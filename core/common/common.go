@@ -2,6 +2,7 @@ package common
 
 import (
 	"database/sql"
+	"fmt"
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
 
@@ -67,12 +68,16 @@ func ParseDB() (results []*LoginData) {
 			LoginUrl:    url,
 		}
 		if len(pwd) > 3 {
-			password = utils.Aes128CBCDecrypt(pwd[3:])
+			password, err = utils.Aes128CBCDecrypt(pwd[3:])
+			if err != nil {
+				panic(err)
+			}
 		}
 		loginD.Password = password
 		if err != nil {
 			log.Println(err)
 		}
+		fmt.Printf("%+v\n", loginD)
 		results = append(results, loginD)
 	}
 	return
