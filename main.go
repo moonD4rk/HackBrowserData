@@ -5,26 +5,40 @@ import (
 	"hack-browser-data/core/common"
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
-	"os"
+	"path/filepath"
 	"runtime"
 )
 
 func main() {
+	log.InitLog()
+	parse()
+}
+
+func parse() {
 	osName := runtime.GOOS
 	switch osName {
 	case "darwin":
-		chromePath, err := utils.GetDBPath(utils.LoginData)
-		if err != nil {
-			log.Error("can't find chrome.app in OS")
-		}
-		err = utils.CopyDB(chromePath, utils.LoginData)
-		if err != nil {
-			log.Println(err)
-		}
-		utils.InitChromeKey()
-		common.ParseDB()
+		//err := utils.InitChromeKey()
+		//if err != nil {
+		//	log.Println(err)
+		//	panic("init chrome key failed")
+		//}
 	case "windows":
 		fmt.Println("Windows")
 	}
-	os.Remove(utils.LoginData)
+	//chromePath, err := utils.GetDBPath(utils.LoginData, utils.History, utils.BookMarks, utils.Cookies, utils.WebData)
+	chromePath, err := utils.GetDBPath(utils.Bookmarks)
+	if err != nil {
+		log.Error("can't find chrome.app in OS")
+	}
+	for _, v := range chromePath {
+		dst := filepath.Base(v)
+		err := utils.CopyDB(v, dst)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		common.ParseDB(dst)
+	}
+
 }

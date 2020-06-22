@@ -5,6 +5,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/sha1"
+	"errors"
 	"hack-browser-data/log"
 	"os/exec"
 	"path/filepath"
@@ -24,15 +25,20 @@ var (
 	chromePass []byte
 )
 
-func GetDBPath(dbName string) (string, error) {
-	s, err := filepath.Glob(macChromeDir + dbName)
-	if err != nil && len(s) == 0 {
-		return "", err
+func GetDBPath(dbName ...string) (dbFile []string, err error) {
+	for _, v := range dbName {
+		s, err := filepath.Glob(macChromeDir + v)
+		if err != nil && len(s) == 0 {
+			continue
+		}
+		if len(s) > 0{
+			dbFile = append(dbFile, s[0])
+		}
 	}
-	return s[0], nil
+	return dbFile, nil
 }
 
-func InitChromeKey() {
+func InitChromeKey() error {
 	var (
 		cmd            *exec.Cmd
 		stdout, stderr bytes.Buffer
@@ -43,22 +49,26 @@ func InitChromeKey() {
 	err := cmd.Run()
 	if err != nil {
 		log.Println(err)
-		panic(err)
+		return err
 	}
 	if stderr.Len() > 0 {
-		panic(stderr.String())
+		log.Println(stderr.String())
+		err = errors.New(stderr.String())
 	}
-	// replace /n
 	temp := stdout.Bytes()
 	chromePass = temp[:len(temp)-1]
-	DecryptPass(chromePass)
+	decryptPass(chromePass)
+	return err
 }
 
-func DecryptPass(chromePass []byte) {
+func decryptPass(chromePass []byte) {
 	chromeKey = pbkdf2.Key(chromePass, chromeSalt, 1003, 16, sha1.New)
 }
 
 func Aes128CBCDecrypt(encryptPass []byte) (string, error) {
+	if chromeKey == nil {
+		return "", nil
+	}
 	block, err := aes.NewCipher(chromeKey)
 	if err != nil {
 		return "", err
