@@ -20,7 +20,7 @@ var (
 	}
 )
 
-func init() {
+func InitLog()  {
 	logger := newLogger("debug")
 	formatLogger = logger.Sugar()
 }
