@@ -2,7 +2,6 @@ package common
 
 import (
 	"database/sql"
-	"fmt"
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
 	"time"
@@ -17,9 +16,11 @@ const (
 )
 
 var (
-	browserData  = new(BrowserData)
-	bookmarkList []*Bookmarks
-	cookieList   []*Cookies
+	FullData      = new(BrowserData)
+	bookmarkList  []*Bookmarks
+	cookieList    []*Cookies
+	historyList   []*History
+	loginItemList []*LoginData
 )
 
 const (
@@ -31,15 +32,13 @@ const (
 	bookmarkChildren = "children"
 )
 
-const (
-	queryHistory = ``
-)
-
 type (
 	BrowserData struct {
 		BrowserName string
 		LoginData   []*LoginData
 		Bookmarks   []*Bookmarks
+		Cookies     []*Cookies
+		History     []*History
 	}
 	LoginData struct {
 		UserName    string    `json:"user_name"`
@@ -69,25 +68,24 @@ type (
 		ExpireDate   time.Time
 	}
 	History struct {
+		Url           string
+		Title         string
+		VisitCount    int
+		LastVisitTime time.Time
 	}
 )
 
 func ParseDB(dbname string) {
 	switch dbname {
 	case utils.LoginData:
-		r, err := parseLogin()
-		if err != nil {
-			fmt.Println(err)
-		}
-		for _, v := range r {
-			fmt.Printf("%+v\n", v)
-		}
+		parseLogin()
 	case utils.Bookmarks:
 		parseBookmarks()
 	case utils.Cookies:
 		parseCookie()
+	case utils.History:
+		parseHistory()
 	}
-
 }
 
 func parseBookmarks() {
@@ -102,13 +100,13 @@ func parseBookmarks() {
 			getBookmarkChildren(value)
 			return true
 		})
-		fmt.Println(len(bookmarkList))
 	}
+	FullData.Bookmarks = bookmarkList
 }
 
 var queryLogin = `SELECT origin_url, username_value, password_value, date_created FROM logins`
 
-func parseLogin() (results []*LoginData, err error) {
+func parseLogin() {
 	//datetime(visit_time / 1000000 + (strftime('%s', '1601-01-01')), 'unixepoch')
 	login := &LoginData{}
 	loginDB, err := sql.Open("sqlite3", utils.LoginData)
@@ -148,13 +146,14 @@ func parseLogin() (results []*LoginData, err error) {
 		if err != nil {
 			log.Println(err)
 		}
-		results = append(results, login)
+		loginItemList = append(loginItemList, login)
 	}
-	return
+	FullData.LoginData = loginItemList
 }
 
 var queryCookie = `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`
-func parseCookie() (results []*Cookies, err error) {
+
+func parseCookie() {
 	cookies := &Cookies{}
 	cookieDB, err := sql.Open("sqlite3", utils.Cookies)
 	defer func() {
@@ -175,7 +174,7 @@ func parseCookie() (results []*Cookies, err error) {
 	for rows.Next() {
 		var (
 			key, host, path, value                        string
-			isSecure, isHTTPOnly, hasExpire, isPersistent bool
+			isSecure, isHTTPOnly, hasExpire, isPersistent int
 			createDate, expireDate                        int64
 			encryptValue                                  []byte
 		)
@@ -185,10 +184,10 @@ func parseCookie() (results []*Cookies, err error) {
 			Host:         host,
 			Path:         path,
 			encryptValue: encryptValue,
-			IsSecure:     false,
-			IsHTTPOnly:   false,
-			HasExpire:    false,
-			IsPersistent: isPersistent,
+			IsSecure:     utils.IntToBool(isSecure),
+			IsHTTPOnly:   utils.IntToBool(isHTTPOnly),
+			HasExpire:    utils.IntToBool(hasExpire),
+			IsPersistent: utils.IntToBool(isPersistent),
 			CreateDate:   utils.TimeEpochFormat(createDate),
 			ExpireDate:   utils.TimeEpochFormat(expireDate),
 		}
@@ -199,11 +198,49 @@ func parseCookie() (results []*Cookies, err error) {
 		cookies.Value = value
 		cookieList = append(cookieList, cookies)
 	}
-	return cookieList, err
+	FullData.Cookies = cookieList
 }
 
-func parseHistory() {
+var queryUrl = `SELECT url, title, visit_count, last_visit_time FROM urls`
 
+func parseHistory() {
+	history := &History{}
+	historyDB, err := sql.Open("sqlite3", utils.History)
+	defer func() {
+		if err := historyDB.Close(); err != nil {
+			log.Println(err)
+		}
+	}()
+	if err != nil {
+		log.Println(err)
+	}
+	err = historyDB.Ping()
+	rows, err := historyDB.Query(queryUrl)
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Println(err)
+		}
+	}()
+	for rows.Next() {
+		var (
+			url, title    string
+			visitCount    int
+			lastVisitTime int64
+		)
+		err := rows.Scan(&url, &title, &visitCount, &lastVisitTime)
+		history = &History{
+			Url:           url,
+			Title:         title,
+			VisitCount:    visitCount,
+			LastVisitTime: utils.TimeEpochFormat(lastVisitTime),
+		}
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		historyList = append(historyList, history)
+	}
+	FullData.History = historyList
 }
 
 func getBookmarkChildren(value gjson.Result) (children gjson.Result) {

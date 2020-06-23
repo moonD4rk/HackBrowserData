@@ -12,7 +12,6 @@ const (
 	LoginData = "Login Data"
 	History   = "History"
 	Cookies   = "Cookies"
-	WebData   = "Web Data"
 	Bookmarks = "Bookmarks"
 )
 
@@ -44,6 +43,14 @@ func ParseBookMarks() {
 
 func RemoveFile() {
 
+}
+
+func IntToBool(a int) bool {
+	switch a {
+	case 0, -1:
+		return false
+	}
+	return true
 }
 
 func TimeEpochFormat(epoch int64) time.Time {
