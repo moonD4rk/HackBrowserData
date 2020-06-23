@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"hack-browser-data/core/common"
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"github.com/urfave/cli/v2"
@@ -20,31 +22,57 @@ var (
 func Execute() {
 	app := &cli.App{
 		Name:    "hack-browser-data",
-		Usage:   "export password/cookie/history/bookmark from browser",
-		Version: "0.0.1",
+		Usage:   "export passwords/cookies/history/bookmarks from browser",
+		Version: "0.1.0",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{Name: "verbose", Aliases: []string{"vv"}, Destination: &verbose, Value: false, Usage: "verbose"},
 			&cli.StringFlag{Name: "browser", Aliases: []string{"b"}, Destination: &browser, Value: "all", Usage: "browser name, all|chrome|safari"},
-			&cli.StringFlag{Name: "dir", Aliases: []string{"d"}, Destination: &exportDir, Value: "data", Usage: "export dir"},
+			&cli.StringFlag{Name: "results-dir", Aliases: []string{"d"}, Destination: &exportDir, Value: "results", Usage: "export dir"},
 			&cli.StringFlag{Name: "format", Aliases: []string{"f"}, Destination: &outputFormat, Value: "csv", Usage: "result format, csv|json"},
 			&cli.StringFlag{Name: "export-data", Aliases: []string{"e"}, Destination: &exportData, Value: "all", Usage: "all|password|cookie|history|bookmark"},
 		},
 		Action: func(c *cli.Context) error {
 			log.InitLog()
+			utils.MakeDir(exportDir)
 			switch runtime.GOOS {
 			case "darwin":
 				err := utils.InitChromeKey()
 				if err != nil {
-
 				}
 			case "windows":
+
 			}
-			switch {
-			case browser == "all":
-			case exportDir == "data":
-			case exportData == "all":
-			case outputFormat == "json":
+			var fileList []string
+			switch exportData {
+			case "all":
+				fileList = utils.GetDBPath(utils.LoginData, utils.History, utils.Bookmarks, utils.Cookies)
+			case "password", "cookie", "history", "bookmark":
+				fileList = utils.GetDBPath(exportData)
+			default:
+				log.Fatal("choose one all|password|cookie|history|bookmark")
 			}
+
+			for _, v := range fileList {
+				dst := filepath.Base(v)
+				err := utils.CopyDB(v, dst)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				common.ParseDB(dst)
+			}
+			if outputFormat == "json" {
+				err := common.FullData.OutPutJson(exportDir, outputFormat)
+				if err != nil {
+					log.Error(err)
+				}
+			} else {
+				err := common.FullData.OutPutCsv(exportDir, outputFormat)
+				if err != nil {
+					log.Error(err)
+				}
+			}
+
 			return nil
 		},
 	}

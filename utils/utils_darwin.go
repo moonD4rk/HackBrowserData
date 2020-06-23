@@ -25,17 +25,19 @@ var (
 	chromePass []byte
 )
 
-func GetDBPath(dbName ...string) (dbFile []string, err error) {
+func GetDBPath(dbName ...string) (dbFile []string) {
 	for _, v := range dbName {
 		s, err := filepath.Glob(macChromeDir + v)
 		if err != nil && len(s) == 0 {
 			continue
 		}
-		if len(s) > 0{
+		if len(s) > 0 {
+			log.Debugf("Find %s File Success", v)
+			log.Debugf("%s file location is %s", v, s[0])
 			dbFile = append(dbFile, s[0])
 		}
 	}
-	return dbFile, nil
+	return dbFile
 }
 
 func InitChromeKey() error {
@@ -52,8 +54,8 @@ func InitChromeKey() error {
 		return err
 	}
 	if stderr.Len() > 0 {
-		log.Println(stderr.String())
 		err = errors.New(stderr.String())
+		log.Println(err)
 	}
 	temp := stdout.Bytes()
 	chromePass = temp[:len(temp)-1]
@@ -66,7 +68,7 @@ func decryptPass(chromePass []byte) {
 }
 
 func Aes128CBCDecrypt(encryptPass []byte) (string, error) {
-	if chromeKey == nil {
+	if len(chromeKey) == 0 {
 		return "", nil
 	}
 	block, err := aes.NewCipher(chromeKey)
