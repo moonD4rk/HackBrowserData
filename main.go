@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"hack-browser-data/cmd"
 	"hack-browser-data/core/common"
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
@@ -10,8 +12,7 @@ import (
 )
 
 func main() {
-	log.InitLog()
-	parse()
+	cmd.Execute()
 }
 
 func parse() {
@@ -26,11 +27,7 @@ func parse() {
 	case "windows":
 		fmt.Println("Windows")
 	}
-	chromePath, err := utils.GetDBPath(utils.LoginData, utils.History, utils.Bookmarks, utils.Cookies)
-	//chromePath, err := utils.GetDBPath(utils.Cookies)
-	if err != nil {
-		log.Error("can't find chrome.app in OS")
-	}
+	chromePath := utils.GetDBPath(utils.LoginData, utils.History, utils.Bookmarks, utils.Cookies)
 	for _, v := range chromePath {
 		dst := filepath.Base(v)
 		err := utils.CopyDB(v, dst)
@@ -44,4 +41,9 @@ func parse() {
 	fmt.Println("cookies", len(common.FullData.Cookies))
 	fmt.Println("login data", len(common.FullData.LoginData))
 	fmt.Println("history", len(common.FullData.History))
+	d, err := json.MarshalIndent(common.FullData.Bookmarks, "", "\t")
+	err = utils.WriteFile("data.json", d)
+	if err != nil {
+		log.Println(err)
+	}
 }
