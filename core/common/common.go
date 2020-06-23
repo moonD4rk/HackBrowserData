@@ -1,10 +1,15 @@
 package common
 
 import (
+	"bytes"
 	"database/sql"
+	"encoding/json"
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
+	"os"
 	"time"
+
+	"github.com/gocarina/gocsv"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tidwall/gjson"
@@ -35,14 +40,15 @@ const (
 type (
 	BrowserData struct {
 		BrowserName string
+		OutPutType  string
 		LoginData   []*LoginData
 		Bookmarks   []*Bookmarks
 		Cookies     []*Cookies
 		History     []*History
 	}
 	LoginData struct {
-		UserName    string    `json:"user_name"`
-		encryptPass []byte    `json:"-"`
+		UserName    string `json:"user_name"`
+		encryptPass []byte
 		Password    string    `json:"password"`
 		LoginUrl    string    `json:"login_url"`
 		CreateDate  time.Time `json:"create_date"`
@@ -74,6 +80,129 @@ type (
 		LastVisitTime time.Time
 	}
 )
+
+func (b BrowserData) OutPutCsv(dir, format string) error {
+	switch {
+	case len(b.Bookmarks) != 0:
+		filename := utils.FormatFileName(dir, utils.Bookmarks, format)
+		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
+		defer file.Close()
+		if err != nil {
+			log.Errorf("create file %s fail", filename)
+		}
+		err = gocsv.MarshalFile(b.Bookmarks, file)
+		if err != nil {
+			log.Error(err)
+		}
+		fallthrough
+	case len(b.LoginData) != 0:
+		filename := utils.FormatFileName(dir, utils.LoginData, format)
+		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
+		defer file.Close()
+		if err != nil {
+			log.Errorf("create file %s fail", filename)
+		}
+		err = gocsv.MarshalFile(b.LoginData, file)
+		if err != nil {
+			log.Error(err)
+		}
+		fallthrough
+	case len(b.Cookies) != 0:
+		filename := utils.FormatFileName(dir, utils.Cookies, format)
+		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
+		defer file.Close()
+		if err != nil {
+			log.Errorf("create file %s fail", filename)
+		}
+		err = gocsv.MarshalFile(b.Cookies, file)
+		if err != nil {
+			log.Error(err)
+		}
+		fallthrough
+	case len(b.History) != 0:
+		filename := utils.FormatFileName(dir, utils.History, format)
+		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
+		defer file.Close()
+		if err != nil {
+			log.Errorf("create file %s fail", filename)
+		}
+		err = gocsv.MarshalFile(b.History, file)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	return nil
+}
+
+func (b BrowserData) OutPutJson(dir, format string) error {
+	switch {
+	case len(b.Bookmarks) != 0:
+		filename := utils.FormatFileName(dir, utils.Bookmarks, format)
+		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
+		defer file.Close()
+		if err != nil {
+			log.Errorf("create file %s fail", filename)
+		}
+		w := new(bytes.Buffer)
+		enc := json.NewEncoder(w)
+		enc.SetEscapeHTML(false)
+		enc.SetIndent("", "\t")
+		enc.Encode(b.BrowserName)
+		file.Write(w.Bytes())
+		fallthrough
+	case len(b.Cookies) != 0:
+		filename := utils.FormatFileName(dir, utils.Cookies, format)
+		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
+		defer file.Close()
+		if err != nil {
+			log.Errorf("create file %s fail", filename)
+		}
+		w := new(bytes.Buffer)
+		enc := json.NewEncoder(w)
+		enc.SetEscapeHTML(false)
+		enc.SetIndent("", "\t")
+		err = enc.Encode(b.Cookies)
+		if err != nil {
+			log.Println(err)
+		}
+		file.Write(w.Bytes())
+		fallthrough
+	case len(b.History) != 0:
+		filename := utils.FormatFileName(dir, utils.History, format)
+		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
+		defer file.Close()
+		if err != nil {
+			log.Errorf("create file %s fail", filename)
+		}
+		w := new(bytes.Buffer)
+		enc := json.NewEncoder(w)
+		enc.SetEscapeHTML(false)
+		enc.SetIndent("", "\t")
+		err = enc.Encode(b.History)
+		if err != nil {
+			log.Println(err)
+		}
+		file.Write(w.Bytes())
+		fallthrough
+	case len(b.LoginData) != 0:
+		filename := utils.FormatFileName(dir, utils.LoginData, format)
+		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
+		defer file.Close()
+		if err != nil {
+			log.Errorf("create file %s fail", filename)
+		}
+		w := new(bytes.Buffer)
+		enc := json.NewEncoder(w)
+		enc.SetEscapeHTML(false)
+		enc.SetIndent("", "\t")
+		err = enc.Encode(b.LoginData)
+		if err != nil {
+			log.Println(err)
+		}
+		file.Write(w.Bytes())
+	}
+	return nil
+}
 
 func ParseDB(dbname string) {
 	switch dbname {
@@ -107,7 +236,6 @@ func parseBookmarks() {
 var queryLogin = `SELECT origin_url, username_value, password_value, date_created FROM logins`
 
 func parseLogin() {
-	//datetime(visit_time / 1000000 + (strftime('%s', '1601-01-01')), 'unixepoch')
 	login := &LoginData{}
 	loginDB, err := sql.Open("sqlite3", utils.LoginData)
 	defer func() {
@@ -201,7 +329,7 @@ func parseCookie() {
 	FullData.Cookies = cookieList
 }
 
-var queryUrl = `SELECT url, title, visit_count, last_visit_time FROM urls`
+var queryHistory = `SELECT url, title, visit_count, last_visit_time FROM urls`
 
 func parseHistory() {
 	history := &History{}
@@ -215,7 +343,7 @@ func parseHistory() {
 		log.Println(err)
 	}
 	err = historyDB.Ping()
-	rows, err := historyDB.Query(queryUrl)
+	rows, err := historyDB.Query(queryHistory)
 	defer func() {
 		if err := rows.Close(); err != nil {
 			log.Println(err)

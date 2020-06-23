@@ -1,10 +1,13 @@
 package utils
 
 import (
+	"fmt"
 	"hack-browser-data/log"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -29,20 +32,11 @@ func CopyDB(src, dst string) error {
 	if err != nil {
 		log.Println(err.Error())
 	}
-
 	err = ioutil.WriteFile(dst, sourceFile, 0777)
 	if err != nil {
 		log.Println(err.Error())
 	}
 	return err
-}
-
-func ParseBookMarks() {
-
-}
-
-func RemoveFile() {
-
 }
 
 func IntToBool(a int) bool {
@@ -54,6 +48,10 @@ func IntToBool(a int) bool {
 }
 
 func TimeEpochFormat(epoch int64) time.Time {
+	maxTime := int64(99633311740000000)
+	if epoch > maxTime{
+		epoch = maxTime
+	}
 	t := time.Date(1601, 1, 1, 0, 0, 0, 0, time.UTC)
 	d := time.Duration(epoch)
 	for i := 0; i < 1000; i++ {
@@ -62,11 +60,37 @@ func TimeEpochFormat(epoch int64) time.Time {
 	return t
 }
 
+// check time our range[1.9999]
+func checkTimeRange(check time.Time) time.Time {
+	end, _ := time.Parse(time.RFC3339, "9000-01-02T15:04:05Z07:00")
+	if check.Before(end) {
+		return check
+	} else {
+		return end
+	}
+}
+
 func ReadFile(filename string) (string, error) {
 	s, err := ioutil.ReadFile(filename)
 	return string(s), err
 }
 
-//func MakeDir(dirName string) error {
-//
-//}
+func WriteFile(filename string, data []byte) error {
+	err := ioutil.WriteFile(filename, data, 0644)
+	if err != nil {
+		return nil
+	}
+	return err
+}
+
+func FormatFileName(dir, filename, format string) string {
+	r := strings.TrimSpace(strings.ToLower(filename))
+	p := path.Join(dir, fmt.Sprintf("%s.%s", r, format))
+	return p
+}
+
+func MakeDir(dirName string) {
+	if _, err := os.Stat(dirName); os.IsNotExist(err) {
+		err = os.Mkdir(dirName, 0700)
+	}
+}
