@@ -6,7 +6,6 @@ import (
 	"hack-browser-data/utils"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/urfave/cli/v2"
 )
@@ -34,14 +33,7 @@ func Execute() {
 		Action: func(c *cli.Context) error {
 			log.InitLog()
 			utils.MakeDir(exportDir)
-			switch runtime.GOOS {
-			case "darwin":
-				err := utils.InitChromeKey()
-				if err != nil {
-				}
-			case "windows":
 
-			}
 			var fileList []string
 			switch exportData {
 			case "all":
@@ -49,7 +41,11 @@ func Execute() {
 			case "password", "cookie", "history", "bookmark":
 				fileList = utils.GetDBPath(exportData)
 			default:
-				log.Fatal("choose one all|password|cookie|history|bookmark")
+				log.Fatal("choose one from all|password|cookie|history|bookmark")
+			}
+			err := utils.InitChromeKey()
+			if err != nil {
+				panic(err)
 			}
 
 			for _, v := range fileList {
@@ -72,7 +68,6 @@ func Execute() {
 					log.Error(err)
 				}
 			}
-
 			return nil
 		},
 	}
