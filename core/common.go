@@ -1,15 +1,12 @@
-package common
+package core
 
 import (
-	"bytes"
 	"database/sql"
-	"encoding/json"
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
 	"os"
+	"sort"
 	"time"
-
-	"github.com/gocarina/gocsv"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tidwall/gjson"
@@ -18,14 +15,6 @@ import (
 const (
 	Chrome = "Chrome"
 	Safari = "Safari"
-)
-
-var (
-	FullData      = new(BrowserData)
-	bookmarkList  []*Bookmarks
-	cookieList    []*Cookies
-	historyList   []*History
-	loginItemList []*LoginData
 )
 
 const (
@@ -37,30 +26,37 @@ const (
 	bookmarkChildren = "children"
 )
 
+var (
+	FullData = new(BrowserData)
+)
+
 type (
 	BrowserData struct {
 		BrowserName string
-		OutPutType  string
-		LoginData   []*LoginData
-		Bookmarks   []*Bookmarks
-		Cookies     []*Cookies
-		History     []*History
+		LoginDataSlice
+		BookmarkSlice
+		CookieMap
+		HistorySlice
 	}
-	LoginData struct {
+	LoginDataSlice []loginData
+	BookmarkSlice  []bookmarks
+	CookieMap      map[string][]cookies
+	HistorySlice   []history
+	loginData      struct {
 		UserName    string
-		EncryptPass []byte
+		encryptPass []byte
 		Password    string
 		LoginUrl    string
 		CreateDate  time.Time
 	}
-	Bookmarks struct {
-		ID        string
+	bookmarks struct {
+		ID        int64
 		DateAdded time.Time
 		URL       string
 		Name      string
 		Type      string
 	}
-	Cookies struct {
+	cookies struct {
 		KeyName      string
 		encryptValue []byte
 		Value        string
@@ -73,7 +69,7 @@ type (
 		CreateDate   time.Time
 		ExpireDate   time.Time
 	}
-	History struct {
+	history struct {
 		Url           string
 		Title         string
 		VisitCount    int
@@ -81,130 +77,7 @@ type (
 	}
 )
 
-func (b BrowserData) OutPutCsv(dir, format string) error {
-	switch {
-	case len(b.Bookmarks) != 0:
-		filename := utils.FormatFileName(dir, utils.Bookmarks, format)
-		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
-		defer file.Close()
-		if err != nil {
-			log.Errorf("create file %s fail", filename)
-		}
-		err = gocsv.MarshalFile(b.Bookmarks, file)
-		if err != nil {
-			log.Error(err)
-		}
-		fallthrough
-	case len(b.LoginData) != 0:
-		filename := utils.FormatFileName(dir, utils.LoginData, format)
-		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
-		defer file.Close()
-		if err != nil {
-			log.Errorf("create file %s fail", filename)
-		}
-		err = gocsv.MarshalFile(b.LoginData, file)
-		if err != nil {
-			log.Error(err)
-		}
-		fallthrough
-	case len(b.Cookies) != 0:
-		filename := utils.FormatFileName(dir, utils.Cookies, format)
-		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
-		defer file.Close()
-		if err != nil {
-			log.Errorf("create file %s fail", filename)
-		}
-		err = gocsv.MarshalFile(b.Cookies, file)
-		if err != nil {
-			log.Error(err)
-		}
-		fallthrough
-	case len(b.History) != 0:
-		filename := utils.FormatFileName(dir, utils.History, format)
-		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
-		defer file.Close()
-		if err != nil {
-			log.Errorf("create file %s fail", filename)
-		}
-		err = gocsv.MarshalFile(b.History, file)
-		if err != nil {
-			log.Error(err)
-		}
-	}
-	return nil
-}
-
-func (b BrowserData) OutPutJson(dir, format string) error {
-	switch {
-	case len(b.Bookmarks) != 0:
-		filename := utils.FormatFileName(dir, utils.Bookmarks, format)
-		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
-		defer file.Close()
-		if err != nil {
-			log.Errorf("create file %s fail", filename)
-		}
-		w := new(bytes.Buffer)
-		enc := json.NewEncoder(w)
-		enc.SetEscapeHTML(false)
-		enc.SetIndent("", "\t")
-		enc.Encode(b.BrowserName)
-		file.Write(w.Bytes())
-		fallthrough
-	case len(b.Cookies) != 0:
-		filename := utils.FormatFileName(dir, utils.Cookies, format)
-		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
-		defer file.Close()
-		if err != nil {
-			log.Errorf("create file %s fail", filename)
-		}
-		w := new(bytes.Buffer)
-		enc := json.NewEncoder(w)
-		enc.SetEscapeHTML(false)
-		enc.SetIndent("", "\t")
-		err = enc.Encode(b.Cookies)
-		if err != nil {
-			log.Println(err)
-		}
-		file.Write(w.Bytes())
-		fallthrough
-	case len(b.History) != 0:
-		filename := utils.FormatFileName(dir, utils.History, format)
-		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
-		defer file.Close()
-		if err != nil {
-			log.Errorf("create file %s fail", filename)
-		}
-		w := new(bytes.Buffer)
-		enc := json.NewEncoder(w)
-		enc.SetEscapeHTML(false)
-		enc.SetIndent("", "\t")
-		err = enc.Encode(b.History)
-		if err != nil {
-			log.Println(err)
-		}
-		file.Write(w.Bytes())
-		fallthrough
-	case len(b.LoginData) != 0:
-		filename := utils.FormatFileName(dir, utils.LoginData, format)
-		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
-		defer file.Close()
-		if err != nil {
-			log.Errorf("create file %s fail", filename)
-		}
-		w := new(bytes.Buffer)
-		enc := json.NewEncoder(w)
-		enc.SetEscapeHTML(false)
-		enc.SetIndent("", "\t")
-		err = enc.Encode(b.LoginData)
-		if err != nil {
-			log.Println(err)
-		}
-		file.Write(w.Bytes())
-	}
-	return nil
-}
-
-func ParseDB(dbname string) {
+func ChromeDB(dbname string) {
 	switch dbname {
 	case utils.LoginData:
 		parseLogin()
@@ -217,8 +90,11 @@ func ParseDB(dbname string) {
 	}
 }
 
+var bookmarkList BookmarkSlice
+
 func parseBookmarks() {
 	bookmarks, err := utils.ReadFile(utils.Bookmarks)
+	defer os.Remove(utils.Bookmarks)
 	if err != nil {
 		log.Println(err)
 	}
@@ -230,14 +106,19 @@ func parseBookmarks() {
 			return true
 		})
 	}
-	FullData.Bookmarks = bookmarkList
+	sort.Slice(bookmarkList, func(i, j int) bool {
+		return bookmarkList[i].ID < bookmarkList[j].ID
+	})
+	FullData.BookmarkSlice = bookmarkList
 }
 
 var queryLogin = `SELECT origin_url, username_value, password_value, date_created FROM logins`
 
 func parseLogin() {
-	login := &LoginData{}
+	var loginItemList LoginDataSlice
+	login := loginData{}
 	loginDB, err := sql.Open("sqlite3", utils.LoginData)
+	defer os.Remove(utils.LoginData)
 	defer func() {
 		if err := loginDB.Close(); err != nil {
 			log.Println(err)
@@ -260,9 +141,9 @@ func parseLogin() {
 			create                  int64
 		)
 		err = rows.Scan(&url, &username, &pwd, &create)
-		login = &LoginData{
+		login = loginData{
 			UserName:    username,
-			EncryptPass: pwd,
+			encryptPass: pwd,
 			LoginUrl:    url,
 			CreateDate:  utils.TimeEpochFormat(create),
 		}
@@ -273,14 +154,17 @@ func parseLogin() {
 		}
 		loginItemList = append(loginItemList, login)
 	}
-	FullData.LoginData = loginItemList
+	sort.Sort(loginItemList)
+	FullData.LoginDataSlice = loginItemList
 }
 
 var queryCookie = `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`
 
 func parseCookie() {
-	cookies := &Cookies{}
+	cookie := cookies{}
+	cookieMap := make(map[string][]cookies)
 	cookieDB, err := sql.Open("sqlite3", utils.Cookies)
+	defer os.Remove(utils.Cookies)
 	defer func() {
 		if err := cookieDB.Close(); err != nil {
 			log.Println(err)
@@ -304,7 +188,7 @@ func parseCookie() {
 			encryptValue                                  []byte
 		)
 		err = rows.Scan(&key, &encryptValue, &host, &path, &createDate, &expireDate, &isSecure, &isHTTPOnly, &hasExpire, &isPersistent)
-		cookies = &Cookies{
+		cookie = cookies{
 			KeyName:      key,
 			Host:         host,
 			Path:         path,
@@ -318,17 +202,23 @@ func parseCookie() {
 		}
 		// remove prefix 'v10'
 		value, err = utils.DecryptChromePass(encryptValue)
-		cookies.Value = value
-		cookieList = append(cookieList, cookies)
+		cookie.Value = value
+		if _, ok := cookieMap[host]; ok {
+			cookieMap[host] = append(cookieMap[host], cookie)
+		} else {
+			cookieMap[host] = []cookies{cookie}
+		}
 	}
-	FullData.Cookies = cookieList
+	FullData.CookieMap = cookieMap
 }
 
 var queryHistory = `SELECT url, title, visit_count, last_visit_time FROM urls`
 
 func parseHistory() {
-	history := &History{}
+	var historyList HistorySlice
+	h := history{}
 	historyDB, err := sql.Open("sqlite3", utils.History)
+	defer os.Remove(utils.History)
 	defer func() {
 		if err := historyDB.Close(); err != nil {
 			log.Println(err)
@@ -351,7 +241,7 @@ func parseHistory() {
 			lastVisitTime int64
 		)
 		err := rows.Scan(&url, &title, &visitCount, &lastVisitTime)
-		history = &History{
+		h = history{
 			Url:           url,
 			Title:         title,
 			VisitCount:    visitCount,
@@ -361,14 +251,17 @@ func parseHistory() {
 			log.Println(err)
 			continue
 		}
-		historyList = append(historyList, history)
+		historyList = append(historyList, h)
 	}
-	FullData.History = historyList
+	sort.Slice(historyList, func(i, j int) bool {
+		return historyList[i].VisitCount > historyList[j].VisitCount
+	})
+	FullData.HistorySlice = historyList
 }
 
 func getBookmarkChildren(value gjson.Result) (children gjson.Result) {
-	b := new(Bookmarks)
-	b.ID = value.Get(bookmarkID).String()
+	b := bookmarks{}
+	b.ID = value.Get(bookmarkID).Int()
 	nodeType := value.Get(bookmarkType)
 	b.DateAdded = utils.TimeEpochFormat(value.Get(bookmarkAdded).Int())
 	b.URL = value.Get(bookmarkUrl).String()

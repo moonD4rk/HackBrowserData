@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"hack-browser-data/core/common"
+	"hack-browser-data/core"
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
 	"os"
@@ -33,7 +33,6 @@ func Execute() {
 		Action: func(c *cli.Context) error {
 			log.InitLog()
 			utils.MakeDir(exportDir)
-
 			var fileList []string
 			switch exportData {
 			case "all":
@@ -47,7 +46,6 @@ func Execute() {
 			if err != nil {
 				panic(err)
 			}
-
 			for _, v := range fileList {
 				dst := filepath.Base(v)
 				err := utils.CopyDB(v, dst)
@@ -55,15 +53,15 @@ func Execute() {
 					log.Println(err)
 					continue
 				}
-				common.ParseDB(dst)
+				core.ChromeDB(dst)
 			}
 			if outputFormat == "json" {
-				err := common.FullData.OutPutJson(exportDir, outputFormat)
+				err := core.FullData.OutPutJson(exportDir, outputFormat)
 				if err != nil {
 					log.Error(err)
 				}
 			} else {
-				err := common.FullData.OutPutCsv(exportDir, outputFormat)
+				err := core.FullData.OutPutCsv(exportDir, outputFormat)
 				if err != nil {
 					log.Error(err)
 				}
