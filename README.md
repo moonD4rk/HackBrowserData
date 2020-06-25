@@ -6,20 +6,19 @@
 
 ### 安装编译
 
-1. 直接下载编译好的[二进制文件](https://github.com/moonD4rk/HackBrowserData/releases)
+你可以选择下载编译好的[二进制文件](https://github.com/moonD4rk/HackBrowserData/releases)
 
-2. 手动编译
+也可以通过源码手动编译
 
-   ```
-   git clone https://github.com/moonD4rk/HackBrowserData
-   
-   cd HackBrowserData && go mod tidy
-   ```
+```bash
+git clone https://github.com/moonD4rk/HackBrowserData
+
+cd HackBrowserData && go mod tidy
+```
 
 ### 运行
 
 ```bash
-​```bash
 ./hack-browser-data -h
 NAME:
    hack-browser-data - export passwords/cookies/history/bookmarks from browser
@@ -56,8 +55,6 @@ GLOBAL OPTIONS:
 
 ### Todo List
 
-based this two list
-
 [Desktop Browser Market Share Worldwide](https://gs.statcounter.com/browser-market-share/desktop/worldwide)
 
 | Chrome | Safari | Firefox | Edge Legacy | IE |  Other  |
@@ -70,9 +67,11 @@ based this two list
 | :----- | :------: | :-----: | :--------: | :---: | :------------: |
 | 68.33% |   9.4%   |  8.91%  |   4.41%    | 5.65% |     4.74%      |
 
-I woulf support those browser in the future
-1. Firefox
-2. Safari
-3. Edge
-4. 360 browser
-5. IE
+Based on those two lists, I woulf support those browser in the future
+
+- [x] Chrome
+- [ ] Safari
+- [ ] Firefox
+- [ ] Edge
+- [ ] 360 browser
+- [ ] IE
