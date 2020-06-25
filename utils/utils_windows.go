@@ -34,7 +34,7 @@ func InitChromeKey() error {
 	if err != nil {
 		return err
 	}
-	chromeKey, err = decryptStringWithDPAPI(masterKey[5:])
+	chromeKey, err = DecryptStringWithDPAPI(masterKey[5:])
 	return err
 }
 
@@ -73,7 +73,7 @@ func aesGCMDecrypt(crypted, key, nounce []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	blockMode, _ := cipher.NewGCM(block)
+	blockMode, err := cipher.NewGCM(block)
 	origData, err := blockMode.Open(nil, nounce, crypted, nil)
 	if err != nil {
 		return "", err
@@ -103,7 +103,7 @@ func (b *DataBlob) ToByteArray() []byte {
 }
 
 // chrome < 80 https://chromium.googlesource.com/chromium/src/+/76f496a7235c3432983421402951d73905c8be96/components/os_crypt/os_crypt_win.cc#82
-func decryptStringWithDPAPI(data []byte) ([]byte, error) {
+func DecryptStringWithDPAPI(data []byte) ([]byte, error) {
 	dllCrypt := syscall.NewLazyDLL("Crypt32.dll")
 	dllKernel := syscall.NewLazyDLL("Kernel32.dll")
 	procDecryptData := dllCrypt.NewProc("CryptUnprotectData")
