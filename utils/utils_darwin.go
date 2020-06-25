@@ -6,6 +6,7 @@ import (
 	"crypto/cipher"
 	"crypto/sha1"
 	"errors"
+	"fmt"
 	"hack-browser-data/log"
 	"os/exec"
 	"path/filepath"
@@ -22,7 +23,6 @@ var (
 	command    = []string{"security", "find-generic-password", "-wa", "Chrome"}
 	chromeSalt = []byte("saltysalt")
 	chromeKey  []byte
-	chromePass []byte
 )
 
 func GetDBPath(dbName ...string) (dbFile []string) {
@@ -58,16 +58,27 @@ func InitChromeKey() error {
 		log.Println(err)
 	}
 	temp := stdout.Bytes()
-	chromePass = temp[:len(temp)-1]
-	decryptPass(chromePass)
+	chromePass := temp[:len(temp)-1]
+	decryptChromeKey(chromePass)
 	return err
 }
 
-func decryptPass(chromePass []byte) {
+func decryptChromeKey(chromePass []byte) {
 	chromeKey = pbkdf2.Key(chromePass, chromeSalt, 1003, 16, sha1.New)
 }
 
-func Aes128CBCDecrypt(encryptPass []byte) (string, error) {
+func DecryptChromePass(encryptPass []byte) (string, error) {
+	if len(encryptPass) > 3 {
+		return aes128CBCDecrypt(encryptPass[3:])
+	} else {
+		return "", &DecryptError{
+			err: passwordIsEmpty,
+			msg: fmt.Sprintf("password is %s", string(encryptPass)),
+		}
+	}
+}
+
+func aes128CBCDecrypt(encryptPass []byte) (string, error) {
 	if len(chromeKey) == 0 {
 		return "", nil
 	}

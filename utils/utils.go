@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"hack-browser-data/log"
 	"io/ioutil"
@@ -10,6 +11,23 @@ import (
 	"strings"
 	"time"
 )
+
+var (
+	passwordIsEmpty    = errors.New("decrypt fail, password is empty")
+)
+
+type DecryptError struct {
+	err error
+	msg string
+}
+
+func (e *DecryptError) Error() string {
+	return fmt.Sprintf("%s: %s", e.msg, e.err)
+}
+
+func (e *DecryptError) Unwrap() error {
+	return e.err
+}
 
 const (
 	LoginData = "Login Data"
@@ -49,7 +67,7 @@ func IntToBool(a int) bool {
 
 func TimeEpochFormat(epoch int64) time.Time {
 	maxTime := int64(99633311740000000)
-	if epoch > maxTime{
+	if epoch > maxTime {
 		epoch = maxTime
 	}
 	t := time.Date(1601, 1, 1, 0, 0, 0, 0, time.UTC)

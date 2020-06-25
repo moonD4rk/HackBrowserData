@@ -47,18 +47,18 @@ type (
 		History     []*History
 	}
 	LoginData struct {
-		UserName    string `json:"user_name"`
-		encryptPass []byte
-		Password    string    `json:"password"`
-		LoginUrl    string    `json:"login_url"`
-		CreateDate  time.Time `json:"create_date"`
+		UserName    string
+		EncryptPass []byte
+		Password    string
+		LoginUrl    string
+		CreateDate  time.Time
 	}
 	Bookmarks struct {
-		ID        string    `json:"id"`
-		DateAdded time.Time `json:"date_added"`
-		URL       string    `json:"url"`
-		Name      string    `json:"name"`
-		Type      string    `json:"type"`
+		ID        string
+		DateAdded time.Time
+		URL       string
+		Name      string
+		Type      string
 	}
 	Cookies struct {
 		KeyName      string
@@ -262,14 +262,11 @@ func parseLogin() {
 		err = rows.Scan(&url, &username, &pwd, &create)
 		login = &LoginData{
 			UserName:    username,
-			encryptPass: pwd,
+			EncryptPass: pwd,
 			LoginUrl:    url,
 			CreateDate:  utils.TimeEpochFormat(create),
 		}
-		if len(pwd) > 3 {
-			// remove prefix 'v10'
-			password, err = utils.Aes128CBCDecrypt(pwd[3:])
-		}
+		password, err = utils.DecryptChromePass(pwd)
 		login.Password = password
 		if err != nil {
 			log.Println(err)
@@ -319,10 +316,8 @@ func parseCookie() {
 			CreateDate:   utils.TimeEpochFormat(createDate),
 			ExpireDate:   utils.TimeEpochFormat(expireDate),
 		}
-		if len(encryptValue) > 3 {
-			// remove prefix 'v10'
-			value, err = utils.Aes128CBCDecrypt(encryptValue[3:])
-		}
+		// remove prefix 'v10'
+		value, err = utils.DecryptChromePass(encryptValue)
 		cookies.Value = value
 		cookieList = append(cookieList, cookies)
 	}
