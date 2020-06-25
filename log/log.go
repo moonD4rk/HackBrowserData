@@ -20,7 +20,7 @@ var (
 	}
 )
 
-func InitLog()  {
+func InitLog() {
 	logger := newLogger("debug")
 	formatLogger = logger.Sugar()
 }
@@ -111,6 +111,6 @@ func Fatalf(template string, args ...interface{}) {
 	formatLogger.Fatalf(template, args...)
 }
 
-func Println(args ...interface{})  {
+func Println(args ...interface{}) {
 	formatLogger.Debug(args...)
 }

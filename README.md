@@ -42,16 +42,16 @@ GLOBAL OPTIONS:
 
 ### 目前支持平台
 
-| Browser        | Password | Cookie | Bookmark | History |
-| :------------- | :------: | :----: | :------: | :-----: |
-| Windows Chrome |    ✔     |   ✔    |    ✔     |    ✔    |
-| MacOS Chrome   |    ✔     |   ✔    |    ✔     |    ✔    |
-| Linux Chrome   |    ✖     |   ✖    |    ✖     |    ✖    |
-| Windows Edge   |    ✖     |   ✖    |    ✖     |    ✖    |
-| MacOS Edge     |    ✖     |   ✖    |    ✖     |    ✖    |
-| Linux Edge     |    ✖     |   ✖    |    ✖     |    ✖    |
-| MacOS Safari   |    ✖     |   ✖    |    ✖     |    ✖    |
-| MacOS Keychain |    ✖     |        |          |         |
+| Browser                           | Password | Cookie | Bookmark | History |
+| :-------------------------------- | :------: | :----: | :------: | :-----: |
+| Windows Chrome                    |    ✔     |   ✔    |    ✔     |    ✔    |
+| MacOS Chrome<br />(need password) |    ✔     |   ✔    |    ✔     |    ✔    |
+| Linux Chrome                      |    ✖     |   ✖    |    ✖     |    ✖    |
+| Windows Edge                      |    ✖     |   ✖    |    ✖     |    ✖    |
+| MacOS Edge                        |    ✖     |   ✖    |    ✖     |    ✖    |
+| Linux Edge                        |    ✖     |   ✖    |    ✖     |    ✖    |
+| MacOS Safari                      |    ✖     |   ✖    |    ✖     |    ✖    |
+| MacOS Keychain                    |    ✖     |        |          |         |
 
 ### Todo List
 
@@ -65,7 +65,7 @@ GLOBAL OPTIONS:
 
 | Chrome | 360 Safe | Firefox | QQ Browser |  IE   | Sogou Explorer |
 | :----- | :------: | :-----: | :--------: | :---: | :------------: |
-| 68.33% |   9.4%   |  8.91%  |   4.41%    | 5.65% |     4.74%      |
+| 39.85% |  22.26%  |  9.28%  |    6.5%    | 5.65% |     4.74%      |
 
 Based on those two lists, I woulf support those browser in the future
 

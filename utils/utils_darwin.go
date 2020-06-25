@@ -6,7 +6,6 @@ import (
 	"crypto/cipher"
 	"crypto/sha1"
 	"errors"
-	"fmt"
 	"hack-browser-data/log"
 	"os/exec"
 	"path/filepath"
@@ -24,21 +23,6 @@ var (
 	chromeSalt = []byte("saltysalt")
 	chromeKey  []byte
 )
-
-func GetDBPath(dbName ...string) (dbFile []string) {
-	for _, v := range dbName {
-		s, err := filepath.Glob(macChromeDir + v)
-		if err != nil && len(s) == 0 {
-			continue
-		}
-		if len(s) > 0 {
-			log.Debugf("Find %s File Success", v)
-			log.Debugf("%s file location is %s", v, s[0])
-			dbFile = append(dbFile, s[0])
-		}
-	}
-	return dbFile
-}
 
 func InitChromeKey() error {
 	var (
@@ -63,6 +47,21 @@ func InitChromeKey() error {
 	return err
 }
 
+func GetDBPath(dbName ...string) (dbFile []string) {
+	for _, v := range dbName {
+		s, err := filepath.Glob(macChromeDir + v)
+		if err != nil && len(s) == 0 {
+			continue
+		}
+		if len(s) > 0 {
+			log.Debugf("Find %s File Success", v)
+			log.Debugf("%s file location is %s", v, s[0])
+			dbFile = append(dbFile, s[0])
+		}
+	}
+	return dbFile
+}
+
 func decryptChromeKey(chromePass []byte) {
 	chromeKey = pbkdf2.Key(chromePass, chromeSalt, 1003, 16, sha1.New)
 }
@@ -73,7 +72,6 @@ func DecryptChromePass(encryptPass []byte) (string, error) {
 	} else {
 		return "", &DecryptError{
 			err: passwordIsEmpty,
-			msg: fmt.Sprintf("password is %s", string(encryptPass)),
 		}
 	}
 }

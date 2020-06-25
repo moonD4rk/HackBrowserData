@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	passwordIsEmpty    = errors.New("decrypt fail, password is empty")
+	passwordIsEmpty = errors.New("decrypt fail, password is empty")
 )
 
 type DecryptError struct {
