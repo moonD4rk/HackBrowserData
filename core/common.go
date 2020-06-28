@@ -13,11 +13,6 @@ import (
 )
 
 const (
-	Chrome = "Chrome"
-	Safari = "Safari"
-)
-
-const (
 	bookmarkID       = "id"
 	bookmarkAdded    = "date_added"
 	bookmarkUrl      = "url"
@@ -27,7 +22,8 @@ const (
 )
 
 var (
-	FullData = new(BrowserData)
+	FullDataSlice []*BrowserData
+	FullData      = new(BrowserData)
 )
 
 type (
@@ -77,16 +73,16 @@ type (
 	}
 )
 
-func ChromeDB(dbname string) {
+func ParseResult(dbname string) {
 	switch dbname {
-	case utils.LoginData:
-		parseLogin()
 	case utils.Bookmarks:
 		parseBookmarks()
-	case utils.Cookies:
-		parseCookie()
 	case utils.History:
 		parseHistory()
+	case utils.Cookies:
+		parseCookie()
+	case utils.LoginData:
+		parseLogin()
 	}
 }
 
@@ -145,9 +141,18 @@ func parseLogin() {
 			UserName:    username,
 			encryptPass: pwd,
 			LoginUrl:    url,
-			CreateDate:  utils.TimeEpochFormat(create),
 		}
-		password, err = utils.DecryptChromePass(pwd)
+		if utils.VersionUnder80 {
+			password, err = utils.DecryptStringWithDPAPI(pwd)
+		} else {
+			password, err = utils.DecryptChromePass(pwd)
+		}
+		if create > time.Now().Unix() {
+			login.CreateDate = utils.TimeEpochFormat(create)
+		} else {
+			login.CreateDate = utils.TimeStampFormat(create)
+		}
+
 		login.Password = password
 		if err != nil {
 			log.Println(err)
@@ -201,7 +206,12 @@ func parseCookie() {
 			ExpireDate:   utils.TimeEpochFormat(expireDate),
 		}
 		// remove prefix 'v10'
-		value, err = utils.DecryptChromePass(encryptValue)
+		if utils.VersionUnder80 {
+			value, err = utils.DecryptStringWithDPAPI(encryptValue)
+		} else {
+			value, err = utils.DecryptChromePass(encryptValue)
+		}
+
 		cookie.Value = value
 		if _, ok := cookieMap[host]; ok {
 			cookieMap[host] = append(cookieMap[host], cookie)

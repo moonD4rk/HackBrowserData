@@ -14,6 +14,9 @@ import (
 
 var (
 	passwordIsEmpty = errors.New("decrypt fail, password is empty")
+
+	errBrowserNotSupported = errors.New("browser not supported")
+	VersionUnder80         bool
 )
 
 type DecryptError struct {
@@ -29,12 +32,40 @@ func (e *DecryptError) Unwrap() error {
 	return e.err
 }
 
+type Browser struct {
+	Name    string
+	DataDir string
+}
+
 const (
 	LoginData = "Login Data"
 	History   = "History"
 	Cookies   = "Cookies"
 	Bookmarks = "Bookmarks"
 )
+
+func ListBrowser() []string {
+	var l []string
+	for k := range browserList {
+		l = append(l, k)
+	}
+	return l
+}
+
+func GetDBPath(dir string, dbName ...string) (dbFile []string) {
+	for _, v := range dbName {
+		s, err := filepath.Glob(dir + v)
+		if err != nil && len(s) == 0 {
+			continue
+		}
+		if len(s) > 0 {
+			log.Debugf("Find %s File Success", v)
+			log.Debugf("%s file location is %s", v, s[0])
+			dbFile = append(dbFile, s[0])
+		}
+	}
+	return dbFile
+}
 
 func CopyDB(src, dst string) error {
 	locals, _ := filepath.Glob("*")
@@ -63,6 +94,11 @@ func IntToBool(a int) bool {
 		return false
 	}
 	return true
+}
+
+func TimeStampFormat(stamp int64) time.Time {
+	s1 := time.Unix(stamp, 0)
+	return s1
 }
 
 func TimeEpochFormat(epoch int64) time.Time {
@@ -101,9 +137,9 @@ func WriteFile(filename string, data []byte) error {
 	return err
 }
 
-func FormatFileName(dir, filename, format string) string {
+func FormatFileName(dir, browser, filename, format string) string {
 	r := strings.TrimSpace(strings.ToLower(filename))
-	p := path.Join(dir, fmt.Sprintf("%s.%s", r, format))
+	p := path.Join(dir, fmt.Sprintf("%s_%s.%s", r, browser, format))
 	return p
 }
 

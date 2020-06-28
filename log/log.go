@@ -8,6 +8,10 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+const (
+	Prefix = "[x]: "
+)
+
 var (
 	formatLogger *zap.SugaredLogger
 	levelMap     = map[string]zapcore.Level{
@@ -20,8 +24,8 @@ var (
 	}
 )
 
-func InitLog() {
-	logger := newLogger("debug")
+func InitLog(level string) {
+	logger := newLogger(level)
 	formatLogger = logger.Sugar()
 }
 

