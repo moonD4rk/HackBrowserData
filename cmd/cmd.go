@@ -6,6 +6,7 @@ import (
 	"hack-browser-data/utils"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/urfave/cli/v2"
 )
@@ -20,31 +21,44 @@ var (
 
 func Execute() {
 	app := &cli.App{
-		Name:    "hack-browser-data",
-		Usage:   "export passwords/cookies/history/bookmarks from browser",
+		Name:  "hack-browser-data",
+		Usage: "export passwords/cookies/history/bookmarks from browser",
+		UsageText: "[hack-browser-data -b chrome -f json -dir results -e all]\n 	Get all data(password/cookie/history/bookmark) from chrome",
 		Version: "0.1.0",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{Name: "verbose", Aliases: []string{"vv"}, Destination: &verbose, Value: false, Usage: "verbose"},
-			&cli.StringFlag{Name: "browser", Aliases: []string{"b"}, Destination: &browser, Value: "all", Usage: "browser name, all|chrome|safari"},
-			&cli.StringFlag{Name: "results-dir", Aliases: []string{"d"}, Destination: &exportDir, Value: "results", Usage: "export dir"},
+			&cli.StringFlag{Name: "browser", Aliases: []string{"b"}, Destination: &browser, Value: "chrome", Usage: "available browsers: " + strings.Join(utils.ListBrowser(), "|")},
+			&cli.StringFlag{Name: "results-dir", Aliases: []string{"dir"}, Destination: &exportDir, Value: "results", Usage: "export dir"},
 			&cli.StringFlag{Name: "format", Aliases: []string{"f"}, Destination: &outputFormat, Value: "csv", Usage: "result format, csv|json"},
 			&cli.StringFlag{Name: "export-data", Aliases: []string{"e"}, Destination: &exportData, Value: "all", Usage: "all|password|cookie|history|bookmark"},
 		},
+		HideHelpCommand: true,
+		HideVersion:     true,
 		Action: func(c *cli.Context) error {
-			log.InitLog()
+			if verbose {
+				log.InitLog("debug")
+			} else {
+				log.InitLog("error")
+			}
+
 			utils.MakeDir(exportDir)
+			browserDir, key, err := utils.PickBrowser(browser)
+			if err != nil {
+				log.Fatal(err, " Available browsers: "+strings.Join(utils.ListBrowser(), "|"))
+			}
+			err = utils.InitKey(key)
+			if err != nil {
+				log.Fatal(err, "Please Open an issue on GitHub")
+			}
+
 			var fileList []string
 			switch exportData {
 			case "all":
-				fileList = utils.GetDBPath(utils.LoginData, utils.History, utils.Bookmarks, utils.Cookies)
+				fileList = utils.GetDBPath(browserDir, utils.LoginData, utils.History, utils.Bookmarks, utils.Cookies)
 			case "password", "cookie", "history", "bookmark":
-				fileList = utils.GetDBPath(exportData)
+				fileList = utils.GetDBPath(browserDir, exportData)
 			default:
-				log.Fatal("choose one from all|password|cookie|history|bookmark")
-			}
-			err := utils.InitChromeKey()
-			if err != nil {
-				panic(err)
+				log.Fatal("Choose one from all|password|cookie|history|bookmark")
 			}
 			for _, v := range fileList {
 				dst := filepath.Base(v)
@@ -53,15 +67,15 @@ func Execute() {
 					log.Println(err)
 					continue
 				}
-				core.ChromeDB(dst)
+				core.ParseResult(dst)
 			}
 			if outputFormat == "json" {
-				err := core.FullData.OutPutJson(exportDir, outputFormat)
+				err := core.FullData.OutPutJson(exportDir, browser, outputFormat)
 				if err != nil {
 					log.Error(err)
 				}
 			} else {
-				err := core.FullData.OutPutCsv(exportDir, outputFormat)
+				err := core.FullData.OutPutCsv(exportDir, browser, outputFormat)
 				if err != nil {
 					log.Error(err)
 				}
