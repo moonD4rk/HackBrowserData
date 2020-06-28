@@ -84,26 +84,6 @@ func InitKey(key string) error {
 	}
 }
 
-//func GetDBPath(dir string, dbName ...string) (dbFile []string) {
-//	var dbPath []string
-//	chromeDBPath := os.Getenv("USERPROFILE") + dir
-//	for _, v := range dbName {
-//		dbPath = append(dbPath, chromeDBPath+v)
-//	}
-//	for _, v := range dbPath {
-//		s, err := filepath.Glob(v)
-//		if err != nil && len(s) == 0 {
-//			continue
-//		}
-//		if len(s) > 0 {
-//			log.Debugf("Find %s File Success", v)
-//			log.Debugf("%s file location is %s", v, s[0])
-//			dbFile = append(dbFile, s[0])
-//		}
-//	}
-//	return dbFile
-//}
-
 func DecryptChromePass(encryptPass []byte) (string, error) {
 	if len(encryptPass) > 15 {
 		// remove prefix 'v10'
