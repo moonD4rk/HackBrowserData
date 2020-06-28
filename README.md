@@ -14,6 +14,8 @@
 git clone https://github.com/moonD4rk/HackBrowserData
 
 cd HackBrowserData && go mod tidy
+
+go build
 ```
 
 ### 运行
@@ -23,35 +25,41 @@ cd HackBrowserData && go mod tidy
 NAME:
    hack-browser-data - export passwords/cookies/history/bookmarks from browser
 
-VERSION:
-   0.1.0
-
-COMMANDS:
-   help, h  Shows a list of commands or help for one command
+USAGE:
+   [hack-browser-data -b chrome -f json -dir results -e all]
+   Get all data(password/cookie/history/bookmark) from chrome
 
 GLOBAL OPTIONS:
-   --browser value, -b value      browser name, all|chrome|safari (default: "all")
-   --results-dir value, -d value  export dir (default: "results")
-   --format value, -f value       result format, csv|json (default: "csv")
-   --export-data value, -e value  all|password|cookie|history|bookmark (default: "all")
-   --help, -h                     show help (default: false)
-   --version, -v                  print the version (default: false)
+   --verbose, --vv                   verbose (default: false)
+   --browser value, -b value         available browsers: edge|chrome (default: "chrome")
+   --results-dir value, --dir value  export dir (default: "results")
+   --format value, -f value          result format, csv|json (default: "csv")
+   --export-data value, -e value     all|password|cookie|history|bookmark (default: "all")
+   --help, -h                        show help (default: false)
+
 ```
 
 
 
 ### 目前支持平台
 
-| Browser                           | Password | Cookie | Bookmark | History |
-| :-------------------------------- | :------: | :----: | :------: | :-----: |
-| Windows Chrome                    |    ✔     |   ✔    |    ✔     |    ✔    |
-| MacOS Chrome<br />(need password) |    ✔     |   ✔    |    ✔     |    ✔    |
-| Linux Chrome                      |    ✖     |   ✖    |    ✖     |    ✖    |
-| Windows Edge                      |    ✖     |   ✖    |    ✖     |    ✖    |
-| MacOS Edge                        |    ✖     |   ✖    |    ✖     |    ✖    |
-| Linux Edge                        |    ✖     |   ✖    |    ✖     |    ✖    |
-| MacOS Safari                      |    ✖     |   ✖    |    ✖     |    ✖    |
-| MacOS Keychain                    |    ✖     |        |          |         |
+
+
+| Browser                             | Password | Cookie | Bookmark | History |
+| :---------------------------------- | :------: | :----: | :------: | :-----: |
+| Chrome [Windows]                    |    ✔     |   ✔    |    ✔     |    ✔    |
+| Chrome [MacOS]<br />(need password) |    ✔     |   ✔    |    ✔     |    ✔    |
+| Edge [Windows]                      |    ✔     |   ✔    |    ✔     |    ✔    |
+| Edge [MacOS]<br />(need password)   |    ✔     |   ✔    |    ✔     |    ✔    |
+| 360 Secure Browser [Windows]        |    ✔     |   ✔    |    ✔     |    ✔    |
+| 360 Speed Browser [Windows]         |    ✖     |   ✖    |    ✖     |    ✖    |
+| FireFox [Windows]                   |    ✖     |   ✖    |    ✖     |    ✖    |
+| FireFox [MacOS]                     |    ✖     |   ✖    |    ✖     |    ✖    |
+| Safari [MacOS]                      |    ✖     |   ✖    |    ✖     |    ✖    |
+| Internet Explorer [Windows]         |    ✖     |   ✖    |    ✖     |    ✖    |
+| QQ Browser [Windows]                |    ✖     |   ✖    |    ✖     |    ✖    |
+| Chrome [Linux]                      |    ✖     |   ✖    |    ✖     |    ✖    |
+
 
 ### Todo List
 
@@ -72,6 +80,6 @@ Based on those two lists, I woulf support those browser in the future
 - [x] Chrome
 - [ ] Safari
 - [ ] Firefox
-- [ ] Edge
-- [ ] 360 browser
+- [x] Edge
+- [x] 360 browser
 - [ ] IE
