@@ -139,6 +139,7 @@ func WriteFile(filename string, data []byte) error {
 
 func FormatFileName(dir, browser, filename, format string) string {
 	r := strings.TrimSpace(strings.ToLower(filename))
+	r = strings.Replace(r, " ", "_", -1)
 	p := path.Join(dir, fmt.Sprintf("%s_%s.%s", r, browser, format))
 	return p
 }
