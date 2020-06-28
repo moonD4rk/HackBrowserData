@@ -20,10 +20,10 @@ go build
 
 ### 运行
 
-```bash
+```shell
 ./hack-browser-data -h
 NAME:
-   hack-browser-data - export passwords/cookies/history/bookmarks from browser
+   hack-browser-data - Get passwords/cookies/history/bookmarks from browser
 
 USAGE:
    [hack-browser-data -b chrome -f json -dir results -e all]
@@ -39,25 +39,32 @@ GLOBAL OPTIONS:
 
 ```
 
+```shell
+✗ ./hack-browser-data -b chrome -f json -dir results -e all
+[x]:  Get 538 bookmarks, filename is results/bookmarks_chrome.json 
+[x]:  Get 1415 cookies, filename is results/cookies_chrome.json 
+[x]:  Get 34050 history, filename is results/history_chrome.json 
+[x]:  Get 357 login data, filename is results/login_data_chrome.json 
+```
+
 
 
 ### 目前支持平台
 
-
-
 | Browser                             | Password | Cookie | Bookmark | History |
 | :---------------------------------- | :------: | :----: | :------: | :-----: |
-| Chrome [Windows]                    |    ✔     |   ✔    |    ✔     |    ✔    |
+| Chrome version < 80 [Windows]       |    ✔     |   ✔    |    ✔     |    ✔    |
+| Chrome version > 80 [Windows]       |    ✔     |   ✔    |    ✔     |    ✔    |
 | Chrome [MacOS]<br />(need password) |    ✔     |   ✔    |    ✔     |    ✔    |
 | Edge [Windows]                      |    ✔     |   ✔    |    ✔     |    ✔    |
 | Edge [MacOS]<br />(need password)   |    ✔     |   ✔    |    ✔     |    ✔    |
 | 360 Secure Browser [Windows]        |    ✔     |   ✔    |    ✔     |    ✔    |
-| 360 Speed Browser [Windows]         |    ✖     |   ✖    |    ✖     |    ✖    |
+| QQ Browser [Windows]                |    ✔     |   ✔    |    ✔     |    ✔    |
 | FireFox [Windows]                   |    ✖     |   ✖    |    ✖     |    ✖    |
 | FireFox [MacOS]                     |    ✖     |   ✖    |    ✖     |    ✖    |
 | Safari [MacOS]                      |    ✖     |   ✖    |    ✖     |    ✖    |
 | Internet Explorer [Windows]         |    ✖     |   ✖    |    ✖     |    ✖    |
-| QQ Browser [Windows]                |    ✖     |   ✖    |    ✖     |    ✖    |
+| 360 Speed Browser [Windows]         |    ✖     |   ✖    |    ✖     |    ✖    |
 | Chrome [Linux]                      |    ✖     |   ✖    |    ✖     |    ✖    |
 
 
@@ -78,8 +85,10 @@ GLOBAL OPTIONS:
 Based on those two lists, I woulf support those browser in the future
 
 - [x] Chrome
+- [x] QQ browser
+- [x] Edge
+- [x] 360 secure browser
+- [ ] 360 speed browser
 - [ ] Safari
 - [ ] Firefox
-- [x] Edge
-- [x] 360 browser
 - [ ] IE
