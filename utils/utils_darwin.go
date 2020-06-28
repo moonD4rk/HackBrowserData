@@ -80,20 +80,6 @@ func InitKey(key string) error {
 	return err
 }
 
-//func GetDBPath(dir string, dbName ...string) (dbFile []string) {
-//	for _, v := range dbName {
-//		s, err := filepath.Glob(dir + v)
-//		if err != nil && len(s) == 0 {
-//			continue
-//		}
-//		if len(s) > 0 {
-//			log.Debugf("Find %s File Success", v)
-//			log.Debugf("%s file location is %s", v, s[0])
-//			dbFile = append(dbFile, s[0])
-//		}
-//	}
-//	return dbFile
-//}
 
 func decryptChromeKey(chromePass []byte) {
 	chromeKey = pbkdf2.Key(chromePass, chromeSalt, 1003, 16, sha1.New)
