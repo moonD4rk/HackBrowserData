@@ -14,15 +14,15 @@ import (
 )
 
 const (
-	chromeDir    = "/Users/*/Library/Application Support/Google/Chrome/*/"
-	edgeDir      = "/Users/*/Library/Application Support/Microsoft Edge/*/"
-	mac360Secure = "/Users/*/Library/Application Support/360Chrome/*/"
+	chromeDir = "/Users/*/Library/Application Support/Google/Chrome/*/"
+	edgeDir   = "/Users/*/Library/Application Support/Microsoft Edge/*/"
+	//mac360Secure = "/Users/*/Library/Application Support/360Chrome/*/"
 )
 
 const (
-	Chrome        = "Chrome"
-	Edge          = "Microsoft Edge"
-	SecureBrowser = "Chromium"
+	Chrome = "Chrome"
+	Edge   = "Microsoft Edge"
+	//Secure360 = "360"
 )
 
 var (
@@ -79,7 +79,6 @@ func InitKey(key string) error {
 	decryptChromeKey(chromePass)
 	return err
 }
-
 
 func decryptChromeKey(chromePass []byte) {
 	chromeKey = pbkdf2.Key(chromePass, chromeSalt, 1003, 16, sha1.New)

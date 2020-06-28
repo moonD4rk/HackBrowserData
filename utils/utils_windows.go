@@ -16,10 +16,12 @@ import (
 const (
 	chromeDir        = "/AppData/Local/Google/Chrome/User Data/*/"
 	chromeKeyFile    = "/AppData/Local/Google/Chrome/User Data/Local State"
-	secure360Dir     = "/AppData/Local/360chrome/Chrome/User Data/*/"
-	secure360KeyFile = ""
 	edgeDir          = "/AppData/Local/Microsoft/Edge/User Data/*/"
 	edgeKeyFile      = "/AppData/Local/Microsoft/Edge/User Data/Local State"
+	secure360Dir     = "/AppData/Local/360chrome/Chrome/User Data/*/"
+	secure360KeyFile = ""
+	qqBrowserDir     = "/AppData/Local/Tencent/QQBrowser/User Data/*/"
+	qqBrowserKeyFile = ""
 )
 
 var (
@@ -41,9 +43,12 @@ var (
 			secure360Dir,
 			secure360KeyFile,
 		},
+		"qq": {
+			qqBrowserDir,
+			qqBrowserKeyFile,
+		},
 	}
 )
-
 
 func PickBrowser(name string) (browserDir, key string, err error) {
 	name = strings.ToLower(name)
