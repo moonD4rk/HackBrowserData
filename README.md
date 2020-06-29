@@ -53,18 +53,18 @@ GLOBAL OPTIONS:
 
 | Browser                             | Password | Cookie | Bookmark | History |
 | :---------------------------------- | :------: | :----: | :------: | :-----: |
-| Chrome version < 80 [Windows]       |    ✔     |   ✔    |    ✔     |    ✔    |
+| Chrome version <= 80 [Windows]       |    ✔     |   ✔    |    ✔     |    ✔    |
 | Chrome version > 80 [Windows]       |    ✔     |   ✔    |    ✔     |    ✔    |
-| Chrome [MacOS]<br />(need password) |    ✔     |   ✔    |    ✔     |    ✔    |
+| Chrome [MacOS]<br />(require password) |    ✔     |   ✔    |    ✔     |    ✔    |
 | Edge [Windows]                      |    ✔     |   ✔    |    ✔     |    ✔    |
-| Edge [MacOS]<br />(need password)   |    ✔     |   ✔    |    ✔     |    ✔    |
-| 360 Secure Browser [Windows]        |    ✔     |   ✔    |    ✔     |    ✔    |
+| Edge [MacOS]<br />(require password)   |    ✔     |   ✔    |    ✔     |    ✔    |
+| 360 Speed Browser [Windows]        |    ✔     |   ✔    |    ✔     |    ✔    |
 | QQ Browser [Windows]                |    ✔     |   ✔    |    ✔     |    ✔    |
 | FireFox [Windows]                   |    ✖     |   ✖    |    ✖     |    ✖    |
 | FireFox [MacOS]                     |    ✖     |   ✖    |    ✖     |    ✖    |
 | Safari [MacOS]                      |    ✖     |   ✖    |    ✖     |    ✖    |
 | Internet Explorer [Windows]         |    ✖     |   ✖    |    ✖     |    ✖    |
-| 360 Speed Browser [Windows]         |    ✖     |   ✖    |    ✖     |    ✖    |
+| 360 Secure Browser [Windows]         |    ✖     |   ✖    |    ✖     |    ✖    |
 | Chrome [Linux]                      |    ✖     |   ✖    |    ✖     |    ✖    |
 
 
@@ -82,13 +82,13 @@ GLOBAL OPTIONS:
 | :----- | :------: | :-----: | :--------: | :---: | :------------: |
 | 39.85% |  22.26%  |  9.28%  |    6.5%    | 5.65% |     4.74%      |
 
-Based on those two lists, I woulf support those browser in the future
+Based on those two lists, I would support those browsers in the future
 
 - [x] Chrome
 - [x] QQ browser
 - [x] Edge
-- [x] 360 secure browser
-- [ ] 360 speed browser
+- [x] 360 speed browser
+- [ ] 360 secure browser
 - [ ] Safari
 - [ ] Firefox
 - [ ] IE

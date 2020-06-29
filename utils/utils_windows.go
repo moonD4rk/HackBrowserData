@@ -18,8 +18,8 @@ const (
 	chromeKeyFile    = "/AppData/Local/Google/Chrome/User Data/Local State"
 	edgeDir          = "/AppData/Local/Microsoft/Edge/User Data/*/"
 	edgeKeyFile      = "/AppData/Local/Microsoft/Edge/User Data/Local State"
-	secure360Dir     = "/AppData/Local/360chrome/Chrome/User Data/*/"
-	secure360KeyFile = ""
+	speed360Dir      = "/AppData/Local/360chrome/Chrome/User Data/*/"
+	speed360KeyFile  = ""
 	qqBrowserDir     = "/AppData/Local/Tencent/QQBrowser/User Data/*/"
 	qqBrowserKeyFile = ""
 )
@@ -39,9 +39,9 @@ var (
 			edgeDir,
 			edgeKeyFile,
 		},
-		"360secure": {
-			secure360Dir,
-			secure360KeyFile,
+		"360speed": {
+			speed360Dir,
+			speed360KeyFile,
 		},
 		"qq": {
 			qqBrowserDir,
