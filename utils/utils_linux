@@ -1,0 +1,21 @@
+//package utils
+//
+
+//var (
+//	browserList = map[string]struct {
+//		Dir     string
+//		Command string
+//	}{
+//		"chrome": {
+//			chromeDir,
+//			Chrome,
+//		},
+//		"edge": {
+//			edgeDir,
+//			Edge,
+//		},
+//	}
+//)
+
+
+
