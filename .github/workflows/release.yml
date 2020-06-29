@@ -43,7 +43,7 @@ jobs:
               run: echo "::set-env name=RELEASE::hack-browser-data-${{ github.event.release.tag_name}}-${{ matrix.releaseos}}-64bit"
             - uses: actions/checkout@v2
             - name: Build ${{ matrix.goos }}/${{ matrix.arch }}
-              run: go build -o ${{ matrix.bin }}
+              run: go build -ldflags '-w -s' -o ${{ matrix.bin }}
               env:
                 GOOS: ${{ matrix.goos }}
                 GOARCH: ${{ matrix.arch }}
@@ -71,6 +71,7 @@ jobs:
                   echo "Creating release $RELEASE_DIR"
                   for BINARY in $RELEASE_DIR/*
                   do
+                    chmod 777 $BINARY;
                     cp $BINARY .;
                     zip -r releases/$(basename $RELEASE_DIR).zip \
                       $(basename ${BINARY}) \
