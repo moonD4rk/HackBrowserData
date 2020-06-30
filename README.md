@@ -1,6 +1,6 @@
 # HackBrowserData
 
-hack-browser-data is an open-source tool that could help you export data from browser. It supports the most popular browsers on the market and runs on W indows and macOS.
+hack-browser-data is an open-source tool that could help you export data from browser. It supports the most popular browsers on the market and runs on Windows and macOS.
 
 ### Supported Browser
 
