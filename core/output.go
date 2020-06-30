@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
-	"io"
 	"os"
 
-	"github.com/gocarina/gocsv"
+	"github.com/jszwec/csvutil"
 )
+
+var utf8Bom = []byte{239, 187, 191}
 
 func (b BrowserData) OutPutCsv(dir, browser, format string) error {
 	switch {
@@ -20,17 +21,18 @@ func (b BrowserData) OutPutCsv(dir, browser, format string) error {
 		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
 		defer file.Close()
 		if err != nil {
-			log.Errorf("create file %s fail", filename)
+			log.Errorf("create file %s fail %s", filename, err)
 		}
-		gocsv.SetCSVWriter(func(out io.Writer) *gocsv.SafeCSVWriter {
-			writer := csv.NewWriter(out)
-			writer.Comma = '	'
-			return gocsv.NewSafeCSVWriter(writer)
-		})
-		err = gocsv.MarshalFile(b.BookmarkSlice, file)
-		if err != nil {
-			log.Error(err)
+		file.Write(utf8Bom)
+		w := csv.NewWriter(file)
+		w.Comma = ';'
+		enc := csvutil.NewEncoder(w)
+		for _, u := range b.BookmarkSlice {
+			if err := enc.Encode(u); err != nil {
+				log.Error(err)
+			}
 		}
+		w.Flush()
 		fmt.Printf("%s Get %d bookmarks, filename is %s \n", log.Prefix, len(b.BookmarkSlice), filename)
 		fallthrough
 	case len(b.LoginDataSlice) != 0:
@@ -40,10 +42,16 @@ func (b BrowserData) OutPutCsv(dir, browser, format string) error {
 		if err != nil {
 			log.Errorf("create file %s fail", filename)
 		}
-		err = gocsv.MarshalFile(b.LoginDataSlice, file)
-		if err != nil {
-			log.Error(err)
+		file.Write(utf8Bom)
+		w := csv.NewWriter(file)
+		w.Comma = ';'
+		enc := csvutil.NewEncoder(w)
+		for _, u := range b.LoginDataSlice {
+			if err := enc.Encode(u); err != nil {
+				log.Error(err)
+			}
 		}
+		w.Flush()
 		fmt.Printf("%s Get %d login data, filename is %s \n", log.Prefix, len(b.LoginDataSlice), filename)
 		fallthrough
 	case len(b.CookieMap) != 0:
@@ -57,10 +65,16 @@ func (b BrowserData) OutPutCsv(dir, browser, format string) error {
 		for _, v := range b.CookieMap {
 			tempSlice = append(tempSlice, v...)
 		}
-		err = gocsv.MarshalFile(tempSlice, file)
-		if err != nil {
-			log.Error(err)
+		file.Write(utf8Bom)
+		w := csv.NewWriter(file)
+		w.Comma = ';'
+		enc := csvutil.NewEncoder(w)
+		for _, u := range tempSlice {
+			if err := enc.Encode(u); err != nil {
+				log.Error(err)
+			}
 		}
+		w.Flush()
 		fmt.Printf("%s Get %d cookies, filename is %s \n", log.Prefix, len(b.CookieMap), filename)
 		fallthrough
 	case len(b.HistorySlice) != 0:
@@ -70,10 +84,16 @@ func (b BrowserData) OutPutCsv(dir, browser, format string) error {
 		if err != nil {
 			log.Errorf("create file %s fail", filename)
 		}
-		err = gocsv.MarshalFile(b.HistorySlice, file)
-		if err != nil {
-			log.Error(err)
+		file.Write(utf8Bom)
+		w := csv.NewWriter(file)
+		w.Comma = ';'
+		enc := csvutil.NewEncoder(w)
+		for _, u := range b.HistorySlice {
+			if err := enc.Encode(u); err != nil {
+				log.Error(err)
+			}
 		}
+		w.Flush()
 		fmt.Printf("%s Get %d login data, filename is %s \n", log.Prefix, len(b.HistorySlice), filename)
 	}
 	return nil

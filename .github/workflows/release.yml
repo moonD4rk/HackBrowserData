@@ -75,17 +75,7 @@ jobs:
                     cp $BINARY .;
                     zip -r releases/$(basename $RELEASE_DIR).zip \
                       $(basename ${BINARY}) \
-                      static/js/dist \
-                      static/js/src/vendor/ckeditor \
-                      static/css/dist \
-                      static/images \
-                      static/font \
-                      static/db \
-                      db \
-                      templates \
                       README.md \
-                      VERSION \
-                      LICENSE \
                       config.json;
                     rm $BINARY;
                   done
