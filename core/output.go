@@ -2,7 +2,6 @@ package core
 
 import (
 	"bytes"
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"hack-browser-data/log"
@@ -24,15 +23,8 @@ func (b BrowserData) OutPutCsv(dir, browser, format string) error {
 			log.Errorf("create file %s fail %s", filename, err)
 		}
 		file.Write(utf8Bom)
-		w := csv.NewWriter(file)
-		w.Comma = ';'
-		enc := csvutil.NewEncoder(w)
-		for _, u := range b.BookmarkSlice {
-			if err := enc.Encode(u); err != nil {
-				log.Error(err)
-			}
-		}
-		w.Flush()
+		data, err := csvutil.Marshal(b.BookmarkSlice)
+		file.Write(data)
 		fmt.Printf("%s Get %d bookmarks, filename is %s \n", log.Prefix, len(b.BookmarkSlice), filename)
 		fallthrough
 	case len(b.LoginDataSlice) != 0:
@@ -43,15 +35,8 @@ func (b BrowserData) OutPutCsv(dir, browser, format string) error {
 			log.Errorf("create file %s fail", filename)
 		}
 		file.Write(utf8Bom)
-		w := csv.NewWriter(file)
-		w.Comma = ';'
-		enc := csvutil.NewEncoder(w)
-		for _, u := range b.LoginDataSlice {
-			if err := enc.Encode(u); err != nil {
-				log.Error(err)
-			}
-		}
-		w.Flush()
+		data, err := csvutil.Marshal(b.LoginDataSlice)
+		file.Write(data)
 		fmt.Printf("%s Get %d login data, filename is %s \n", log.Prefix, len(b.LoginDataSlice), filename)
 		fallthrough
 	case len(b.CookieMap) != 0:
@@ -66,15 +51,8 @@ func (b BrowserData) OutPutCsv(dir, browser, format string) error {
 			tempSlice = append(tempSlice, v...)
 		}
 		file.Write(utf8Bom)
-		w := csv.NewWriter(file)
-		w.Comma = ';'
-		enc := csvutil.NewEncoder(w)
-		for _, u := range tempSlice {
-			if err := enc.Encode(u); err != nil {
-				log.Error(err)
-			}
-		}
-		w.Flush()
+		data, err := csvutil.Marshal(tempSlice)
+		file.Write(data)
 		fmt.Printf("%s Get %d cookies, filename is %s \n", log.Prefix, len(b.CookieMap), filename)
 		fallthrough
 	case len(b.HistorySlice) != 0:
@@ -85,15 +63,8 @@ func (b BrowserData) OutPutCsv(dir, browser, format string) error {
 			log.Errorf("create file %s fail", filename)
 		}
 		file.Write(utf8Bom)
-		w := csv.NewWriter(file)
-		w.Comma = ';'
-		enc := csvutil.NewEncoder(w)
-		for _, u := range b.HistorySlice {
-			if err := enc.Encode(u); err != nil {
-				log.Error(err)
-			}
-		}
-		w.Flush()
+		data, err := csvutil.Marshal(b.HistorySlice)
+		file.Write(data)
 		fmt.Printf("%s Get %d login data, filename is %s \n", log.Prefix, len(b.HistorySlice), filename)
 	}
 	return nil
