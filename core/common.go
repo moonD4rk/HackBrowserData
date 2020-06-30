@@ -22,13 +22,11 @@ const (
 )
 
 var (
-	FullDataSlice []*BrowserData
-	FullData      = new(BrowserData)
+	FullData = new(BrowserData)
 )
 
 type (
 	BrowserData struct {
-		BrowserName string
 		LoginDataSlice
 		BookmarkSlice
 		CookieMap
@@ -47,17 +45,17 @@ type (
 	}
 	bookmarks struct {
 		ID        int64
-		DateAdded time.Time
-		URL       string
 		Name      string
 		Type      string
+		URL       string
+		DateAdded time.Time
 	}
 	cookies struct {
+		Host         string
+		Path         string
 		KeyName      string
 		encryptValue []byte
 		Value        string
-		Host         string
-		Path         string
 		IsSecure     bool
 		IsHTTPOnly   bool
 		HasExpire    bool
@@ -66,8 +64,8 @@ type (
 		ExpireDate   time.Time
 	}
 	history struct {
-		Url           string
 		Title         string
+		Url           string
 		VisitCount    int
 		LastVisitTime time.Time
 	}
