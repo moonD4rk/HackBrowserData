@@ -22,7 +22,7 @@ var (
 func Execute() {
 	app := &cli.App{
 		Name:  "hack-browser-data",
-		Usage: "export passwords/cookies/history/bookmarks from browser",
+		Usage: "Export passwords/cookies/history/bookmarks from browser",
 		UsageText: "[hack-browser-data -b chrome -f json -dir results -e all]\n 	Get all data(password/cookie/history/bookmark) from chrome",
 		Version: "0.1.0",
 		Flags: []cli.Flag{
