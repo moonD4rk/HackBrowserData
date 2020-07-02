@@ -14,38 +14,38 @@ import (
 )
 
 const (
-	chromeDir        = "/AppData/Local/Google/Chrome/User Data/*/"
-	chromeKeyFile    = "/AppData/Local/Google/Chrome/User Data/Local State"
-	edgeDir          = "/AppData/Local/Microsoft/Edge/User Data/*/"
-	edgeKeyFile      = "/AppData/Local/Microsoft/Edge/User Data/Local State"
-	speed360Dir      = "/AppData/Local/360chrome/Chrome/User Data/*/"
-	speed360KeyFile  = ""
-	qqBrowserDir     = "/AppData/Local/Tencent/QQBrowser/User Data/*/"
-	qqBrowserKeyFile = ""
+	chromeProfilePath    = "/AppData/Local/Google/Chrome/User Data/*/"
+	chromeKeyPath        = "/AppData/Local/Google/Chrome/User Data/Local State"
+	edgeProfilePath      = "/AppData/Local/Microsoft/Edge/User Data/*/"
+	edgeKeyPath          = "/AppData/Local/Microsoft/Edge/User Data/Local State"
+	speed360ProfilePath  = "/AppData/Local/360chrome/Chrome/User Data/*/"
+	speed360KeyPath      = ""
+	qqBrowserProfilePath = "/AppData/Local/Tencent/QQBrowser/User Data/*/"
+	qqBrowserKeyPath     = ""
 )
 
 var (
 	chromeKey []byte
 
 	browserList = map[string]struct {
-		Dir string
-		Key string
+		ProfilePath string
+		KeyPath     string
 	}{
 		"chrome": {
-			chromeDir,
-			chromeKeyFile,
+			chromeProfilePath,
+			chromeKeyPath,
 		},
 		"edge": {
-			edgeDir,
-			edgeKeyFile,
+			edgeProfilePath,
+			edgeKeyPath,
 		},
 		"360speed": {
-			speed360Dir,
-			speed360KeyFile,
+			speed360ProfilePath,
+			speed360KeyPath,
 		},
 		"qq": {
-			qqBrowserDir,
-			qqBrowserKeyFile,
+			qqBrowserProfilePath,
+			qqBrowserKeyPath,
 		},
 	}
 )
@@ -53,10 +53,10 @@ var (
 func PickBrowser(name string) (browserDir, key string, err error) {
 	name = strings.ToLower(name)
 	if choice, ok := browserList[name]; ok {
-		if choice.Key != "" {
-			return os.Getenv("USERPROFILE") + choice.Dir, os.Getenv("USERPROFILE") + choice.Key, nil
+		if choice.KeyPath != "" {
+			return os.Getenv("USERPROFILE") + choice.ProfilePath, os.Getenv("USERPROFILE") + choice.KeyPath, nil
 		} else {
-			return os.Getenv("USERPROFILE") + choice.Dir, "", nil
+			return os.Getenv("USERPROFILE") + choice.ProfilePath, "", nil
 		}
 	}
 	return "", "", errBrowserNotSupported
