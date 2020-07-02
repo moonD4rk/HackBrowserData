@@ -14,15 +14,10 @@ import (
 )
 
 const (
-	chromeDir = "/Users/*/Library/Application Support/Google/Chrome/*/"
-	edgeDir   = "/Users/*/Library/Application Support/Microsoft Edge/*/"
-	//mac360Secure = "/Users/*/Library/Application Support/360Chrome/*/"
-)
-
-const (
-	Chrome = "Chrome"
-	Edge   = "Microsoft Edge"
-	//Secure360 = "360"
+	chromeProfilePath = "/Users/*/Library/Application Support/Google/Chrome/*/"
+	chromeCommand     = "Chrome"
+	edgeProfilePath   = "/Users/*/Library/Application Support/Microsoft Edge/*/"
+	edgeCommand       = "Microsoft Edge"
 )
 
 var (
@@ -31,16 +26,16 @@ var (
 	chromeSalt  = []byte("saltysalt")
 	chromeKey   []byte
 	browserList = map[string]struct {
-		Dir     string
-		Command string
+		ProfilePath string
+		Command     string
 	}{
 		"chrome": {
-			chromeDir,
-			Chrome,
+			chromeProfilePath,
+			chromeCommand,
 		},
 		"edge": {
-			edgeDir,
-			Edge,
+			edgeProfilePath,
+			edgeCommand,
 		},
 	}
 )
@@ -52,7 +47,7 @@ func DecryptStringWithDPAPI(data []byte) (string, error) {
 func PickBrowser(name string) (browserDir, command string, err error) {
 	name = strings.ToLower(name)
 	if choice, ok := browserList[name]; ok {
-		return choice.Dir, choice.Command, err
+		return choice.ProfilePath, choice.Command, err
 	}
 	return "", "", errBrowserNotSupported
 }
