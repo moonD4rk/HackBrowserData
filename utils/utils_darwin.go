@@ -14,10 +14,12 @@ import (
 )
 
 const (
-	chromeProfilePath = "/Users/*/Library/Application Support/Google/Chrome/*/"
-	chromeCommand     = "Chrome"
-	edgeProfilePath   = "/Users/*/Library/Application Support/Microsoft Edge/*/"
-	edgeCommand       = "Microsoft Edge"
+	chromeProfilePath  = "/Users/*/Library/Application Support/Google/Chrome/*/"
+	chromeCommand      = "Chrome"
+	edgeProfilePath    = "/Users/*/Library/Application Support/Microsoft Edge/*/"
+	edgeCommand        = "Microsoft Edge"
+	fireFoxProfilePath = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-release/"
+	fireFoxCommand     = ""
 )
 
 var (
@@ -36,6 +38,10 @@ var (
 		"edge": {
 			edgeProfilePath,
 			edgeCommand,
+		},
+		"firefox": {
+			fireFoxProfilePath,
+			fireFoxCommand,
 		},
 	}
 )
