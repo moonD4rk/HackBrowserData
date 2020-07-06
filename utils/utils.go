@@ -149,3 +149,15 @@ func MakeDir(dirName string) {
 		err = os.Mkdir(dirName, 0700)
 	}
 }
+
+func paddingZero(s []byte, l int) []byte {
+	h := l - len(s)
+	if h <= 0 {
+		return s
+	} else {
+		for i := len(s); i < l; i++ {
+			s = append(s, 0)
+		}
+		return s
+	}
+}
