@@ -13,7 +13,7 @@ hack-browser-data is an open-source tool that could help you export data from br
 | Edge [MacOS]<br />(require password)   |    ✅    |   ✅   |    ✅    |    ✅    |
 | 360 Speed Browser [Windows]        |    ✅    |   ✅   |    ✅    |    ✅    |
 | QQ Browser [Windows]                |    ✅    |   ✅   |    ✅    |    ✅    |
-| FireFox [MacOS]    |   ✅   |   ❌   |    ❌    |    ❌    |
+| FireFox [MacOS]    |   ✅   |   ✅   |    ❌    |    ❌    |
 | FireFox [Windows]    |    ❌    |   ❌   |    ❌    |    ❌    |
 | Safari [MacOS]                      |    ❌    |   ❌   |    ❌    |    ❌    |
 | Internet Explorer [Windows]         |    ❌    |   ❌   |    ❌    |    ❌    |
