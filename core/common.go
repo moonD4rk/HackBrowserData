@@ -48,6 +48,7 @@ type (
 	loginData      struct {
 		UserName    string
 		encryptPass []byte
+		encryptUser []byte
 		Password    string
 		LoginUrl    string
 		CreateDate  time.Time
@@ -90,6 +91,8 @@ func ParseResult(dbname string) {
 		parseCookie()
 	case utils.LoginData:
 		parseLogin()
+	case utils.FirefoxCookie:
+		parseFirefoxCookie()
 	}
 }
 
@@ -449,13 +452,65 @@ func DecodeKey4() {
 		blockMode2 := cipher.NewCBCDecrypter(block, s2.Iv)
 		sq2 := make([]byte, len(s2.Encrypted))
 		blockMode2.CryptBlocks(sq2, s2.Encrypted)
+		u := utils.PKCS7UnPadding(sq)
+		s := utils.PKCS7UnPadding(sq2)
 		FullData.LoginDataSlice = append(FullData.LoginDataSlice, loginData{
-			LoginUrl: v.loginUrl,
-			UserName: string(sq),
-			Password: string(sq2),
+			LoginUrl:   v.LoginUrl,
+			UserName:   string(u),
+			Password:   string(s),
+			CreateDate: v.CreateDate,
 		})
-		log.Errorf("%s:%s:%s", v.loginUrl, string(sq), string(sq2))
 	}
+}
+
+var queryFirefoxCookie = `SELECT name, value, host, path, creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
+
+func parseFirefoxCookie() {
+	cookie := cookies{}
+	cookieMap := make(map[string][]cookies)
+	cookieDB, err := sql.Open("sqlite3", utils.FirefoxCookie)
+	defer os.Remove(utils.FirefoxCookie)
+	defer func() {
+		if err := cookieDB.Close(); err != nil {
+			log.Println(err)
+		}
+	}()
+	if err != nil {
+		log.Println(err)
+	}
+	err = cookieDB.Ping()
+	rows, err := cookieDB.Query(queryFirefoxCookie)
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Println(err)
+		}
+	}()
+	for rows.Next() {
+		var (
+			name, value, host, path string
+			isSecure, isHttpOnly    int
+			creationTime, expiry    int64
+		)
+		err = rows.Scan(&name, &value, &host, &path, &creationTime, &expiry, &isSecure, &isHttpOnly)
+		cookie = cookies{
+			KeyName:    name,
+			Host:       host,
+			Path:       path,
+			IsSecure:   utils.IntToBool(isSecure),
+			IsHTTPOnly: utils.IntToBool(isHttpOnly),
+			CreateDate: utils.TimeStampFormat(creationTime / 1000000),
+			ExpireDate: utils.TimeStampFormat(expiry),
+		}
+
+		cookie.Value = value
+		if _, ok := cookieMap[host]; ok {
+			cookieMap[host] = append(cookieMap[host], cookie)
+		} else {
+			cookieMap[host] = []cookies{cookie}
+		}
+	}
+	FullData.CookieMap = cookieMap
+
 }
 
 func checkPassword(globalSalt, entrySalt, encryptText []byte) []byte {
@@ -482,13 +537,10 @@ func checkPassword(globalSalt, entrySalt, encryptText []byte) []byte {
 	tk.Write(pes)
 	pes = append(pes, entrySalt...)
 	log.Warn(hex.EncodeToString(pes))
-	//k1 = hmac.new(chp, pes + entrySalt, sha1).digest()
-	//tk = hmac.new(chp, pes, sha1).digest()
 	k1 := hmac.New(sha1.New, chp[:])
 	k1.Write(pes)
 	log.Warn(hex.EncodeToString(k1.Sum(nil)))
 	log.Warn(hex.EncodeToString(tk.Sum(nil)))
-	//k2 = hmac.new(chp, tk + entrySalt, sha1).digest()
 	tkPlus := append(tk.Sum(nil), entrySalt...)
 	k2 := hmac.New(sha1.New, chp[:])
 	k2.Write(tkPlus)
@@ -519,14 +571,7 @@ func paddingZero(s []byte, l int) []byte {
 	}
 }
 
-type Logins struct {
-	encryptUser []byte
-	encryptPass []byte
-	loginUrl    string
-	createTime  int64
-}
-
-func GetLoginData(loginsJson string) (l []Logins) {
+func GetLoginData(loginsJson string) (l []loginData) {
 	s, err := ioutil.ReadFile(loginsJson)
 	if err != nil {
 		log.Warn(err)
@@ -536,12 +581,11 @@ func GetLoginData(loginsJson string) (l []Logins) {
 	if h.Exists() {
 		for _, v := range h.Array() {
 			var (
-				m Logins
+				m loginData
 				u []byte
 				p []byte
 			)
-
-			m.loginUrl = v.Get("formSubmitURL").String()
+			m.LoginUrl = v.Get("formSubmitURL").String()
 			u, err = base64.StdEncoding.DecodeString(v.Get("encryptedUsername").String())
 			m.encryptUser = u
 			if err != nil {
@@ -549,7 +593,7 @@ func GetLoginData(loginsJson string) (l []Logins) {
 			}
 			p, err = base64.StdEncoding.DecodeString(v.Get("encryptedPassword").String())
 			m.encryptPass = p
-			m.createTime = v.Get("timeCreated").Int()
+			m.CreateDate = utils.TimeStampFormat(v.Get("timeCreated").Int() / 1000)
 			l = append(l, m)
 		}
 	}

@@ -42,6 +42,7 @@ const (
 	History   = "History"
 	Cookies   = "Cookies"
 	Bookmarks = "Bookmarks"
+	FirefoxCookie = "cookies.sqlite"
 )
 
 func ListBrowser() []string {
