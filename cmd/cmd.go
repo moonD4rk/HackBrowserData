@@ -70,7 +70,7 @@ func Execute() {
 					core.ParseResult(dst)
 				}
 			} else {
-				fileList := utils.GetDBPath(browserDir, "key4.db", "logins.json")
+				fileList := utils.GetDBPath(browserDir, "key4.db", "logins.json", utils.FirefoxCookie)
 				for _, v := range fileList {
 					dst := filepath.Base(v)
 					err := utils.CopyDB(v, dst)
@@ -78,6 +78,7 @@ func Execute() {
 						log.Println(err)
 						continue
 					}
+					core.ParseResult(dst)
 					core.DecodeKey4()
 				}
 			}
