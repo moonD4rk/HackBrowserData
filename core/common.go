@@ -449,6 +449,11 @@ func DecodeKey4() {
 		blockMode2 := cipher.NewCBCDecrypter(block, s2.Iv)
 		sq2 := make([]byte, len(s2.Encrypted))
 		blockMode2.CryptBlocks(sq2, s2.Encrypted)
+		FullData.LoginDataSlice = append(FullData.LoginDataSlice, loginData{
+			LoginUrl: v.loginUrl,
+			UserName: string(sq),
+			Password: string(sq2),
+		})
 		log.Errorf("%s:%s:%s", v.loginUrl, string(sq), string(sq2))
 	}
 }
