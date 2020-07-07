@@ -175,3 +175,9 @@ func paddingZero(s []byte, l int) []byte {
 		return s
 	}
 }
+
+func PKCS5UnPadding(src []byte) []byte {
+	length := len(src)
+	unpadding := int(src[length-1])
+	return src[:(length - unpadding)]
+}
