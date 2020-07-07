@@ -7,6 +7,7 @@ import (
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
 	"os"
+	"sort"
 
 	"github.com/jszwec/csvutil"
 )
@@ -142,4 +143,14 @@ func (b BrowserData) OutPutJson(dir, browser, format string) error {
 		fmt.Printf("%s Get %d login data, filename is %s \n", log.Prefix, len(b.LoginDataSlice), filename)
 	}
 	return nil
+}
+
+func (b BrowserData) Sorted() {
+	sort.Slice(b.BookmarkSlice, func(i, j int) bool {
+		return b.BookmarkSlice[i].ID < b.BookmarkSlice[j].ID
+	})
+	sort.Slice(b.HistorySlice, func(i, j int) bool {
+		return b.HistorySlice[i].VisitCount > b.HistorySlice[j].VisitCount
+	})
+	sort.Sort(b.LoginDataSlice)
 }
