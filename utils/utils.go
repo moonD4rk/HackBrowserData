@@ -38,11 +38,15 @@ type Browser struct {
 }
 
 const (
-	LoginData = "Login Data"
-	History   = "History"
-	Cookies   = "Cookies"
-	Bookmarks = "Bookmarks"
-	FirefoxCookie = "cookies.sqlite"
+	LoginData        = "Login Data"
+	History          = "History"
+	Cookies          = "Cookies"
+	Bookmarks        = "Bookmarks"
+	FirefoxCookie    = "cookies.sqlite"
+	FirefoxKey4DB    = "key4.db"
+	FirefoxLoginData = "logins.json"
+	FirefoxData      = "places.sqlite"
+	FirefoxKey3DB    = "key3.db"
 )
 
 func ListBrowser() []string {
@@ -95,6 +99,15 @@ func IntToBool(a int) bool {
 		return false
 	}
 	return true
+}
+
+func BookMarkType(a int64) string {
+	switch a {
+	case 1:
+		return "url"
+	default:
+		return "folder"
+	}
 }
 
 func TimeStampFormat(stamp int64) time.Time {
