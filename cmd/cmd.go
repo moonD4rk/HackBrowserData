@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"hack-browser-data/core"
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
@@ -70,16 +71,16 @@ func Execute() {
 					core.ParseResult(dst)
 				}
 			} else {
-				fileList := utils.GetDBPath(browserDir, "key4.db", "logins.json", utils.FirefoxCookie)
+				fileList := utils.GetDBPath(browserDir, utils.FirefoxLoginData, utils.FirefoxKey4DB, utils.FirefoxCookie, utils.FirefoxData)
 				for _, v := range fileList {
 					dst := filepath.Base(v)
+					fmt.Println(dst)
 					err := utils.CopyDB(v, dst)
 					if err != nil {
 						log.Println(err)
 						continue
 					}
 					core.ParseResult(dst)
-					core.DecodeKey4()
 				}
 			}
 
