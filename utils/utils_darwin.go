@@ -110,14 +110,5 @@ func aes128CBCDecrypt(encryptPass []byte) (string, error) {
 	return string(dst), nil
 }
 
-func PKCS5UnPadding(src []byte) []byte {
-	length := len(src)
-	unpadding := int(src[length-1])
-	return src[:(length - unpadding)]
-}
 
-func PKCS7UnPadding(origData []byte)[]byte{
-	length := len(origData)
-	unpadding := int(origData[length-1])
-	return origData[:length-unpadding]
-}
+
