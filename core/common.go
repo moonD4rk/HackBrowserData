@@ -15,7 +15,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"sort"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -117,9 +116,6 @@ func parseBookmarks() {
 			return true
 		})
 	}
-	sort.Slice(bookmarkList, func(i, j int) bool {
-		return bookmarkList[i].ID < bookmarkList[j].ID
-	})
 	FullData.BookmarkSlice = bookmarkList
 }
 
@@ -174,7 +170,6 @@ func parseLogin() {
 		}
 		loginItemList = append(loginItemList, login)
 	}
-	sort.Sort(loginItemList)
 	FullData.LoginDataSlice = loginItemList
 }
 
@@ -278,9 +273,6 @@ func parseHistory() {
 		}
 		historyList = append(historyList, h)
 	}
-	sort.Slice(historyList, func(i, j int) bool {
-		return historyList[i].VisitCount > historyList[j].VisitCount
-	})
 	FullData.HistorySlice = historyList
 }
 
@@ -311,11 +303,11 @@ var queryFirefoxHistory = `SELECT id, url, title, last_visit_date, visit_count F
 func parseFirefoxData() {
 	var historyList HistorySlice
 	var (
-		err                      error
-		keyDB                    *sql.DB
-		bookmarkRows, historyRow *sql.Rows
-		tempMap                  map[int64]string
-		bookmarkUrl              string
+		err                       error
+		keyDB                     *sql.DB
+		bookmarkRows, historyRows *sql.Rows
+		tempMap                   map[int64]string
+		bookmarkUrl               string
 	)
 	tempMap = make(map[int64]string)
 	keyDB, err = sql.Open("sqlite3", utils.FirefoxData)
@@ -329,38 +321,39 @@ func parseFirefoxData() {
 	if err != nil {
 		log.Error(err)
 	}
-	bookmarkRows, err = keyDB.Query(queryFirefoxBookMarks)
-	historyRow, err = keyDB.Query(queryFirefoxHistory)
+	historyRows, err = keyDB.Query(queryFirefoxHistory)
 	if err != nil {
 		log.Error(err)
 	}
+
 	defer func() {
-		if err := bookmarkRows.Close(); err != nil {
+		if err := historyRows.Close(); err != nil {
 			log.Error(err)
 		}
 	}()
-	defer func() {
-		if err := historyRow.Close(); err != nil {
-			log.Error(err)
-		}
-	}()
-	for historyRow.Next() {
+	for historyRows.Next() {
 		var (
 			id, visitDate int64
 			url, title    string
 			visitCount    int
 		)
-		err = historyRow.Scan(&id, &url, &title, &visitDate, &visitCount)
+		err = historyRows.Scan(&id, &url, &title, &visitDate, &visitCount)
 		historyList = append(historyList, history{
 			Title:         title,
 			Url:           url,
 			VisitCount:    visitCount,
-			LastVisitTime: utils.TimeStampFormat(visitDate / 100000),
+			LastVisitTime: utils.TimeStampFormat(visitDate / 1000000),
 		})
 		tempMap[id] = url
 	}
 	FullData.HistorySlice = historyList
 
+	bookmarkRows, err = keyDB.Query(queryFirefoxBookMarks)
+	defer func() {
+		if err := bookmarkRows.Close(); err != nil {
+			log.Error(err)
+		}
+	}()
 	for bookmarkRows.Next() {
 		var (
 			id, fk, bType, dateAdded int64
@@ -550,15 +543,11 @@ func parseFirefoxKey4() {
 		blockMode2.CryptBlocks(sq2, s2.Encrypted)
 		FullData.LoginDataSlice = append(FullData.LoginDataSlice, loginData{
 			LoginUrl:   v.LoginUrl,
-			UserName:   string(utils.PKCS7UnPadding(sq)),
-			Password:   string(utils.PKCS7UnPadding(sq2)),
+			UserName:   string(utils.PKCS5UnPadding(sq)),
+			Password:   string(utils.PKCS5UnPadding(sq2)),
 			CreateDate: v.CreateDate,
 		})
 	}
-	//err := os.Remove("key4.db")
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
 }
 
 var queryFirefoxCookie = `SELECT name, value, host, path, creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`

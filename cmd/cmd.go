@@ -83,7 +83,7 @@ func Execute() {
 					core.ParseResult(dst)
 				}
 			}
-
+			core.FullData.Sorted()
 			if outputFormat == "json" {
 				err := core.FullData.OutPutJson(exportDir, browser, outputFormat)
 				if err != nil {
