@@ -3,14 +3,20 @@ package utils
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/sha1"
+	"crypto/sha256"
+	"encoding/asn1"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
+	"hack-browser-data/log"
 	"os"
 	"strings"
 	"syscall"
 	"unsafe"
 
 	"github.com/tidwall/gjson"
+	"golang.org/x/crypto/pbkdf2"
 )
 
 const (
@@ -22,6 +28,8 @@ const (
 	speed360KeyPath      = ""
 	qqBrowserProfilePath = "/AppData/Local/Tencent/QQBrowser/User Data/*/"
 	qqBrowserKeyPath     = ""
+	firefoxProfilePath   = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-release/"
+	firefoxKeyPath       = ""
 )
 
 var (
@@ -46,6 +54,10 @@ var (
 		"qq": {
 			qqBrowserProfilePath,
 			qqBrowserKeyPath,
+		},
+		"firefox": {
+			firefoxProfilePath,
+			"",
 		},
 	}
 )
@@ -160,4 +172,67 @@ func DecryptStringWithDPAPI(data []byte) (string, error) {
 	}
 	defer procLocalFree.Call(uintptr(unsafe.Pointer(outBlob.pbData)))
 	return string(outBlob.ToByteArray()), nil
+}
+
+type MetaPBE struct {
+	SequenceA
+	CipherText []byte
+}
+type SequenceA struct {
+	PKCS5PBES2 asn1.ObjectIdentifier
+	SequenceB
+}
+type SequenceB struct {
+	SequenceC
+	SequenceD
+}
+
+type SequenceC struct {
+	PKCS5PBKDF2 asn1.ObjectIdentifier
+	SequenceE
+}
+
+type SequenceD struct {
+	AES256CBC asn1.ObjectIdentifier
+	IV        []byte
+}
+
+type SequenceE struct {
+	EntrySalt      []byte
+	IterationCount int
+	KeySize        int
+	SequenceF
+}
+
+type SequenceF struct {
+	HMACWithSHA256 asn1.ObjectIdentifier
+}
+
+func CheckPassword(globalSalt, masterPwd []byte, pbe MetaPBE) ([]byte, error) {
+	sha1.New()
+	k := sha1.Sum(globalSalt)
+
+	log.Println(hex.EncodeToString(k[:]))
+	key := pbkdf2.Key(k[:], pbe.EntrySalt, pbe.IterationCount, pbe.KeySize, sha256.New)
+	log.Println(hex.EncodeToString(key))
+	i, err := hex.DecodeString("040e")
+	if err != nil {
+		log.Println(err)
+	}
+	// @https://hg.mozilla.org/projects/nss/rev/fc636973ad06392d11597620b602779b4af312f6#l6.49
+	iv := append(i, pbe.IV...)
+	dst, err := aes128CBCDecrypt(key, iv, pbe.CipherText)
+	if err != nil {
+		log.Println(err)
+	}
+	return dst, err
+}
+
+func DecodeMeta(decodeItem []byte) (pbe MetaPBE, err error) {
+	_, err = asn1.Unmarshal(decodeItem, &pbe)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	return
 }
