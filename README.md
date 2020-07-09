@@ -4,21 +4,37 @@ hack-browser-data is an open-source tool that could help you export data from br
 
 ### Supported Browser
 
+#### Windows
 | Browser                             | Password | Cookie | Bookmark | History |
 | :---------------------------------- | :------: | :----: | :------: | :-----: |
-| Chrome <= 80 [Windows]       |    ✅    |   ✅   |    ✅    |    ✅    |
-| Chrome  > 80 [Windows]      |    ✅    |   ✅   |    ✅    |    ✅    |
-| Chrome [MacOS]<br />(require password) |    ✅    |   ✅   |    ✅    |    ✅    |
-| Edge [Windows]                      |    ✅    |   ✅   |    ✅    |    ✅    |
-| Edge [MacOS]<br />(require password)   |    ✅    |   ✅   |    ✅    |    ✅    |
-| 360 Speed Browser [Windows]        |    ✅    |   ✅   |    ✅    |    ✅    |
-| QQ Browser [Windows]                |    ✅    |   ✅   |    ✅    |    ✅    |
-| FireFox [MacOS]    |   ✅   |   ✅   |    ✅    |    ✅    |
-| FireFox [Windows]    |    ❌    |   ❌   |    ❌    |    ❌    |
-| Safari [MacOS]                      |    ❌    |   ❌   |    ❌    |    ❌    |
-| Internet Explorer [Windows]         |    ❌    |   ❌   |    ❌    |    ❌    |
-| 360 Secure Browser [Windows]         |    ❌    |   ❌   |    ❌    |    ❌    |
-| Chrome [Linux]                      |    ❌    |   ❌   |    ❌    |    ❌    |
+| Google Chrome (Full Version) |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
+| Microsoft Edge |    ✅    |   ✅   |    ✅    |    ✅    |
+| 360 Speed Browser |    ✅    |   ✅   |    ✅    |    ✅    |
+| QQ Browser |    ✅    |   ✅   |    ✅    |    ✅    |
+| Internet Explorer |    ❌    |   ❌   |    ❌    |    ❌    |
+
+#### MacOS
+
+Because of  the security policies, all those browsers require a password.
+
+| Browser                             | Password | Cookie | Bookmark | History |
+| :---------------------------------- | :------: | :----: | :------: | :-----: |
+| Google Chrome |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
+| Microsoft Edge |    ✅    |   ✅   |    ✅    |    ✅    |
+| Safari |    ❌    |   ❌   |    ❌    |    ❌    |
+
+#### Linux
+
+These browsers will be supported in the future.
+
+| Browser                             | Password | Cookie | Bookmark | History |
+| :---------------------------------- | :------: | :----: | :------: | :-----: |
+| Firefox |    ❌    |   ❌   |    ❌    |    ❌    |
+| Google Chrome |    ❌    |   ❌   |    ❌    |    ❌    |
+| Microsoft Edge |    ❌    |   ❌   |    ❌    |    ❌    |
+
 
 ### Install
 
