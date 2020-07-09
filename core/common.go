@@ -2,8 +2,6 @@ package core
 
 import (
 	"bytes"
-	"crypto/hmac"
-	"crypto/sha1"
 	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
@@ -445,7 +443,7 @@ func parseFirefoxKey4() {
 		return
 	}
 	var masterPwd []byte
-	m, err := checkPassword(globalSalt, masterPwd, pbe)
+	m, err := utils.CheckPassword(globalSalt, masterPwd, pbe)
 	if err != nil {
 		log.Error("decrypt firefox failed", err)
 		return
@@ -460,7 +458,7 @@ func parseFirefoxKey4() {
 				return
 			}
 			log.Debugf("decrypt asn1 pbe success")
-			finallyKey, err := checkPassword(globalSalt, masterPwd, pbe2)
+			finallyKey, err := utils.CheckPassword(globalSalt, masterPwd, pbe2)
 			finallyKey = finallyKey[:24]
 			if err != nil {
 				log.Error(err)
@@ -543,37 +541,6 @@ func parseFirefoxCookie() {
 	}
 	FullData.CookieMap = cookieMap
 
-}
-
-func checkPassword(globalSalt, masterPwd []byte, pbe utils.MetaPBE) ([]byte, error) {
-	//byte[] GLMP; // GlobalSalt + MasterPassword
-	//byte[] HP; // SHA1(GLMP)
-	//byte[] HPES; // HP + EntrySalt
-	//byte[] CHP; // SHA1(HPES)
-	//byte[] PES; // EntrySalt completed to 20 bytes by zero
-	//byte[] PESES; // PES + EntrySalt
-	//byte[] k1;
-	//byte[] tk;
-	//byte[] k2;
-	//byte[] k; // final value conytaining key and iv
-	glmp := append(globalSalt, masterPwd...)
-	hp := sha1.Sum(glmp)
-	s := append(hp[:], pbe.EntrySalt...)
-	chp := sha1.Sum(s)
-	pes := utils.PaddingZero(pbe.EntrySalt, 20)
-	tk := hmac.New(sha1.New, chp[:])
-	tk.Write(pes)
-	pes = append(pes, pbe.EntrySalt...)
-	k1 := hmac.New(sha1.New, chp[:])
-	k1.Write(pes)
-	tkPlus := append(tk.Sum(nil), pbe.EntrySalt...)
-	k2 := hmac.New(sha1.New, chp[:])
-	k2.Write(tkPlus)
-	k := append(k1.Sum(nil), k2.Sum(nil)...)
-	iv := k[len(k)-8:]
-	key := k[:24]
-	log.Warn("key=", hex.EncodeToString(key), "iv=", hex.EncodeToString(iv))
-	return utils.Des3Decrypt(key, iv, pbe.Encrypted)
 }
 
 func GetLoginData() (l []loginData) {

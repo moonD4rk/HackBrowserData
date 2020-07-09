@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"crypto/aes"
 	"crypto/cipher"
 	"crypto/des"
 	"encoding/asn1"
@@ -223,4 +224,19 @@ func DecodeLogin(decodeItem []byte) (pbe LoginPBE, err error) {
 		return
 	}
 	return pbe, nil
+}
+
+func aes128CBCDecrypt(key, iv, encryptPass []byte) ([]byte, error) {
+	if len(chromeKey) == 0 {
+		return []byte{}, nil
+	}
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return []byte{}, err
+	}
+	dst := make([]byte, len(encryptPass))
+	mode := cipher.NewCBCDecrypter(block, iv)
+	mode.CryptBlocks(dst, encryptPass)
+	dst = PKCS5UnPadding(dst)
+	return dst, nil
 }
