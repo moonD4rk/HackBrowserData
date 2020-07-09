@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"hack-browser-data/core"
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
@@ -41,8 +40,6 @@ func Execute() {
 			} else {
 				log.InitLog("error")
 			}
-
-			utils.MakeDir(exportDir)
 			browserDir, key, err := utils.PickBrowser(browser)
 			if err != nil {
 				log.Fatal(err, " Available browsers: "+strings.Join(utils.ListBrowser(), "|"))
@@ -65,7 +62,7 @@ func Execute() {
 					dst := filepath.Base(v)
 					err := utils.CopyDB(v, dst)
 					if err != nil {
-						log.Println(err)
+						log.Debug(err)
 						continue
 					}
 					core.ParseResult(dst)
@@ -74,16 +71,16 @@ func Execute() {
 				fileList := utils.GetDBPath(browserDir, utils.FirefoxLoginData, utils.FirefoxKey4DB, utils.FirefoxCookie, utils.FirefoxData)
 				for _, v := range fileList {
 					dst := filepath.Base(v)
-					fmt.Println(dst)
 					err := utils.CopyDB(v, dst)
 					if err != nil {
-						log.Println(err)
+						log.Debug(err)
 						continue
 					}
 					core.ParseResult(dst)
 				}
 			}
 			core.FullData.Sorted()
+			utils.MakeDir(exportDir)
 			if outputFormat == "json" {
 				err := core.FullData.OutPutJson(exportDir, browser, outputFormat)
 				if err != nil {

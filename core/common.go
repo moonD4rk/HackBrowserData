@@ -2,17 +2,13 @@ package core
 
 import (
 	"bytes"
-	"crypto/cipher"
-	"crypto/des"
 	"crypto/hmac"
 	"crypto/sha1"
 	"database/sql"
-	"encoding/asn1"
 	"encoding/base64"
 	"encoding/hex"
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
-	"io"
 	"io/ioutil"
 	"os"
 	"time"
@@ -106,7 +102,7 @@ func parseBookmarks() {
 	bookmarks, err := utils.ReadFile(utils.Bookmarks)
 	defer os.Remove(utils.Bookmarks)
 	if err != nil {
-		log.Println(err)
+		log.Debug(err)
 	}
 	r := gjson.Parse(bookmarks)
 	if r.Exists() {
@@ -128,17 +124,17 @@ func parseLogin() {
 	defer os.Remove(utils.LoginData)
 	defer func() {
 		if err := loginDB.Close(); err != nil {
-			log.Println(err)
+			log.Debug(err)
 		}
 	}()
 	if err != nil {
-		log.Println(err)
+		log.Debug(err)
 	}
 	err = loginDB.Ping()
 	rows, err := loginDB.Query(queryLogin)
 	defer func() {
 		if err := rows.Close(); err != nil {
-			log.Println(err)
+			log.Debug(err)
 		}
 	}()
 	for rows.Next() {
@@ -166,7 +162,7 @@ func parseLogin() {
 
 		login.Password = password
 		if err != nil {
-			log.Println(err)
+			log.Debug(err)
 		}
 		loginItemList = append(loginItemList, login)
 	}
@@ -182,17 +178,17 @@ func parseCookie() {
 	defer os.Remove(utils.Cookies)
 	defer func() {
 		if err := cookieDB.Close(); err != nil {
-			log.Println(err)
+			log.Debug(err)
 		}
 	}()
 	if err != nil {
-		log.Println(err)
+		log.Debug(err)
 	}
 	err = cookieDB.Ping()
 	rows, err := cookieDB.Query(queryCookie)
 	defer func() {
 		if err := rows.Close(); err != nil {
-			log.Println(err)
+			log.Debug(err)
 		}
 	}()
 	for rows.Next() {
@@ -241,17 +237,17 @@ func parseHistory() {
 	defer os.Remove(utils.History)
 	defer func() {
 		if err := historyDB.Close(); err != nil {
-			log.Println(err)
+			log.Debug(err)
 		}
 	}()
 	if err != nil {
-		log.Println(err)
+		log.Debug(err)
 	}
 	err = historyDB.Ping()
 	rows, err := historyDB.Query(queryHistory)
 	defer func() {
 		if err := rows.Close(); err != nil {
-			log.Println(err)
+			log.Debug(err)
 		}
 	}()
 	for rows.Next() {
@@ -268,7 +264,7 @@ func parseHistory() {
 			LastVisitTime: utils.TimeEpochFormat(lastVisitTime),
 		}
 		if err != nil {
-			log.Println(err)
+			log.Debug(err)
 			continue
 		}
 		historyList = append(historyList, h)
@@ -375,178 +371,127 @@ func parseFirefoxData() {
 }
 
 var queryPassword = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
+var queryNssPrivate = `SELECT a11, a102 from nssPrivate`
 
-func checkKey1() (b [][]byte) {
+func GetDecryptKey() (b [][]byte) {
 	var (
-		err   error
-		keyDB *sql.DB
-		rows  *sql.Rows
+		err     error
+		keyDB   *sql.DB
+		pwdRows *sql.Rows
+		nssRows *sql.Rows
 	)
-
+	defer func() {
+		if err := os.Remove(utils.FirefoxKey4DB); err != nil {
+			log.Error(err)
+		}
+	}()
 	keyDB, err = sql.Open("sqlite3", utils.FirefoxKey4DB)
 	defer func() {
 		if err := keyDB.Close(); err != nil {
 			log.Error(err)
 		}
 	}()
-
 	if err != nil {
-		log.Println(err)
+		log.Debug(err)
 	}
 	err = keyDB.Ping()
-	rows, err = keyDB.Query(queryPassword)
+	pwdRows, err = keyDB.Query(queryPassword)
 	defer func() {
-		if err := rows.Close(); err != nil {
-			log.Println(err)
+		if err := pwdRows.Close(); err != nil {
+			log.Debug(err)
 		}
 	}()
-	for rows.Next() {
+	for pwdRows.Next() {
 		var (
 			item1, item2 []byte
 		)
-		if err := rows.Scan(&item1, &item2); err != nil {
+		if err := pwdRows.Scan(&item1, &item2); err != nil {
 			log.Error(err)
 			continue
 		}
 		b = append(b, item1, item2)
 	}
-	return b
-}
-
-var queryNssPrivate = `SELECT a11, a102 from nssPrivate;`
-
-func checkA102() (b [][]byte) {
-	keyDB, err := sql.Open("sqlite3", utils.FirefoxKey4DB)
-
-	defer func() {
-		if err := os.Remove(utils.FirefoxKey4DB); err != nil {
-			log.Error(err)
-		}
-	}()
-	defer func(closer io.Closer) {
-		if err := keyDB.Close(); err != nil {
-			log.Error(err)
-		}
-	}(keyDB)
-
 	if err != nil {
 		log.Error(err)
 	}
-	rows, err := keyDB.Query(queryNssPrivate)
+	nssRows, err = keyDB.Query(queryNssPrivate)
 	defer func() {
-		if err := rows.Close(); err != nil {
-			log.Println(err)
+		if err := nssRows.Close(); err != nil {
+			log.Debug(err)
 		}
 	}()
-	for rows.Next() {
+	for nssRows.Next() {
 		var (
 			a11, a102 []byte
 		)
-		if err := rows.Scan(&a11, &a102); err != nil {
-			log.Println(err)
+		if err := nssRows.Scan(&a11, &a102); err != nil {
+			log.Debug(err)
 		}
 		b = append(b, a11, a102)
 	}
 	return b
 }
 
-/*
-ASN1 PBE Structures
-SEQUENCE (2 elem)
-	SEQUENCE (2 elem)
-		OBJECT IDENTIFIER
-		SEQUENCE (2 elem)
-			OCTET STRING (20 byte)
-			INTEGER 1
-	OCTET STRING (16 byte)
-*/
-
-type PBEAlgorithms struct {
-	SequenceA
-	CipherText []byte
-}
-
-type SequenceA struct {
-	DecryptMethod asn1.ObjectIdentifier
-	SequenceB
-}
-
-type SequenceB struct {
-	EntrySalt []byte
-	Len       int
-}
-
-/*
-SEQUENCE (3 elem)
-	OCTET STRING (16 byte)
-	SEQUENCE (2 elem)
-		OBJECT IDENTIFIER 1.2.840.113549.3.7 des-EDE3-CBC (RSADSI encryptionAlgorithm)
-		OCTET STRING (8 byte)
-	OCTET STRING (16 byte)
-*/
-type PasswordAsn1 struct {
-	CipherText []byte
-	SequenceIV
-	Encrypted []byte
-}
-
-type SequenceIV struct {
-	asn1.ObjectIdentifier
-	Iv []byte
-}
-
-func decryptPBE(decodeItem []byte) (pbe PBEAlgorithms) {
-	_, err := asn1.Unmarshal(decodeItem, &pbe)
-	if err != nil {
-		log.Error(err)
-	}
-	return
-}
-
 func parseFirefoxKey4() {
-	h1 := checkKey1()
+	h1 := GetDecryptKey()
 	globalSalt := h1[0]
 	decodedItem := h1[1]
+	a11 := h1[2]
+	a102 := h1[3]
 	keyLin := []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
-	pbe := decryptPBE(decodedItem)
-	m := checkPassword(globalSalt, pbe.EntrySalt, pbe.CipherText)
-	var finallyKey []byte
+	pbe, err := utils.DecodeMeta(decodedItem)
+	if err != nil {
+		log.Error("decrypt meta data failed", err)
+		return
+	}
+	var masterPwd []byte
+	m, err := checkPassword(globalSalt, masterPwd, pbe)
+	if err != nil {
+		log.Error("decrypt firefox failed", err)
+		return
+	}
 	if bytes.Contains(m, []byte("password-check")) {
-		log.Println("password-check success")
-		h2 := checkA102()
-		a11 := h2[0]
-		a102 := h2[1]
+		log.Debugf("password-check success")
 		m := bytes.Compare(a102, keyLin)
 		if m == 0 {
-			pbe2 := decryptPBE(a11)
+			pbe2, err := utils.DecodeMeta(a11)
+			if err != nil {
+				log.Error(err)
+				return
+			}
 			log.Debugf("decrypt asn1 pbe success")
-			finallyKey = checkPassword(globalSalt, pbe2.EntrySalt, pbe2.CipherText)[:24]
+			finallyKey, err := checkPassword(globalSalt, masterPwd, pbe2)
+			finallyKey = finallyKey[:24]
+			if err != nil {
+				log.Error(err)
+				return
+			}
 			log.Debugf("finally key", finallyKey, hex.EncodeToString(finallyKey))
+			allLogins := GetLoginData()
+			for _, v := range allLogins {
+				log.Debug(hex.EncodeToString(v.encryptUser))
+				user, _ := utils.DecodeLogin(v.encryptUser)
+				log.Debug(hex.EncodeToString(v.encryptPass))
+				pwd, _ := utils.DecodeLogin(v.encryptPass)
+				log.Debug(user, user.CipherText, user.Encrypted, user.Iv)
+				u, err := utils.Des3Decrypt(finallyKey, user.Iv, user.Encrypted)
+				if err != nil {
+					log.Error(err)
+					return
+				}
+				p, err := utils.Des3Decrypt(finallyKey, pwd.Iv, pwd.Encrypted)
+				if err != nil {
+					log.Error(err)
+					return
+				}
+				FullData.LoginDataSlice = append(FullData.LoginDataSlice, loginData{
+					LoginUrl:   v.LoginUrl,
+					UserName:   string(u),
+					Password:   string(p),
+					CreateDate: v.CreateDate,
+				})
+			}
 		}
-	}
-	allLogins := GetLoginData()
-	for _, v := range allLogins {
-		log.Warn(hex.EncodeToString(v.encryptUser))
-		s1 := decryptLogin(v.encryptUser)
-		log.Warn(hex.EncodeToString(v.encryptPass))
-		s2 := decryptLogin(v.encryptPass)
-		log.Println(s1, s1.CipherText, s1.Encrypted, s1.Iv)
-		block, err := des.NewTripleDESCipher(finallyKey)
-		if err != nil {
-			log.Println(err)
-		}
-		blockMode := cipher.NewCBCDecrypter(block, s1.Iv)
-		sq := make([]byte, len(s1.Encrypted))
-		blockMode.CryptBlocks(sq, s1.Encrypted)
-		blockMode2 := cipher.NewCBCDecrypter(block, s2.Iv)
-		sq2 := make([]byte, len(s2.Encrypted))
-		blockMode2.CryptBlocks(sq2, s2.Encrypted)
-		FullData.LoginDataSlice = append(FullData.LoginDataSlice, loginData{
-			LoginUrl:   v.LoginUrl,
-			UserName:   string(utils.PKCS5UnPadding(sq)),
-			Password:   string(utils.PKCS5UnPadding(sq2)),
-			CreateDate: v.CreateDate,
-		})
 	}
 }
 
@@ -559,17 +504,17 @@ func parseFirefoxCookie() {
 	defer os.Remove(utils.FirefoxCookie)
 	defer func() {
 		if err := cookieDB.Close(); err != nil {
-			log.Println(err)
+			log.Debug(err)
 		}
 	}()
 	if err != nil {
-		log.Println(err)
+		log.Debug(err)
 	}
 	err = cookieDB.Ping()
 	rows, err := cookieDB.Query(queryFirefoxCookie)
 	defer func() {
 		if err := rows.Close(); err != nil {
-			log.Println(err)
+			log.Debug(err)
 		}
 	}()
 	for rows.Next() {
@@ -600,7 +545,7 @@ func parseFirefoxCookie() {
 
 }
 
-func checkPassword(globalSalt, entrySalt, encryptText []byte) []byte {
+func checkPassword(globalSalt, masterPwd []byte, pbe utils.MetaPBE) ([]byte, error) {
 	//byte[] GLMP; // GlobalSalt + MasterPassword
 	//byte[] HP; // SHA1(GLMP)
 	//byte[] HPES; // HP + EntrySalt
@@ -611,51 +556,24 @@ func checkPassword(globalSalt, entrySalt, encryptText []byte) []byte {
 	//byte[] tk;
 	//byte[] k2;
 	//byte[] k; // final value conytaining key and iv
-	sha1.New()
-	hp := sha1.Sum(globalSalt)
-	log.Warn(hex.EncodeToString(hp[:]))
-	log.Println(len(entrySalt))
-	s := append(hp[:], entrySalt...)
-	log.Warn(hex.EncodeToString(s))
+	glmp := append(globalSalt, masterPwd...)
+	hp := sha1.Sum(glmp)
+	s := append(hp[:], pbe.EntrySalt...)
 	chp := sha1.Sum(s)
-	log.Warn(hex.EncodeToString(chp[:]))
-	pes := paddingZero(entrySalt, 20)
+	pes := utils.PaddingZero(pbe.EntrySalt, 20)
 	tk := hmac.New(sha1.New, chp[:])
 	tk.Write(pes)
-	pes = append(pes, entrySalt...)
-	log.Warn(hex.EncodeToString(pes))
+	pes = append(pes, pbe.EntrySalt...)
 	k1 := hmac.New(sha1.New, chp[:])
 	k1.Write(pes)
-	log.Warn(hex.EncodeToString(k1.Sum(nil)))
-	log.Warn(hex.EncodeToString(tk.Sum(nil)))
-	tkPlus := append(tk.Sum(nil), entrySalt...)
+	tkPlus := append(tk.Sum(nil), pbe.EntrySalt...)
 	k2 := hmac.New(sha1.New, chp[:])
 	k2.Write(tkPlus)
-	log.Warn(hex.EncodeToString(k2.Sum(nil)))
 	k := append(k1.Sum(nil), k2.Sum(nil)...)
 	iv := k[len(k)-8:]
 	key := k[:24]
 	log.Warn("key=", hex.EncodeToString(key), "iv=", hex.EncodeToString(iv))
-	block, err := des.NewTripleDESCipher(key)
-	if err != nil {
-		log.Println(err)
-	}
-	blockMode := cipher.NewCBCDecrypter(block, iv)
-	sq := make([]byte, len(encryptText))
-	blockMode.CryptBlocks(sq, encryptText)
-	return sq
-}
-
-func paddingZero(s []byte, l int) []byte {
-	h := l - len(s)
-	if h <= 0 {
-		return s
-	} else {
-		for i := len(s); i < l; i++ {
-			s = append(s, 0)
-		}
-		return s
-	}
+	return utils.Des3Decrypt(key, iv, pbe.Encrypted)
 }
 
 func GetLoginData() (l []loginData) {
@@ -676,7 +594,7 @@ func GetLoginData() (l []loginData) {
 			u, err = base64.StdEncoding.DecodeString(v.Get("encryptedUsername").String())
 			m.encryptUser = u
 			if err != nil {
-				log.Println(err)
+				log.Debug(err)
 			}
 			p, err = base64.StdEncoding.DecodeString(v.Get("encryptedPassword").String())
 			m.encryptPass = p
@@ -685,12 +603,4 @@ func GetLoginData() (l []loginData) {
 		}
 	}
 	return
-}
-
-func decryptLogin(s []byte) (pbe PasswordAsn1) {
-	_, err := asn1.Unmarshal(s, &pbe)
-	if err != nil {
-		log.Println(err)
-	}
-	return pbe
 }
