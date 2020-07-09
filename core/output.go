@@ -101,7 +101,7 @@ func (b BrowserData) OutPutJson(dir, browser, format string) error {
 		enc.SetIndent("", "\t")
 		err = enc.Encode(b.CookieMap)
 		if err != nil {
-			log.Println(err)
+			log.Debug(err)
 		}
 		file.Write(w.Bytes())
 		fmt.Printf("%s Get %d cookies, filename is %s \n", log.Prefix, len(b.CookieMap), filename)
@@ -119,7 +119,7 @@ func (b BrowserData) OutPutJson(dir, browser, format string) error {
 		enc.SetIndent("", "\t")
 		err = enc.Encode(b.HistorySlice)
 		if err != nil {
-			log.Println(err)
+			log.Debug(err)
 		}
 		file.Write(w.Bytes())
 		fmt.Printf("%s Get %d history, filename is %s \n", log.Prefix, len(b.HistorySlice), filename)
@@ -137,7 +137,7 @@ func (b BrowserData) OutPutJson(dir, browser, format string) error {
 		enc.SetIndent("", "\t")
 		err = enc.Encode(b.LoginDataSlice)
 		if err != nil {
-			log.Println(err)
+			log.Debug(err)
 		}
 		file.Write(w.Bytes())
 		fmt.Printf("%s Get %d login data, filename is %s \n", log.Prefix, len(b.LoginDataSlice), filename)

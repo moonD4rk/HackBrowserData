@@ -5,6 +5,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/sha1"
+	"encoding/asn1"
 	"errors"
 	"hack-browser-data/log"
 	"os/exec"
@@ -68,12 +69,12 @@ func InitKey(key string) error {
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		log.Println(err)
+		log.Error(err)
 		return err
 	}
 	if stderr.Len() > 0 {
 		err = errors.New(stderr.String())
-		log.Println(err)
+		log.Error(err)
 	}
 	temp := stdout.Bytes()
 	chromePass := temp[:len(temp)-1]
@@ -110,5 +111,36 @@ func aes128CBCDecrypt(encryptPass []byte) (string, error) {
 	return string(dst), nil
 }
 
+/*
+SEQUENCE (2 elem)
+	SEQUENCE (2 elem)
+		OBJECT IDENTIFIER
+		SEQUENCE (2 elem)
+			OCTET STRING (20 byte)
+			INTEGER 1
+	OCTET STRING (16 byte)
+*/
 
+type MetaPBE struct {
+	SequenceA
+	Encrypted []byte
+}
 
+type SequenceA struct {
+	DecryptMethod asn1.ObjectIdentifier
+	SequenceB
+}
+
+type SequenceB struct {
+	EntrySalt []byte
+	Len       int
+}
+
+func DecodeMeta(decodeItem []byte) (pbe MetaPBE, err error) {
+	_, err = asn1.Unmarshal(decodeItem, &pbe)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	return
+}
