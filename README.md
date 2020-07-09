@@ -33,7 +33,6 @@ These browsers will be supported in the future.
 | :---------------------------------- | :------: | :----: | :------: | :-----: |
 | Firefox |    ❌    |   ❌   |    ❌    |    ❌    |
 | Google Chrome |    ❌    |   ❌   |    ❌    |    ❌    |
-| Microsoft Edge |    ❌    |   ❌   |    ❌    |    ❌    |
 
 
 ### Install
