@@ -2,10 +2,10 @@ package utils
 
 import (
 	"bytes"
-	"crypto/aes"
-	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/asn1"
+	"encoding/hex"
 	"errors"
 	"hack-browser-data/log"
 	"os/exec"
@@ -88,27 +88,13 @@ func decryptChromeKey(chromePass []byte) {
 
 func DecryptChromePass(encryptPass []byte) (string, error) {
 	if len(encryptPass) > 3 {
-		return aes128CBCDecrypt(encryptPass[3:])
+		m, err := aes128CBCDecrypt(chromeKey, iv, encryptPass[3:])
+		return string(m), err
 	} else {
 		return "", &DecryptError{
 			err: passwordIsEmpty,
 		}
 	}
-}
-
-func aes128CBCDecrypt(encryptPass []byte) (string, error) {
-	if len(chromeKey) == 0 {
-		return "", nil
-	}
-	block, err := aes.NewCipher(chromeKey)
-	if err != nil {
-		return "", err
-	}
-	dst := make([]byte, len(encryptPass))
-	mode := cipher.NewCBCDecrypter(block, iv)
-	mode.CryptBlocks(dst, encryptPass)
-	dst = PKCS5UnPadding(dst)
-	return string(dst), nil
 }
 
 /*
@@ -143,4 +129,35 @@ func DecodeMeta(decodeItem []byte) (pbe MetaPBE, err error) {
 		return
 	}
 	return
+}
+
+func CheckPassword(globalSalt, masterPwd []byte, pbe MetaPBE) ([]byte, error) {
+	//byte[] GLMP; // GlobalSalt + MasterPassword
+	//byte[] HP; // SHA1(GLMP)
+	//byte[] HPES; // HP + EntrySalt
+	//byte[] CHP; // SHA1(HPES)
+	//byte[] PES; // EntrySalt completed to 20 bytes by zero
+	//byte[] PESES; // PES + EntrySalt
+	//byte[] k1;
+	//byte[] tk;
+	//byte[] k2;
+	//byte[] k; // final value conytaining key and iv
+	glmp := append(globalSalt, masterPwd...)
+	hp := sha1.Sum(glmp)
+	s := append(hp[:], pbe.EntrySalt...)
+	chp := sha1.Sum(s)
+	pes := PaddingZero(pbe.EntrySalt, 20)
+	tk := hmac.New(sha1.New, chp[:])
+	tk.Write(pes)
+	pes = append(pes, pbe.EntrySalt...)
+	k1 := hmac.New(sha1.New, chp[:])
+	k1.Write(pes)
+	tkPlus := append(tk.Sum(nil), pbe.EntrySalt...)
+	k2 := hmac.New(sha1.New, chp[:])
+	k2.Write(tkPlus)
+	k := append(k1.Sum(nil), k2.Sum(nil)...)
+	iv := k[len(k)-8:]
+	key := k[:24]
+	log.Warn("key=", hex.EncodeToString(key), "iv=", hex.EncodeToString(iv))
+	return Des3Decrypt(key, iv, pbe.Encrypted)
 }
