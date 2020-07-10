@@ -33,6 +33,11 @@ var (
 	}
 )
 
+
+func InitKey(string) error {
+	return nil
+}
+
 func DecryptStringWithDPAPI(data []byte) (string, error) {
 	return string(data), nil
 }
