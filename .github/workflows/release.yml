@@ -23,10 +23,6 @@ jobs:
                       goos: darwin
                       bin: 'hack-browser-data'
                       releaseos: osx
-                    - os: windows-latest
-                      goos: windows
-                      bin: 'hack-browser-data.exe'
-                      releaseos: windows
                 exclude:
                     - os: macos-latest
                       arch: '386'
