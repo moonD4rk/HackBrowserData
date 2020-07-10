@@ -106,7 +106,7 @@ func DecryptChromePass(encryptPass []byte) (string, error) {
 		// remove prefix 'v10'
 		return aesGCMDecrypt(encryptPass[15:], chromeKey, encryptPass[3:15])
 	} else {
-		return "", passwordIsEmpty
+		return "", errPasswordIsEmpty
 	}
 }
 
