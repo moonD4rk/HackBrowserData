@@ -1,24 +1,18 @@
 package utils
 
 import (
-	"bytes"
 	"crypto/hmac"
 	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/asn1"
 	"encoding/hex"
-	"errors"
 	"hack-browser-data/log"
-	"os/exec"
 	"strings"
 
 	"golang.org/x/crypto/pbkdf2"
 )
 
 const (
-	chromeProfilePath  = "/Users/*/Library/Application Support/Google/Chrome/*/"
-	chromeCommand      = "Chrome"
-	edgeProfilePath    = "/Users/*/Library/Application Support/Microsoft Edge/*/"
-	edgeCommand        = "Microsoft Edge"
 	fireFoxProfilePath = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-release/"
 	fireFoxCommand     = ""
 )
@@ -32,14 +26,6 @@ var (
 		ProfilePath string
 		Command     string
 	}{
-		"chrome": {
-			chromeProfilePath,
-			chromeCommand,
-		},
-		"edge": {
-			edgeProfilePath,
-			edgeCommand,
-		},
 		"firefox": {
 			fireFoxProfilePath,
 			fireFoxCommand,
@@ -57,29 +43,6 @@ func PickBrowser(name string) (browserDir, command string, err error) {
 		return choice.ProfilePath, choice.Command, err
 	}
 	return "", "", errBrowserNotSupported
-}
-
-func InitKey(key string) error {
-	var (
-		cmd            *exec.Cmd
-		stdout, stderr bytes.Buffer
-	)
-	cmd = exec.Command(command[0], command[1], command[2], key)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	if stderr.Len() > 0 {
-		err = errors.New(stderr.String())
-		log.Error(err)
-	}
-	temp := stdout.Bytes()
-	chromePass := temp[:len(temp)-1]
-	decryptChromeKey(chromePass)
-	return err
 }
 
 func decryptChromeKey(chromePass []byte) {
@@ -110,11 +73,6 @@ SEQUENCE (2 elem)
 	OCTET STRING (16 byte)
 */
 
-type NssPBE struct {
-	SequenceA
-	Encrypted []byte
-}
-
 type MetaPBE struct {
 	SequenceA
 	Encrypted []byte
@@ -130,9 +88,43 @@ type SequenceB struct {
 	Len       int
 }
 
-func DecodeMeta(metaBytes []byte) (pbe MetaPBE, err error) {
-	log.Debug(hex.EncodeToString(metaBytes))
-	_, err = asn1.Unmarshal(metaBytes, &pbe)
+type NssPBE struct {
+	SequenceNSSA
+	Encrypted []byte
+}
+
+type SequenceNSSA struct {
+	PKCS5PBES2 asn1.ObjectIdentifier
+	SequenceNSSB
+}
+type SequenceNSSB struct {
+	SequenceC
+	SequenceD
+}
+
+type SequenceC struct {
+	PKCS5PBKDF2 asn1.ObjectIdentifier
+	SequenceE
+}
+
+type SequenceD struct {
+	AES256CBC asn1.ObjectIdentifier
+	IV        []byte
+}
+
+type SequenceE struct {
+	EntrySalt      []byte
+	IterationCount int
+	KeySize        int
+	SequenceF
+}
+
+type SequenceF struct {
+	HMACWithSHA256 asn1.ObjectIdentifier
+}
+
+func DecodeMeta(decodeItem []byte) (pbe MetaPBE, err error) {
+	_, err = asn1.Unmarshal(decodeItem, &pbe)
 	if err != nil {
 		log.Error(err)
 		return
@@ -151,13 +143,14 @@ func DecodeNss(nssA11Bytes []byte) (pbe NssPBE, err error) {
 }
 
 func DecryptMeta(globalSalt, masterPwd []byte, pbe MetaPBE) ([]byte, error) {
-	return decryptPBE(globalSalt, masterPwd, pbe.EntrySalt, pbe.Encrypted)}
-
-func DecryptNss(globalSalt, masterPwd []byte, pbe NssPBE) ([]byte, error) {
-	return decryptPBE(globalSalt, masterPwd, pbe.EntrySalt, pbe.Encrypted)
+	return decryptMeta(globalSalt, masterPwd, pbe.EntrySalt, pbe.Encrypted)
 }
 
-func decryptPBE(globalSalt, masterPwd, entrySalt, encrypted []byte) ([]byte, error) {
+func DecryptNss(globalSalt, masterPwd []byte, pbe NssPBE) ([]byte, error) {
+	return decryptNss(globalSalt, masterPwd, pbe.IV, pbe.EntrySalt, pbe.Encrypted, pbe.IterationCount, pbe.KeySize)
+}
+
+func decryptMeta(globalSalt, masterPwd, entrySalt, encrypted []byte) ([]byte, error) {
 	//byte[] GLMP; // GlobalSalt + MasterPassword
 	//byte[] HP; // SHA1(GLMP)
 	//byte[] HPES; // HP + EntrySalt
@@ -186,4 +179,22 @@ func decryptPBE(globalSalt, masterPwd, entrySalt, encrypted []byte) ([]byte, err
 	key := k[:24]
 	log.Warnf("key=%s iv=%s", hex.EncodeToString(key), hex.EncodeToString(iv))
 	return Des3Decrypt(key, iv, encrypted)
+}
+
+func decryptNss(globalSalt, masterPwd, nssIv, entrySalt, encrypted []byte, iter, keySize int) ([]byte, error) {
+	k := sha1.Sum(globalSalt)
+	log.Println(hex.EncodeToString(k[:]))
+	key := pbkdf2.Key(k[:], entrySalt, iter, keySize, sha256.New)
+	log.Println(hex.EncodeToString(key))
+	i, err := hex.DecodeString("040e")
+	if err != nil {
+		log.Println(err)
+	}
+	// @https://hg.mozilla.org/projects/nss/rev/fc636973ad06392d11597620b602779b4af312f6#l6.49
+	iv := append(i, nssIv...)
+	dst, err := aes128CBCDecrypt(key, iv, encrypted)
+	if err != nil {
+		log.Println(err)
+	}
+	return dst, err
 }

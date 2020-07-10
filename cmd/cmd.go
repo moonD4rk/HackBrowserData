@@ -69,6 +69,7 @@ func Execute() {
 				}
 			} else {
 				fileList := utils.GetDBPath(browserDir, utils.FirefoxLoginData, utils.FirefoxKey4DB, utils.FirefoxCookie, utils.FirefoxData)
+				log.Error("fileList", fileList)
 				for _, v := range fileList {
 					dst := filepath.Base(v)
 					err := utils.CopyDB(v, dst)

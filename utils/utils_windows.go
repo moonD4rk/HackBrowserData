@@ -15,8 +15,9 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/tidwall/gjson"
 	"golang.org/x/crypto/pbkdf2"
+
+	"github.com/tidwall/gjson"
 )
 
 const (
@@ -174,9 +175,14 @@ func DecryptStringWithDPAPI(data []byte) (string, error) {
 	return string(outBlob.ToByteArray()), nil
 }
 
+type NssPBE struct {
+	SequenceA
+	Encrypted []byte
+}
+
 type MetaPBE struct {
 	SequenceA
-	CipherText []byte
+	Encrypted []byte
 }
 type SequenceA struct {
 	PKCS5PBES2 asn1.ObjectIdentifier
@@ -208,26 +214,6 @@ type SequenceF struct {
 	HMACWithSHA256 asn1.ObjectIdentifier
 }
 
-func CheckPassword(globalSalt, masterPwd []byte, pbe MetaPBE) ([]byte, error) {
-	sha1.New()
-	k := sha1.Sum(globalSalt)
-
-	log.Println(hex.EncodeToString(k[:]))
-	key := pbkdf2.Key(k[:], pbe.EntrySalt, pbe.IterationCount, pbe.KeySize, sha256.New)
-	log.Println(hex.EncodeToString(key))
-	i, err := hex.DecodeString("040e")
-	if err != nil {
-		log.Println(err)
-	}
-	// @https://hg.mozilla.org/projects/nss/rev/fc636973ad06392d11597620b602779b4af312f6#l6.49
-	iv := append(i, pbe.IV...)
-	dst, err := aes128CBCDecrypt(key, iv, pbe.CipherText)
-	if err != nil {
-		log.Println(err)
-	}
-	return dst, err
-}
-
 func DecodeMeta(decodeItem []byte) (pbe MetaPBE, err error) {
 	_, err = asn1.Unmarshal(decodeItem, &pbe)
 	if err != nil {
@@ -235,4 +221,40 @@ func DecodeMeta(decodeItem []byte) (pbe MetaPBE, err error) {
 		return
 	}
 	return
+}
+
+func DecodeNss(nssA11Bytes []byte) (pbe NssPBE, err error) {
+	log.Debug(hex.EncodeToString(nssA11Bytes))
+	_, err = asn1.Unmarshal(nssA11Bytes, &pbe)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	return
+}
+
+func DecryptMeta(globalSalt, masterPwd []byte, pbe MetaPBE) ([]byte, error) {
+	return decryptMeta(globalSalt, masterPwd, pbe.IV, pbe.EntrySalt, pbe.Encrypted, pbe.IterationCount, pbe.KeySize)
+}
+
+func DecryptNss(globalSalt, masterPwd []byte, pbe NssPBE) ([]byte, error) {
+	return decryptMeta(globalSalt, masterPwd, pbe.IV, pbe.EntrySalt, pbe.Encrypted, pbe.IterationCount, pbe.KeySize)
+}
+
+func decryptMeta(globalSalt, masterPwd, nssIv, entrySalt, encrypted []byte, iter, keySize int) ([]byte, error) {
+	k := sha1.Sum(globalSalt)
+	log.Println(hex.EncodeToString(k[:]))
+	key := pbkdf2.Key(k[:], entrySalt, iter, keySize, sha256.New)
+	log.Println(hex.EncodeToString(key))
+	i, err := hex.DecodeString("040e")
+	if err != nil {
+		log.Println(err)
+	}
+	// @https://hg.mozilla.org/projects/nss/rev/fc636973ad06392d11597620b602779b4af312f6#l6.49
+	iv := append(i, nssIv...)
+	dst, err := aes128CBCDecrypt(key, iv, encrypted)
+	if err != nil {
+		log.Println(err)
+	}
+	return dst, err
 }
