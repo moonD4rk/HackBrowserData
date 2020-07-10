@@ -378,11 +378,11 @@ func GetDecryptKey() (b [][]byte) {
 		pwdRows *sql.Rows
 		nssRows *sql.Rows
 	)
-	defer func() {
-		if err := os.Remove(utils.FirefoxKey4DB); err != nil {
-			log.Error(err)
-		}
-	}()
+	//defer func() {
+	//	if err := os.Remove(utils.FirefoxKey4DB); err != nil {
+	//		log.Error(err)
+	//	}
+	//}()
 	keyDB, err = sql.Open("sqlite3", utils.FirefoxKey4DB)
 	defer func() {
 		if err := keyDB.Close(); err != nil {
@@ -433,32 +433,32 @@ func GetDecryptKey() (b [][]byte) {
 func parseFirefoxKey4() {
 	h1 := GetDecryptKey()
 	globalSalt := h1[0]
-	decodedItem := h1[1]
-	a11 := h1[2]
-	a102 := h1[3]
+	metaBytes := h1[1]
+	nssA11 := h1[2]
+	nssA102 := h1[3]
 	keyLin := []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
-	pbe, err := utils.DecodeMeta(decodedItem)
+	meta, err := utils.DecodeMeta(metaBytes)
 	if err != nil {
 		log.Error("decrypt meta data failed", err)
 		return
 	}
 	var masterPwd []byte
-	m, err := utils.CheckPassword(globalSalt, masterPwd, pbe)
+	m, err := utils.DecryptMeta(globalSalt, masterPwd, meta)
 	if err != nil {
 		log.Error("decrypt firefox failed", err)
 		return
 	}
 	if bytes.Contains(m, []byte("password-check")) {
 		log.Debugf("password-check success")
-		m := bytes.Compare(a102, keyLin)
+		m := bytes.Compare(nssA102, keyLin)
 		if m == 0 {
-			pbe2, err := utils.DecodeMeta(a11)
+			nss, err := utils.DecodeNss(nssA11)
 			if err != nil {
 				log.Error(err)
 				return
 			}
 			log.Debugf("decrypt asn1 pbe success")
-			finallyKey, err := utils.CheckPassword(globalSalt, masterPwd, pbe2)
+			finallyKey, err := utils.DecryptNss(globalSalt, masterPwd, nss)
 			finallyKey = finallyKey[:24]
 			if err != nil {
 				log.Error(err)
@@ -548,7 +548,7 @@ func GetLoginData() (l []loginData) {
 	if err != nil {
 		log.Warn(err)
 	}
-	defer os.Remove(utils.FirefoxLoginData)
+	//defer os.Remove(utils.FirefoxLoginData)
 	h := gjson.GetBytes(s, "logins")
 	if h.Exists() {
 		for _, v := range h.Array() {
