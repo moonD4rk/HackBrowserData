@@ -53,7 +53,6 @@ const (
 	FirefoxKey3DB    = "key3.db"
 )
 
-
 func ListBrowser() []string {
 	var l []string
 	for k := range browserList {

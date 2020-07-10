@@ -33,7 +33,6 @@ var (
 	}
 )
 
-
 func InitKey(string) error {
 	return nil
 }
