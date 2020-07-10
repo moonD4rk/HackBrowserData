@@ -7,7 +7,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        goVer: [1.13, 1.14]
+        goVer: [1.11, 1.12, 1.13, 1.14]
 
     steps:
     - name: Set up Go ${{ matrix.goVer }}

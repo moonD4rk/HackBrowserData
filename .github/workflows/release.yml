@@ -26,8 +26,6 @@ jobs:
                 # Don't build windows-32bit due to missing MinGW dependencies
                 # Don't build osx-32bit due to eventual drop in Go support
                 exclude:
-                    - os: windows-latest
-                      arch: '386'
                     - os: macos-latest
                       arch: '386'
         steps:
@@ -37,8 +35,8 @@ jobs:
                 go-version: 1.14
             # - if: matrix.os == 'ubuntu-latest'
             #  run: sudo apt-get update && sudo apt-get install -y gcc-multilib
-            # - if: matrix.arch == '386'
-            #  run: echo "::set-env name=RELEASE::gophish-${{ github.event.release.tag_name }}-${{ matrix.releaseos}}-32bit"
+            - if: matrix.arch == '386'
+              run: echo "::set-env name=RELEASE::hack-browser-data-${{ github.event.release.tag_name }}-${{ matrix.releaseos}}-32bit"
             - if: matrix.arch == 'amd64'
               run: echo "::set-env name=RELEASE::hack-browser-data-${{ github.event.release.tag_name}}-${{ matrix.releaseos}}-64bit"
             - uses: actions/checkout@v2
