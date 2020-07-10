@@ -151,7 +151,8 @@ func DecodeNss(nssA11Bytes []byte) (pbe NssPBE, err error) {
 }
 
 func DecryptMeta(globalSalt, masterPwd []byte, pbe MetaPBE) ([]byte, error) {
-	return decryptPBE(globalSalt, masterPwd, pbe.EntrySalt, pbe.Encrypted)}
+	return decryptPBE(globalSalt, masterPwd, pbe.EntrySalt, pbe.Encrypted)
+}
 
 func DecryptNss(globalSalt, masterPwd []byte, pbe NssPBE) ([]byte, error) {
 	return decryptPBE(globalSalt, masterPwd, pbe.EntrySalt, pbe.Encrypted)
