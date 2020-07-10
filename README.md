@@ -41,10 +41,14 @@ Installation of hack-browser-data is dead-simple, just download [the release for
 
 #### Building from source
 
+support `go 1.11+`
+
 ```bash
 git clone https://github.com/moonD4rk/HackBrowserData
 
-cd HackBrowserData && go mod tidy
+cd HackBrowserData
+
+go get -v -t -d ./...
 
 go build
 ```
@@ -52,8 +56,7 @@ go build
 #### Run
 
 ```shell
-✗ .\hack-browser-data.exe -h
-NAME:
+PS C:\hack> .\hack.exe -h                                                                                               NAME:
    hack-browser-data - Export passwords/cookies/history/bookmarks from browser
 
 USAGE:
@@ -62,22 +65,20 @@ USAGE:
 
 GLOBAL OPTIONS:
    --verbose, --vv                   verbose (default: false)
-   --browser value, -b value         available browsers: chrome|edge|360speed|qq (default: "chrome")
-   --results-dir value, --dir value  Export dir (default: "results")
+   --browser value, -b value         available browsers: chrome|edge|360speed|qq|firefox (default: "chrome")
+   --results-dir value, --dir value  export dir (default: "results")
    --format value, -f value          result format, csv|json (default: "csv")
    --export-data value, -e value     all|password|cookie|history|bookmark (default: "all")
    --help, -h                        show help (default: false)
+
+PS C:\hack> .\hack.exe -b firefox
+[x]:  Get 28 bookmarks, filename is results/bookmarks_firefox.csv
+[x]:  Get 1 login data, filename is results/login_data_firefox.csv
+[x]:  Get 10 cookies, filename is results/cookies_firefox.csv
+[x]:  Get 33 login data, filename is results/history_firefox.csv
 ```
 
 
-
-```shell
-✗ ./hack-browser-data.exe -b chrome -f json -dir results -e all
-[x]:  Get 538 bookmarks, filename is results/bookmarks_chrome.json 
-[x]:  Get 1610 cookies, filename is results/cookies_chrome.json 
-[x]:  Get 44050 history, filename is results/history_chrome.json 
-[x]:  Get 457 login data, filename is results/login_data_chrome.json 
-```
 
 
 
@@ -102,7 +103,6 @@ GLOBAL OPTIONS:
 - [x] QQ browser
 - [x] Edge
 - [x] 360 speed browser
-- [ ] 360 secure browser
+- [x] Firefox
 - [ ] Safari
-- [ ] Firefox
 - [ ] IE
