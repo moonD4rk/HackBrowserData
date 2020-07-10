@@ -9,8 +9,8 @@ jobs:
         runs-on: ${{ matrix.os }}
         strategy:
             matrix:
-                os: [windows-latest, macos-latest]
-                arch: [amd64]
+                os: [windows-latest, macos-latest, ubuntu-latest]
+                arch: [amd64, '386']
                 include:
                     - os: windows-latest
                       goos: windows
@@ -26,8 +26,6 @@ jobs:
                       releaseos: linux
                 exclude:
                     - os: macos-latest
-                      arch: '386'
-                    - os: windows-latest
                       arch: '386'
         steps:
             - name: Set up Go
