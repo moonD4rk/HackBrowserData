@@ -53,6 +53,10 @@ const (
 	FirefoxKey3DB    = "key3.db"
 )
 
+func InitKey(string) error {
+	return nil
+}
+
 func ListBrowser() []string {
 	var l []string
 	for k := range browserList {
