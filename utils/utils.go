@@ -17,9 +17,9 @@ import (
 )
 
 var (
-	passwordIsEmpty = errors.New("decrypt fail, password is empty")
-
+	errPasswordIsEmpty     = errors.New("decrypt failed, password is empty")
 	errBrowserNotSupported = errors.New("browser not supported")
+	errKeyIsEmpty          = errors.New("input [security find-generic-password -wa 'Chrome'] in terminal")
 	VersionUnder80         bool
 )
 
@@ -227,9 +227,7 @@ func DecodeLogin(decodeItem []byte) (pbe LoginPBE, err error) {
 }
 
 func aes128CBCDecrypt(key, iv, encryptPass []byte) ([]byte, error) {
-	if len(chromeKey) == 0 {
-		return []byte{}, nil
-	}
+
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return []byte{}, err

@@ -88,11 +88,14 @@ func decryptChromeKey(chromePass []byte) {
 
 func DecryptChromePass(encryptPass []byte) (string, error) {
 	if len(encryptPass) > 3 {
+		if len(chromeKey) == 0 {
+			return "", errKeyIsEmpty
+		}
 		m, err := aes128CBCDecrypt(chromeKey, iv, encryptPass[3:])
 		return string(m), err
 	} else {
 		return "", &DecryptError{
-			err: passwordIsEmpty,
+			err: errPasswordIsEmpty,
 		}
 	}
 }
