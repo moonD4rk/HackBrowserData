@@ -27,6 +27,8 @@ jobs:
                 exclude:
                     - os: macos-latest
                       arch: '386'
+                    - os: windows-latest
+                      arch: '386'
         steps:
             - name: Set up Go
               uses: actions/setup-go@v2
