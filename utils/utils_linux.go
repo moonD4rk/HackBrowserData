@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	fireFoxProfilePath = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-release/"
+	fireFoxProfilePath = "/home/*/.mozilla/firefox/*.default-release/"
 	fireFoxCommand     = ""
 )
 
