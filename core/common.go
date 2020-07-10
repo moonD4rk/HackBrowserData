@@ -98,7 +98,11 @@ var bookmarkList BookmarkSlice
 
 func parseBookmarks() {
 	bookmarks, err := utils.ReadFile(utils.Bookmarks)
-	defer os.Remove(utils.Bookmarks)
+	defer func() {
+		if err := os.Remove(utils.Bookmarks); err != nil {
+			log.Error(err)
+		}
+	}()
 	if err != nil {
 		log.Debug(err)
 	}
@@ -119,7 +123,11 @@ func parseLogin() {
 	var loginItemList LoginDataSlice
 	login := loginData{}
 	loginDB, err := sql.Open("sqlite3", utils.LoginData)
-	defer os.Remove(utils.LoginData)
+	defer func() {
+		if err := os.Remove(utils.LoginData); err != nil {
+			log.Error(err)
+		}
+	}()
 	defer func() {
 		if err := loginDB.Close(); err != nil {
 			log.Debug(err)
@@ -173,7 +181,11 @@ func parseCookie() {
 	cookie := cookies{}
 	cookieMap := make(map[string][]cookies)
 	cookieDB, err := sql.Open("sqlite3", utils.Cookies)
-	defer os.Remove(utils.Cookies)
+	defer func() {
+		if err := os.Remove(utils.Cookies); err != nil {
+			log.Error(err)
+		}
+	}()
 	defer func() {
 		if err := cookieDB.Close(); err != nil {
 			log.Debug(err)
@@ -232,7 +244,11 @@ func parseHistory() {
 	var historyList HistorySlice
 	h := history{}
 	historyDB, err := sql.Open("sqlite3", utils.History)
-	defer os.Remove(utils.History)
+	defer func() {
+		if err := os.Remove(utils.History); err != nil {
+			log.Error(err)
+		}
+	}()
 	defer func() {
 		if err := historyDB.Close(); err != nil {
 			log.Debug(err)
@@ -305,7 +321,11 @@ func parseFirefoxData() {
 	)
 	tempMap = make(map[int64]string)
 	keyDB, err = sql.Open("sqlite3", utils.FirefoxData)
-	defer os.Remove(utils.FirefoxData)
+	defer func() {
+		if err := os.Remove(utils.FirefoxData); err != nil {
+			log.Error(err)
+		}
+	}()
 	defer func() {
 		err := keyDB.Close()
 		if err != nil {
@@ -378,11 +398,11 @@ func GetDecryptKey() (b [][]byte) {
 		pwdRows *sql.Rows
 		nssRows *sql.Rows
 	)
-	//defer func() {
-	//	if err := os.Remove(utils.FirefoxKey4DB); err != nil {
-	//		log.Error(err)
-	//	}
-	//}()
+	defer func() {
+		if err := os.Remove(utils.FirefoxKey4DB); err != nil {
+			log.Error(err)
+		}
+	}()
 	keyDB, err = sql.Open("sqlite3", utils.FirefoxKey4DB)
 	defer func() {
 		if err := keyDB.Close(); err != nil {
@@ -499,7 +519,11 @@ func parseFirefoxCookie() {
 	cookie := cookies{}
 	cookieMap := make(map[string][]cookies)
 	cookieDB, err := sql.Open("sqlite3", utils.FirefoxCookie)
-	defer os.Remove(utils.FirefoxCookie)
+	defer func() {
+		if err := os.Remove(utils.FirefoxCookie); err != nil {
+			log.Debug(err)
+		}
+	}()
 	defer func() {
 		if err := cookieDB.Close(); err != nil {
 			log.Debug(err)
@@ -548,7 +572,11 @@ func GetLoginData() (l []loginData) {
 	if err != nil {
 		log.Warn(err)
 	}
-	//defer os.Remove(utils.FirefoxLoginData)
+	defer func() {
+		if err := os.Remove(utils.FirefoxLoginData); err != nil {
+			log.Error(err)
+		}
+	}()
 	h := gjson.GetBytes(s, "logins")
 	if h.Exists() {
 		for _, v := range h.Array() {

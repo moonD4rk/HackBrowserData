@@ -11,9 +11,6 @@ jobs:
             matrix:
                 os: [windows-latest, macos-latest]
                 arch: [amd64]
-                # We sometimes use different verbiage for things (e.g. "darwin"
-                # for the GOOS build flag and "osx" in the actual release ZIP).
-                # We need to specify those here.
                 include:
                     - os: windows-latest
                       goos: windows
@@ -23,16 +20,22 @@ jobs:
                       goos: darwin
                       bin: 'hack-browser-data'
                       releaseos: osx
+                    - os: ubuntu-latest
+                      goos: linux
+                      bin: 'hack-browser-data'
+                      releaseos: linux
                 exclude:
                     - os: macos-latest
+                      arch: '386'
+                    - os: windows-latest
                       arch: '386'
         steps:
             - name: Set up Go
               uses: actions/setup-go@v2
               with:
                 go-version: 1.14
-            # - if: matrix.os == 'ubuntu-latest'
-            #  run: sudo apt-get update && sudo apt-get install -y gcc-multilib
+            - if: matrix.os == 'ubuntu-latest'
+              run: sudo apt-get update && sudo apt-get install -y gcc-multilib
             - if: matrix.arch == '386'
               run: echo "::set-env name=RELEASE::hack-browser-data-${{ github.event.release.tag_name }}-${{ matrix.releaseos}}-32bit"
             - if: matrix.arch == 'amd64'
@@ -49,7 +52,6 @@ jobs:
               with:
                 name: ${{ env.RELEASE }}
                 path: ${{ matrix.bin }}
-
     package:
         name: Package Assets
         runs-on: ubuntu-latest
@@ -91,8 +93,6 @@ jobs:
               with:
                 name: releases
                 path: releases/
-            # I would love to use @actions/upload-release-asset, but they don't
-            # support wildcards in the asset path. Ref #9, #24, and #47
             - name: Upload Archives to Release
               env:
                 UPLOAD_URL: ${{ github.event.release.upload_url }}

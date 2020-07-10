@@ -1,6 +1,6 @@
 # HackBrowserData
 
-hack-browser-data is an open-source tool that could help you export data from browser. It supports the most popular browsers on the market and runs on Windows and macOS.
+hack-browser-data is an open-source tool that could help you export data from browser. It supports the most popular browsers on the market and runs on Windows, macOS and Linux.
 
 ### Supported Browser
 
@@ -27,11 +27,9 @@ Because of  the security policies, all those browsers require a password.
 
 #### Linux
 
-These browsers will be supported in the future.
-
 | Browser                             | Password | Cookie | Bookmark | History |
 | :---------------------------------- | :------: | :----: | :------: | :-----: |
-| Firefox |    ❌    |   ❌   |    ❌    |    ❌    |
+| Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
 | Google Chrome |    ❌    |   ❌   |    ❌    |    ❌    |
 
 
@@ -64,10 +62,10 @@ USAGE:
    Get all data(password/cookie/history/bookmark) from chrome
 
 GLOBAL OPTIONS:
-   --verbose, --vv                   verbose (default: false)
-   --browser value, -b value         available browsers: chrome|edge|360speed|qq|firefox (default: "chrome")
-   --results-dir value, --dir value  export dir (default: "results")
-   --format value, -f value          result format, csv|json (default: "csv")
+   --verbose, --vv                   Verbose (default: false)
+   --browser value, -b value         Available browsers: chrome|edge|360speed|qq|firefox (default: "chrome")
+   --results-dir value, --dir value  Export dir (default: "results")
+   --format value, -f value          Format, csv|json (default: "csv")
    --export-data value, -e value     all|password|cookie|history|bookmark (default: "all")
    --help, -h                        show help (default: false)
 
