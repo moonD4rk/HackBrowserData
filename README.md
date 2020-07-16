@@ -1,45 +1,48 @@
 # HackBrowserData
 
-hack-browser-data is an open-source tool that could help you export data from browser. It supports the most popular browsers on the market and runs on Windows, macOS and Linux.
+[English Readme](https://github.com/moonD4rk/HackBrowserData/blob/master/README_EN.md) 
 
-### Supported Browser
+hack-browser-data 是一个浏览器数据（密码|历史记录|Cookies|书签）导出工具，支持全平台主流浏览器。
+
+### 各平台浏览器支持情况
 
 #### Windows
-| Browser                             | Password | Cookie | Bookmark | History |
-| :---------------------------------- | :------: | :----: | :------: | :-----: |
-| Google Chrome (Full Version) |    ✅    |   ✅   |    ✅    |    ✅    |
-| Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
-| Microsoft Edge |    ✅    |   ✅   |    ✅    |    ✅    |
-| 360 Speed Browser |    ✅    |   ✅   |    ✅    |    ✅    |
-| QQ Browser |    ✅    |   ✅   |    ✅    |    ✅    |
-| Internet Explorer |    ❌    |   ❌   |    ❌    |    ❌    |
+
+| 浏览器                      | 密码 | Cookie | 书签 | 历史记录 |
+| :--------------------------- | :------: | :----: | :------: | :-----: |
+| Google Chrome (全版本) |    ✅     |   ✅    |    ✅     |    ✅    |
+| Firefox                    |    ✅     |   ✅    |    ✅     |    ✅    |
+| Microsoft Edge               |    ✅     |   ✅    |    ✅     |    ✅    |
+| 360 急速浏览器    |    ✅     |   ✅    |    ✅     |    ✅    |
+| QQ 浏览器               |    ✅     |   ✅    |    ✅     |    ✅    |
+| IE 浏览器        |    ❌     |   ❌    |    ❌     |    ❌    |
 
 #### MacOS
 
-Because of  the security policies, all those browsers require a password.
+由于 MacOS 的安全性设置，基于 `Chromium` 内核浏览器解密时需要用户密码
 
-| Browser                             | Password | Cookie | Bookmark | History |
-| :---------------------------------- | :------: | :----: | :------: | :-----: |
-| Google Chrome |    ✅    |   ✅   |    ✅    |    ✅    |
-| Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
-| Microsoft Edge |    ✅    |   ✅   |    ✅    |    ✅    |
-| Safari |    ❌    |   ❌   |    ❌    |    ❌    |
+| Browser                      | Password | Cookie | Bookmark | History |
+| :--------------------------- | :------: | :----: | :------: | :-----: |
+| Google Chrome<br />需要密码  |    ✅     |   ✅    |    ✅     |    ✅    |
+| Firefox                      |    ✅     |   ✅    |    ✅     |    ✅    |
+| Microsoft Edge<br />需要密码 |    ✅     |   ✅    |    ✅     |    ✅    |
+| Safari                       |    ❌     |   ❌    |    ❌     |    ❌    |
 
 #### Linux
 
-| Browser                             | Password | Cookie | Bookmark | History |
-| :---------------------------------- | :------: | :----: | :------: | :-----: |
-| Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
-| Google Chrome |    ❌    |   ❌   |    ❌    |    ❌    |
+| Browser       | Password | Cookie | Bookmark | History |
+| :------------ | :------: | :----: | :------: | :-----: |
+| Firefox       |    ✅     |   ✅    |    ✅     |    ✅    |
+| Google Chrome |    ❌     |   ❌    |    ❌     |    ❌    |
 
 
-### Install
+### 安装运行
 
-Installation of hack-browser-data is dead-simple, just download [the release for your system](https://github.com/moonD4rk/HackBrowserData/releases) and run the binary.
+基于Golang，如图方便可以下载我编译好的[二进制文件 ](https://github.com/moonD4rk/HackBrowserData/releases) 就行
 
-#### Building from source
+#### 自己编译
 
-support `go 1.11+`
+支持版本 `go 1.11+`
 
 ```bash
 git clone https://github.com/moonD4rk/HackBrowserData
@@ -51,7 +54,7 @@ go get -v -t -d ./...
 go build
 ```
 
-#### Run
+#### 运行
 
 ```shell
 PS C:\hack> .\hack.exe -h                                                                                               NAME:
@@ -77,17 +80,13 @@ PS C:\hack> .\hack.exe -b firefox
 ```
 
 
-
-
-
-
 ### TODO
 
 [Desktop Browser Market Share Worldwide](https://gs.statcounter.com/browser-market-share/desktop/worldwide)
 
-| Chrome | Safari | Firefox | Edge Legacy | IE |  Other  |
-| :------:| :------: | :----: | :------: | :-----: | :--: |
-| 68.33% |    9.4% | 8.91% |   4.41% |    3%    |  3%  |
+| Chrome | Safari | Firefox | Edge Legacy |  IE  | Other |
+| :----: | :----: | :-----: | :---------: | :--: | :---: |
+| 68.33% |  9.4%  |  8.91%  |    4.41%    |  3%  |  3%   |
 
 [Desktop Browser Market Share China](https://gs.statcounter.com/browser-market-share/desktop/china)
 
