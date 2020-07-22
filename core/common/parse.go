@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/base64"
-	"hack-browser-data/core/decrypt"
-	"hack-browser-data/log"
-	"hack-browser-data/utils"
 	"io/ioutil"
 	"os"
 	"sort"
 	"time"
+
+	"hack-browser-data/core/decrypt"
+	"hack-browser-data/log"
+	"hack-browser-data/utils"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tidwall/gjson"
@@ -244,9 +245,9 @@ func (h *History) ChromeParse(key []byte) error {
 func (c *Cookies) ChromeParse(secretKey []byte) error {
 	cookie := cookies{}
 	c.cookies = make(map[string][]cookies)
-	cookieDB, err := sql.Open("sqlite3", utils.Cookies)
+	cookieDB, err := sql.Open("sqlite3", ChromeCookies)
 	defer func() {
-		if err := os.Remove(utils.Cookies); err != nil {
+		if err := os.Remove(ChromeCookies); err != nil {
 			log.Error(err)
 		}
 	}()
@@ -534,11 +535,11 @@ func getDecryptKey() (item1, item2, a11, a102 []byte, err error) {
 		nssRows *sql.Rows
 	)
 	defer func() {
-		if err := os.Remove(utils.FirefoxKey4DB); err != nil {
+		if err := os.Remove(FirefoxKey4DB); err != nil {
 			log.Error(err)
 		}
 	}()
-	keyDB, err = sql.Open("sqlite3", utils.FirefoxKey4DB)
+	keyDB, err = sql.Open("sqlite3", FirefoxKey4DB)
 	defer func() {
 		if err := keyDB.Close(); err != nil {
 			log.Error(err)

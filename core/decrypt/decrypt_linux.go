@@ -11,14 +11,8 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-const (
-	fireFoxProfilePath = "/home/*/.mozilla/firefox/*.default-release/"
-	fireFoxCommand     = ""
-)
-
 var (
-	chromeIV   = []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
-	chromeSalt = []byte("saltysalt")
+	chromeIV = []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
 )
 
 func ChromePass(key, encryptPass []byte) ([]byte, error) {
