@@ -14,47 +14,6 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-const (
-	chromeProfilePath    = "/AppData/Local/Google/Chrome/User Data/*/"
-	chromeKeyPath        = "/AppData/Local/Google/Chrome/User Data/Local State"
-	edgeProfilePath      = "/AppData/Local/Microsoft/Edge/User Data/*/"
-	edgeKeyPath          = "/AppData/Local/Microsoft/Edge/User Data/Local State"
-	speed360ProfilePath  = "/AppData/Local/360chrome/Chrome/User Data/*/"
-	speed360KeyPath      = ""
-	qqBrowserProfilePath = "/AppData/Local/Tencent/QQBrowser/User Data/*/"
-	qqBrowserKeyPath     = ""
-	firefoxProfilePath   = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-release/"
-	firefoxKeyPath       = ""
-)
-
-var (
-	browserList = map[string]struct {
-		ProfilePath string
-		KeyPath     string
-	}{
-		"chrome": {
-			chromeProfilePath,
-			chromeKeyPath,
-		},
-		"edge": {
-			edgeProfilePath,
-			edgeKeyPath,
-		},
-		"360speed": {
-			speed360ProfilePath,
-			speed360KeyPath,
-		},
-		"qq": {
-			qqBrowserProfilePath,
-			qqBrowserKeyPath,
-		},
-		"firefox": {
-			firefoxProfilePath,
-			"",
-		},
-	}
-)
-
 func ChromePass(encryptPass, key []byte) ([]byte, error) {
 	if len(encryptPass) > 15 {
 		// remove prefix 'v10'
