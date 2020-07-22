@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
+
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
-	"os"
 
 	"github.com/jszwec/csvutil"
 )
