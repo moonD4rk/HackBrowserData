@@ -5,7 +5,6 @@ import (
 	"crypto/cipher"
 	"crypto/des"
 	"encoding/asn1"
-	"errors"
 	"fmt"
 	"hack-browser-data/log"
 	"io/ioutil"
@@ -14,13 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-)
-
-var (
-	errPasswordIsEmpty     = errors.New("decrypt failed, password is empty")
-	errBrowserNotSupported = errors.New("browser not supported")
-	errKeyIsEmpty          = errors.New("input [security find-generic-password -wa 'Chrome'] in terminal")
-	VersionUnder80         bool
 )
 
 type DecryptError struct {
@@ -53,13 +45,6 @@ const (
 	FirefoxKey3DB    = "key3.db"
 )
 
-func ListBrowser() []string {
-	var l []string
-	for k := range browserList {
-		l = append(l, k)
-	}
-	return l
-}
 
 func GetDBPath(dir string, dbName ...string) (dbFile []string) {
 	for _, v := range dbName {
@@ -122,7 +107,7 @@ func TimeStampFormat(stamp int64) time.Time {
 func TimeEpochFormat(epoch int64) time.Time {
 	maxTime := int64(99633311740000000)
 	if epoch > maxTime {
-		epoch = maxTime
+		return time.Date(2049, 1, 1, 1, 1, 1, 1, time.Local)
 	}
 	t := time.Date(1601, 1, 1, 0, 0, 0, 0, time.UTC)
 	d := time.Duration(epoch)
@@ -156,9 +141,9 @@ func WriteFile(filename string, data []byte) error {
 }
 
 func FormatFileName(dir, browser, filename, format string) string {
-	r := strings.TrimSpace(strings.ToLower(filename))
-	r = strings.Replace(r, " ", "_", -1)
-	p := path.Join(dir, fmt.Sprintf("%s_%s.%s", r, browser, format))
+	r := strings.TrimSpace(strings.ToLower(browser))
+	r = strings.Replace(browser, " ", "_", -1)
+	p := path.Join(dir, fmt.Sprintf("%s_%s.%s", r, filename, format))
 	return p
 }
 
