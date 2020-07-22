@@ -39,6 +39,7 @@ func Execute() {
 			} else {
 				log.InitLog("error")
 			}
+			// default select all browsers
 			browsers, err := core.PickBrowsers(browser)
 			if err != nil {
 				log.Error(err)
