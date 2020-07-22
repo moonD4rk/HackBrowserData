@@ -1,4 +1,4 @@
-package utils
+package decrypt
 
 import (
 	"crypto/hmac"
@@ -7,7 +7,6 @@ import (
 	"encoding/asn1"
 	"encoding/hex"
 	"hack-browser-data/log"
-	"strings"
 
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -18,53 +17,24 @@ const (
 )
 
 var (
-	iv          = []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
-	command     = []string{"security", "find-generic-password", "-wa"}
-	chromeSalt  = []byte("saltysalt")
-	chromeKey   []byte
-	browserList = map[string]struct {
-		ProfilePath string
-		Command     string
-	}{
-		"firefox": {
-			fireFoxProfilePath,
-			fireFoxCommand,
-		},
-	}
+	chromeIV   = []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
+	chromeSalt = []byte("saltysalt")
 )
 
-func InitKey(string) error {
-	return nil
-}
-
-func DecryptStringWithDPAPI(data []byte) (string, error) {
-	return string(data), nil
-}
-
-func PickBrowser(name string) (browserDir, command string, err error) {
-	name = strings.ToLower(name)
-	if choice, ok := browserList[name]; ok {
-		return choice.ProfilePath, choice.Command, err
-	}
-	return "", "", errBrowserNotSupported
-}
-
-func decryptChromeKey(chromePass []byte) {
-	chromeKey = pbkdf2.Key(chromePass, chromeSalt, 1003, 16, sha1.New)
-}
-
-func DecryptChromePass(encryptPass []byte) (string, error) {
+func ChromePass(key, encryptPass []byte) ([]byte, error) {
 	if len(encryptPass) > 3 {
-		if len(chromeKey) == 0 {
-			return "", errKeyIsEmpty
+		if len(key) == 0 {
+			return nil, errKeyIsEmpty
 		}
-		m, err := aes128CBCDecrypt(chromeKey, iv, encryptPass[3:])
-		return string(m), err
+		m, err := aes128CBCDecrypt(key, chromeIV, encryptPass[3:])
+		return m, err
 	} else {
-		return "", &DecryptError{
-			err: errPasswordIsEmpty,
-		}
+		return nil, errDecryptFailed
 	}
+}
+
+func DPApi(data []byte) ([]byte, error) {
+	return nil, nil
 }
 
 /*
@@ -146,11 +116,11 @@ func DecodeNss(nssA11Bytes []byte) (pbe NssPBE, err error) {
 	return
 }
 
-func DecryptMeta(globalSalt, masterPwd []byte, pbe MetaPBE) ([]byte, error) {
+func Meta(globalSalt, masterPwd []byte, pbe MetaPBE) ([]byte, error) {
 	return decryptMeta(globalSalt, masterPwd, pbe.EntrySalt, pbe.Encrypted)
 }
 
-func DecryptNss(globalSalt, masterPwd []byte, pbe NssPBE) ([]byte, error) {
+func Nss(globalSalt, masterPwd []byte, pbe NssPBE) ([]byte, error) {
 	return decryptNss(globalSalt, masterPwd, pbe.IV, pbe.EntrySalt, pbe.Encrypted, pbe.IterationCount, pbe.KeySize)
 }
 
