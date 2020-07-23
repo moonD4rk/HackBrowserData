@@ -1,5 +1,7 @@
 # HackBrowserData
 
+[中文文档](https://github.com/moonD4rk/HackBrowserData/blob/master/README_ZH.md) 
+
 hack-browser-data is an open-source tool that could help you export data from browser. It supports the most popular browsers on the market and runs on Windows, macOS and Linux.
 
 ### Supported Browser
