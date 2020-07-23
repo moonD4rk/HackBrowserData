@@ -95,7 +95,7 @@ func (l *Logins) OutPutJson(browser, dir string) error {
 		log.Error(err)
 		return err
 	}
-	fmt.Printf("%s Get %d history, filename is %s \n", log.Prefix, len(l.logins), filename)
+	fmt.Printf("%s Get %d passwords, filename is %s \n", log.Prefix, len(l.logins), filename)
 	return nil
 }
 
@@ -125,7 +125,7 @@ func (c *Cookies) OutPutJson(browser, dir string) error {
 		log.Error(err)
 		return err
 	}
-	fmt.Printf("%s Get %d history, filename is %s \n", log.Prefix, len(c.cookies), filename)
+	fmt.Printf("%s Get %d cookies, filename is %s \n", log.Prefix, len(c.cookies), filename)
 	return nil
 }
 
@@ -169,7 +169,7 @@ func (h *History) OutPutCsv(browser, dir string) error {
 		return err
 	}
 	file.Write(data)
-	fmt.Printf("%s Get %d bookmarks, filename is %s \n", log.Prefix, len(h.history), filename)
+	fmt.Printf("%s Get %d history, filename is %s \n", log.Prefix, len(h.history), filename)
 	return nil
 }
 
@@ -191,7 +191,7 @@ func (l *Logins) OutPutCsv(browser, dir string) error {
 		return err
 	}
 	file.Write(data)
-	fmt.Printf("%s Get %d bookmarks, filename is %s \n", log.Prefix, len(l.logins), filename)
+	fmt.Printf("%s Get %d passwords, filename is %s \n", log.Prefix, len(l.logins), filename)
 	return nil
 }
 
