@@ -57,7 +57,8 @@ go build
 #### 运行
 
 ```shell
-PS C:\hack> .\hack.exe -h                                                                                               NAME:
+PS C:\hack> .\hack.exe -h
+NAME:
    hack-browser-data - Export passwords/cookies/history/bookmarks from browser
 
 USAGE:
@@ -66,17 +67,31 @@ USAGE:
 
 GLOBAL OPTIONS:
    --verbose, --vv                   Verbose (default: false)
-   --browser value, -b value         Available browsers: chrome|edge|360speed|qq|firefox (default: "chrome")
+   --browser value, -b value         Available browsers: all|360|qq|firefox|chrome|edge (default: "all")
    --results-dir value, --dir value  Export dir (default: "results")
    --format value, -f value          Format, csv|json (default: "csv")
    --export-data value, -e value     all|password|cookie|history|bookmark (default: "all")
    --help, -h                        show help (default: false)
 
-PS C:\hack> .\hack.exe -b firefox
-[x]:  Get 28 bookmarks, filename is results/bookmarks_firefox.csv
-[x]:  Get 1 login data, filename is results/login_data_firefox.csv
-[x]:  Get 10 cookies, filename is results/cookies_firefox.csv
-[x]:  Get 33 login data, filename is results/history_firefox.csv
+PS C:\hack> .\hack.exe -b all -f json -e all --dir windows-results
+[x]:  Get 6 history, filename is windows-results/Chrome_cookie.json
+[x]:  Get 6 history, filename is windows-results/Chrome_history.json
+[x]:  Get 1 history, filename is windows-results/Chrome_password.json
+[x]:  Get 1 history, filename is windows-results/Microsoft_Edge_password.json
+[x]:  Get 45 history, filename is windows-results/Microsoft_Edge_cookie.json
+[x]:  Get 54 history, filename is windows-results/Microsoft_Edge_history.json
+[x]:  Get 18 history, filename is windows-results/360speed_history.json
+[x]:  Get 6 bookmarks, filename is windows-results/360speed_bookmark.json
+[x]:  Get 1 history, filename is windows-results/360speed_password.json
+[x]:  Get 19 history, filename is windows-results/360speed_cookie.json
+[x]:  Get 12 bookmarks, filename is windows-results/qq_bookmark.json
+[x]:  Get 1 history, filename is windows-results/qq_password.json
+[x]:  Get 14 history, filename is windows-results/qq_cookie.json
+[x]:  Get 12 history, filename is windows-results/qq_history.json
+[x]:  Get 10 history, filename is windows-results/Firefox_cookie.json
+[x]:  Get 33 history, filename is windows-results/Firefox_history.json
+[x]:  Get 28 bookmarks, filename is windows-results/Firefox_bookmark.json
+[x]:  Get 1 history, filename is windows-results/Firefox_password.json
 ```
 
 
