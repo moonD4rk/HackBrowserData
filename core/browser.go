@@ -295,7 +295,7 @@ func (f *firefox) GetProfilePath(filename string) (err error) {
 			}
 			if len(m) > 0 {
 				log.Debugf("%s find %s File Success", f.Name, v.name)
-				log.Debugf("%+v file location is %s", v, m[0])
+				log.Debugf("%s file location is %s", v.mainFile, m[0])
 				v.mainPath = m[0]
 				f.FileLists = append(f.FileLists, v)
 			} else {
