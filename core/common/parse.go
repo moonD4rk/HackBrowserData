@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"io/ioutil"
-	"os"
 	"sort"
 	"time"
 
@@ -98,13 +97,8 @@ const (
 
 func (b *Bookmarks) ChromeParse(key []byte) error {
 	bookmarks, err := utils.ReadFile(ChromeBookmarks)
-	defer func() {
-		if err := os.Remove(ChromeBookmarks); err != nil {
-			log.Error(err)
-		}
-	}()
 	if err != nil {
-		log.Debug(err)
+		log.Error(err)
 		return err
 	}
 	r := gjson.Parse(bookmarks)
@@ -119,22 +113,16 @@ func (b *Bookmarks) ChromeParse(key []byte) error {
 }
 
 func (l *Logins) ChromeParse(key []byte) error {
-	login := loginData{}
 	loginDB, err := sql.Open("sqlite3", ChromePassword)
-	defer func() {
-		if err := os.Remove(ChromePassword); err != nil {
-			log.Error(err)
-		}
-	}()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
 	defer func() {
 		if err := loginDB.Close(); err != nil {
 			log.Debug(err)
 		}
 	}()
-	if err != nil {
-		log.Debug(err)
-		return err
-	}
 	err = loginDB.Ping()
 	var queryLogin = `SELECT origin_url, username_value, password_value, date_created FROM logins`
 	rows, err := loginDB.Query(queryLogin)
@@ -150,7 +138,7 @@ func (l *Logins) ChromeParse(key []byte) error {
 			create        int64
 		)
 		err = rows.Scan(&url, &username, &pwd, &create)
-		login = loginData{
+		login := loginData{
 			UserName:    username,
 			encryptPass: pwd,
 			LoginUrl:    url,
@@ -176,12 +164,13 @@ func (l *Logins) ChromeParse(key []byte) error {
 }
 
 func getBookmarkChildren(value gjson.Result, b *Bookmarks) (children gjson.Result) {
-	bm := bookmark{}
-	bm.ID = value.Get(bookmarkID).Int()
 	nodeType := value.Get(bookmarkType)
-	bm.DateAdded = utils.TimeEpochFormat(value.Get(bookmarkAdded).Int())
-	bm.URL = value.Get(bookmarkUrl).String()
-	bm.Name = value.Get(bookmarkName).String()
+	bm := bookmark{
+		ID:        value.Get(bookmarkID).Int(),
+		Name:      value.Get(bookmarkName).String(),
+		URL:       value.Get(bookmarkUrl).String(),
+		DateAdded: utils.TimeEpochFormat(value.Get(bookmarkAdded).Int()),
+	}
 	children = value.Get(bookmarkChildren)
 	if nodeType.Exists() {
 		bm.Type = nodeType.String()
@@ -196,22 +185,16 @@ func getBookmarkChildren(value gjson.Result, b *Bookmarks) (children gjson.Resul
 }
 
 func (h *History) ChromeParse(key []byte) error {
-	data := history{}
 	historyDB, err := sql.Open("sqlite3", ChromeHistory)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
 	defer func() {
-		if err := os.Remove(ChromeHistory); err != nil {
+		if err := historyDB.Close(); err != nil {
 			log.Error(err)
 		}
 	}()
-	defer func() {
-		if err := historyDB.Close(); err != nil {
-			log.Debug(err)
-		}
-	}()
-	if err != nil {
-		log.Debug(err)
-		return err
-	}
 	err = historyDB.Ping()
 	var queryHistory = `SELECT url, title, visit_count, last_visit_time FROM urls`
 	rows, err := historyDB.Query(queryHistory)
@@ -227,14 +210,14 @@ func (h *History) ChromeParse(key []byte) error {
 			lastVisitTime int64
 		)
 		err := rows.Scan(&url, &title, &visitCount, &lastVisitTime)
-		data = history{
+		data := history{
 			Url:           url,
 			Title:         title,
 			VisitCount:    visitCount,
 			LastVisitTime: utils.TimeEpochFormat(lastVisitTime),
 		}
 		if err != nil {
-			log.Debug(err)
+			log.Error(err)
 			continue
 		}
 		h.history = append(h.history, data)
@@ -243,26 +226,19 @@ func (h *History) ChromeParse(key []byte) error {
 }
 
 func (c *Cookies) ChromeParse(secretKey []byte) error {
-	cookie := cookies{}
 	c.cookies = make(map[string][]cookies)
 	cookieDB, err := sql.Open("sqlite3", ChromeCookies)
-	defer func() {
-		if err := os.Remove(ChromeCookies); err != nil {
-			log.Error(err)
-		}
-	}()
+	if err != nil {
+		log.Debug(err)
+		return err
+	}
 	defer func() {
 		if err := cookieDB.Close(); err != nil {
 			log.Debug(err)
 		}
 	}()
-	if err != nil {
-		log.Debug(err)
-		return err
-	}
 	err = cookieDB.Ping()
 	var queryCookie = `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`
-
 	rows, err := cookieDB.Query(queryCookie)
 	defer func() {
 		if err := rows.Close(); err != nil {
@@ -277,7 +253,7 @@ func (c *Cookies) ChromeParse(secretKey []byte) error {
 			value, encryptValue                           []byte
 		)
 		err = rows.Scan(&key, &encryptValue, &host, &path, &createDate, &expireDate, &isSecure, &isHTTPOnly, &hasExpire, &isPersistent)
-		cookie = cookies{
+		cookie := cookies{
 			KeyName:      key,
 			Host:         host,
 			Path:         path,
@@ -308,6 +284,7 @@ func (c *Cookies) ChromeParse(secretKey []byte) error {
 
 func (h *History) FirefoxParse() error {
 	var queryFirefoxHistory = `SELECT id, url, title, last_visit_date, visit_count FROM moz_places`
+	var closeJournalMode = `PRAGMA journal_mode=off`
 	var (
 		err         error
 		keyDB       *sql.DB
@@ -320,14 +297,12 @@ func (h *History) FirefoxParse() error {
 		log.Error(err)
 		return err
 	}
+	_, err = keyDB.Exec(closeJournalMode)
+	if err != nil {
+		log.Error(err)
+	}
 	defer func() {
-		if err := os.Remove(FirefoxData); err != nil {
-			log.Error(err)
-		}
-	}()
-	defer func() {
-		err := keyDB.Close()
-		if err != nil {
+		if err := keyDB.Close(); err != nil {
 			log.Error(err)
 		}
 	}()
@@ -360,6 +335,8 @@ func (h *History) FirefoxParse() error {
 }
 
 func (b *Bookmarks) FirefoxParse() error {
+	var queryFirefoxBookMarks = `SELECT id, fk, type, dateAdded, title FROM moz_bookmarks`
+	var closeJournalMode = `PRAGMA journal_mode=off`
 	var (
 		err          error
 		keyDB        *sql.DB
@@ -367,17 +344,15 @@ func (b *Bookmarks) FirefoxParse() error {
 		tempMap      map[int64]string
 		bookmarkUrl  string
 	)
-	var queryFirefoxBookMarks = `SELECT id, fk, type, dateAdded, title FROM moz_bookmarks`
 	keyDB, err = sql.Open("sqlite3", FirefoxData)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	defer func() {
-		if err := os.Remove(FirefoxData); err != nil {
-			log.Error(err)
-		}
-	}()
+	_, err = keyDB.Exec(closeJournalMode)
+	if err != nil {
+		log.Error(err)
+	}
 	bookmarkRows, err = keyDB.Query(queryFirefoxBookMarks)
 	defer func() {
 		if err := bookmarkRows.Close(); err != nil {
@@ -414,11 +389,6 @@ func (c *Cookies) FirefoxParse() error {
 		log.Debug(err)
 		return err
 	}
-	defer func() {
-		if err := os.Remove(FirefoxCookie); err != nil {
-			log.Debug(err)
-		}
-	}()
 	defer func() {
 		if err := cookieDB.Close(); err != nil {
 			log.Debug(err)
@@ -534,20 +504,16 @@ func getDecryptKey() (item1, item2, a11, a102 []byte, err error) {
 		pwdRows *sql.Rows
 		nssRows *sql.Rows
 	)
-	defer func() {
-		if err := os.Remove(FirefoxKey4DB); err != nil {
-			log.Error(err)
-		}
-	}()
 	keyDB, err = sql.Open("sqlite3", FirefoxKey4DB)
+	if err != nil {
+		log.Error(err)
+		return nil, nil, nil, nil, err
+	}
 	defer func() {
 		if err := keyDB.Close(); err != nil {
 			log.Error(err)
 		}
 	}()
-	if err != nil {
-		log.Debug(err)
-	}
 	var queryPassword = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
 	var queryNssPrivate = `SELECT a11, a102 from nssPrivate`
 	err = keyDB.Ping()
@@ -585,11 +551,6 @@ func getLoginData() (l []loginData, err error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := os.Remove(FirefoxLoginData); err != nil {
-			log.Error(err)
-		}
-	}()
 	h := gjson.GetBytes(s, "logins")
 	if h.Exists() {
 		for _, v := range h.Array() {

@@ -23,7 +23,7 @@ func Execute() {
 		Name:  "hack-browser-data",
 		Usage: "Export passwords/cookies/history/bookmarks from browser",
 		UsageText: "[hack-browser-data -b chrome -f json -dir results -e all]\n 	Get all data(password/cookie/history/bookmark) from chrome",
-		Version: "0.1.0",
+		Version: "0.1.7",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{Name: "verbose", Aliases: []string{"vv"}, Destination: &verbose, Value: false, Usage: "Verbose"},
 			&cli.StringFlag{Name: "browser", Aliases: []string{"b"}, Destination: &browser, Value: "all", Usage: "Available browsers: all|" + strings.Join(core.ListBrowser(), "|")},
