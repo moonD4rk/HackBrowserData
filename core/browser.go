@@ -144,16 +144,28 @@ func (c *chromium) ParseDB() {
 			if err := chromeParse(c.SecretKey, &c.Data.Bookmarks); err != nil {
 				log.Error(err)
 			}
+			if err := release(v.mainFile, &c.Data.Bookmarks); err != nil {
+				log.Error(err)
+			}
 		case history:
 			if err := chromeParse(c.SecretKey, &c.Data.History); err != nil {
+				log.Error(err)
+			}
+			if err := release(v.mainFile, &c.Data.History); err != nil {
 				log.Error(err)
 			}
 		case password:
 			if err := chromeParse(c.SecretKey, &c.Data.Logins); err != nil {
 				log.Error(err)
 			}
+			if err := release(v.mainFile, &c.Data.Logins); err != nil {
+				log.Error(err)
+			}
 		case cookie:
 			if err := chromeParse(c.SecretKey, &c.Data.Cookies); err != nil {
+				log.Error(err)
+			}
+			if err := release(v.mainFile, &c.Data.Cookies); err != nil {
 				log.Error(err)
 			}
 		}
@@ -229,16 +241,31 @@ func (f *firefox) ParseDB() {
 			if err := firefoxParse(&f.Data.Logins); err != nil {
 				log.Error(err)
 			}
+			if err := release(v.mainFile, &f.Data.Logins); err != nil {
+				log.Error(err)
+			}
+			if err := release(v.subFile, &f.Data.Logins); err != nil {
+				log.Error(err)
+			}
 		case bookmark:
 			if err := firefoxParse(&f.Data.Bookmarks); err != nil {
+				log.Error(err)
+			}
+			if err := release(v.mainFile, &f.Data.Bookmarks); err != nil {
 				log.Error(err)
 			}
 		case history:
 			if err := firefoxParse(&f.Data.History); err != nil {
 				log.Error(err)
 			}
+			if err := release(v.mainFile, &f.Data.History); err != nil {
+				log.Error(err)
+			}
 		case cookie:
 			if err := firefoxParse(&f.Data.Cookies); err != nil {
+				log.Error(err)
+			}
+			if err := release(v.mainFile, &f.Data.Cookies); err != nil {
 				log.Error(err)
 			}
 		}
@@ -382,6 +409,10 @@ func outPutJson(name, dir string, f common.Formatter) error {
 
 func outPutCsv(name, dir string, f common.Formatter) error {
 	return f.OutPutCsv(name, dir)
+}
+
+func release(filename string, f common.Formatter) error {
+	return f.Release(filename)
 }
 
 func ListBrowser() []string {
