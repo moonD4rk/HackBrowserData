@@ -181,4 +181,7 @@ Cookies
 hack-browser-data
 History
 *.db
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
 
