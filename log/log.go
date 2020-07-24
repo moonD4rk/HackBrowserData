@@ -1,120 +1,103 @@
 package log
 
 import (
+	"fmt"
+	"io"
+	"log"
 	"os"
-	"strings"
-
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 const (
 	Prefix = "[x]: "
 )
 
+type Level int
+
+const (
+	LevelDebug Level = iota
+	LevelWarn
+	LevelError
+)
+
+func (l Level) String() string {
+	switch l {
+	case LevelDebug:
+		return "debug"
+	case LevelError:
+		return "error"
+	}
+	return ""
+}
+
 var (
-	formatLogger *zap.SugaredLogger
-	levelMap     = map[string]zapcore.Level{
-		"debug": zapcore.DebugLevel,
-		"info":  zapcore.InfoLevel,
-		"warn":  zapcore.WarnLevel,
-		"error": zapcore.ErrorLevel,
-		"panic": zapcore.PanicLevel,
-		"fatal": zapcore.FatalLevel,
+	formatLogger *Logger
+	levelMap     = map[string]Level{
+		"debug": LevelDebug,
+		"error": LevelError,
 	}
 )
 
-func InitLog(level string) {
-	logger := newLogger(level)
-	formatLogger = logger.Sugar()
+func InitLog(l string) {
+	formatLogger = newLog(os.Stdout).setLevel(levelMap[l]).setFlags(log.Lshortfile)
 }
 
-func newLogger(level string) *zap.Logger {
-	core := newCore(level)
-	return zap.New(core,
-		zap.AddCaller(),
-		zap.AddCallerSkip(1),
-		zap.Development(),
-	)
+type Logger struct {
+	level Level
+	l     *log.Logger
 }
 
-func newCore(level string) zapcore.Core {
-	encoderConfig := zapcore.EncoderConfig{
-		TimeKey:        "time",
-		LevelKey:       "level",
-		NameKey:        "logger",
-		CallerKey:      "line",
-		MessageKey:     "msg",
-		StacktraceKey:  "stacktrace",
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.CapitalLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
-		EncodeDuration: zapcore.SecondsDurationEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
-		EncodeName:     zapcore.FullNameEncoder,
+func newLog(w io.Writer) *Logger {
+	return &Logger{
+		l: log.New(w, "", 0),
 	}
-	return zapcore.NewCore(
-		zapcore.NewConsoleEncoder(encoderConfig),
-		zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout)),
-		zap.NewAtomicLevelAt(getLoggerLevel(level)),
-	)
 }
 
-func getLoggerLevel(lvl string) zapcore.Level {
-	if level, ok := levelMap[strings.ToLower(lvl)]; ok {
-		return level
+func (l *Logger) setFlags(flag int) *Logger {
+	l.l.SetFlags(flag)
+	return l
+}
+
+func (l *Logger) setLevel(level Level) *Logger {
+	l.level = level
+	return l
+}
+
+func (l *Logger) doLog(level Level, v ...interface{}) bool {
+	if level < l.level {
+		return false
 	}
-	return zapcore.InfoLevel
+	l.l.Output(3, level.String()+" "+fmt.Sprintln(v...))
+	return true
 }
 
-func Debug(args ...interface{}) {
-	formatLogger.Debug(args...)
+func (l *Logger) doLogf(level Level, format string, v ...interface{}) bool {
+	if level < l.level {
+		return false
+	}
+	l.l.Output(3, level.String()+" "+fmt.Sprintln(fmt.Sprintf(format, v...)))
+	return true
 }
 
-func Debugf(template string, args ...interface{}) {
-	formatLogger.Debugf(template, args...)
+func Debug(v ...interface{}) {
+	formatLogger.doLog(LevelDebug, v...)
 }
 
-func Info(args ...interface{}) {
-	formatLogger.Info(args...)
+func Warn(v ...interface{}) {
+	formatLogger.doLog(LevelWarn, v...)
 }
 
-func Infof(template string, args ...interface{}) {
-	formatLogger.Infof(template, args...)
+func Error(v ...interface{}) {
+	formatLogger.doLog(LevelError, v...)
 }
 
-func Warn(args ...interface{}) {
-	formatLogger.Warn(args...)
+func Errorf(format string, v ...interface{}) {
+	formatLogger.doLogf(LevelError, format, v...)
 }
 
-func Warnf(template string, args ...interface{}) {
-	formatLogger.Warnf(template, args...)
+func Warnf(format string, v ...interface{}) {
+	formatLogger.doLogf(LevelWarn, format, v...)
 }
 
-func Error(args ...interface{}) {
-	formatLogger.Error(args...)
-}
-
-func Errorf(template string, args ...interface{}) {
-	formatLogger.Errorf(template, args...)
-}
-
-func Panic(args ...interface{}) {
-	formatLogger.Panic(args...)
-}
-
-func Panicf(template string, args ...interface{}) {
-	formatLogger.Panicf(template, args...)
-}
-
-func Fatal(args ...interface{}) {
-	formatLogger.Fatal(args...)
-}
-
-func Fatalf(template string, args ...interface{}) {
-	formatLogger.Fatalf(template, args...)
-}
-
-func Println(args ...interface{}) {
-	formatLogger.Debug(args...)
+func Debugf(format string, v ...interface{}) {
+	formatLogger.doLogf(LevelDebug, format, v...)
 }

@@ -160,16 +160,15 @@ func (l *Logins) ChromeParse(key []byte) error {
 		} else {
 			password, err = decrypt.ChromePass(key, pwd)
 		}
+		if err != nil {
+			log.Debugf("%s have empty password %s", login.LoginUrl, err.Error())
+		}
 		if create > time.Now().Unix() {
 			login.CreateDate = utils.TimeEpochFormat(create)
 		} else {
 			login.CreateDate = utils.TimeStampFormat(create)
 		}
-
 		login.Password = string(password)
-		if err != nil {
-			log.Debug(err)
-		}
 		l.logins = append(l.logins, login)
 	}
 	return nil
@@ -470,7 +469,7 @@ func (l *Logins) FirefoxParse() error {
 		return err
 	}
 	if bytes.Contains(m, []byte("password-check")) {
-		log.Debugf("password-check success")
+		log.Debug("password-check success")
 		m := bytes.Compare(nssA102, keyLin)
 		if m == 0 {
 			nss, err := decrypt.DecodeNss(nssA11)
@@ -478,7 +477,7 @@ func (l *Logins) FirefoxParse() error {
 				log.Error(err)
 				return err
 			}
-			log.Debugf("decrypt asn1 pbe success")
+			log.Debug("decrypt asn1 pbe success")
 			finallyKey, err := decrypt.Nss(globalSalt, masterPwd, nss)
 			finallyKey = finallyKey[:24]
 			if err != nil {
