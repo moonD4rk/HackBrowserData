@@ -136,7 +136,6 @@ func (l *Logins) ChromeParse(key []byte) error {
 			log.Debug(err)
 		}
 	}()
-	err = loginDB.Ping()
 	rows, err := loginDB.Query(queryChromiumLogin)
 	defer func() {
 		if err := rows.Close(); err != nil {
@@ -206,7 +205,6 @@ func (h *History) ChromeParse(key []byte) error {
 			log.Error(err)
 		}
 	}()
-	err = historyDB.Ping()
 	rows, err := historyDB.Query(queryChromiumHistory)
 	defer func() {
 		if err := rows.Close(); err != nil {
@@ -247,7 +245,6 @@ func (c *Cookies) ChromeParse(secretKey []byte) error {
 			log.Debug(err)
 		}
 	}()
-	err = cookieDB.Ping()
 	rows, err := cookieDB.Query(queryChromiumCookie)
 	defer func() {
 		if err := rows.Close(); err != nil {
@@ -282,11 +279,7 @@ func (c *Cookies) ChromeParse(secretKey []byte) error {
 		}
 
 		cookie.Value = string(value)
-		if _, ok := c.cookies[host]; ok {
-			c.cookies[host] = append(c.cookies[host], cookie)
-		} else {
-			c.cookies[host] = []cookies{cookie}
-		}
+		c.cookies[host] = append(c.cookies[host], cookie)
 	}
 	return nil
 }
@@ -412,7 +405,6 @@ func (c *Cookies) FirefoxParse() error {
 			log.Debug(err)
 		}
 	}()
-	err = cookieDB.Ping()
 	rows, err := cookieDB.Query(queryFirefoxCookie)
 	if err != nil {
 		log.Error(err)
@@ -441,11 +433,7 @@ func (c *Cookies) FirefoxParse() error {
 		}
 
 		cookie.Value = value
-		if _, ok := c.cookies[host]; ok {
-			c.cookies[host] = append(c.cookies[host], cookie)
-		} else {
-			c.cookies[host] = []cookies{cookie}
-		}
+		c.cookies[host] = append(c.cookies[host], cookie)
 	}
 	return nil
 }
@@ -533,7 +521,6 @@ func getDecryptKey() (item1, item2, a11, a102 []byte, err error) {
 		}
 	}()
 
-	err = keyDB.Ping()
 	pwdRows, err = keyDB.Query(queryMetaData)
 	defer func() {
 		if err := pwdRows.Close(); err != nil {

@@ -14,7 +14,7 @@ var (
 func ChromePass(key, encryptPass []byte) ([]byte, error) {
 	if len(encryptPass) > 3 {
 		if len(key) == 0 {
-			return nil, errKeyIsEmpty
+			return nil, errSecurityKeyIsEmpty
 		}
 		m, err := aes128CBCDecrypt(key, chromeIV, encryptPass[3:])
 		return m, err
