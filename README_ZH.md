@@ -33,7 +33,7 @@ hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|�
 | Browser       | Password | Cookie | Bookmark | History |
 | :------------ | :------: | :----: | :------: | :-----: |
 | Firefox       |    ✅     |   ✅    |    ✅     |    ✅    |
-| Google Chrome |    ❌     |   ❌    |    ❌     |    ❌    |
+| Google Chrome |    ✅     |   ✅    |    ✅     |    ✅    |
 
 
 ### 安装运行
