@@ -158,18 +158,18 @@ func Nss(globalSalt, masterPwd []byte, pbe NssPBE) ([]byte, error) {
 
 func decryptMeta(globalSalt, masterPwd, nssIv, entrySalt, encrypted []byte, iter, keySize int) ([]byte, error) {
 	k := sha1.Sum(globalSalt)
-	log.Println(hex.EncodeToString(k[:]))
+	log.Debug(hex.EncodeToString(k[:]))
 	key := pbkdf2.Key(k[:], entrySalt, iter, keySize, sha256.New)
-	log.Println(hex.EncodeToString(key))
+	log.Debug(hex.EncodeToString(key))
 	i, err := hex.DecodeString("040e")
 	if err != nil {
-		log.Println(err)
+		log.Debug(err)
 	}
 	// @https://hg.mozilla.org/projects/nss/rev/fc636973ad06392d11597620b602779b4af312f6#l6.49
 	iv := append(i, nssIv...)
 	dst, err := aes128CBCDecrypt(key, iv, encrypted)
 	if err != nil {
-		log.Println(err)
+		log.Debug(err)
 	}
 	return dst, err
 }

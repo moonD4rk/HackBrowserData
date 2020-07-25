@@ -2,7 +2,7 @@
 
 [中文文档](https://github.com/moonD4rk/HackBrowserData/blob/master/README_ZH.md) 
 
-hack-browser-data is an open-source tool that could help you export data from browser. It supports the most popular browsers on the market and runs on Windows, macOS and Linux.
+hack-browser-data is an open-source tool that could help you decrypt data[passwords|bookmarks|cookies|history] from the browser. It supports the most popular browsers on the market and runs on Windows, macOS and Linux.
 
 ### Supported Browser
 
@@ -58,7 +58,7 @@ go build
 ```shell
 PS C:\hack> .\hack.exe -h
 NAME:
-   hack-browser-data - Export passwords/cookies/history/bookmarks from browser
+   hack-browser-data - Decrypt passwords/cookies/history/bookmarks from browser
 
 USAGE:
    [hack-browser-data -b chrome -f json -dir results -e all]

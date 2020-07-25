@@ -59,6 +59,7 @@ const (
 var (
 	ErrDataNotSupported    = errors.New(`not supported, default is "all", choose from history|password|bookmark|cookie`)
 	ErrBrowserNotSupported = errors.New("browser not supported")
+	ErrChromeSecretIsEmpty = errors.New("chrome secret is empty")
 	chromiumParseList      = map[string]FileList{
 		cookie: {
 			name:     cookie,
