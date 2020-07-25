@@ -32,7 +32,7 @@ Because of  the security policies, some of the browsers require a password.
 | Browser                             | Password | Cookie | Bookmark | History |
 | :---------------------------------- | :------: | :----: | :------: | :-----: |
 | Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
-| Google Chrome |    ❌    |   ❌   |    ❌    |    ❌    |
+| Google Chrome |    ✅    |   ✅   |    ✅    |    ✅    |
 
 
 ### Install
