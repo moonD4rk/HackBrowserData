@@ -2,7 +2,7 @@
 
 [中文文档](https://github.com/moonD4rk/HackBrowserData/blob/master/README_ZH.md) 
 
-hack-browser-data 是一个浏览器数据（密码|历史记录|Cookies|书签）导出工具，支持全平台主流浏览器。
+hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|书签）的导出工具，支持全平台主流浏览器。
 
 ### 各平台浏览器支持情况
 

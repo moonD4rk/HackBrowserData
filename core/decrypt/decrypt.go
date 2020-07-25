@@ -10,9 +10,10 @@ import (
 )
 
 var (
-	errKeyIsEmpty      = errors.New("input [security find-generic-password -wa 'Chrome'] in terminal")
-	errPasswordIsEmpty = errors.New("password is empty")
-	errDecryptFailed   = errors.New("decrypt failed, password is empty")
+	errSecurityKeyIsEmpty = errors.New("input [security find-generic-password -wa 'Chrome'] in terminal")
+	errPasswordIsEmpty    = errors.New("password is empty")
+	errDecryptFailed      = errors.New("decrypt failed, password is empty")
+	errDbusSecretIsEmpty  = errors.New("dbus secret key is empty")
 )
 
 func aes128CBCDecrypt(key, iv, encryptPass []byte) ([]byte, error) {

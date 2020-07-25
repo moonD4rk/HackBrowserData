@@ -60,10 +60,13 @@ func (c *chromium) InitSecretKey() error {
 		log.Error(err)
 	}
 	temp := stdout.Bytes()
-	chromePass := temp[:len(temp)-1]
+	chromeSecret := temp[:len(temp)-1]
+	if chromeSecret == nil {
+		return ErrChromeSecretIsEmpty
+	}
 	var chromeSalt = []byte("saltysalt")
 	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157
-	key := pbkdf2.Key(chromePass, chromeSalt, 1003, 16, sha1.New)
+	key := pbkdf2.Key(chromeSecret, chromeSalt, 1003, 16, sha1.New)
 	c.SecretKey = key
 	return err
 }
