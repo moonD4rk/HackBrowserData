@@ -19,7 +19,7 @@ var (
 func aes128CBCDecrypt(key, iv, encryptPass []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 	dst := make([]byte, len(encryptPass))
 	mode := cipher.NewCBCDecrypter(block, iv)

@@ -14,7 +14,7 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-func ChromePass(encryptPass, key []byte) ([]byte, error) {
+func ChromePass(key, encryptPass []byte) ([]byte, error) {
 	if len(encryptPass) > 15 {
 		// remove prefix 'v10'
 		return aesGCMDecrypt(encryptPass[15:], key, encryptPass[3:15])
