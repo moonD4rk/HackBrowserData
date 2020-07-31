@@ -33,6 +33,17 @@ func CopyDB(src, dst string) error {
 	return err
 }
 
+func GetItemPath(profilePath, file string) (string, error) {
+	p, err := filepath.Glob(profilePath + file)
+	if err != nil {
+		return "", err
+	}
+	if len(p) > 0 {
+		return p[0], nil
+	}
+	return "", fmt.Errorf("find %s failed", file)
+}
+
 func IntToBool(a int) bool {
 	switch a {
 	case 0, -1:
@@ -87,8 +98,9 @@ func FormatFileName(dir, browser, filename, format string) string {
 	return p
 }
 
-func MakeDir(dirName string) {
+func MakeDir(dirName string) error {
 	if _, err := os.Stat(dirName); os.IsNotExist(err) {
-		err = os.Mkdir(dirName, 0700)
+		return os.Mkdir(dirName, 0700)
 	}
+	return nil
 }
