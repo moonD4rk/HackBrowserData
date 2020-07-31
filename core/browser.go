@@ -121,7 +121,7 @@ func (c *Chromium) GetAllItems(itemName string) (Items []common.Item, err error)
 	} else if item, ok := chromiumItems[itemName]; ok {
 		m, err := utils.GetItemPath(c.profilePath, item.mainFile)
 		if err != nil {
-			log.Errorf("%s find %s file failed, ERR: ", c.name, item, err)
+			log.Errorf("%s find %s file failed, ERR:%s", c.name, item.mainFile, err)
 		}
 		i := item.newItem(m, "")
 		items = append(items, i)
@@ -175,12 +175,12 @@ func (f *Firefox) GetAllItems(itemName string) ([]common.Item, error) {
 		if item.subFile != "" {
 			sub, err = utils.GetItemPath(f.profilePath, item.subFile)
 			if err != nil {
-				log.Errorf("%s find %s file failed, ERR:", f.name, item, err)
+				log.Errorf("%s find %s file failed, ERR:%s", f.name, item.subFile, err)
 			}
 		}
 		main, err = utils.GetItemPath(f.profilePath, item.mainFile)
 		if err != nil {
-			log.Errorf("%s find %s file failed, ERR:%s", f.name, item, err)
+			log.Errorf("%s find %s file failed, ERR:%s", f.name, item.mainFile, err)
 		}
 		i := item.newItem(main, sub)
 		log.Debugf("%s find %s file success", f.name, item.mainFile)
