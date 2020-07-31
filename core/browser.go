@@ -2,11 +2,11 @@ package core
 
 import (
 	"errors"
+	"strings"
+
 	"hack-browser-data/core/common"
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
-	"path/filepath"
-	"strings"
 )
 
 const (
@@ -18,35 +18,10 @@ const (
 )
 
 type Browser interface {
-	GetProfilePath(filename string) (err error)
 	InitSecretKey() error
-	ParseDB()
-	OutPut(dir, format string)
-}
-
-type chromium struct {
-	ProfilePath string
-	KeyPath     string
-	Name        string
-	SecretKey   []byte
-	FileLists   []FileList
-	Data        common.BrowserData
-}
-
-type firefox struct {
-	ProfilePath string
-	KeyPath     string
-	Name        string
-	FileLists   []FileList
-	Data        common.BrowserData
-}
-
-type FileList struct {
-	name     string
-	mainFile string
-	mainPath string
-	subFile  string
-	subPath  string
+	GetName() string
+	GetSecretKey() []byte
+	GetAllItems(itemName string) ([]common.Item, error)
 }
 
 const (
@@ -57,327 +32,179 @@ const (
 )
 
 var (
-	errDataNotSupported    = errors.New(`not supported, default is "all", choose from history|password|bookmark|cookie`)
+	errItemNotSupported    = errors.New(`item not supported, default is "all", choose from history|password|bookmark|cookie`)
 	errBrowserNotSupported = errors.New("browser not supported")
 	errChromeSecretIsEmpty = errors.New("chrome secret is empty")
 	errDbusSecretIsEmpty   = errors.New("dbus secret key is empty")
-	chromiumParseList      = map[string]FileList{
+)
+
+var (
+	chromiumItems = map[string]struct {
+		mainFile string
+		newItem  func(mainFile, subFile string) common.Item
+	}{
+		bookmark: {
+			mainFile: common.ChromeBookmarkFile,
+			newItem:  common.NewBookmarks,
+		},
 		cookie: {
-			name:     cookie,
-			mainFile: common.ChromeCookies,
+			mainFile: common.ChromeCookieFile,
+			newItem:  common.NewCookies,
 		},
 		history: {
-			name:     history,
-			mainFile: common.ChromeHistory,
-		},
-		bookmark: {
-			name:     bookmark,
-			mainFile: common.ChromeBookmarks,
+			mainFile: common.ChromeHistoryFile,
+			newItem:  common.NewHistoryData,
 		},
 		password: {
-			name:     password,
-			mainFile: common.ChromePassword,
+			mainFile: common.ChromePasswordFile,
+			newItem:  common.NewCPasswords,
 		},
 	}
-	firefoxParseList = map[string]FileList{
+	firefoxItems = map[string]struct {
+		mainFile string
+		subFile  string
+		newItem  func(mainFile, subFile string) common.Item
+	}{
+		bookmark: {
+			mainFile: common.FirefoxDataFile,
+			newItem:  common.NewBookmarks,
+		},
 		cookie: {
-			name:     cookie,
-			mainFile: common.FirefoxCookie,
+			mainFile: common.FirefoxCookieFile,
+			newItem:  common.NewCookies,
 		},
 		history: {
-			name:     history,
-			mainFile: common.FirefoxData,
-		},
-		bookmark: {
-			name:     bookmark,
-			mainFile: common.FirefoxData,
+			mainFile: common.FirefoxDataFile,
+			newItem:  common.NewHistoryData,
 		},
 		password: {
-			name:     password,
-			mainFile: common.FirefoxKey4DB,
-			subFile:  common.FirefoxLoginData,
+			mainFile: common.FirefoxKey4File,
+			subFile:  common.FirefoxLoginFile,
+			newItem:  common.NewFPasswords,
 		},
 	}
 )
 
-func (c *chromium) GetProfilePath(filename string) (err error) {
-	filename = strings.ToLower(filename)
-	if filename == "all" {
-		for _, v := range chromiumParseList {
-			m, err := filepath.Glob(c.ProfilePath + v.mainFile)
+type Chromium struct {
+	name        string
+	profilePath string
+	keyPath     string
+	secretKey   []byte
+}
+
+func NewChromium(profile, key, name string) (Browser, error) {
+	return &Chromium{profilePath: profile, keyPath: key, name: name}, nil
+}
+
+func (c *Chromium) GetName() string {
+	return c.name
+}
+
+func (c *Chromium) GetSecretKey() []byte {
+	return c.secretKey
+}
+
+func (c *Chromium) GetAllItems(itemName string) (Items []common.Item, err error) {
+	itemName = strings.ToLower(itemName)
+	var items []common.Item
+	if itemName == "all" {
+		for item, choice := range chromiumItems {
+			m, err := utils.GetItemPath(c.profilePath, choice.mainFile)
 			if err != nil {
-				log.Error(err)
+				log.Errorf("%s find %s file failed, ERR:%s", c.name, item, err)
 				continue
 			}
-			if len(m) > 0 {
-				log.Debugf("%s find %s File Success", c.Name, v.name)
-				log.Debugf("%s file location is %s", v, m[0])
-				v.mainPath = m[0]
-				c.FileLists = append(c.FileLists, v)
-			} else {
-				log.Errorf("%+v find %s failed", c.Name, v.name)
-			}
+			i := choice.newItem(m, "")
+			log.Debugf("%s find %s File Success", c.name, item)
+			items = append(items, i)
 		}
-	} else if v, ok := chromiumParseList[filename]; ok {
-		m, err := filepath.Glob(c.ProfilePath + v.mainFile)
+	} else if item, ok := chromiumItems[itemName]; ok {
+		m, err := utils.GetItemPath(c.profilePath, item.mainFile)
 		if err != nil {
-			log.Error(err)
+			log.Errorf("%s find %s file failed, ERR: ", c.name, item, err)
 		}
-		if len(m) > 0 {
-			log.Debugf("%s find %s File Success", c.Name, v)
-			log.Debugf("%s file location is %s", v, m[0])
-			v.mainPath = m[0]
-			c.FileLists = append(c.FileLists, v)
-		}
+		i := item.newItem(m, "")
+		items = append(items, i)
+		return items, nil
 	} else {
-		return errDataNotSupported
+		return nil, errItemNotSupported
 	}
-	return nil
+	return items, nil
 }
 
-func (c *chromium) ParseDB() {
-	for _, v := range c.FileLists {
-		err := utils.CopyDB(v.mainPath, filepath.Base(v.mainPath))
-		if err != nil {
-			log.Error(err)
-		}
-		switch v.name {
-		case bookmark:
-			if err := chromeParse(c.SecretKey, &c.Data.Bookmarks); err != nil {
-				log.Error(err)
-			}
-			if err := release(v.mainFile, &c.Data.Bookmarks); err != nil {
-				log.Error(err)
-			}
-		case history:
-			if err := chromeParse(c.SecretKey, &c.Data.History); err != nil {
-				log.Error(err)
-			}
-			if err := release(v.mainFile, &c.Data.History); err != nil {
-				log.Error(err)
-			}
-		case password:
-			if err := chromeParse(c.SecretKey, &c.Data.Logins); err != nil {
-				log.Error(err)
-			}
-			if err := release(v.mainFile, &c.Data.Logins); err != nil {
-				log.Error(err)
-			}
-		case cookie:
-			if err := chromeParse(c.SecretKey, &c.Data.Cookies); err != nil {
-				log.Error(err)
-			}
-			if err := release(v.mainFile, &c.Data.Cookies); err != nil {
-				log.Error(err)
-			}
-		}
-	}
+type Firefox struct {
+	name        string
+	profilePath string
+	keyPath     string
 }
 
-func (c *chromium) OutPut(dir, format string) {
-	c.Data.Sorted()
-	switch format {
-	case "json":
-		for _, v := range c.FileLists {
-			switch v.name {
-			case bookmark:
-				if err := outPutJson(c.Name, dir, &c.Data.Bookmarks); err != nil {
-					log.Error(err)
-				}
-			case history:
-				if err := outPutJson(c.Name, dir, &c.Data.History); err != nil {
-					log.Error(err)
-				}
-			case password:
-				if err := outPutJson(c.Name, dir, &c.Data.Logins); err != nil {
-					log.Error(err)
-				}
-			case cookie:
-				if err := outPutJson(c.Name, dir, &c.Data.Cookies); err != nil {
-					log.Error(err)
-				}
-			}
-		}
-	case "csv":
-		for _, v := range c.FileLists {
-			switch v.name {
-			case bookmark:
-				if err := outPutCsv(c.Name, dir, &c.Data.Bookmarks); err != nil {
-					log.Error(err)
-				}
-			case history:
-				if err := outPutCsv(c.Name, dir, &c.Data.History); err != nil {
-					log.Error(err)
-				}
-			case password:
-				if err := outPutCsv(c.Name, dir, &c.Data.Logins); err != nil {
-					log.Error(err)
-				}
-			case cookie:
-				if err := outPutCsv(c.Name, dir, &c.Data.Cookies); err != nil {
-					log.Error(err)
-				}
-			}
-		}
-	}
+func NewFirefox(profile, key, name string) (Browser, error) {
+	return &Firefox{profilePath: profile, keyPath: key, name: name}, nil
 }
 
-func decryptChromium(profile, key, name string) (Browser, error) {
-	return &chromium{ProfilePath: profile, KeyPath: key, Name: name}, nil
-}
-
-func (f *firefox) ParseDB() {
-	for _, v := range f.FileLists {
-		err := utils.CopyDB(v.mainPath, filepath.Base(v.mainPath))
-		if v.subPath != "" {
-			err := utils.CopyDB(v.subPath, filepath.Base(v.subPath))
-			if err != nil {
-				log.Error(err)
-			}
-		}
-		if err != nil {
-			log.Error(err)
-		}
-		switch v.name {
-		case password:
-			if err := firefoxParse(&f.Data.Logins); err != nil {
-				log.Error(err)
-			}
-			if err := release(v.mainFile, &f.Data.Logins); err != nil {
-				log.Error(err)
-			}
-			if err := release(v.subFile, &f.Data.Logins); err != nil {
-				log.Error(err)
-			}
-		case bookmark:
-			if err := firefoxParse(&f.Data.Bookmarks); err != nil {
-				log.Error(err)
-			}
-			if err := release(v.mainFile, &f.Data.Bookmarks); err != nil {
-				log.Error(err)
-			}
-		case history:
-			if err := firefoxParse(&f.Data.History); err != nil {
-				log.Error(err)
-			}
-			if err := release(v.mainFile, &f.Data.History); err != nil {
-				log.Error(err)
-			}
-		case cookie:
-			if err := firefoxParse(&f.Data.Cookies); err != nil {
-				log.Error(err)
-			}
-			if err := release(v.mainFile, &f.Data.Cookies); err != nil {
-				log.Error(err)
-			}
-		}
-	}
-}
-
-func (f *firefox) GetProfilePath(filename string) (err error) {
-	filename = strings.ToLower(filename)
-	if filename == "all" {
-		for _, v := range firefoxParseList {
-			m, err := filepath.Glob(f.ProfilePath + v.mainFile)
-			if v.subFile != "" {
-				s, err := filepath.Glob(f.ProfilePath + v.subFile)
+func (f *Firefox) GetAllItems(itemName string) ([]common.Item, error) {
+	itemName = strings.ToLower(itemName)
+	var items []common.Item
+	if itemName == "all" {
+		for item, choice := range firefoxItems {
+			var (
+				sub, main string
+				err       error
+			)
+			if choice.subFile != "" {
+				sub, err = utils.GetItemPath(f.profilePath, choice.subFile)
 				if err != nil {
-					log.Error(err)
+					log.Errorf("%s find %s file failed, ERR:%s", f.name, item, err)
 					continue
 				}
-				if len(s) > 0 {
-					log.Debugf("%s find %s File Success", f.Name, v.name)
-					log.Debugf("%s file location is %s", v, s[0])
-					v.subPath = s[0]
-				}
 			}
+			main, err = utils.GetItemPath(f.profilePath, choice.mainFile)
 			if err != nil {
-				log.Error(err)
+				log.Errorf("%s find %s file failed, ERR:%s", f.name, item, err)
 				continue
 			}
-			if len(m) > 0 {
-				log.Debugf("%s find %s File Success", f.Name, v.name)
-				log.Debugf("%s file location is %s", v.mainFile, m[0])
-				v.mainPath = m[0]
-				f.FileLists = append(f.FileLists, v)
-			} else {
-				log.Errorf("%s find %s failed", f.Name, v.name)
+			i := choice.newItem(main, sub)
+			log.Debugf("%s find %s file success", f.name, item)
+			items = append(items, i)
+		}
+	} else if item, ok := firefoxItems[itemName]; ok {
+		var (
+			sub, main string
+			err       error
+		)
+		if item.subFile != "" {
+			sub, err = utils.GetItemPath(f.profilePath, item.subFile)
+			if err != nil {
+				log.Errorf("%s find %s file failed, ERR:", f.name, item, err)
 			}
 		}
-	} else if v, ok := firefoxParseList[filename]; ok {
-		m, err := filepath.Glob(f.ProfilePath + v.mainFile)
+		main, err = utils.GetItemPath(f.profilePath, item.mainFile)
 		if err != nil {
-			log.Error(err)
+			log.Errorf("%s find %s file failed, ERR:%s", f.name, item, err)
 		}
-		if len(m) > 0 {
-			log.Debugf("%s find %s File Success", f.Name, v)
-			log.Debugf("%s file location is %s", v, m[0])
-			v.mainPath = m[0]
-			f.FileLists = append(f.FileLists, v)
-		}
+		i := item.newItem(main, sub)
+		log.Debugf("%s find %s file success", f.name, item.mainFile)
+		items = append(items, i)
+		return items, nil
 	} else {
-		return errDataNotSupported
+		return nil, errItemNotSupported
 	}
+	return items, nil
+}
+
+func (f *Firefox) GetName() string {
+	return f.name
+}
+
+func (f *Firefox) GetSecretKey() []byte {
 	return nil
 }
 
-func (f *firefox) OutPut(dir, format string) {
-	f.Data.Sorted()
-	switch format {
-	case "json":
-		for _, v := range f.FileLists {
-			switch v.name {
-			case bookmark:
-				if err := outPutJson(f.Name, dir, &f.Data.Bookmarks); err != nil {
-					log.Error(err)
-				}
-			case history:
-				if err := outPutJson(f.Name, dir, &f.Data.History); err != nil {
-					log.Error(err)
-				}
-			case password:
-				if err := outPutJson(f.Name, dir, &f.Data.Logins); err != nil {
-					log.Error(err)
-				}
-			case cookie:
-				if err := outPutJson(f.Name, dir, &f.Data.Cookies); err != nil {
-					log.Error(err)
-				}
-			}
-		}
-	case "csv":
-		for _, v := range f.FileLists {
-			switch v.name {
-			case bookmark:
-				if err := outPutCsv(f.Name, dir, &f.Data.Bookmarks); err != nil {
-					log.Error(err)
-				}
-			case history:
-				if err := outPutCsv(f.Name, dir, &f.Data.History); err != nil {
-					log.Error(err)
-				}
-			case password:
-				if err := outPutCsv(f.Name, dir, &f.Data.Logins); err != nil {
-					log.Error(err)
-				}
-			case cookie:
-				if err := outPutCsv(f.Name, dir, &f.Data.Cookies); err != nil {
-					log.Error(err)
-				}
-			}
-		}
-	}
-}
-
-func (f *firefox) InitSecretKey() error {
+func (f *Firefox) InitSecretKey() error {
 	return nil
 }
 
-func decryptFirefox(profile, key, name string) (Browser, error) {
-	return &firefox{ProfilePath: profile, KeyPath: key, Name: name}, nil
-}
-
-func PickBrowsers(name string) ([]Browser, error) {
+func PickBrowser(name string) ([]Browser, error) {
 	var browsers []Browser
 	name = strings.ToLower(name)
 	if name == "all" {
@@ -397,29 +224,17 @@ func PickBrowsers(name string) ([]Browser, error) {
 	return nil, errBrowserNotSupported
 }
 
-func chromeParse(key []byte, f common.Formatter) error {
-	return f.ChromeParse(key)
-}
-
-func firefoxParse(f common.Formatter) error {
-	return f.FirefoxParse()
-}
-
-func outPutJson(name, dir string, f common.Formatter) error {
-	return f.OutPutJson(name, dir)
-}
-
-func outPutCsv(name, dir string, f common.Formatter) error {
-	return f.OutPutCsv(name, dir)
-}
-
-func release(filename string, f common.Formatter) error {
-	return f.Release(filename)
-}
-
 func ListBrowser() []string {
 	var l []string
 	for k := range browserList {
+		l = append(l, k)
+	}
+	return l
+}
+
+func ListItem() []string {
+	var l []string
+	for k := range chromiumItems {
 		l = append(l, k)
 	}
 	return l

@@ -7,10 +7,6 @@ import (
 	"os"
 )
 
-const (
-	Prefix = "[x]: "
-)
-
 type Level int
 
 const (
