@@ -82,6 +82,6 @@ func (c *Chromium) InitSecretKey() error {
 	}
 	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_linux.cc
 	key := pbkdf2.Key(chromeSecret, chromeSalt, 1, 16, sha1.New)
-	c.SecretKey = key
+	c.secretKey = key
 	return nil
 }
