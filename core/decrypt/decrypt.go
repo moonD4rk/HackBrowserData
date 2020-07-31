@@ -13,7 +13,6 @@ var (
 	errSecurityKeyIsEmpty = errors.New("input [security find-generic-password -wa 'Chrome'] in terminal")
 	errPasswordIsEmpty    = errors.New("password is empty")
 	errDecryptFailed      = errors.New("decrypt failed, password is empty")
-	errDbusSecretIsEmpty  = errors.New("dbus secret key is empty")
 )
 
 func aes128CBCDecrypt(key, iv, encryptPass []byte) ([]byte, error) {
@@ -33,6 +32,7 @@ func PKCS5UnPadding(src []byte) []byte {
 	unpad := int(src[length-1])
 	return src[:(length - unpad)]
 }
+
 func Des3Decrypt(key, iv []byte, src []byte) ([]byte, error) {
 	block, err := des.NewTripleDESCipher(key)
 	if err != nil {

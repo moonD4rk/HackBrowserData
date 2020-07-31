@@ -62,7 +62,7 @@ func (c *chromium) InitSecretKey() error {
 	temp := stdout.Bytes()
 	chromeSecret := temp[:len(temp)-1]
 	if chromeSecret == nil {
-		return ErrChromeSecretIsEmpty
+		return errChromeSecretIsEmpty
 	}
 	var chromeSalt = []byte("saltysalt")
 	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157

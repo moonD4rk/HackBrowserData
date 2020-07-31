@@ -57,9 +57,10 @@ const (
 )
 
 var (
-	ErrDataNotSupported    = errors.New(`not supported, default is "all", choose from history|password|bookmark|cookie`)
-	ErrBrowserNotSupported = errors.New("browser not supported")
-	ErrChromeSecretIsEmpty = errors.New("chrome secret is empty")
+	errDataNotSupported    = errors.New(`not supported, default is "all", choose from history|password|bookmark|cookie`)
+	errBrowserNotSupported = errors.New("browser not supported")
+	errChromeSecretIsEmpty = errors.New("chrome secret is empty")
+	errDbusSecretIsEmpty   = errors.New("dbus secret key is empty")
 	chromiumParseList      = map[string]FileList{
 		cookie: {
 			name:     cookie,
@@ -129,7 +130,7 @@ func (c *chromium) GetProfilePath(filename string) (err error) {
 			c.FileLists = append(c.FileLists, v)
 		}
 	} else {
-		return ErrDataNotSupported
+		return errDataNotSupported
 	}
 	return nil
 }
@@ -315,7 +316,7 @@ func (f *firefox) GetProfilePath(filename string) (err error) {
 			f.FileLists = append(f.FileLists, v)
 		}
 	} else {
-		return ErrDataNotSupported
+		return errDataNotSupported
 	}
 	return nil
 }
@@ -393,7 +394,7 @@ func PickBrowsers(name string) ([]Browser, error) {
 		browsers = append(browsers, b)
 		return browsers, err
 	}
-	return nil, ErrBrowserNotSupported
+	return nil, errBrowserNotSupported
 }
 
 func chromeParse(key []byte, f common.Formatter) error {

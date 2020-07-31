@@ -2,10 +2,10 @@ package core
 
 import (
 	"crypto/sha1"
-	"github.com/godbus/dbus/v5"
-	keyring "github.com/ppacher/go-dbus-keyring"
 	"hack-browser-data/log"
 
+	"github.com/godbus/dbus/v5"
+	keyring "github.com/ppacher/go-dbus-keyring"
 	"golang.org/x/crypto/pbkdf2"
 )
 
@@ -80,7 +80,7 @@ func (c *chromium) InitSecretKey() error {
 	}
 	var chromeSalt = []byte("saltysalt")
 	if chromeSecret == nil {
-		return ErrChromeSecretIsEmpty
+		return errDbusSecretIsEmpty
 	}
 	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_linux.cc
 	key := pbkdf2.Key(chromeSecret, chromeSalt, 1, 16, sha1.New)
