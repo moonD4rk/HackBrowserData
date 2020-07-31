@@ -24,17 +24,17 @@ var (
 		"firefox": {
 			ProfilePath: fireFoxProfilePath,
 			Name:        firefoxName,
-			New:         decryptFirefox,
+			New:         NewFirefox,
 		},
 		"chrome": {
 			ProfilePath: chromeProfilePath,
 			Name:        chromeName,
-			New:         decryptChromium,
+			New:         NewChromium,
 		},
 	}
 )
 
-func (c *chromium) InitSecretKey() error {
+func (c *Chromium) InitSecretKey() error {
 	//what is d-bus @https://dbus.freedesktop.org/
 	var chromeSecret []byte
 	conn, err := dbus.SessionBus()
@@ -50,9 +50,7 @@ func (c *chromium) InitSecretKey() error {
 		return err
 	}
 	defer func() {
-		if err = session.Close(); err != nil {
-			log.Error(err)
-		}
+		session.Close()
 	}()
 	collections, err := svc.GetAllCollections()
 	if err != nil {
