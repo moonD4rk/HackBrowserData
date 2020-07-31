@@ -380,6 +380,7 @@ func (b *Bookmarks) FirefoxParse() error {
 func (b *Bookmarks) Release(filename string) error {
 	return os.Remove(filename)
 }
+
 func (c *Cookies) Release(filename string) error {
 	return os.Remove(filename)
 }
