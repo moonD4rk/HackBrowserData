@@ -145,3 +145,27 @@ func writeToCsv(filename string, data interface{}) error {
 	}
 	return nil
 }
+
+func (b *bookmarks) outPutConsole() {
+	for _, v := range b.bookmarks {
+		fmt.Printf("%+v\n", v)
+	}
+}
+
+func (c *cookies) outPutConsole() {
+	for host, value := range c.cookies {
+		fmt.Printf("%s\n%+v\n", host, value)
+	}
+}
+
+func (h *historyData) outPutConsole() {
+	for _, v := range h.history {
+		fmt.Printf("%+v\n", v)
+	}
+}
+
+func (p *passwords) outPutConsole() {
+	for _, v := range p.logins {
+		fmt.Printf("%+v\n", v)
+	}
+}
