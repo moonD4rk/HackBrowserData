@@ -156,14 +156,16 @@ func (b *bookmarks) OutPut(format, browser, dir string) error {
 		return b.bookmarks[i].ID < b.bookmarks[j].ID
 	})
 	switch format {
-	case "json":
-		err := b.outPutJson(browser, dir)
-		return err
 	case "csv":
 		err := b.outPutCsv(browser, dir)
 		return err
+	case "console":
+		b.outPutConsole()
+		return nil
+	default:
+		err := b.outPutJson(browser, dir)
+		return err
 	}
-	return nil
 }
 
 type cookies struct {
@@ -279,14 +281,16 @@ func (c *cookies) Release() error {
 
 func (c *cookies) OutPut(format, browser, dir string) error {
 	switch format {
-	case "json":
-		err := c.outPutJson(browser, dir)
-		return err
 	case "csv":
 		err := c.outPutCsv(browser, dir)
 		return err
+	case "console":
+		c.outPutConsole()
+		return nil
+	default:
+		err := c.outPutJson(browser, dir)
+		return err
 	}
-	return nil
 }
 
 type historyData struct {
@@ -400,14 +404,16 @@ func (h *historyData) OutPut(format, browser, dir string) error {
 		return h.history[i].VisitCount > h.history[j].VisitCount
 	})
 	switch format {
-	case "json":
-		err := h.outPutJson(browser, dir)
-		return err
 	case "csv":
 		err := h.outPutCsv(browser, dir)
 		return err
+	case "console":
+		h.outPutConsole()
+		return nil
+	default:
+		err := h.outPutJson(browser, dir)
+		return err
 	}
-	return nil
 }
 
 type passwords struct {
@@ -566,14 +572,16 @@ func (p *passwords) Release() error {
 func (p *passwords) OutPut(format, browser, dir string) error {
 	sort.Sort(p)
 	switch format {
-	case "json":
-		err := p.outPutJson(browser, dir)
-		return err
 	case "csv":
 		err := p.outPutCsv(browser, dir)
 		return err
+	case "console":
+		p.outPutConsole()
+		return nil
+	default:
+		err := p.outPutJson(browser, dir)
+		return err
 	}
-	return nil
 }
 
 func getDecryptKey() (item1, item2, a11, a102 []byte, err error) {

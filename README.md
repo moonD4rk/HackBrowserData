@@ -66,11 +66,10 @@ USAGE:
 
 GLOBAL OPTIONS:
    --verbose, --vv                   Verbose (default: false)
-   --browser value, -b value         Available browsers: all|chrome|edge|360|qq|firefox (default: "all")
+   --browser value, -b value         Available browsers: all|chrome|edge|firefox (default: "all")
    --results-dir value, --dir value  Export dir (default: "results")
-   --format value, -f value          Format, csv|json (default: "csv")
-   --export-data value, -e value     all|bookmark|cookie|history|password (default: "all")
-   --help, -h                        show help (default: false)
+   --format value, -f value          Format, csv|json|console (default: "json")
+   --export-data value, -e value     all|cookie|history|password|bookmark (default: "all")
 
 
 PS C:\test>  .\hack-browser-data.exe -b all -f json -e all --dir results
