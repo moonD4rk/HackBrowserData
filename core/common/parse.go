@@ -19,10 +19,19 @@ import (
 )
 
 type Item interface {
+	// ChromeParse parse chrome items, Password and Cookie need secret key
 	ChromeParse(key []byte) error
+
+	// FirefoxParse parse firefox items
 	FirefoxParse() error
+
+	// OutPut with json or csv
 	OutPut(format, browser, dir string) error
+
+	// Copy item file to local path
 	CopyItem() error
+
+	// Release item file
 	Release() error
 }
 

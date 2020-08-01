@@ -18,9 +18,16 @@ const (
 )
 
 type Browser interface {
+	// InitSecretKey is init chrome secret key, firefox's key always empty
 	InitSecretKey() error
+
+	// GetName return browser name
 	GetName() string
+
+	// GetSecretKey return browser secret key
 	GetSecretKey() []byte
+
+	// GetAllItems, default return all of items(password|bookmark|cookie|history)
 	GetAllItems(itemName string) ([]common.Item, error)
 }
 
