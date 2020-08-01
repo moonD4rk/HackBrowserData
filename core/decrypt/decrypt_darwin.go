@@ -93,7 +93,7 @@ func decryptPBE(globalSalt, masterPwd, entrySalt, encrypted []byte) ([]byte, err
 	//byte[] k1;
 	//byte[] tk;
 	//byte[] k2;
-	//byte[] k; // final value conytaining key and iv
+	//byte[] k; // final value containing key and iv
 	glmp := append(globalSalt, masterPwd...)
 	hp := sha1.Sum(glmp)
 	s := append(hp[:], entrySalt...)
