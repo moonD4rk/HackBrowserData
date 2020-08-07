@@ -16,7 +16,7 @@ import (
 
 func ChromePass(key, encryptPass []byte) ([]byte, error) {
 	if len(encryptPass) > 15 {
-		// remove prefix 'v10'
+		// remove Prefix 'v10'
 		return aesGCMDecrypt(encryptPass[15:], key, encryptPass[3:15])
 	} else {
 		return nil, errPasswordIsEmpty
