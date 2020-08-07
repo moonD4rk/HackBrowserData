@@ -16,16 +16,18 @@ var (
 	exportDir    string
 	outputFormat string
 	verbose      bool
+	compress     bool
 )
 
 func Execute() {
 	app := &cli.App{
 		Name:  "hack-browser-data",
 		Usage: "Export passwords/cookies/history/bookmarks from browser",
-		UsageText: "[hack-browser-data -b chrome -f json -dir results -e all]\n 	Get all data(password/cookie/history/bookmark) from chrome",
-		Version: "0.2.0",
+		UsageText: "[hack-browser-data -b chrome -f json -dir results -e all -cc]\n 	Get all data(password/cookie/history/bookmark) from chrome",
+		Version: "0.2.1",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{Name: "verbose", Aliases: []string{"vv"}, Destination: &verbose, Value: false, Usage: "Verbose"},
+			&cli.BoolFlag{Name: "compress", Aliases: []string{"cc"}, Destination: &compress, Value: false, Usage: "Compress result"},
 			&cli.StringFlag{Name: "browser", Aliases: []string{"b"}, Destination: &browser, Value: "all", Usage: "Available browsers: all|" + strings.Join(core.ListBrowser(), "|")},
 			&cli.StringFlag{Name: "results-dir", Aliases: []string{"dir"}, Destination: &exportDir, Value: "results", Usage: "Export dir"},
 			&cli.StringFlag{Name: "format", Aliases: []string{"f"}, Destination: &outputFormat, Value: "json", Usage: "Format, csv|json|console"},
@@ -78,12 +80,18 @@ func Execute() {
 					}
 					err = item.Release()
 					if err != nil {
-						return err
+						log.Error(err)
 					}
 					err = item.OutPut(outputFormat, name, exportDir)
 					if err != nil {
 						log.Error(err)
 					}
+				}
+			}
+			if compress {
+				err = utils.Compress(exportDir)
+				if err != nil {
+					log.Error(err)
 				}
 			}
 			return nil
