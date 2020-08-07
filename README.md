@@ -61,18 +61,20 @@ NAME:
    hack-browser-data - Export passwords/cookies/history/bookmarks from browser
 
 USAGE:
-   [hack-browser-data -b chrome -f json -dir results -e all]
+   [hack-browser-data -b chrome -f json -dir results -e all -cc]
    Get all data(password/cookie/history/bookmark) from chrome
 
 GLOBAL OPTIONS:
    --verbose, --vv                   Verbose (default: false)
+   --compress, --cc                  Compress result to zip (default: false)
    --browser value, -b value         Available browsers: all|chrome|edge|firefox (default: "all")
    --results-dir value, --dir value  Export dir (default: "results")
    --format value, -f value          Format, csv|json|console (default: "json")
-   --export-data value, -e value     all|cookie|history|password|bookmark (default: "all")
+   --export-data value, -e value     all|password|bookmark|cookie|history (default: "all")
+   --help, -h                        show help (default: false)
 
 
-PS C:\test>  .\hack-browser-data.exe -b all -f json -e all --dir results
+PS C:\test>  .\hack-browser-data.exe -b all -f json -e all --dir results -cc
 [x]:  Get 44 cookies, filename is results/microsoft_edge_cookie.json
 [x]:  Get 54 history, filename is results/microsoft_edge_history.json
 [x]:  Get 1 passwords, filename is results/microsoft_edge_password.json
@@ -93,6 +95,7 @@ PS C:\test>  .\hack-browser-data.exe -b all -f json -e all --dir results
 [x]:  Get 4 bookmarks, filename is results/chrome_bookmark.json
 [x]:  Get 6 cookies, filename is results/chrome_cookie.json
 [x]:  Get 6 history, filename is results/chrome_history.json
+[x]:  Compress success, zip filename is results/archive.zip
 ```
 
 
