@@ -14,7 +14,6 @@ import (
 
 var (
 	utf8Bom = []byte{239, 187, 191}
-	prefix  = "[x]: "
 )
 
 func (b *bookmarks) outPutJson(browser, dir string) error {
@@ -26,7 +25,7 @@ func (b *bookmarks) outPutJson(browser, dir string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s Get %d bookmarks, filename is %s \n", prefix, len(b.bookmarks), filename)
+	fmt.Printf("%s Get %d bookmarks, filename is %s \n", utils.Prefix, len(b.bookmarks), filename)
 	return nil
 }
 
@@ -39,7 +38,7 @@ func (h *historyData) outPutJson(browser, dir string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s Get %d history, filename is %s \n", prefix, len(h.history), filename)
+	fmt.Printf("%s Get %d history, filename is %s \n", utils.Prefix, len(h.history), filename)
 	return nil
 }
 
@@ -49,7 +48,7 @@ func (p *passwords) outPutJson(browser, dir string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s Get %d passwords, filename is %s \n", prefix, len(p.logins), filename)
+	fmt.Printf("%s Get %d passwords, filename is %s \n", utils.Prefix, len(p.logins), filename)
 	return nil
 }
 
@@ -59,7 +58,7 @@ func (c *cookies) outPutJson(browser, dir string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s Get %d cookies, filename is %s \n", prefix, len(c.cookies), filename)
+	fmt.Printf("%s Get %d cookies, filename is %s \n", utils.Prefix, len(c.cookies), filename)
 	return nil
 }
 
@@ -89,7 +88,7 @@ func (b *bookmarks) outPutCsv(browser, dir string) error {
 	if err := writeToCsv(filename, b.bookmarks); err != nil {
 		return err
 	}
-	fmt.Printf("%s Get %d bookmarks, filename is %s \n", prefix, len(b.bookmarks), filename)
+	fmt.Printf("%s Get %d bookmarks, filename is %s \n", utils.Prefix, len(b.bookmarks), filename)
 	return nil
 }
 
@@ -98,7 +97,7 @@ func (h *historyData) outPutCsv(browser, dir string) error {
 	if err := writeToCsv(filename, h.history); err != nil {
 		return err
 	}
-	fmt.Printf("%s Get %d history, filename is %s \n", prefix, len(h.history), filename)
+	fmt.Printf("%s Get %d history, filename is %s \n", utils.Prefix, len(h.history), filename)
 	return nil
 }
 
@@ -107,7 +106,7 @@ func (p *passwords) outPutCsv(browser, dir string) error {
 	if err := writeToCsv(filename, p.logins); err != nil {
 		return err
 	}
-	fmt.Printf("%s Get %d passwords, filename is %s \n", prefix, len(p.logins), filename)
+	fmt.Printf("%s Get %d passwords, filename is %s \n", utils.Prefix, len(p.logins), filename)
 	return nil
 }
 
@@ -120,7 +119,7 @@ func (c *cookies) outPutCsv(browser, dir string) error {
 	if err := writeToCsv(filename, tempSlice); err != nil {
 		return err
 	}
-	fmt.Printf("%s Get %d cookies, filename is %s \n", prefix, len(c.cookies), filename)
+	fmt.Printf("%s Get %d cookies, filename is %s \n", utils.Prefix, len(c.cookies), filename)
 	return nil
 }
 

@@ -59,7 +59,6 @@ func NewBookmarks(main, sub string) Item {
 func (b *bookmarks) ChromeParse(key []byte) error {
 	bookmarks, err := utils.ReadFile(ChromeBookmarkFile)
 	if err != nil {
-		log.Error(err)
 		return err
 	}
 	r := gjson.Parse(bookmarks)
@@ -104,14 +103,10 @@ func (b *bookmarks) FirefoxParse() error {
 	)
 	keyDB, err = sql.Open("sqlite3", FirefoxDataFile)
 	if err != nil {
-		log.Error(err)
 		return err
 	}
 	defer func() {
 		if err := keyDB.Close(); err != nil {
-			log.Error(err)
-		}
-		if err := bookmarkRows.Close(); err != nil {
 			log.Error(err)
 		}
 	}()
@@ -121,7 +116,7 @@ func (b *bookmarks) FirefoxParse() error {
 	}
 	bookmarkRows, err = keyDB.Query(queryFirefoxBookMarks)
 	if err != nil {
-		log.Error(err)
+		return err
 	}
 	for bookmarkRows.Next() {
 		var (
@@ -181,7 +176,6 @@ func (c *cookies) ChromeParse(secretKey []byte) error {
 	c.cookies = make(map[string][]cookie)
 	cookieDB, err := sql.Open("sqlite3", ChromeCookieFile)
 	if err != nil {
-		log.Debug(err)
 		return err
 	}
 	defer func() {
@@ -215,7 +209,7 @@ func (c *cookies) ChromeParse(secretKey []byte) error {
 			CreateDate:   utils.TimeEpochFormat(createDate),
 			ExpireDate:   utils.TimeEpochFormat(expireDate),
 		}
-		// remove prefix 'v10'
+		// remove utils.Prefix 'v10'
 		if secretKey == nil {
 			value, err = decrypt.DPApi(encryptValue)
 		} else {
@@ -232,7 +226,6 @@ func (c *cookies) FirefoxParse() error {
 	c.cookies = make(map[string][]cookie)
 	cookieDB, err := sql.Open("sqlite3", FirefoxCookieFile)
 	if err != nil {
-		log.Debug(err)
 		return err
 	}
 	defer func() {
@@ -242,7 +235,6 @@ func (c *cookies) FirefoxParse() error {
 	}()
 	rows, err := cookieDB.Query(queryFirefoxCookie)
 	if err != nil {
-		log.Error(err)
 		return err
 	}
 	defer func() {
@@ -257,6 +249,9 @@ func (c *cookies) FirefoxParse() error {
 			creationTime, expiry    int64
 		)
 		err = rows.Scan(&name, &value, &host, &path, &creationTime, &expiry, &isSecure, &isHttpOnly)
+		if err != nil {
+			log.Error(err)
+		}
 		c.cookies[host] = append(c.cookies[host], cookie{
 			KeyName:    name,
 			Host:       host,
@@ -305,7 +300,6 @@ func NewHistoryData(main, sub string) Item {
 func (h *historyData) ChromeParse(key []byte) error {
 	historyDB, err := sql.Open("sqlite3", ChromeHistoryFile)
 	if err != nil {
-		log.Error(err)
 		return err
 	}
 	defer func() {
@@ -334,7 +328,6 @@ func (h *historyData) ChromeParse(key []byte) error {
 		}
 		if err != nil {
 			log.Error(err)
-			continue
 		}
 		h.history = append(h.history, data)
 	}
@@ -351,7 +344,6 @@ func (h *historyData) FirefoxParse() error {
 	tempMap = make(map[int64]string)
 	keyDB, err = sql.Open("sqlite3", FirefoxDataFile)
 	if err != nil {
-		log.Error(err)
 		return err
 	}
 	_, err = keyDB.Exec(closeJournalMode)
@@ -433,7 +425,6 @@ func NewCPasswords(main, sub string) Item {
 func (p *passwords) ChromeParse(key []byte) error {
 	loginDB, err := sql.Open("sqlite3", ChromePasswordFile)
 	if err != nil {
-		log.Error(err)
 		return err
 	}
 	defer func() {
@@ -484,7 +475,6 @@ func (p *passwords) ChromeParse(key []byte) error {
 func (p *passwords) FirefoxParse() error {
 	globalSalt, metaBytes, nssA11, nssA102, err := getDecryptKey()
 	if err != nil {
-		log.Error(err)
 		return err
 	}
 	keyLin := []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
@@ -505,14 +495,12 @@ func (p *passwords) FirefoxParse() error {
 		if m == 0 {
 			nss, err := decrypt.DecodeNss(nssA11)
 			if err != nil {
-				log.Error(err)
 				return err
 			}
 			log.Debug("decrypt asn1 pbe success")
 			finallyKey, err := decrypt.Nss(globalSalt, masterPwd, nss)
 			finallyKey = finallyKey[:24]
 			if err != nil {
-				log.Error(err)
 				return err
 			}
 			log.Debug("get firefox finally key success")
@@ -526,12 +514,10 @@ func (p *passwords) FirefoxParse() error {
 				user, err := decrypt.Des3Decrypt(finallyKey, userPBE.Iv, userPBE.Encrypted)
 				if err != nil {
 					log.Error(err)
-					return err
 				}
 				pwd, err := decrypt.Des3Decrypt(finallyKey, pwdPBE.Iv, pwdPBE.Encrypted)
 				if err != nil {
 					log.Error(err)
-					return err
 				}
 				log.Debug("decrypt firefox success")
 				p.logins = append(p.logins, loginData{
