@@ -74,7 +74,7 @@ jobs:
                     zip -r releases/$(basename $RELEASE_DIR).zip \
                       $(basename ${BINARY}) \
                       README.md \
-                      config.json;
+                      README_ZH.md;
                     rm $BINARY;
                   done
                 done
