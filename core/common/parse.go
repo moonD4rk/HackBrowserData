@@ -39,7 +39,7 @@ var (
 	queryChromiumLogin    = `SELECT origin_url, username_value, password_value, date_created FROM logins`
 	queryChromiumHistory  = `SELECT url, title, visit_count, last_visit_time FROM urls`
 	queryChromiumCookie   = `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`
-	queryFirefoxHistory   = `SELECT id, url, title, last_visit_date, visit_count FROM moz_places`
+	queryFirefoxHistory   = `SELECT id, url, last_visit_date, title, visit_count FROM moz_places`
 	queryFirefoxBookMarks = `SELECT id, fk, type, dateAdded, title FROM moz_bookmarks`
 	queryFirefoxCookie    = `SELECT name, value, host, path, creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
 	queryMetaData         = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
@@ -371,7 +371,7 @@ func (h *historyData) FirefoxParse() error {
 			url, title    string
 			visitCount    int
 		)
-		err = historyRows.Scan(&id, &url, &title, &visitDate, &visitCount)
+		err = historyRows.Scan(&id, &url, &visitDate, &title, &visitCount)
 		h.history = append(h.history, history{
 			Title:         title,
 			Url:           url,
