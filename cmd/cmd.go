@@ -24,7 +24,7 @@ func Execute() {
 		Name:  "hack-browser-data",
 		Usage: "Export passwords/cookies/history/bookmarks from browser",
 		UsageText: "[hack-browser-data -b chrome -f json -dir results -e all -cc]\n 	Get all data(password/cookie/history/bookmark) from chrome",
-		Version: "0.2.1",
+		Version: "0.2.2",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{Name: "verbose", Aliases: []string{"vv"}, Destination: &verbose, Value: false, Usage: "Verbose"},
 			&cli.BoolFlag{Name: "compress", Aliases: []string{"cc"}, Destination: &compress, Value: false, Usage: "Compress result to zip"},
