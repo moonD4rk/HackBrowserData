@@ -1,10 +1,9 @@
 name: CI
 on: [push]
 jobs:
-
   build:
     name: Build
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         goVer: [1.11, 1.12, 1.13, 1.14, 1.15]
@@ -28,6 +27,3 @@ jobs:
 
     - name: Format
       run: diff -u <(echo -n) <(gofmt -d .)
-
-    - name: Test
-      run: go test -v ./...
