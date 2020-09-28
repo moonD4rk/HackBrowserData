@@ -45,7 +45,7 @@ func (c *Chromium) InitSecretKey() error {
 		cmd            *exec.Cmd
 		stdout, stderr bytes.Buffer
 	)
-	//➜ security find-generic-password -wa 'Chrome'
+	// ➜ security find-generic-password -wa 'Chrome'
 	cmd = exec.Command("security", "find-generic-password", "-wa", c.name)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

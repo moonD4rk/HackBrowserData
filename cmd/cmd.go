@@ -12,7 +12,6 @@ import (
 
 var (
 	browser      string
-	exportData   string
 	exportDir    string
 	outputFormat string
 	verbose      bool
@@ -23,18 +22,16 @@ func Execute() {
 	app := &cli.App{
 		Name:  "hack-browser-data",
 		Usage: "Export passwords/cookies/history/bookmarks from browser",
-		UsageText: "[hack-browser-data -b chrome -f json -dir results -e all -cc]\n 	Get all data(password/cookie/history/bookmark) from chrome",
-		Version: "0.2.2",
+		UsageText: "[hack-browser-data -b chrome -f json -dir results -cc]\n 	Get all data(password/cookie/history/bookmark) from chrome",
+		Version: "0.2.3",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{Name: "verbose", Aliases: []string{"vv"}, Destination: &verbose, Value: false, Usage: "Verbose"},
 			&cli.BoolFlag{Name: "compress", Aliases: []string{"cc"}, Destination: &compress, Value: false, Usage: "Compress result to zip"},
 			&cli.StringFlag{Name: "browser", Aliases: []string{"b"}, Destination: &browser, Value: "all", Usage: "Available browsers: all|" + strings.Join(core.ListBrowser(), "|")},
 			&cli.StringFlag{Name: "results-dir", Aliases: []string{"dir"}, Destination: &exportDir, Value: "results", Usage: "Export dir"},
 			&cli.StringFlag{Name: "format", Aliases: []string{"f"}, Destination: &outputFormat, Value: "json", Usage: "Format, csv|json|console"},
-			&cli.StringFlag{Name: "export-data", Aliases: []string{"e"}, Destination: &exportData, Value: "all", Usage: "all|" + strings.Join(core.ListItem(), "|")},
 		},
 		HideHelpCommand: true,
-		HideVersion:     true,
 		Action: func(c *cli.Context) error {
 			if verbose {
 				log.InitLog("debug")
@@ -55,14 +52,16 @@ func Execute() {
 				if err != nil {
 					log.Error(err)
 				}
-				items, err := browser.GetAllItems(exportData)
+				// default select all items
+				// also you can get single item with browser.GetItem(itemName)
+				items, err := browser.GetAllItems()
 				if err != nil {
 					log.Error(err)
 				}
 				name := browser.GetName()
 				key := browser.GetSecretKey()
 				for _, item := range items {
-					err := item.CopyItem()
+					err := item.CopyDB()
 					if err != nil {
 						log.Error(err)
 					}
