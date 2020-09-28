@@ -1,7 +1,5 @@
 # HackBrowserData
 
-[中文文档](https://github.com/moonD4rk/HackBrowserData/blob/master/README_ZH.md) 
-
 hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|书签）的导出工具，支持全平台主流浏览器。
 
 ### 各平台浏览器支持情况
@@ -10,7 +8,7 @@ hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|�
 
 | 浏览器                      | 密码 | Cookie | 书签 | 历史记录 |
 | :--------------------------- | :------: | :----: | :------: | :-----: |
-| Google Chrome (全版本) |    ✅     |   ✅    |    ✅     |    ✅    |
+| Google Chrome |    ✅     |   ✅    |    ✅     |    ✅    |
 | Firefox                    |    ✅     |   ✅    |    ✅     |    ✅    |
 | Microsoft Edge               |    ✅     |   ✅    |    ✅     |    ✅    |
 | 360 急速浏览器    |    ✅     |   ✅    |    ✅     |    ✅    |
@@ -19,26 +17,26 @@ hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|�
 
 #### MacOS
 
-由于 MacOS 的安全性设置，基于 `Chromium` 内核浏览器解密时需要用户密码
+由于 MacOS 的安全性设置，基于 `Chromium` 内核浏览器解密时**需要当前用户密码**
 
-| Browser                      | Password | Cookie | Bookmark | History |
+| Browser                      | 密码 | Cookie | 书签 | 历史记录 |
 | :--------------------------- | :------: | :----: | :------: | :-----: |
-| Google Chrome<br />需要密码  |    ✅     |   ✅    |    ✅     |    ✅    |
+| Google Chrome  |    ✅     |   ✅    |    ✅     |    ✅    |
 | Firefox                      |    ✅     |   ✅    |    ✅     |    ✅    |
-| Microsoft Edge<br />需要密码 |    ✅     |   ✅    |    ✅     |    ✅    |
+| Microsoft Edge |    ✅     |   ✅    |    ✅     |    ✅    |
 | Safari                       |    ❌     |   ❌    |    ❌     |    ❌    |
 
 #### Linux
 
-| Browser       | Password | Cookie | Bookmark | History |
+| Browser       | 密码 | Cookie | 书签 | 历史记录 |
 | :------------ | :------: | :----: | :------: | :-----: |
 | Firefox       |    ✅     |   ✅    |    ✅     |    ✅    |
 | Google Chrome |    ✅     |   ✅    |    ✅     |    ✅    |
-
+| Microsoft Edge |    ❌     |   ❌    |    ❌     |    ❌    |
 
 ### 安装运行
 
-基于Golang，如图方便可以下载我编译好的[二进制文件 ](https://github.com/moonD4rk/HackBrowserData/releases) 就行
+可下载已编译好，直接运行的 [二进制文件 ](https://github.com/moonD4rk/HackBrowserData/releases) 
 
 #### 自己编译
 
@@ -54,28 +52,51 @@ go get -v -t -d ./...
 go build
 ```
 
-#### 运行
+##### 跨平台编译
+
+由于用到了 `go-sqlite3` 库，在跨平台编译时需提前安装支持目标平台的 `GCC` 工具，下面以 `MacOS` 下分别编译 `Windows` 和 `Linux` 程序为例：
+
+**Windows**
+
 
 ```shell
+brew install mingw-w64
+
+CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC="x86_64-w64-mingw32-gcc" go build
+```
+
+**Linux**
+
+```shell
+brew install FiloSottile/musl-cross/musl-cross
+
+CC=x86_64-linux-musl-gcc CXX=x86_64-linux-musl-g++ GOARCH=amd64 GOOS=linux CGO_ENABLED=1 go build -ldflags "-linkmode external -extldflags -static"
+```
+
+#### 运行
+
+双击直接运行，也可以命令行调整对应的命令
+
+```
 PS C:\test> .\hack-browser-data.exe -h
 NAME:
    hack-browser-data - Export passwords/cookies/history/bookmarks from browser
-
 USAGE:
-   [hack-browser-data -b chrome -f json -dir results -e all -cc]
+   [hack-browser-data -b chrome -f json -dir results -cc]
    Get all data(password/cookie/history/bookmark) from chrome
-
+VERSION:
+   0.2.3
 GLOBAL OPTIONS:
    --verbose, --vv                   Verbose (default: false)
    --compress, --cc                  Compress result to zip (default: false)
-   --browser value, -b value         Available browsers: all|chrome|edge|firefox (default: "all")
+   --browser value, -b value         Available browsers: all|edge|firefox|chrome|qq|360 (default: "all")
    --results-dir value, --dir value  Export dir (default: "results")
    --format value, -f value          Format, csv|json|console (default: "json")
-   --export-data value, -e value     all|password|bookmark|cookie|history (default: "all")
    --help, -h                        show help (default: false)
+   --version, -v                     print the version (default: false)
 
 
-PS C:\test>  .\hack-browser-data.exe -b all -f json -e all --dir results -cc
+PS C:\test>  .\hack-browser-data.exe -b all -f json --dir results -cc
 [x]:  Get 44 cookies, filename is results/microsoft_edge_cookie.json
 [x]:  Get 54 history, filename is results/microsoft_edge_history.json
 [x]:  Get 1 passwords, filename is results/microsoft_edge_password.json
@@ -113,8 +134,6 @@ PS C:\test>  .\hack-browser-data.exe -b all -f json -e all --dir results -cc
 | Chrome | 360 Safe | Firefox | QQ Browser |  IE   | Sogou Explorer |
 | :----- | :------: | :-----: | :--------: | :---: | :------------: |
 | 39.85% |  22.26%  |  9.28%  |    6.5%    | 5.65% |     4.74%      |
-
-  
 
 - [x] Chrome
 - [x] QQ browser
