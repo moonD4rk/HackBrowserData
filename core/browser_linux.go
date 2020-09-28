@@ -35,7 +35,7 @@ var (
 )
 
 func (c *Chromium) InitSecretKey() error {
-	//what is d-bus @https://dbus.freedesktop.org/
+	// what is d-bus @https://dbus.freedesktop.org/
 	var chromeSecret []byte
 	conn, err := dbus.SessionBus()
 	if err != nil {
