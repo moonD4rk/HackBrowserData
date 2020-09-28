@@ -84,16 +84,16 @@ func Nss(globalSalt, masterPwd []byte, pbe NssPBE) ([]byte, error) {
 }
 
 func decryptPBE(globalSalt, masterPwd, entrySalt, encrypted []byte) ([]byte, error) {
-	//byte[] GLMP; // GlobalSalt + MasterPassword
-	//byte[] HP; // SHA1(GLMP)
-	//byte[] HPES; // HP + EntrySalt
-	//byte[] CHP; // SHA1(HPES)
-	//byte[] PES; // EntrySalt completed to 20 bytes by zero
-	//byte[] PESES; // PES + EntrySalt
-	//byte[] k1;
-	//byte[] tk;
-	//byte[] k2;
-	//byte[] k; // final value containing key and iv
+	// byte[] GLMP; // GlobalSalt + MasterPassword
+	// byte[] HP; // SHA1(GLMP)
+	// byte[] HPES; // HP + EntrySalt
+	// byte[] CHP; // SHA1(HPES)
+	// byte[] PES; // EntrySalt completed to 20 bytes by zero
+	// byte[] PESES; // PES + EntrySalt
+	// byte[] k1;
+	// byte[] tk;
+	// byte[] k2;
+	// byte[] k; // final value containing key and iv
 	glmp := append(globalSalt, masterPwd...)
 	hp := sha1.Sum(glmp)
 	s := append(hp[:], entrySalt...)

@@ -27,8 +27,11 @@ type Browser interface {
 	// GetSecretKey return browser secret key
 	GetSecretKey() []byte
 
-	// GetAllItems, default return all of items(password|bookmark|cookie|history)
-	GetAllItems(itemName string) ([]common.Item, error)
+	// GetAllItems return all of items (password|bookmark|cookie|history)
+	GetAllItems() ([]common.Item, error)
+
+	// GetItem return single one from password|bookmark|cookie|history
+	GetItem(itemName string) (common.Item, error)
 }
 
 const (
@@ -111,32 +114,33 @@ func (c *Chromium) GetSecretKey() []byte {
 	return c.secretKey
 }
 
-func (c *Chromium) GetAllItems(itemName string) (Items []common.Item, err error) {
-	itemName = strings.ToLower(itemName)
+func (c *Chromium) GetAllItems() (Items []common.Item, err error) {
 	var items []common.Item
-	if itemName == "all" {
-		for item, choice := range chromiumItems {
-			m, err := utils.GetItemPath(c.profilePath, choice.mainFile)
-			if err != nil {
-				log.Errorf("%s find %s file failed, ERR:%s", c.name, item, err)
-				continue
-			}
-			i := choice.newItem(m, "")
-			log.Debugf("%s find %s File Success", c.name, item)
-			items = append(items, i)
+	for item, choice := range chromiumItems {
+		m, err := utils.GetItemPath(c.profilePath, choice.mainFile)
+		if err != nil {
+			log.Errorf("%s find %s file failed, ERR:%s", c.name, item, err)
+			continue
 		}
-	} else if item, ok := chromiumItems[itemName]; ok {
+		i := choice.newItem(m, "")
+		log.Debugf("%s find %s File Success", c.name, item)
+		items = append(items, i)
+	}
+	return items, nil
+}
+
+func (c *Chromium) GetItem(itemName string) (common.Item, error) {
+	itemName = strings.ToLower(itemName)
+	if item, ok := chromiumItems[itemName]; ok {
 		m, err := utils.GetItemPath(c.profilePath, item.mainFile)
 		if err != nil {
 			log.Errorf("%s find %s file failed, ERR:%s", c.name, item.mainFile, err)
 		}
 		i := item.newItem(m, "")
-		items = append(items, i)
-		return items, nil
+		return i, nil
 	} else {
 		return nil, errItemNotSupported
 	}
-	return items, nil
 }
 
 type Firefox struct {
@@ -149,32 +153,35 @@ func NewFirefox(profile, key, name string) (Browser, error) {
 	return &Firefox{profilePath: profile, keyPath: key, name: name}, nil
 }
 
-func (f *Firefox) GetAllItems(itemName string) ([]common.Item, error) {
-	itemName = strings.ToLower(itemName)
+func (f *Firefox) GetAllItems() ([]common.Item, error) {
 	var items []common.Item
-	if itemName == "all" {
-		for item, choice := range firefoxItems {
-			var (
-				sub, main string
-				err       error
-			)
-			if choice.subFile != "" {
-				sub, err = utils.GetItemPath(f.profilePath, choice.subFile)
-				if err != nil {
-					log.Errorf("%s find %s file failed, ERR:%s", f.name, item, err)
-					continue
-				}
-			}
-			main, err = utils.GetItemPath(f.profilePath, choice.mainFile)
+	for item, choice := range firefoxItems {
+		var (
+			sub, main string
+			err       error
+		)
+		if choice.subFile != "" {
+			sub, err = utils.GetItemPath(f.profilePath, choice.subFile)
 			if err != nil {
 				log.Errorf("%s find %s file failed, ERR:%s", f.name, item, err)
 				continue
 			}
-			i := choice.newItem(main, sub)
-			log.Debugf("%s find %s file success", f.name, item)
-			items = append(items, i)
 		}
-	} else if item, ok := firefoxItems[itemName]; ok {
+		main, err = utils.GetItemPath(f.profilePath, choice.mainFile)
+		if err != nil {
+			log.Errorf("%s find %s file failed, ERR:%s", f.name, item, err)
+			continue
+		}
+		i := choice.newItem(main, sub)
+		log.Debugf("%s find %s file success", f.name, item)
+		items = append(items, i)
+	}
+	return items, nil
+}
+
+func (f *Firefox) GetItem(itemName string) (common.Item, error) {
+	itemName = strings.ToLower(itemName)
+	if item, ok := firefoxItems[itemName]; ok {
 		var (
 			sub, main string
 			err       error
@@ -191,12 +198,10 @@ func (f *Firefox) GetAllItems(itemName string) ([]common.Item, error) {
 		}
 		i := item.newItem(main, sub)
 		log.Debugf("%s find %s file success", f.name, item.mainFile)
-		items = append(items, i)
-		return items, nil
+		return i, nil
 	} else {
 		return nil, errItemNotSupported
 	}
-	return items, nil
 }
 
 func (f *Firefox) GetName() string {

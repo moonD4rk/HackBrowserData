@@ -25,13 +25,13 @@ type Item interface {
 	// FirefoxParse parse firefox items
 	FirefoxParse() error
 
-	// OutPut with json or csv
+	// OutPut file name and format type
 	OutPut(format, browser, dir string) error
 
-	// Copy item file to local path
-	CopyItem() error
+	// CopyDB is copy item db file to current dir
+	CopyDB() error
 
-	// Release item file
+	// Release is delete item db file
 	Release() error
 }
 
@@ -138,7 +138,7 @@ func (b *bookmarks) FirefoxParse() error {
 	return nil
 }
 
-func (b *bookmarks) CopyItem() error {
+func (b *bookmarks) CopyDB() error {
 	return utils.CopyDB(b.mainPath, filepath.Base(b.mainPath))
 }
 
@@ -266,7 +266,7 @@ func (c *cookies) FirefoxParse() error {
 	return nil
 }
 
-func (c *cookies) CopyItem() error {
+func (c *cookies) CopyDB() error {
 	return utils.CopyDB(c.mainPath, filepath.Base(c.mainPath))
 }
 
@@ -383,7 +383,7 @@ func (h *historyData) FirefoxParse() error {
 	return nil
 }
 
-func (h *historyData) CopyItem() error {
+func (h *historyData) CopyDB() error {
 	return utils.CopyDB(h.mainPath, filepath.Base(h.mainPath))
 }
 
@@ -526,14 +526,13 @@ func (p *passwords) FirefoxParse() error {
 					Password:   string(decrypt.PKCS5UnPadding(pwd)),
 					CreateDate: v.CreateDate,
 				})
-
 			}
 		}
 	}
 	return nil
 }
 
-func (p *passwords) CopyItem() error {
+func (p *passwords) CopyDB() error {
 	err := utils.CopyDB(p.mainPath, filepath.Base(p.mainPath))
 	if err != nil {
 		log.Error(err)
