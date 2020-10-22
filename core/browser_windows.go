@@ -28,7 +28,8 @@ var (
 		ProfilePath string
 		Name        string
 		KeyPath     string
-		New         func(profile, key, name string) (Browser, error)
+		Storage     string
+		New         func(profile, key, name, storage string) (Browser, error)
 	}{
 		"chrome": {
 			ProfilePath: os.Getenv("USERPROFILE") + chromeProfilePath,

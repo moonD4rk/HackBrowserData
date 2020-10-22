@@ -20,8 +20,14 @@ var (
 		ProfilePath string
 		Name        string
 		KeyPath     string
-		New         func(profile, key, name string) (Browser, error)
+		Storage     string
+		New         func(profile, key, name, storage string) (Browser, error)
 	}{
+		"firefox": {
+			ProfilePath: fireFoxProfilePath,
+			Name:        firefoxName,
+			New:         NewFirefox,
+		},
 		"chrome": {
 			ProfilePath: chromeProfilePath,
 			Name:        chromeName,
@@ -31,11 +37,6 @@ var (
 			ProfilePath: edgeProfilePath,
 			Name:        edgeName,
 			New:         NewChromium,
-		},
-		"firefox": {
-			ProfilePath: fireFoxProfilePath,
-			Name:        firefoxName,
-			New:         NewFirefox,
 		},
 	}
 )
