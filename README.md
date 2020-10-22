@@ -4,6 +4,8 @@
 
 hack-browser-data is an open-source tool that could help you decrypt data ( passwords|bookmarks|cookies|history ) from the browser. It supports the most popular browsers on the market and runs on Windows, macOS and Linux.
 
+> Special Note: This tool is limited to security research only, and the user assumes all legal and related responsibilities arising from its use! The author assumes no legal responsibility!
+
 ### Supported Browser
 
 #### Windows
@@ -33,6 +35,7 @@ Based on Apple's security policy, some browsers **require a current user passwor
 | :---------------------------------- | :------: | :----: | :------: | :-----: |
 | Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
 | Google Chrome |    ✅    |   ✅   |    ✅    |    ✅    |
+| Microsoft Edge Dev |    ✅    |   ✅   |    ✅    |    ✅    |
 
 
 ### Install
@@ -85,7 +88,7 @@ USAGE:
    [hack-browser-data -b chrome -f json -dir results -cc]
    Get all data(password/cookie/history/bookmark) from chrome
 VERSION:
-   0.2.3
+   0.2.4
 GLOBAL OPTIONS:
    --verbose, --vv                   Verbose (default: false)
    --compress, --cc                  Compress result to zip (default: false)
