@@ -12,6 +12,12 @@ import (
 const (
 	fireFoxProfilePath = "/home/*/.mozilla/firefox/*.default-release/"
 	chromeProfilePath  = "/home/*/.config/google-chrome/*/"
+	edgeProfilePath    = "/home/*/.config/microsoft-edge*/*/"
+)
+
+const (
+	chromeStorageName = "Chrome Safe Storage"
+	edgeStorageName   = "Chromium Safe Storage"
 )
 
 var (
@@ -19,7 +25,8 @@ var (
 		ProfilePath string
 		Name        string
 		KeyPath     string
-		New         func(profile, key, name string) (Browser, error)
+		Storage     string
+		New         func(profile, key, name, storage string) (Browser, error)
 	}{
 		"firefox": {
 			ProfilePath: fireFoxProfilePath,
@@ -29,6 +36,13 @@ var (
 		"chrome": {
 			ProfilePath: chromeProfilePath,
 			Name:        chromeName,
+			Storage:     chromeStorageName,
+			New:         NewChromium,
+		},
+		"edge": {
+			ProfilePath: edgeProfilePath,
+			Name:        edgeName,
+			Storage:     edgeStorageName,
 			New:         NewChromium,
 		},
 	}
@@ -62,24 +76,25 @@ func (c *Chromium) InitSecretKey() error {
 			return err
 		}
 		for _, item := range items {
-			i, err := item.GetLabel()
+			label, err := item.GetLabel()
 			if err != nil {
 				log.Error(err)
 				continue
 			}
-			if i == "Chrome Safe Storage" {
+			if label == c.storage {
 				se, err := item.GetSecret(session.Path())
 				if err != nil {
+					log.Error(err)
 					return err
 				}
 				chromeSecret = se.Value
 			}
 		}
 	}
-	var chromeSalt = []byte("saltysalt")
 	if chromeSecret == nil {
 		return errDbusSecretIsEmpty
 	}
+	var chromeSalt = []byte("saltysalt")
 	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_linux.cc
 	key := pbkdf2.Key(chromeSecret, chromeSalt, 1, 16, sha1.New)
 	c.secretKey = key
