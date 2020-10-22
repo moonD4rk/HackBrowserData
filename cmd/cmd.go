@@ -53,7 +53,7 @@ func Execute() {
 					log.Error(err)
 				}
 				// default select all items
-				// also you can get single item with browser.GetItem(itemName)
+				// you can get single item with browser.GetItem(itemName)
 				items, err := browser.GetAllItems()
 				if err != nil {
 					log.Error(err)
