@@ -2,6 +2,9 @@
 
 hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|书签）的导出工具，支持全平台主流浏览器。
 
+
+>特别声明：此工具仅限于安全研究，用户承担因使用此工具而导致的所有法律和相关责任！作者不承担任何法律责任！
+
 ### 各平台浏览器支持情况
 
 #### Windows
@@ -32,7 +35,7 @@ hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|�
 | :------------ | :------: | :----: | :------: | :-----: |
 | Firefox       |    ✅     |   ✅    |    ✅     |    ✅    |
 | Google Chrome |    ✅     |   ✅    |    ✅     |    ✅    |
-| Microsoft Edge |    ❌     |   ❌    |    ❌     |    ❌    |
+| Microsoft Edge |    ✅    |   ✅   |    ✅    |    ✅    |
 
 ### 安装运行
 
@@ -85,7 +88,7 @@ USAGE:
    [hack-browser-data -b chrome -f json -dir results -cc]
    Get all data(password/cookie/history/bookmark) from chrome
 VERSION:
-   0.2.3
+   0.2.4
 GLOBAL OPTIONS:
    --verbose, --vv                   Verbose (default: false)
    --compress, --cc                  Compress result to zip (default: false)
