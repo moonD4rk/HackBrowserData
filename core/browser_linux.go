@@ -13,11 +13,13 @@ const (
 	fireFoxProfilePath = "/home/*/.mozilla/firefox/*.default-release/"
 	chromeProfilePath  = "/home/*/.config/google-chrome/*/"
 	edgeProfilePath    = "/home/*/.config/microsoft-edge*/*/"
+	braveProfilePath   = "/home/*/.config/BraveSoftware/Brave-Browser/*/"
 )
 
 const (
 	chromeStorageName = "Chrome Safe Storage"
 	edgeStorageName   = "Chromium Safe Storage"
+	braveStorageName  = "Brave Safe Storage"
 )
 
 var (
@@ -43,6 +45,12 @@ var (
 			ProfilePath: edgeProfilePath,
 			Name:        edgeName,
 			Storage:     edgeStorageName,
+			New:         NewChromium,
+		},
+		"brave": {
+			ProfilePath: braveProfilePath,
+			Name:        braveName,
+			Storage:     braveStorageName,
 			New:         NewChromium,
 		},
 	}
