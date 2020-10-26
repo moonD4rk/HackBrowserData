@@ -184,6 +184,9 @@ func (c *cookies) ChromeParse(secretKey []byte) error {
 		}
 	}()
 	rows, err := cookieDB.Query(queryChromiumCookie)
+	if err != nil {
+		return err
+	}
 	defer func() {
 		if err := rows.Close(); err != nil {
 			log.Debug(err)
@@ -308,6 +311,9 @@ func (h *historyData) ChromeParse(key []byte) error {
 		}
 	}()
 	rows, err := historyDB.Query(queryChromiumHistory)
+	if err != nil {
+		return err
+	}
 	defer func() {
 		if err := rows.Close(); err != nil {
 			log.Debug(err)

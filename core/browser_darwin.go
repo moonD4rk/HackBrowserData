@@ -13,6 +13,7 @@ const (
 	chromeProfilePath  = "/Users/*/Library/Application Support/Google/Chrome/*/"
 	edgeProfilePath    = "/Users/*/Library/Application Support/Microsoft Edge/*/"
 	fireFoxProfilePath = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-release/"
+	braveProfilePath   = "/Users/*/Library/Application Support/BraveSoftware/Brave-Browser/*/"
 )
 
 var (
@@ -36,6 +37,11 @@ var (
 		"edge": {
 			ProfilePath: edgeProfilePath,
 			Name:        edgeName,
+			New:         NewChromium,
+		},
+		"brave": {
+			ProfilePath: braveProfilePath,
+			Name:        braveName,
 			New:         NewChromium,
 		},
 	}

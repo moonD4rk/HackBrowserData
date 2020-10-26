@@ -15,6 +15,7 @@ const (
 	firefoxName   = "Firefox"
 	speed360Name  = "360speed"
 	qqBrowserName = "qq"
+	braveName     = "Brave"
 )
 
 type Browser interface {
