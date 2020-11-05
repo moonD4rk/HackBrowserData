@@ -14,7 +14,7 @@ hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|�
 | Google Chrome |    ✅     |   ✅    |    ✅     |    ✅    |
 | Firefox                    |    ✅     |   ✅    |    ✅     |    ✅    |
 | Microsoft Edge               |    ✅     |   ✅    |    ✅     |    ✅    |
-| 360 急速浏览器    |    ✅     |   ✅    |    ✅     |    ✅    |
+| 360 极速浏览器    |    ✅     |   ✅    |    ✅     |    ✅    |
 | QQ 浏览器               |    ✅     |   ✅    |    ✅     |    ✅    |
 | Brave 浏览器 |    ✅    |   ✅   |    ✅    |    ✅    |
 | IE 浏览器        |    ❌     |   ❌    |    ❌     |    ❌    |
