@@ -18,11 +18,8 @@ const (
 	braveProfilePath     = "/AppData/Local/BraveSoftware/Brave-Browser/User Data/*/"
 	braveKeyPath         = "/AppData/Local/BraveSoftware/Brave-Browser/User Data/Local State"
 	speed360ProfilePath  = "/AppData/Local/360chrome/Chrome/User Data/*/"
-	speed360KeyPath      = ""
 	qqBrowserProfilePath = "/AppData/Local/Tencent/QQBrowser/User Data/*/"
-	qqBrowserKeyPath     = ""
 	firefoxProfilePath   = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-release/"
-	firefoxKeyPath       = ""
 )
 
 var (
