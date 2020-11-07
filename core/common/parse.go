@@ -14,7 +14,7 @@ import (
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/alicebob/sqlittle/driver"
 	"github.com/tidwall/gjson"
 )
 
@@ -101,7 +101,7 @@ func (b *bookmarks) FirefoxParse() error {
 		tempMap      map[int64]string
 		bookmarkUrl  string
 	)
-	keyDB, err = sql.Open("sqlite3", FirefoxDataFile)
+	keyDB, err = sql.Open("sqlittle", FirefoxDataFile)
 	if err != nil {
 		return err
 	}
@@ -174,7 +174,7 @@ func NewCookies(main, sub string) Item {
 
 func (c *cookies) ChromeParse(secretKey []byte) error {
 	c.cookies = make(map[string][]cookie)
-	cookieDB, err := sql.Open("sqlite3", ChromeCookieFile)
+	cookieDB, err := sql.Open("sqlittle", ChromeCookieFile)
 	if err != nil {
 		return err
 	}
@@ -227,7 +227,7 @@ func (c *cookies) ChromeParse(secretKey []byte) error {
 
 func (c *cookies) FirefoxParse() error {
 	c.cookies = make(map[string][]cookie)
-	cookieDB, err := sql.Open("sqlite3", FirefoxCookieFile)
+	cookieDB, err := sql.Open("sqlittle", FirefoxCookieFile)
 	if err != nil {
 		return err
 	}
@@ -301,7 +301,7 @@ func NewHistoryData(main, sub string) Item {
 }
 
 func (h *historyData) ChromeParse(key []byte) error {
-	historyDB, err := sql.Open("sqlite3", ChromeHistoryFile)
+	historyDB, err := sql.Open("sqlittle", ChromeHistoryFile)
 	if err != nil {
 		return err
 	}
@@ -348,7 +348,7 @@ func (h *historyData) FirefoxParse() error {
 		tempMap     map[int64]string
 	)
 	tempMap = make(map[int64]string)
-	keyDB, err = sql.Open("sqlite3", FirefoxDataFile)
+	keyDB, err = sql.Open("sqlittle", FirefoxDataFile)
 	if err != nil {
 		return err
 	}
@@ -429,7 +429,7 @@ func NewCPasswords(main, sub string) Item {
 }
 
 func (p *passwords) ChromeParse(key []byte) error {
-	loginDB, err := sql.Open("sqlite3", ChromePasswordFile)
+	loginDB, err := sql.Open("sqlittle", ChromePasswordFile)
 	if err != nil {
 		return err
 	}
@@ -581,7 +581,7 @@ func getDecryptKey() (item1, item2, a11, a102 []byte, err error) {
 		pwdRows *sql.Rows
 		nssRows *sql.Rows
 	)
-	keyDB, err = sql.Open("sqlite3", FirefoxKey4File)
+	keyDB, err = sql.Open("sqlittle", FirefoxKey4File)
 	if err != nil {
 		log.Error(err)
 		return nil, nil, nil, nil, err
