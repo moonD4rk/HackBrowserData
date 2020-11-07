@@ -43,6 +43,8 @@ hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|�
 
 可下载已编译好，直接运行的 [二进制文件 ](https://github.com/moonD4rk/HackBrowserData/releases) 
 
+> 某些情况下，这款安全工具会被 Windows Defender 或其他杀毒软件当作病毒从而无法执行，0.2.6 版本后将使用 UPX 做简单的压缩壳免杀，后续不再提供免杀做无谓的安全对抗。代码已全部开源，可自己修改编译。
+
 #### 自己编译
 
 支持版本 `go 1.11+`
@@ -90,7 +92,7 @@ USAGE:
    [hack-browser-data -b chrome -f json -dir results -cc]
    Get all data(password/cookie/history/bookmark) from chrome
 VERSION:
-   0.2.4
+   0.2.6
 GLOBAL OPTIONS:
    --verbose, --vv                   Verbose (default: false)
    --compress, --cc                  Compress result to zip (default: false)
