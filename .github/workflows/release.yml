@@ -15,14 +15,17 @@ jobs:
                     - os: windows-latest
                       goos: windows
                       bin: 'hack-browser-data.exe'
+                      args: -9
                       releaseos: windows
                     - os: macos-latest
                       goos: darwin
                       bin: 'hack-browser-data'
+                      args: -9
                       releaseos: osx
                     - os: ubuntu-latest
                       goos: linux
                       bin: 'hack-browser-data'
+                      args: -9
                       releaseos: linux
                 exclude:
                     - os: macos-latest
@@ -47,6 +50,10 @@ jobs:
                 GOOS: ${{ matrix.goos }}
                 GOARCH: ${{ matrix.arch }}
                 CGO_ENABLED: 1
+            - uses: svenstaro/upx-action@v2
+              with:
+                args: ${{ matrix.args }}
+                file: ${{ matrix.bin }}
             - name: Upload to artifacts
               uses: actions/upload-artifact@v2
               with:
