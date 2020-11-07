@@ -47,6 +47,8 @@ Based on Apple's security policy, some browsers **require a current user passwor
 
 Installation of hack-browser-data is dead-simple, just download [the release for your system](https://github.com/moonD4rk/HackBrowserData/releases) and run the binary.
 
+> In some situations, this security tool will be treated as a virus by Windows Defender or other antivirus software and can not be executed, after version 0.2.6 will use UPX try to simply bypass, then no longer with antivirus software to do unnecessary security confrontations.The code is all open source, you can modify and compile by yourself.
+
 #### Building from source
 
 support `go 1.11+`
@@ -93,7 +95,7 @@ USAGE:
    [hack-browser-data -b chrome -f json -dir results -cc]
    Get all data(password/cookie/history/bookmark) from chrome
 VERSION:
-   0.2.4
+   0.2.6
 GLOBAL OPTIONS:
    --verbose, --vv                   Verbose (default: false)
    --compress, --cc                  Compress result to zip (default: false)
