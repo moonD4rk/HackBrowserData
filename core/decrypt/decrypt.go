@@ -6,6 +6,7 @@ import (
 	"crypto/des"
 	"encoding/asn1"
 	"errors"
+
 	"hack-browser-data/log"
 )
 
@@ -33,6 +34,7 @@ func PKCS5UnPadding(src []byte) []byte {
 	return src[:(length - unpad)]
 }
 
+// Des3Decrypt use for decrypt firefox PBE
 func Des3Decrypt(key, iv []byte, src []byte) ([]byte, error) {
 	block, err := des.NewTripleDESCipher(key)
 	if err != nil {
