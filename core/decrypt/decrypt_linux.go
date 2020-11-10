@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/asn1"
 	"encoding/hex"
+
 	"hack-browser-data/log"
 
 	"golang.org/x/crypto/pbkdf2"
@@ -40,7 +41,6 @@ SEQUENCE (2 elem)
 			INTEGER 1
 	OCTET STRING (16 byte)
 */
-
 type MetaPBE struct {
 	SequenceA
 	Encrypted []byte
@@ -101,7 +101,6 @@ func DecodeMeta(decodeItem []byte) (pbe MetaPBE, err error) {
 }
 
 func DecodeNss(nssA11Bytes []byte) (pbe NssPBE, err error) {
-	log.Debug(hex.EncodeToString(nssA11Bytes))
 	_, err = asn1.Unmarshal(nssA11Bytes, &pbe)
 	if err != nil {
 		log.Error(err)

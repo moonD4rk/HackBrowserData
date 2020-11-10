@@ -3,9 +3,10 @@ package core
 import (
 	"encoding/base64"
 	"errors"
+	"os"
+
 	"hack-browser-data/core/decrypt"
 	"hack-browser-data/utils"
-	"os"
 
 	"github.com/tidwall/gjson"
 )
@@ -70,6 +71,8 @@ var (
 	errBase64DecodeFailed = errors.New("decode base64 failed")
 )
 
+// InitSecretKey on windows with win32 DPAPI
+// conference from @https://gist.github.com/akamajoris/ed2f14d817d5514e7548
 func (c *Chromium) InitSecretKey() error {
 	if c.keyPath == "" {
 		return nil

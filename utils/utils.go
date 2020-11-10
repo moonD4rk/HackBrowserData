@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -15,38 +14,6 @@ import (
 )
 
 const Prefix = "[x]: "
-
-func CopyDB(src, dst string) error {
-	locals, _ := filepath.Glob("*")
-	for _, v := range locals {
-		if v == dst {
-			err := os.Remove(dst)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	sourceFile, err := ioutil.ReadFile(src)
-	if err != nil {
-		log.Debug(err.Error())
-	}
-	err = ioutil.WriteFile(dst, sourceFile, 0777)
-	if err != nil {
-		log.Debug(err.Error())
-	}
-	return err
-}
-
-func GetItemPath(profilePath, file string) (string, error) {
-	p, err := filepath.Glob(profilePath + file)
-	if err != nil {
-		return "", err
-	}
-	if len(p) > 0 {
-		return p[0], nil
-	}
-	return "", fmt.Errorf("find %s failed", file)
-}
 
 func IntToBool(a int) bool {
 	switch a {
