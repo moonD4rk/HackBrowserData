@@ -7,9 +7,10 @@ import (
 	"crypto/sha256"
 	"encoding/asn1"
 	"encoding/hex"
-	"hack-browser-data/log"
 	"syscall"
 	"unsafe"
+
+	"hack-browser-data/log"
 
 	"golang.org/x/crypto/pbkdf2"
 )
