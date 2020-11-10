@@ -145,7 +145,7 @@ func (b *bookmarks) FirefoxParse() error {
 		)
 		err = bookmarkRows.Scan(&id, &fk, &bType, &dateAdded, &title)
 		if err != nil {
-			log.Error(err)
+			log.Warn(err)
 		}
 		if url, ok := tempMap[id]; ok {
 			bookmarkUrl = url
@@ -245,7 +245,7 @@ func (c *cookies) ChromeParse(secretKey []byte) error {
 			value, err = decrypt.ChromePass(secretKey, encryptValue)
 		}
 		if err != nil {
-			log.Error(err)
+			log.Debug(err)
 		}
 		cookie.Value = string(value)
 		c.cookies[host] = append(c.cookies[host], cookie)
@@ -407,7 +407,7 @@ func (h *historyData) FirefoxParse() error {
 		)
 		err = historyRows.Scan(&id, &url, &visitDate, &title, &visitCount)
 		if err != nil {
-			log.Error(err)
+			log.Warn(err)
 		}
 		h.history = append(h.history, history{
 			Title:         title,
@@ -433,14 +433,14 @@ func (h *historyData) OutPut(format, browser, dir string) error {
 		return h.history[i].VisitCount > h.history[j].VisitCount
 	})
 	switch format {
-	case "json":
-		err := h.outPutJson(browser, dir)
+	case "csv":
+		err := h.outPutCsv(browser, dir)
 		return err
 	case "console":
 		h.outPutConsole()
 		return nil
 	default:
-		err := h.outPutCsv(browser, dir)
+		err := h.outPutJson(browser, dir)
 		return err
 	}
 }
