@@ -92,13 +92,13 @@ USAGE:
    [hack-browser-data -b chrome -f json -dir results -cc]
    Get all data(password/cookie/history/bookmark) from chrome
 VERSION:
-   0.2.6
+   0.2.7
 GLOBAL OPTIONS:
    --verbose, --vv                   Verbose (default: false)
    --compress, --cc                  Compress result to zip (default: false)
    --browser value, -b value         Available browsers: all|edge|firefox|chrome|qq|360 (default: "all")
    --results-dir value, --dir value  Export dir (default: "results")
-   --format value, -f value          Format, csv|json|console (default: "json")
+   --format value, -f value          Format, csv|json|console (default: "csv")
    --help, -h                        show help (default: false)
    --version, -v                     print the version (default: false)
 
