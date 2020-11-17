@@ -11,12 +11,13 @@ import (
 )
 
 const (
-	chromeName    = "Chrome"
-	edgeName      = "Microsoft Edge"
-	firefoxName   = "Firefox"
-	speed360Name  = "360speed"
-	qqBrowserName = "qq"
-	braveName     = "Brave"
+	chromeName     = "Chrome"
+	chromeBetaName = "Chrome Beta"
+	edgeName       = "Microsoft Edge"
+	firefoxName    = "Firefox"
+	speed360Name   = "360speed"
+	qqBrowserName  = "qq"
+	braveName      = "Brave"
 )
 
 type Browser interface {
