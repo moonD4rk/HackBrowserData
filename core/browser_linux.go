@@ -11,16 +11,18 @@ import (
 )
 
 const (
-	fireFoxProfilePath = "/home/*/.mozilla/firefox/*.default-release/"
-	chromeProfilePath  = "/home/*/.config/google-chrome/*/"
-	edgeProfilePath    = "/home/*/.config/microsoft-edge*/*/"
-	braveProfilePath   = "/home/*/.config/BraveSoftware/Brave-Browser/*/"
+	fireFoxProfilePath    = "/home/*/.mozilla/firefox/*.default-release/"
+	chromeProfilePath     = "/home/*/.config/google-chrome/*/"
+	edgeProfilePath       = "/home/*/.config/microsoft-edge*/*/"
+	braveProfilePath      = "/home/*/.config/BraveSoftware/Brave-Browser/*/"
+	chromeBateProfilePath = "/home/*/.config/google-chrome-beta/*/"
 )
 
 const (
-	chromeStorageName = "Chrome Safe Storage"
-	edgeStorageName   = "Chromium Safe Storage"
-	braveStorageName  = "Brave Safe Storage"
+	chromeStorageName     = "Chrome Safe Storage"
+	edgeStorageName       = "Chromium Safe Storage"
+	braveStorageName      = "Brave Safe Storage"
+	chromeBetaStorageName = "Chrome Safe Storage"
 )
 
 var (
@@ -52,6 +54,12 @@ var (
 			ProfilePath: braveProfilePath,
 			Name:        braveName,
 			Storage:     braveStorageName,
+			New:         NewChromium,
+		},
+		"chrome-beta": {
+			ProfilePath: chromeBateProfilePath,
+			Name:        chromeBetaName,
+			Storage:     chromeBetaStorageName,
 			New:         NewChromium,
 		},
 	}
