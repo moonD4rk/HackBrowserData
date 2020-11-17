@@ -12,15 +12,17 @@ import (
 )
 
 const (
-	chromeProfilePath    = "/AppData/Local/Google/Chrome/User Data/*/"
-	chromeKeyPath        = "/AppData/Local/Google/Chrome/User Data/Local State"
-	edgeProfilePath      = "/AppData/Local/Microsoft/Edge/User Data/*/"
-	edgeKeyPath          = "/AppData/Local/Microsoft/Edge/User Data/Local State"
-	braveProfilePath     = "/AppData/Local/BraveSoftware/Brave-Browser/User Data/*/"
-	braveKeyPath         = "/AppData/Local/BraveSoftware/Brave-Browser/User Data/Local State"
-	speed360ProfilePath  = "/AppData/Local/360chrome/Chrome/User Data/*/"
-	qqBrowserProfilePath = "/AppData/Local/Tencent/QQBrowser/User Data/*/"
-	firefoxProfilePath   = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-release/"
+	chromeProfilePath     = "/AppData/Local/Google/Chrome/User Data/*/"
+	chromeKeyPath         = "/AppData/Local/Google/Chrome/User Data/Local State"
+	chromeBetaProfilePath = "/AppData/Local/Google/Chrome Beta/User Data/*/"
+	chromeBetaKeyPath     = "/AppData/Local/Google/Chrome Beta/User Data/Local State"
+	edgeProfilePath       = "/AppData/Local/Microsoft/Edge/User Data/*/"
+	edgeKeyPath           = "/AppData/Local/Microsoft/Edge/User Data/Local State"
+	braveProfilePath      = "/AppData/Local/BraveSoftware/Brave-Browser/User Data/*/"
+	braveKeyPath          = "/AppData/Local/BraveSoftware/Brave-Browser/User Data/Local State"
+	speed360ProfilePath   = "/AppData/Local/360chrome/Chrome/User Data/*/"
+	qqBrowserProfilePath  = "/AppData/Local/Tencent/QQBrowser/User Data/*/"
+	firefoxProfilePath    = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-release/"
 )
 
 var (
@@ -35,6 +37,12 @@ var (
 			ProfilePath: os.Getenv("USERPROFILE") + chromeProfilePath,
 			KeyPath:     os.Getenv("USERPROFILE") + chromeKeyPath,
 			Name:        chromeName,
+			New:         NewChromium,
+		},
+		"chrome-beta": {
+			ProfilePath: os.Getenv("USERPROFILE") + chromeBetaProfilePath,
+			KeyPath:     os.Getenv("USERPROFILE") + chromeBetaKeyPath,
+			Name:        chromeBetaName,
 			New:         NewChromium,
 		},
 		"edge": {
