@@ -102,7 +102,7 @@ type Chromium struct {
 	name        string
 	profilePath string
 	keyPath     string
-	storage     string // use for linux browser
+	storage     string // storage use for linux and macOS, get secret key
 	secretKey   []byte
 }
 

@@ -10,10 +10,18 @@ import (
 )
 
 const (
-	chromeProfilePath  = "/Users/*/Library/Application Support/Google/Chrome/*/"
-	edgeProfilePath    = "/Users/*/Library/Application Support/Microsoft Edge/*/"
-	fireFoxProfilePath = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-release/"
-	braveProfilePath   = "/Users/*/Library/Application Support/BraveSoftware/Brave-Browser/*/"
+	chromeProfilePath     = "/Users/*/Library/Application Support/Google/Chrome/*/"
+	chromeBetaProfilePath = "/Users/*/Library/Application Support/Google/Chrome Beta/*/"
+	edgeProfilePath       = "/Users/*/Library/Application Support/Microsoft Edge/*/"
+	fireFoxProfilePath    = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-release/"
+	braveProfilePath      = "/Users/*/Library/Application Support/BraveSoftware/Brave-Browser/*/"
+)
+
+const (
+	chromeStorageName     = "Chrome"
+	chromeBetaStorageName = "Chrome"
+	edgeStorageName       = "Microsoft Edge"
+	braveStorageName      = "Brave"
 )
 
 var (
@@ -32,16 +40,25 @@ var (
 		"chrome": {
 			ProfilePath: chromeProfilePath,
 			Name:        chromeName,
+			Storage:     chromeStorageName,
 			New:         NewChromium,
 		},
 		"edge": {
 			ProfilePath: edgeProfilePath,
 			Name:        edgeName,
+			Storage:     edgeStorageName,
 			New:         NewChromium,
 		},
 		"brave": {
 			ProfilePath: braveProfilePath,
 			Name:        braveName,
+			Storage:     braveStorageName,
+			New:         NewChromium,
+		},
+		"chrome-beta": {
+			ProfilePath: chromeBetaProfilePath,
+			Name:        chromeBetaName,
+			Storage:     chromeBetaStorageName,
 			New:         NewChromium,
 		},
 	}
@@ -53,7 +70,7 @@ func (c *Chromium) InitSecretKey() error {
 		stdout, stderr bytes.Buffer
 	)
 	// ➜ security find-generic-password -wa 'Chrome'
-	cmd = exec.Command("security", "find-generic-password", "-wa", c.name)
+	cmd = exec.Command("security", "find-generic-password", "-wa", c.storage)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
