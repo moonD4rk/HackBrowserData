@@ -12,6 +12,7 @@ hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|�
 | 浏览器                      | 密码 | Cookie | 书签 | 历史记录 |
 | :--------------------------- | :------: | :----: | :------: | :-----: |
 | Google Chrome |    ✅     |   ✅    |    ✅     |    ✅    |
+| Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
 | Firefox                    |    ✅     |   ✅    |    ✅     |    ✅    |
 | Microsoft Edge               |    ✅     |   ✅    |    ✅     |    ✅    |
 | 360 极速浏览器    |    ✅     |   ✅    |    ✅     |    ✅    |
@@ -22,9 +23,10 @@ hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|�
 
 由于 MacOS 的安全性设置，基于 `Chromium` 内核浏览器解密时**需要当前用户密码**
 
-| Browser                      | 密码 | Cookie | 书签 | 历史记录 |
+| 浏览器                   | 密码 | Cookie | 书签 | 历史记录 |
 | :--------------------------- | :------: | :----: | :------: | :-----: |
 | Google Chrome  |    ✅     |   ✅    |    ✅     |    ✅    |
+| Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
 | Firefox                      |    ✅     |   ✅    |    ✅     |    ✅    |
 | Microsoft Edge |    ✅     |   ✅    |    ✅     |    ✅    |
 | Brave 浏览器 |    ✅    |   ✅   |    ✅    |    ✅    |
@@ -32,10 +34,11 @@ hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|�
 
 #### Linux
 
-| Browser       | 密码 | Cookie | 书签 | 历史记录 |
+| 浏览器    | 密码 | Cookie | 书签 | 历史记录 |
 | :------------ | :------: | :----: | :------: | :-----: |
-| Firefox       |    ✅     |   ✅    |    ✅     |    ✅    |
 | Google Chrome |    ✅     |   ✅    |    ✅     |    ✅    |
+| Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox       |    ✅     |   ✅    |    ✅     |    ✅    |
 | Microsoft Edge |    ✅    |   ✅   |    ✅    |    ✅    |
 | Brave 浏览器 |    ✅    |   ✅   |    ✅    |    ✅    |
 
@@ -92,7 +95,7 @@ USAGE:
    [hack-browser-data -b chrome -f json -dir results -cc]
    Get all data(password/cookie/history/bookmark) from chrome
 VERSION:
-   0.2.7
+   0.2.8
 GLOBAL OPTIONS:
    --verbose, --vv                   Verbose (default: false)
    --compress, --cc                  Compress result to zip (default: false)
