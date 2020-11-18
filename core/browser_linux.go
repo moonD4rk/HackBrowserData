@@ -15,7 +15,7 @@ const (
 	chromeProfilePath     = "/home/*/.config/google-chrome/*/"
 	edgeProfilePath       = "/home/*/.config/microsoft-edge*/*/"
 	braveProfilePath      = "/home/*/.config/BraveSoftware/Brave-Browser/*/"
-	chromeBateProfilePath = "/home/*/.config/google-chrome-beta/*/"
+	chromeBetaProfilePath = "/home/*/.config/google-chrome-beta/*/"
 )
 
 const (
@@ -57,7 +57,7 @@ var (
 			New:         NewChromium,
 		},
 		"chrome-beta": {
-			ProfilePath: chromeBateProfilePath,
+			ProfilePath: chromeBetaProfilePath,
 			Name:        chromeBetaName,
 			Storage:     chromeBetaStorageName,
 			New:         NewChromium,
