@@ -41,10 +41,11 @@ type Browser interface {
 }
 
 const (
-	cookie   = "cookie"
-	history  = "history"
-	bookmark = "bookmark"
-	password = "password"
+	cookie     = "cookie"
+	history    = "history"
+	bookmark   = "bookmark"
+	password   = "password"
+	creditcard = "creditcard"
 )
 
 var (
@@ -74,6 +75,10 @@ var (
 		password: {
 			mainFile: data.ChromePasswordFile,
 			newItem:  data.NewCPasswords,
+		},
+		creditcard: {
+			mainFile: data.ChromeCreditFile,
+			newItem:  data.NewCCards,
 		},
 	}
 	firefoxItems = map[string]struct {
