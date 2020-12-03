@@ -20,7 +20,11 @@ hack-browser-data is an open-source tool that could help you decrypt data ( pass
 | 360 Speed Browser |    ✅    |   ✅   |    ✅    |    ✅    |
 | QQ Browser |    ✅    |   ✅   |    ✅    |    ✅    |
 | Brave Browser |    ✅    |   ✅   |    ✅    |    ✅    |
+| Opera Browser |    ✅    |    ✅    |    ✅    |    ✅    |
+| OperaGX Browser |    ✅    |    ✅    |    ✅    |    ✅    |
+| Vivaldi Browser |    ✅    |    ✅    |    ✅    |    ✅    |
 | Internet Explorer |    ❌    |   ❌   |    ❌    |    ❌    |
+
 
 #### MacOS
 
