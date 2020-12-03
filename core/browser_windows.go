@@ -23,6 +23,12 @@ const (
 	speed360ProfilePath   = "/AppData/Local/360chrome/Chrome/User Data/*/"
 	qqBrowserProfilePath  = "/AppData/Local/Tencent/QQBrowser/User Data/*/"
 	firefoxProfilePath    = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-release/"
+	operaProfilePath      = "/AppData/Roaming/Opera Software/Opera Stable/"
+	operaKeyPath	      = "/AppData/Roaming/Opera Software/Opera Stable/Local State"
+	operaGXProfilepath    = "/AppData/Roaming/Opera Software/Opera GX Stable/"
+	operaGXKeyPath        = "/AppData/Roaming/Opera Software/Opera GX Stable/Local State"
+	vivaldiProfilePath    = "/AppData/Local/Vivaldi/User Data/Default/"
+	vivaldiKeyPath        = "/AppData/Local/Vivaldi/Local State"
 )
 
 var (
@@ -70,6 +76,24 @@ var (
 			ProfilePath: os.Getenv("USERPROFILE") + braveProfilePath,
 			KeyPath:     os.Getenv("USERPROFILE") + braveKeyPath,
 			Name:        braveName,
+			New:         NewChromium,
+		},
+		"opera": {
+			ProfilePath: os.Getenv("USERPROFILE") + operaProfilePath,
+			KeyPath:     os.Getenv("USERPROFILE") + operaKeyPath,
+			Name:        operaName,
+			New:         NewChromium,
+		},
+		"operagx": {
+			ProfilePath: os.Getenv("USERPROFILE") + operaGXProfilepath,
+			KeyPath:     os.Getenv("USERPROFILE") + operaGXKeyPath,
+			Name:        operaGXName,
+			New:         NewChromium,
+		},
+		"Vivaldi": {
+			ProfilePath: os.Getenv("USERPROFILE") + vivaldiProfilePath,
+			KeyPath:     os.Getenv("USERPROFILE") + vivaldiKeyPath,
+			Name:        vivaldiName,
 			New:         NewChromium,
 		},
 	}
