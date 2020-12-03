@@ -18,6 +18,9 @@ const (
 	speed360Name   = "360speed"
 	qqBrowserName  = "qq"
 	braveName      = "Brave"
+	operaName      = "Opera"
+	operaGXName    = "OperaGX"
+	vivaldiName    = "vivaldi"
 )
 
 type Browser interface {
