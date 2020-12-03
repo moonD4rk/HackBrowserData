@@ -24,8 +24,8 @@ const (
 	qqBrowserProfilePath  = "/AppData/Local/Tencent/QQBrowser/User Data/*/"
 	firefoxProfilePath    = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-release/"
 	operaProfilePath      = "/AppData/Roaming/Opera Software/Opera Stable/"
-	operaKeyPath	      = "/AppData/Roaming/Opera Software/Opera Stable/Local State"
-	operaGXProfilepath    = "/AppData/Roaming/Opera Software/Opera GX Stable/"
+	operaKeyPath          = "/AppData/Roaming/Opera Software/Opera Stable/Local State"
+	operaGXProfilePath    = "/AppData/Roaming/Opera Software/Opera GX Stable/"
 	operaGXKeyPath        = "/AppData/Roaming/Opera Software/Opera GX Stable/Local State"
 	vivaldiProfilePath    = "/AppData/Local/Vivaldi/User Data/Default/"
 	vivaldiKeyPath        = "/AppData/Local/Vivaldi/Local State"
@@ -84,13 +84,13 @@ var (
 			Name:        operaName,
 			New:         NewChromium,
 		},
-		"operagx": {
-			ProfilePath: os.Getenv("USERPROFILE") + operaGXProfilepath,
+		"opera-gx": {
+			ProfilePath: os.Getenv("USERPROFILE") + operaGXProfilePath,
 			KeyPath:     os.Getenv("USERPROFILE") + operaGXKeyPath,
 			Name:        operaGXName,
 			New:         NewChromium,
 		},
-		"Vivaldi": {
+		"vivaldi": {
 			ProfilePath: os.Getenv("USERPROFILE") + vivaldiProfilePath,
 			KeyPath:     os.Getenv("USERPROFILE") + vivaldiKeyPath,
 			Name:        vivaldiName,
