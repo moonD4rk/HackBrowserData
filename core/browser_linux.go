@@ -17,6 +17,7 @@ const (
 	braveProfilePath      = "/home/*/.config/BraveSoftware/Brave-Browser/*/"
 	chromeBetaProfilePath = "/home/*/.config/google-chrome-beta/*/"
 	operaProfilePath      = "/home/*/.config/opera/"
+	vivaldiProfilePath    = "/home/*/.config/vivaldi/*/"
 )
 
 const (
@@ -25,6 +26,7 @@ const (
 	braveStorageName      = "Brave Safe Storage"
 	chromeBetaStorageName = "Chrome Safe Storage"
 	operaStorageName      = "Chromium Safe Storage"
+	vivaldiStorageName    = "Chrome Safe Storage"
 )
 
 var (
@@ -68,6 +70,12 @@ var (
 			ProfilePath: operaProfilePath,
 			Name:        operaName,
 			Storage:     operaStorageName,
+			New:         NewChromium,
+		},
+		"vivaldi": {
+			ProfilePath: vivaldiProfilePath,
+			Name:        vivaldiName,
+			Storage:     vivaldiStorageName,
 			New:         NewChromium,
 		},
 	}
