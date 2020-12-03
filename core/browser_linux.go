@@ -16,6 +16,7 @@ const (
 	edgeProfilePath       = "/home/*/.config/microsoft-edge*/*/"
 	braveProfilePath      = "/home/*/.config/BraveSoftware/Brave-Browser/*/"
 	chromeBetaProfilePath = "/home/*/.config/google-chrome-beta/*/"
+	operaProfilePath      = "/home/*/.config/opera/"
 )
 
 const (
@@ -23,6 +24,7 @@ const (
 	edgeStorageName       = "Chromium Safe Storage"
 	braveStorageName      = "Brave Safe Storage"
 	chromeBetaStorageName = "Chrome Safe Storage"
+	operaStorageName      = "Chromium Safe Storage"
 )
 
 var (
@@ -60,6 +62,12 @@ var (
 			ProfilePath: chromeBetaProfilePath,
 			Name:        chromeBetaName,
 			Storage:     chromeBetaStorageName,
+			New:         NewChromium,
+		},
+		"opera": {
+			ProfilePath: operaProfilePath,
+			Name:        operaName,
+			Storage:     operaStorageName,
 			New:         NewChromium,
 		},
 	}
