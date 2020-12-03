@@ -15,6 +15,8 @@ const (
 	edgeProfilePath       = "/Users/*/Library/Application Support/Microsoft Edge/*/"
 	fireFoxProfilePath    = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-release/"
 	braveProfilePath      = "/Users/*/Library/Application Support/BraveSoftware/Brave-Browser/*/"
+	operaProfilePath      = "/Users/*/Library/Application Support/com.operasoftware.Opera/"
+	operaGXProfilePath    = "/Users/*/Library/Application Support/com.operasoftware.OperaGX/"
 )
 
 const (
@@ -22,6 +24,7 @@ const (
 	chromeBetaStorageName = "Chrome"
 	edgeStorageName       = "Microsoft Edge"
 	braveStorageName      = "Brave"
+	operaStorageName      = "Opera"
 )
 
 var (
@@ -59,6 +62,18 @@ var (
 			ProfilePath: chromeBetaProfilePath,
 			Name:        chromeBetaName,
 			Storage:     chromeBetaStorageName,
+			New:         NewChromium,
+		},
+		"opera": {
+			ProfilePath: operaProfilePath,
+			Name:        operaName,
+			Storage:     operaStorageName,
+			New:         NewChromium,
+		},
+		"opera-gx": {
+			ProfilePath: operaGXProfilePath,
+			Name:        operaGXName,
+			Storage:     operaStorageName,
 			New:         NewChromium,
 		},
 	}
