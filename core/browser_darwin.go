@@ -17,6 +17,7 @@ const (
 	braveProfilePath      = "/Users/*/Library/Application Support/BraveSoftware/Brave-Browser/*/"
 	operaProfilePath      = "/Users/*/Library/Application Support/com.operasoftware.Opera/"
 	operaGXProfilePath    = "/Users/*/Library/Application Support/com.operasoftware.OperaGX/"
+	vivaldiProfilePath    = "/Users/*/Library/Application Support/Vivaldi/*/"
 )
 
 const (
@@ -25,6 +26,7 @@ const (
 	edgeStorageName       = "Microsoft Edge"
 	braveStorageName      = "Brave"
 	operaStorageName      = "Opera"
+	vivaldiStorageName    = "Vivaldi"
 )
 
 var (
@@ -74,6 +76,12 @@ var (
 			ProfilePath: operaGXProfilePath,
 			Name:        operaGXName,
 			Storage:     operaStorageName,
+			New:         NewChromium,
+		},
+		"vivaldi": {
+			ProfilePath: vivaldiProfilePath,
+			Name:        vivaldiName,
+			Storage:     vivaldiStorageName,
 			New:         NewChromium,
 		},
 	}
