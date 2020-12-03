@@ -37,6 +37,9 @@ Based on Apple's security policy, some browsers **require a current user passwor
 | Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
 | Microsoft Edge |    ✅    |   ✅   |    ✅    |    ✅    |
 | Brave Browser |    ✅    |   ✅   |    ✅    |    ✅    |
+| Opera Browser |    ✅    |    ✅    |    ✅    |    ✅    |
+| OperaGX Browser |    ✅    |    ✅    |    ✅    |    ✅    |
+| Vivaldi Browser |    ✅    |    ✅    |    ✅    |    ✅    |
 | Safari |    ❌    |   ❌   |    ❌    |    ❌    |
 
 #### Linux
@@ -48,6 +51,8 @@ Based on Apple's security policy, some browsers **require a current user passwor
 | Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
 | Microsoft Edge Dev |    ✅    |   ✅   |    ✅    |    ✅    |
 | Brave Browser |    ✅    |   ✅   |    ✅    |    ✅    |
+| Opera Browser |    ✅    |    ✅    |    ✅    |    ✅    |
+| Vivaldi Browser |    ✅    |    ✅    |    ✅    |    ✅    |
 
 
 ### Install
