@@ -62,13 +62,13 @@ func (c *cookies) outPutJson(browser, dir string) error {
 	return nil
 }
 
-func (credit *creditcards) outPutJson(browser, dir string) error {
+func (c *creditCards) outPutJson(browser, dir string) error {
 	filename := utils.FormatFileName(dir, browser, "credit", "json")
-	err := writeToJson(filename, credit.cards)
+	err := writeToJson(filename, c.cards)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s Get %d cards, filename is %s \n", utils.Prefix, len(credit.cards), filename)
+	fmt.Printf("%s Get %d credit cards, filename is %s \n", utils.Prefix, len(c.cards), filename)
 	return nil
 }
 
@@ -133,16 +133,16 @@ func (c *cookies) outPutCsv(browser, dir string) error {
 	return nil
 }
 
-func (credit *creditcards) outPutCsv(browser, dir string) error {
+func (c *creditCards) outPutCsv(browser, dir string) error {
 	filename := utils.FormatFileName(dir, browser, "credit", "csv")
 	var tempSlice []card
-	for _, v := range credit.cards {
+	for _, v := range c.cards {
 		tempSlice = append(tempSlice, v...)
 	}
 	if err := writeToCsv(filename, tempSlice); err != nil {
 		return err
 	}
-	fmt.Printf("%s Get %d cards, filename is %s \n", utils.Prefix, len(credit.cards), filename)
+	fmt.Printf("%s Get %d credit cards, filename is %s \n", utils.Prefix, len(c.cards), filename)
 	return nil
 }
 
@@ -192,8 +192,8 @@ func (p *passwords) outPutConsole() {
 	}
 }
 
-func (credit *creditcards) outPutConsole() {
-	for _, v := range credit.cards {
+func (c *creditCards) outPutConsole() {
+	for _, v := range c.cards {
 		fmt.Printf("%+v\n", v)
 	}
 }
