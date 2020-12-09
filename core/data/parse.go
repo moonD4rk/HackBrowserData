@@ -48,7 +48,7 @@ const (
 )
 
 var (
-	queryChromiumCredit   = `SELECT guid,name_on_card,expiration_month,expiration_year,card_number_encrypted FROM credit_cards`
+	queryChromiumCredit   = `SELECT guid, name_on_card, expiration_month, expiration_year, card_number_encrypted FROM credit_cards`
 	queryChromiumLogin    = `SELECT origin_url, username_value, password_value, date_created FROM logins`
 	queryChromiumHistory  = `SELECT url, title, visit_count, last_visit_time FROM urls`
 	queryChromiumCookie   = `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`
@@ -611,21 +611,21 @@ func (p *passwords) OutPut(format, browser, dir string) error {
 	}
 }
 
-type creditcards struct {
+type creditCards struct {
 	mainPath string
 	cards    map[string][]card
 }
 
 func NewCCards(main string, sub string) Item {
-	return &creditcards{mainPath: main}
+	return &creditCards{mainPath: main}
 }
 
-func (credit *creditcards) FirefoxParse() error {
+func (c *creditCards) FirefoxParse() error {
 	return nil // FireFox does not have a credit card saving feature
 }
 
-func (credit *creditcards) ChromeParse(secretKey []byte) error {
-	credit.cards = make(map[string][]card)
+func (c *creditCards) ChromeParse(secretKey []byte) error {
+	c.cards = make(map[string][]card)
 	creditDB, err := sql.Open("sqlite3", ChromeCreditFile)
 	if err != nil {
 		return err
@@ -646,18 +646,18 @@ func (credit *creditcards) ChromeParse(secretKey []byte) error {
 	}()
 	for rows.Next() {
 		var (
-			name, expirationm, expirationy, guid string
-			value, encryptValue                  []byte
+			name, month, year, guid string
+			value, encryptValue     []byte
 		)
-		err := rows.Scan(&guid, &name, &expirationm, &expirationy, &encryptValue)
+		err := rows.Scan(&guid, &name, &month, &year, &encryptValue)
 		if err != nil {
 			log.Error(err)
 		}
 		creditCardInfo := card{
 			GUID:            guid,
 			Name:            name,
-			ExpirationMonth: expirationm,
-			ExpirationYear:  expirationy,
+			ExpirationMonth: month,
+			ExpirationYear:  year,
 		}
 		if secretKey == nil {
 			value, err = decrypt.DPApi(encryptValue)
@@ -667,30 +667,30 @@ func (credit *creditcards) ChromeParse(secretKey []byte) error {
 		if err != nil {
 			log.Debug(err)
 		}
-		creditCardInfo.Cardnumber = string(value)
-		credit.cards[guid] = append(credit.cards[guid], creditCardInfo)
+		creditCardInfo.CardNumber = string(value)
+		c.cards[guid] = append(c.cards[guid], creditCardInfo)
 	}
 	return nil
 }
 
-func (credit *creditcards) CopyDB() error {
-	return copyToLocalPath(credit.mainPath, filepath.Base(credit.mainPath))
+func (c *creditCards) CopyDB() error {
+	return copyToLocalPath(c.mainPath, filepath.Base(c.mainPath))
 }
 
-func (credit *creditcards) Release() error {
-	return os.Remove(filepath.Base(credit.mainPath))
+func (c *creditCards) Release() error {
+	return os.Remove(filepath.Base(c.mainPath))
 }
 
-func (credit *creditcards) OutPut(format, browser, dir string) error {
+func (c *creditCards) OutPut(format, browser, dir string) error {
 	switch format {
 	case "csv":
-		err := credit.outPutCsv(browser, dir)
+		err := c.outPutCsv(browser, dir)
 		return err
 	case "console":
-		credit.outPutConsole()
+		c.outPutConsole()
 		return nil
 	default:
-		err := credit.outPutJson(browser, dir)
+		err := c.outPutJson(browser, dir)
 		return err
 	}
 }
@@ -809,9 +809,9 @@ type (
 	card struct {
 		GUID            string
 		Name            string
-		ExpirationMonth string
 		ExpirationYear  string
-		Cardnumber      string
+		ExpirationMonth string
+		CardNumber      string
 	}
 )
 
