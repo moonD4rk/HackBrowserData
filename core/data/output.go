@@ -62,6 +62,16 @@ func (c *cookies) outPutJson(browser, dir string) error {
 	return nil
 }
 
+func (credit *creditcards) outPutJson(browser, dir string) error {
+	filename := utils.FormatFileName(dir, browser, "credit", "json")
+	err := writeToJson(filename, credit.cards)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%s Get %d cards, filename is %s \n", utils.Prefix, len(credit.cards), filename)
+	return nil
+}
+
 func writeToJson(filename string, data interface{}) error {
 	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
 	if err != nil {
@@ -123,6 +133,19 @@ func (c *cookies) outPutCsv(browser, dir string) error {
 	return nil
 }
 
+func (credit *creditcards) outPutCsv(browser, dir string) error {
+	filename := utils.FormatFileName(dir, browser, "credit", "csv")
+	var tempSlice []card
+	for _, v := range credit.cards {
+		tempSlice = append(tempSlice, v...)
+	}
+	if err := writeToCsv(filename, tempSlice); err != nil {
+		return err
+	}
+	fmt.Printf("%s Get %d cards, filename is %s \n", utils.Prefix, len(credit.cards), filename)
+	return nil
+}
+
 func writeToCsv(filename string, data interface{}) error {
 	var d []byte
 	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
@@ -165,6 +188,12 @@ func (h *historyData) outPutConsole() {
 
 func (p *passwords) outPutConsole() {
 	for _, v := range p.logins {
+		fmt.Printf("%+v\n", v)
+	}
+}
+
+func (credit *creditcards) outPutConsole() {
+	for _, v := range credit.cards {
 		fmt.Printf("%+v\n", v)
 	}
 }
