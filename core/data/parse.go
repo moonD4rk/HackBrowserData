@@ -27,12 +27,6 @@ type Item interface {
 
 	// OutPut file name and format type
 	OutPut(format, browser, dir string) error
-
-	// CopyDB is copy item db file to current dir
-	// CopyDB() error
-
-	// Release is delete item db file
-	// Release() error
 }
 
 const (
@@ -163,14 +157,6 @@ func (b *bookmarks) FirefoxParse(filepath string) error {
 	return nil
 }
 
-// func (b *bookmarks) CopyDB() error {
-// 	return copyToLocalPath(b.mainPath, filepath.Base(b.mainPath))
-// }
-
-// func (b *bookmarks) Release() error {
-// 	return os.Remove(filepath.Base(b.mainPath))
-// }
-
 func (b *bookmarks) OutPut(format, browser, dir string) error {
 	sort.Slice(b.bookmarks, func(i, j int) bool {
 		return b.bookmarks[i].ID < b.bookmarks[j].ID
@@ -197,7 +183,6 @@ func NewCookies(main, sub string) Item {
 	return &cookies{mainPath: main}
 }
 
-// 解析 chrome cookie
 func (c *cookies) ChromeParse(secretKey []byte, filepath string) error {
 	c.cookies = make(map[string][]cookie)
 	cookieDB, err := sql.Open("sqlite3", filepath)
@@ -299,14 +284,6 @@ func (c *cookies) FirefoxParse(filepath string) error {
 	}
 	return nil
 }
-
-// func (c *cookies) CopyDB() error {
-// 	return copyToLocalPath(c.mainPath, filepath.Base(c.mainPath))
-// }
-
-// func (c *cookies) Release() error {
-// 	return os.Remove(filepath.Base(c.mainPath))
-// }
 
 func (c *cookies) OutPut(format, browser, dir string) error {
 	switch format {
@@ -422,14 +399,6 @@ func (h *historyData) FirefoxParse(filepath string) error {
 	}
 	return nil
 }
-
-// func (h *historyData) CopyDB() error {
-// 	return copyToLocalPath(h.mainPath, filepath.Base(h.mainPath))
-// }
-
-// func (h *historyData) Release() error {
-// 	return os.Remove(filepath.Base(h.mainPath))
-// }
 
 func (h *historyData) OutPut(format, browser, dir string) error {
 	sort.Slice(h.history, func(i, j int) bool {
@@ -575,28 +544,6 @@ func (p *passwords) FirefoxParse(filepath string) error {
 	return nil
 }
 
-// func (p *passwords) CopyDB() error {
-// 	err := copyToLocalPath(p.mainPath, filepath.Base(p.mainPath))
-// 	if err != nil {
-// 		log.Error(err)
-// 	}
-// 	if p.subPath != "" {
-// 		err = copyToLocalPath(p.subPath, filepath.Base(p.subPath))
-// 	}
-// 	return err
-// }
-
-// func (p *passwords) Release() error {
-// 	err := os.Remove(filepath.Base(p.mainPath))
-// 	if err != nil {
-// 		log.Error(err)
-// 	}
-// 	if p.subPath != "" {
-// 		err = os.Remove(filepath.Base(p.subPath))
-// 	}
-// 	return err
-// }
-
 func (p *passwords) OutPut(format, browser, dir string) error {
 	sort.Sort(p)
 	switch format {
@@ -673,14 +620,6 @@ func (c *creditCards) ChromeParse(secretKey []byte, filepath string) error {
 	}
 	return nil
 }
-
-// func (c *creditCards) CopyDB() error {
-// 	return copyToLocalPath(c.mainPath, filepath.Base(c.mainPath))
-// }
-
-// func (c *creditCards) Release() error {
-// 	return os.Remove(filepath.Base(c.mainPath))
-// }
 
 func (c *creditCards) OutPut(format, browser, dir string) error {
 	switch format {
