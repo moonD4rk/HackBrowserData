@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"os"
 
 	"hack-browser-data/core/decrypt"
@@ -108,6 +109,9 @@ var (
 func (c *Chromium) InitSecretKey() error {
 	if c.keyPath == "" {
 		return nil
+	}
+	if _, err := os.Stat(c.keyPath); os.IsNotExist(err) {
+		return fmt.Errorf("%s secret key path is empty", c.name)
 	}
 	keyFile, err := utils.ReadFile(c.keyPath)
 	if err != nil {
