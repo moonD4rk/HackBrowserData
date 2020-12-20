@@ -99,20 +99,23 @@ CC=x86_64-linux-musl-gcc CXX=x86_64-linux-musl-g++ GOARCH=amd64 GOOS=linux CGO_E
 PS C:\test> .\hack-browser-data.exe -h
 NAME:
    hack-browser-data - Export passwords/cookies/history/bookmarks from browser
+
 USAGE:
    [hack-browser-data -b chrome -f json -dir results -cc]
    Get all data(password/cookie/history/bookmark) from chrome
-VERSION:
-   0.3.0
-GLOBAL OPTIONS:
-   --verbose, --vv                   Verbose (default: false)
-   --compress, --cc                  Compress result to zip (default: false)
-   --browser value, -b value         Available browsers: all|edge|firefox|chrome|qq|360 (default: "all")
-   --results-dir value, --dir value  Export dir (default: "results")
-   --format value, -f value          Format, csv|json|console (default: "csv")
-   --help, -h                        show help (default: false)
-   --version, -v                     print the version (default: false)
 
+VERSION:
+   0.3.1
+GLOBAL OPTIONS:
+   --verbose, --vv                     verbose (default: false)
+   --compress, --cc                    compress result to zip (default: false)
+   --browser value, -b value           available browsers: all|opera|firefox|chrome|edge (default: "all")
+   --results-dir value, --dir value    export dir (default: "results")
+   --format value, -f value            format, csv|json|console (default: "csv")
+   --profile-dir-path value, -p value  custom profile dir path, get with chrome://version
+   --key-file-path value, -k value     custom key file path
+   --help, -h                          show help (default: false)
+   --version, -v                       print the version (default: false)
 
 PS C:\test>  .\hack-browser-data.exe -b all -f json --dir results -cc
 [x]:  Get 44 cookies, filename is results/microsoft_edge_cookie.json
@@ -138,6 +141,13 @@ PS C:\test>  .\hack-browser-data.exe -b all -f json --dir results -cc
 [x]:  Compress success, zip filename is results/archive.zip
 ```
 
+### Contributors
+
+![](/CONTRIBUTORS.svg)
+
+### 404StarLink 2.0 - Galaxy
+![](https://github.com/knownsec/404StarLink-Project/raw/master/logo.png)
+HackBrowserData 是 404Team [星链计划2.0](https://github.com/knownsec/404StarLink2.0-Galaxy) 中的一环，如果对 HackBrowserData有任何疑问又或是想要找小伙伴交流，可以参考[星链计划的加群方式](https://github.com/knownsec/404StarLink2.0-Galaxy#community)。
 
 ### TODO
 
