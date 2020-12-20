@@ -63,7 +63,7 @@ Installation of hack-browser-data is dead-simple, just download [the release for
 
 #### Building from source
 
-support `go 1.11+`
+support `go 1.14+`
 
 ```bash
 git clone https://github.com/moonD4rk/HackBrowserData
