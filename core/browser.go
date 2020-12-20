@@ -50,10 +50,10 @@ const (
 )
 
 var (
-	errItemNotSupported         = errors.New(`item not supported, default is "all", choose from history|password|bookmark|cookie`)
-	errBrowserNotSupported      = errors.New("browser not supported")
-	errChromeSecretIsEmpty      = errors.New("chrome secret is empty")
-	errDbusSecretIsEmpty        = errors.New("dbus secret key is empty")
+	errItemNotSupported    = errors.New(`item not supported, default is "all", choose from history|password|bookmark|cookie`)
+	errBrowserNotSupported = errors.New("browser not supported")
+	errChromeSecretIsEmpty = errors.New("chrome secret is empty")
+	errDbusSecretIsEmpty   = errors.New("dbus secret key is empty")
 )
 
 var (
