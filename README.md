@@ -103,19 +103,23 @@ You can double-click to run, or use command line.
 PS C:\test> .\hack-browser-data.exe -h
 NAME:
    hack-browser-data - Export passwords/cookies/history/bookmarks from browser
+
 USAGE:
    [hack-browser-data -b chrome -f json -dir results -cc]
    Get all data(password/cookie/history/bookmark) from chrome
+
 VERSION:
-   0.3.0
+   0.3.1
 GLOBAL OPTIONS:
-   --verbose, --vv                   Verbose (default: false)
-   --compress, --cc                  Compress result to zip (default: false)
-   --browser value, -b value         Available browsers: all|edge|firefox|chrome (default: "all")
-   --results-dir value, --dir value  Export dir (default: "results")
-   --format value, -f value          Format, csv|json|console (default: "csv")
-   --help, -h                        show help (default: false)
-   --version, -v                     print the version (default: false)
+   --verbose, --vv                     verbose (default: false)
+   --compress, --cc                    compress result to zip (default: false)
+   --browser value, -b value           available browsers: all|opera|firefox|chrome|edge (default: "all")
+   --results-dir value, --dir value    export dir (default: "results")
+   --format value, -f value            format, csv|json|console (default: "csv")
+   --profile-dir-path value, -p value  custom profile dir path, get with chrome://version
+   --key-file-path value, -k value     custom key file path
+   --help, -h                          show help (default: false)
+   --version, -v                       print the version (default: false)
 
 PS C:\test>  .\hack-browser-data.exe -b all -f json --dir results -cc
 [x]:  Get 44 cookies, filename is results/microsoft_edge_cookie.json
@@ -140,6 +144,36 @@ PS C:\test>  .\hack-browser-data.exe -b all -f json --dir results -cc
 [x]:  Get 6 history, filename is results/chrome_history.json
 [x]:  Compress success, zip filename is results/archive.zip
 ```
+#### Run with custom browser profile path
+
+```
+PS C:\Users\User\Desktop> .\hack-browser-data.exe -b edge -p 'C:\Users\User\AppData\Local\Microsoft\Edge\User Data\Default' -k 'C:\Users\User\AppData\Local\Microsoft\Edge\User Data\Local State'
+
+[x]:  Get 29 history, filename is results/microsoft_edge_history.csv
+[x]:  Get 0 passwords, filename is results/microsoft_edge_password.csv
+[x]:  Get 1 credit cards, filename is results/microsoft_edge_credit.csv
+[x]:  Get 4 bookmarks, filename is results/microsoft_edge_bookmark.csv
+[x]:  Get 54 cookies, filename is results/microsoft_edge_cookie.csv
+
+
+PS C:\Users\User\Desktop> .\hack-browser-data.exe -b edge -p 'C:\Users\User\AppData\Local\Microsoft\Edge\User Data\Default'
+
+[x]:  Get 1 credit cards, filename is results/microsoft_edge_credit.csv
+[x]:  Get 4 bookmarks, filename is results/microsoft_edge_bookmark.csv
+[x]:  Get 54 cookies, filename is results/microsoft_edge_cookie.csv
+[x]:  Get 29 history, filename is results/microsoft_edge_history.csv
+[x]:  Get 0 passwords, filename is results/microsoft_edge_password.csv
+```
+
+### Contributors
+
+![](/CONTRIBUTORS.svg)
+
+
+### 404StarLink 2.0 - Galaxy
+![](https://github.com/knownsec/404StarLink-Project/raw/master/logo.png)
+
+HackBrowserData is a part of 404Team [StarLink-Galaxy](https://github.com/knownsec/404StarLink2.0-Galaxy), if you have any questions about HackBrowserData or want to find a partner to communicate with，please refer to the [Starlink group](https://github.com/knownsec/404StarLink2.0-Galaxy#community).
 
 
 ### TODO
@@ -163,3 +197,4 @@ PS C:\test>  .\hack-browser-data.exe -b all -f json --dir results -cc
 - [x] Firefox
 - [ ] Safari
 - [ ] IE
+
