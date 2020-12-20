@@ -58,7 +58,7 @@ hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|�
 
 #### 自己编译
 
-支持版本 `go 1.11+`
+支持版本 `go 1.14+`
 
 ```bash
 git clone https://github.com/moonD4rk/HackBrowserData
