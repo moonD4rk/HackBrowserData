@@ -105,7 +105,7 @@ USAGE:
    Get all data(password/cookie/history/bookmark) from chrome
 
 VERSION:
-   0.3.1
+   0.3.2
 GLOBAL OPTIONS:
    --verbose, --vv                     verbose (default: false)
    --compress, --cc                    compress result to zip (default: false)
@@ -147,6 +147,7 @@ PS C:\test>  .\hack-browser-data.exe -b all -f json --dir results -cc
 
 ### 404StarLink 2.0 - Galaxy
 ![](https://github.com/knownsec/404StarLink-Project/raw/master/logo.png)
+
 HackBrowserData 是 404Team [星链计划2.0](https://github.com/knownsec/404StarLink2.0-Galaxy) 中的一环，如果对 HackBrowserData有任何疑问又或是想要找小伙伴交流，可以参考[星链计划的加群方式](https://github.com/knownsec/404StarLink2.0-Galaxy#community)。
 
 ### TODO
