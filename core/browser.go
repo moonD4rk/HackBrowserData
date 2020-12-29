@@ -283,9 +283,9 @@ func PickCustomBrowser(browserName, cusProfile, cusKey string) ([]Browser, error
 					return nil, err
 				}
 			}
-		}
-		if err := checkKeyPath(cusKey); err != nil {
-			return nil, err
+			if err := checkKeyPath(cusKey); err != nil {
+				return nil, err
+			}
 		}
 		b, err := choice.New(cusProfile, cusKey, choice.Name, choice.Storage)
 		browsers = append(browsers, b)
