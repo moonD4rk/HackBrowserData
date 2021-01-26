@@ -14,6 +14,7 @@ import (
 const (
 	chromeName     = "Chrome"
 	chromeBetaName = "Chrome Beta"
+	chromiumName   = "Chromium"
 	edgeName       = "Microsoft Edge"
 	firefoxName    = "Firefox"
 	speed360Name   = "360speed"
