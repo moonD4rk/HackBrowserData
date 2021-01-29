@@ -15,6 +15,7 @@ hack-browser-data is an open-source tool that could help you decrypt data ( pass
 | :---------------------------------- | :------: | :----: | :------: | :-----: |
 | Google Chrome |    ✅    |   ✅   |    ✅    |    ✅    |
 | Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
+| Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
 | Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
 | Microsoft Edge |    ✅    |   ✅   |    ✅    |    ✅    |
 | 360 Speed Browser |    ✅    |   ✅   |    ✅    |    ✅    |
@@ -34,6 +35,7 @@ Based on Apple's security policy, some browsers **require a current user passwor
 | :---------------------------------- | :------: | :----: | :------: | :-----: |
 | Google Chrome |    ✅    |   ✅   |    ✅    |    ✅    |
 | Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
+| Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
 | Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
 | Microsoft Edge |    ✅    |   ✅   |    ✅    |    ✅    |
 | Brave Browser |    ✅    |   ✅   |    ✅    |    ✅    |
@@ -48,12 +50,12 @@ Based on Apple's security policy, some browsers **require a current user passwor
 | :---------------------------------- | :------: | :----: | :------: | :-----: |
 | Google Chrome |    ✅    |   ✅   |    ✅    |    ✅    |
 | Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
+| Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
 | Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
 | Microsoft Edge Dev |    ✅    |   ✅   |    ✅    |    ✅    |
 | Brave Browser |    ✅    |   ✅   |    ✅    |    ✅    |
 | Opera Browser |    ✅    |    ✅    |    ✅    |    ✅    |
 | Vivaldi Browser |    ✅    |    ✅    |    ✅    |    ✅    |
-| Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
 
 
 ### Install
@@ -110,7 +112,7 @@ USAGE:
    Get all data(password/cookie/history/bookmark) from chrome
 
 VERSION:
-   0.3.2
+   0.3.3
 GLOBAL OPTIONS:
    --verbose, --vv                     verbose (default: false)
    --compress, --cc                    compress result to zip (default: false)
