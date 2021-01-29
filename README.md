@@ -53,6 +53,7 @@ Based on Apple's security policy, some browsers **require a current user passwor
 | Brave Browser |    ✅    |   ✅   |    ✅    |    ✅    |
 | Opera Browser |    ✅    |    ✅    |    ✅    |    ✅    |
 | Vivaldi Browser |    ✅    |    ✅    |    ✅    |    ✅    |
+| Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
 
 
 ### Install
