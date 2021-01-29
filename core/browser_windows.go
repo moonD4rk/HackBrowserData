@@ -17,6 +17,8 @@ const (
 	chromeKeyPath         = "/AppData/Local/Google/Chrome/User Data/Local State"
 	chromeBetaProfilePath = "/AppData/Local/Google/Chrome Beta/User Data/*/"
 	chromeBetaKeyPath     = "/AppData/Local/Google/Chrome Beta/User Data/Local State"
+	chromiumProfilePath   = "/AppData/Local/Chromium/User Data/*/"
+	chromiumKeyPath       = "/AppData/Local/Chromium/User Data/Local State"
 	edgeProfilePath       = "/AppData/Local/Microsoft/Edge/User Data/*/"
 	edgeKeyPath           = "/AppData/Local/Microsoft/Edge/User Data/Local State"
 	braveProfilePath      = "/AppData/Local/BraveSoftware/Brave-Browser/User Data/*/"
@@ -50,6 +52,12 @@ var (
 			ProfilePath: os.Getenv("USERPROFILE") + chromeBetaProfilePath,
 			KeyPath:     os.Getenv("USERPROFILE") + chromeBetaKeyPath,
 			Name:        chromeBetaName,
+			New:         NewChromium,
+		},
+		"chromium": {
+			ProfilePath: os.Getenv("USERPROFILE") + chromiumProfilePath,
+			KeyPath:     os.Getenv("USERPROFILE") + chromiumKeyPath,
+			Name:        chromiumName,
 			New:         NewChromium,
 		},
 		"edge": {
