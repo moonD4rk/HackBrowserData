@@ -12,6 +12,7 @@ import (
 const (
 	chromeProfilePath     = "/Users/*/Library/Application Support/Google/Chrome/*/"
 	chromeBetaProfilePath = "/Users/*/Library/Application Support/Google/Chrome Beta/*/"
+	chromiumProfilePath   = "/Users/*/Library/Application Support/Chromium/*/"
 	edgeProfilePath       = "/Users/*/Library/Application Support/Microsoft Edge/*/"
 	fireFoxProfilePath    = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-release/"
 	braveProfilePath      = "/Users/*/Library/Application Support/BraveSoftware/Brave-Browser/*/"
@@ -23,6 +24,7 @@ const (
 const (
 	chromeStorageName     = "Chrome"
 	chromeBetaStorageName = "Chrome"
+	chromiumStorageName   = "Chromium"
 	edgeStorageName       = "Microsoft Edge"
 	braveStorageName      = "Brave"
 	operaStorageName      = "Opera"
@@ -46,6 +48,12 @@ var (
 			ProfilePath: chromeProfilePath,
 			Name:        chromeName,
 			Storage:     chromeStorageName,
+			New:         NewChromium,
+		},
+		"chromium": {
+			ProfilePath: chromiumProfilePath,
+			Name:        chromiumName,
+			Storage:     chromiumStorageName,
 			New:         NewChromium,
 		},
 		"edge": {
