@@ -112,7 +112,7 @@ var (
 	errBase64DecodeFailed = errors.New("decode base64 failed")
 )
 
-// InitSecretKey on windows with win32 DPAPI
+// InitSecretKey on Windows with win32 DPAPI
 // conference from @https://gist.github.com/akamajoris/ed2f14d817d5514e7548
 func (c *Chromium) InitSecretKey() error {
 	if c.keyPath == "" {
