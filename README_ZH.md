@@ -11,12 +11,13 @@ hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|�
 
 | 浏览器                      | 密码 | Cookie | 书签 | 历史记录 |
 | :--------------------------- | :------: | :----: | :------: | :-----: |
-| Google Chrome |    ✅     |   ✅    |    ✅     |    ✅    |
-| Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
-| Firefox                    |    ✅     |   ✅    |    ✅     |    ✅    |
-| Microsoft Edge               |    ✅     |   ✅    |    ✅     |    ✅    |
+| Google Chrome|    ✅     |   ✅    |    ✅     |    ✅    |
+| Google Chrome Beta|    ✅    |   ✅   |    ✅    |    ✅    |
+| Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
+| Firefox|    ✅     |   ✅    |    ✅     |    ✅    |
+| Microsoft Edge|    ✅     |   ✅    |    ✅     |    ✅    |
 | 360 极速浏览器    |    ✅     |   ✅    |    ✅     |    ✅    |
-| QQ 浏览器               |    ✅     |   ✅    |    ✅     |    ✅    |
+| QQ 浏览器|    ✅     |   ✅    |    ✅     |    ✅    |
 | Brave 浏览器 |    ✅    |   ✅   |    ✅    |    ✅    |
 | Opera 浏览器 |    ✅    |    ✅    |    ✅    |    ✅    |
 | OperaGX 浏览器 |    ✅    |    ✅    |    ✅    |    ✅    |
@@ -30,7 +31,8 @@ hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|�
 | :--------------------------- | :------: | :----: | :------: | :-----: |
 | Google Chrome  |    ✅     |   ✅    |    ✅     |    ✅    |
 | Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
-| Firefox                      |    ✅     |   ✅    |    ✅     |    ✅    |
+| Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
+| Firefox|    ✅     |   ✅    |    ✅     |    ✅    |
 | Microsoft Edge |    ✅     |   ✅    |    ✅     |    ✅    |
 | Brave 浏览器 |    ✅    |   ✅   |    ✅    |    ✅    |
 | Opera 浏览器 |    ✅    |    ✅    |    ✅    |    ✅    |
@@ -44,6 +46,7 @@ hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|�
 | :------------ | :------: | :----: | :------: | :-----: |
 | Google Chrome |    ✅     |   ✅    |    ✅     |    ✅    |
 | Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
+| Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
 | Firefox       |    ✅     |   ✅    |    ✅     |    ✅    |
 | Microsoft Edge |    ✅    |   ✅   |    ✅    |    ✅    |
 | Brave 浏览器 |    ✅    |   ✅   |    ✅    |    ✅    |
@@ -106,7 +109,7 @@ USAGE:
    Get all data(password/cookie/history/bookmark) from chrome
 
 VERSION:
-   0.3.2
+   0.3.3
 GLOBAL OPTIONS:
    --verbose, --vv                     verbose (default: false)
    --compress, --cc                    compress result to zip (default: false)
