@@ -34,6 +34,9 @@ func BookMarkType(a int64) string {
 
 func TimeStampFormat(stamp int64) time.Time {
 	s1 := time.Unix(stamp, 0)
+	if s1.Local().Year() > 9999 {
+		return time.Date(9999, 12, 13, 23, 59, 59, 0, time.Local)
+	}
 	return s1
 }
 
