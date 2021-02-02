@@ -613,11 +613,13 @@ func (p *passwords) FirefoxParse() error {
 		log.Debug("password-check success")
 		m := bytes.Compare(nssA102, keyLin)
 		if m == 0 {
-			nss, err := decrypt.DecodeNss(nssA11)
+			var nss interface{}
+			nss, err = decrypt.DecodeNss(nssA11)
 			if err != nil {
 				log.Error("decode firefox nssA11 bytes failed", err)
 				return err
 			}
+
 			finallyKey, err := decrypt.Nss(globalSalt, masterPwd, nss)
 			finallyKey = finallyKey[:24]
 			if err != nil {
