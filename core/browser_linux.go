@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	fireFoxProfilePath    = "/home/*/.mozilla/firefox/*.default-release/"
+	fireFoxProfilePath    = "/home/*/.mozilla/firefox/*.default*/"
 	chromeProfilePath     = "/home/*/.config/google-chrome/*/"
 	chromiumProfilePath   = "/home/*/.config/chromium/*/"
 	edgeProfilePath       = "/home/*/.config/microsoft-edge*/*/"
