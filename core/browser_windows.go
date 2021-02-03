@@ -25,7 +25,7 @@ const (
 	braveKeyPath          = "/AppData/Local/BraveSoftware/Brave-Browser/User Data/Local State"
 	speed360ProfilePath   = "/AppData/Local/360chrome/Chrome/User Data/*/"
 	qqBrowserProfilePath  = "/AppData/Local/Tencent/QQBrowser/User Data/*/"
-	firefoxProfilePath    = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-release/"
+	firefoxProfilePath    = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default*/"
 	operaProfilePath      = "/AppData/Roaming/Opera Software/Opera Stable/"
 	operaKeyPath          = "/AppData/Roaming/Opera Software/Opera Stable/Local State"
 	operaGXProfilePath    = "/AppData/Roaming/Opera Software/Opera GX Stable/"

@@ -14,7 +14,7 @@ const (
 	chromeBetaProfilePath = "/Users/*/Library/Application Support/Google/Chrome Beta/*/"
 	chromiumProfilePath   = "/Users/*/Library/Application Support/Chromium/*/"
 	edgeProfilePath       = "/Users/*/Library/Application Support/Microsoft Edge/*/"
-	fireFoxProfilePath    = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-release/"
+	fireFoxProfilePath    = "/Users/*/Library/Application Support/Firefox/Profiles/*.default*/"
 	braveProfilePath      = "/Users/*/Library/Application Support/BraveSoftware/Brave-Browser/*/"
 	operaProfilePath      = "/Users/*/Library/Application Support/com.operasoftware.Opera/"
 	operaGXProfilePath    = "/Users/*/Library/Application Support/com.operasoftware.OperaGX/"
