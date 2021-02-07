@@ -42,6 +42,16 @@ func (h *historyData) outPutJson(browser, dir string) error {
 	return nil
 }
 
+func (d *downloadHistoryData) outPutJson(browser, dir string) error {
+	filename := utils.FormatFileName(dir, browser, "download_history", "json")
+	err := writeToJson(filename, d.downloadHistory)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%s Get %d history, filename is %s \n", utils.Prefix, len(d.downloadHistory), filename)
+	return nil
+}
+
 func (p *passwords) outPutJson(browser, dir string) error {
 	filename := utils.FormatFileName(dir, browser, "password", "json")
 	err := writeToJson(filename, p.logins)
@@ -108,6 +118,15 @@ func (h *historyData) outPutCsv(browser, dir string) error {
 		return err
 	}
 	fmt.Printf("%s Get %d history, filename is %s \n", utils.Prefix, len(h.history), filename)
+	return nil
+}
+
+func (d *downloadHistoryData) outPutCsv(browser, dir string) error {
+	filename := utils.FormatFileName(dir, browser, "download_history", "csv")
+	if err := writeToCsv(filename, d.downloadHistory); err != nil {
+		return err
+	}
+	fmt.Printf("%s Get %d download history, filename is %s \n", utils.Prefix, len(d.downloadHistory), filename)
 	return nil
 }
 
@@ -182,6 +201,12 @@ func (c *cookies) outPutConsole() {
 
 func (h *historyData) outPutConsole() {
 	for _, v := range h.history {
+		fmt.Printf("%+v\n", v)
+	}
+}
+
+func (d *downloadHistoryData) outPutConsole() {
+	for _, v := range d.downloadHistory {
 		fmt.Printf("%+v\n", v)
 	}
 }
