@@ -48,16 +48,17 @@ const (
 )
 
 var (
-	queryChromiumCredit   = `SELECT guid, name_on_card, expiration_month, expiration_year, card_number_encrypted FROM credit_cards`
-	queryChromiumLogin    = `SELECT origin_url, username_value, password_value, date_created FROM logins`
-	queryChromiumHistory  = `SELECT url, title, visit_count, last_visit_time FROM urls`
-	queryChromiumCookie   = `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`
-	queryFirefoxHistory   = `SELECT id, url, last_visit_date, title, visit_count FROM moz_places`
-	queryFirefoxBookMarks = `SELECT id, fk, type, dateAdded, title FROM moz_bookmarks`
-	queryFirefoxCookie    = `SELECT name, value, host, path, creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
-	queryMetaData         = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
-	queryNssPrivate       = `SELECT a11, a102 from nssPrivate`
-	closeJournalMode      = `PRAGMA journal_mode=off`
+	queryChromiumCredit   			= `SELECT guid, name_on_card, expiration_month, expiration_year, card_number_encrypted FROM credit_cards`
+	queryChromiumLogin    			= `SELECT origin_url, username_value, password_value, date_created FROM logins`
+	queryChromiumHistory  			= `SELECT url, title, visit_count, last_visit_time FROM urls`
+	queryChromiumDownloadHistory	= `SELECT target_path, tab_url, total_bytes, start_time, end_time FROM downloads`
+	queryChromiumCookie   			= `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`
+	queryFirefoxHistory   			= `SELECT id, url, last_visit_date, title, visit_count FROM moz_places`
+	queryFirefoxBookMarks 			= `SELECT id, fk, type, dateAdded, title FROM moz_bookmarks`
+	queryFirefoxCookie    			= `SELECT name, value, host, path, creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
+	queryMetaData         			= `SELECT item1, item2 FROM metaData WHERE id = 'password'`
+	queryNssPrivate       			= `SELECT a11, a102 from nssPrivate`
+	closeJournalMode      			= `PRAGMA journal_mode=off`
 )
 
 const (
@@ -447,6 +448,81 @@ func (h *historyData) OutPut(format, browser, dir string) error {
 	}
 }
 
+type downloadHistoryData struct {
+	mainPath string
+	downloadHistory  []downloadHistory
+}
+
+func NewDownloadHistoryData(main, sub string) Item {
+	return &downloadHistoryData{mainPath: main}
+}
+
+func (d *downloadHistoryData) ChromeParse(key []byte) error {
+	historyDB, err := sql.Open("sqlite3", ChromeHistoryFile)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := historyDB.Close(); err != nil {
+			log.Error(err)
+		}
+	}()
+	rows, err := historyDB.Query(queryChromiumDownloadHistory)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Debug(err)
+		}
+	}()
+	for rows.Next() {
+		var (
+			target_path, tab_url    string
+			total_bytes, start_time, end_time int64
+		)
+		err := rows.Scan(&target_path, &tab_url, &total_bytes, &start_time, &end_time)
+		data := downloadHistory{
+			TargetPath:	target_path,
+			Url:		tab_url,
+			TotalBytes:	total_bytes,
+			StartTime:	utils.TimeEpochFormat(start_time),
+			EndTime: 	utils.TimeEpochFormat(end_time),
+		}
+		if err != nil {
+			log.Error(err)
+		}
+		d.downloadHistory = append(d.downloadHistory, data)
+	}
+	return nil
+}
+
+func (d *downloadHistoryData) FirefoxParse() error {
+	return nil
+}
+
+func (d *downloadHistoryData) CopyDB() error {
+	return copyToLocalPath(d.mainPath, filepath.Base(d.mainPath))
+}
+
+func (d *downloadHistoryData) Release() error {
+	return os.Remove(filepath.Base(d.mainPath))
+}
+
+func (d *downloadHistoryData) OutPut(format, browser, dir string) error {
+	switch format {
+	case "csv":
+		err := d.outPutCsv(browser, dir)
+		return err
+	case "console":
+		d.outPutConsole()
+		return nil
+	default:
+		err := d.outPutJson(browser, dir)
+		return err
+	}
+}
+
 type passwords struct {
 	mainPath string
 	subPath  string
@@ -597,7 +673,6 @@ func (p *passwords) Release() error {
 }
 
 func (p *passwords) OutPut(format, browser, dir string) error {
-	sort.Sort(p)
 	switch format {
 	case "csv":
 		err := p.outPutCsv(browser, dir)
@@ -805,6 +880,13 @@ type (
 		Url           string
 		VisitCount    int
 		LastVisitTime time.Time
+	}
+	downloadHistory struct {
+		TargetPath	string
+		Url			string
+		TotalBytes	int64
+		StartTime	time.Time
+		EndTime 	time.Time
 	}
 	card struct {
 		GUID            string
