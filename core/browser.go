@@ -46,6 +46,7 @@ const (
 	cookie     = "cookie"
 	history    = "history"
 	bookmark   = "bookmark"
+	download   = "download"
 	password   = "password"
 	creditcard = "creditcard"
 )
@@ -73,6 +74,10 @@ var (
 		history: {
 			mainFile: data.ChromeHistoryFile,
 			newItem:  data.NewHistoryData,
+		},
+		download: {
+			mainFile: data.ChromeDownloadFile,
+			newItem:  data.NewDownloads,
 		},
 		password: {
 			mainFile: data.ChromePasswordFile,
