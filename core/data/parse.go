@@ -39,6 +39,7 @@ const (
 	ChromeCreditFile   = "Web Data"
 	ChromePasswordFile = "Login Data"
 	ChromeHistoryFile  = "History"
+	ChromeDownloadFile = "History"
 	ChromeCookieFile   = "Cookies"
 	ChromeBookmarkFile = "Bookmarks"
 	FirefoxCookieFile  = "cookies.sqlite"
@@ -48,17 +49,17 @@ const (
 )
 
 var (
-	queryChromiumCredit   			= `SELECT guid, name_on_card, expiration_month, expiration_year, card_number_encrypted FROM credit_cards`
-	queryChromiumLogin    			= `SELECT origin_url, username_value, password_value, date_created FROM logins`
-	queryChromiumHistory  			= `SELECT url, title, visit_count, last_visit_time FROM urls`
-	queryChromiumDownloadHistory	= `SELECT target_path, tab_url, total_bytes, start_time, end_time FROM downloads`
-	queryChromiumCookie   			= `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`
-	queryFirefoxHistory   			= `SELECT id, url, last_visit_date, title, visit_count FROM moz_places`
-	queryFirefoxBookMarks 			= `SELECT id, fk, type, dateAdded, title FROM moz_bookmarks`
-	queryFirefoxCookie    			= `SELECT name, value, host, path, creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
-	queryMetaData         			= `SELECT item1, item2 FROM metaData WHERE id = 'password'`
-	queryNssPrivate       			= `SELECT a11, a102 from nssPrivate`
-	closeJournalMode      			= `PRAGMA journal_mode=off`
+	queryChromiumCredit   = `SELECT guid, name_on_card, expiration_month, expiration_year, card_number_encrypted FROM credit_cards`
+	queryChromiumLogin    = `SELECT origin_url, username_value, password_value, date_created FROM logins`
+	queryChromiumHistory  = `SELECT url, title, visit_count, last_visit_time FROM urls`
+	queryChromiumDownload = `SELECT target_path, tab_url, total_bytes, start_time, end_time, mime_type FROM downloads`
+	queryChromiumCookie   = `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`
+	queryFirefoxHistory   = `SELECT id, url, last_visit_date, title, visit_count FROM moz_places`
+	queryFirefoxBookMarks = `SELECT id, fk, type, dateAdded, title FROM moz_bookmarks`
+	queryFirefoxCookie    = `SELECT name, value, host, path, creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
+	queryMetaData         = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
+	queryNssPrivate       = `SELECT a11, a102 from nssPrivate`
+	closeJournalMode      = `PRAGMA journal_mode=off`
 )
 
 const (
@@ -448,17 +449,17 @@ func (h *historyData) OutPut(format, browser, dir string) error {
 	}
 }
 
-type downloadHistoryData struct {
-	mainPath string
-	downloadHistory  []downloadHistory
+type downloads struct {
+	mainPath  string
+	downloads []download
 }
 
-func NewDownloadHistoryData(main, sub string) Item {
-	return &downloadHistoryData{mainPath: main}
+func NewDownloads(main, sub string) Item {
+	return &downloads{mainPath: main}
 }
 
-func (d *downloadHistoryData) ChromeParse(key []byte) error {
-	historyDB, err := sql.Open("sqlite3", ChromeHistoryFile)
+func (d *downloads) ChromeParse(key []byte) error {
+	historyDB, err := sql.Open("sqlite3", ChromeDownloadFile)
 	if err != nil {
 		return err
 	}
@@ -467,49 +468,50 @@ func (d *downloadHistoryData) ChromeParse(key []byte) error {
 			log.Error(err)
 		}
 	}()
-	rows, err := historyDB.Query(queryChromiumDownloadHistory)
+	rows, err := historyDB.Query(queryChromiumDownload)
 	if err != nil {
 		return err
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
-			log.Debug(err)
+			log.Error(err)
 		}
 	}()
 	for rows.Next() {
 		var (
-			target_path, tab_url    string
-			total_bytes, start_time, end_time int64
+			targetPath, tabUrl, mimeType   string
+			totalBytes, startTime, endTime int64
 		)
-		err := rows.Scan(&target_path, &tab_url, &total_bytes, &start_time, &end_time)
-		data := downloadHistory{
-			TargetPath:	target_path,
-			Url:		tab_url,
-			TotalBytes:	total_bytes,
-			StartTime:	utils.TimeEpochFormat(start_time),
-			EndTime: 	utils.TimeEpochFormat(end_time),
+		err := rows.Scan(&targetPath, &tabUrl, &totalBytes, &startTime, &endTime, &mimeType)
+		data := download{
+			TargetPath: targetPath,
+			Url:        tabUrl,
+			TotalBytes: totalBytes,
+			StartTime:  utils.TimeEpochFormat(startTime),
+			EndTime:    utils.TimeEpochFormat(endTime),
+			MimiType:   mimeType,
 		}
 		if err != nil {
 			log.Error(err)
 		}
-		d.downloadHistory = append(d.downloadHistory, data)
+		d.downloads = append(d.downloads, data)
 	}
 	return nil
 }
 
-func (d *downloadHistoryData) FirefoxParse() error {
+func (d *downloads) FirefoxParse() error {
 	return nil
 }
 
-func (d *downloadHistoryData) CopyDB() error {
+func (d *downloads) CopyDB() error {
 	return copyToLocalPath(d.mainPath, filepath.Base(d.mainPath))
 }
 
-func (d *downloadHistoryData) Release() error {
+func (d *downloads) Release() error {
 	return os.Remove(filepath.Base(d.mainPath))
 }
 
-func (d *downloadHistoryData) OutPut(format, browser, dir string) error {
+func (d *downloads) OutPut(format, browser, dir string) error {
 	switch format {
 	case "csv":
 		err := d.outPutCsv(browser, dir)
@@ -673,6 +675,7 @@ func (p *passwords) Release() error {
 }
 
 func (p *passwords) OutPut(format, browser, dir string) error {
+	sort.Sort(p)
 	switch format {
 	case "csv":
 		err := p.outPutCsv(browser, dir)
@@ -881,12 +884,13 @@ type (
 		VisitCount    int
 		LastVisitTime time.Time
 	}
-	downloadHistory struct {
-		TargetPath	string
-		Url			string
-		TotalBytes	int64
-		StartTime	time.Time
-		EndTime 	time.Time
+	download struct {
+		TargetPath string
+		Url        string
+		TotalBytes int64
+		StartTime  time.Time
+		EndTime    time.Time
+		MimiType   string
 	}
 	card struct {
 		GUID            string
@@ -907,6 +911,18 @@ func (p passwords) Less(i, j int) bool {
 
 func (p passwords) Swap(i, j int) {
 	p.logins[i], p.logins[j] = p.logins[j], p.logins[i]
+}
+
+func (d downloads) Len() int {
+	return len(d.downloads)
+}
+
+func (d downloads) Less(i, j int) bool {
+	return d.downloads[i].StartTime.After(d.downloads[j].StartTime)
+}
+
+func (d downloads) Swap(i, j int) {
+	d.downloads[i], d.downloads[j] = d.downloads[j], d.downloads[i]
 }
 
 func copyToLocalPath(src, dst string) error {
