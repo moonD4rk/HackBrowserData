@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/asn1"
 	"encoding/hex"
+	"errors"
 
 	"hack-browser-data/log"
 
@@ -100,21 +101,30 @@ func DecodeMeta(decodeItem []byte) (pbe MetaPBE, err error) {
 	return
 }
 
-func DecodeNss(nssA11Bytes []byte) (pbe NssPBE, err error) {
+func DecodeNss(nssA11Bytes []byte) (nss interface{}, err error) {
+	var pbe NssPBE
 	_, err = asn1.Unmarshal(nssA11Bytes, &pbe)
+
 	if err != nil {
-		log.Error(err)
-		return
+		return DecodeMeta(nssA11Bytes)
 	}
-	return
+
+	return pbe, err
 }
 
 func Meta(globalSalt, masterPwd []byte, pbe MetaPBE) ([]byte, error) {
 	return decryptMeta(globalSalt, masterPwd, pbe.EntrySalt, pbe.Encrypted)
 }
 
-func Nss(globalSalt, masterPwd []byte, pbe NssPBE) ([]byte, error) {
-	return decryptNss(globalSalt, masterPwd, pbe.IV, pbe.EntrySalt, pbe.Encrypted, pbe.IterationCount, pbe.KeySize)
+func Nss(globalSalt, masterPwd []byte, pbe interface{}) ([]byte, error) {
+	switch pbe.(type) {
+	case NssPBE:
+		return decryptNss(globalSalt, masterPwd, pbe.(NssPBE).IV, pbe.(NssPBE).EntrySalt, pbe.(NssPBE).Encrypted, pbe.(NssPBE).IterationCount, pbe.(NssPBE).KeySize)
+	case MetaPBE:
+		return decryptMeta(globalSalt, masterPwd, pbe.(MetaPBE).EntrySalt, pbe.(MetaPBE).Encrypted)
+	default:
+		return nil, errors.New("decrypt nss failed")
+	}
 }
 
 func decryptMeta(globalSalt, masterPwd, entrySalt, encrypted []byte) ([]byte, error) {
