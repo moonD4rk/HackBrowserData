@@ -109,7 +109,7 @@ USAGE:
    Get all data(password/cookie/history/bookmark) from chrome
 
 VERSION:
-   0.3.3
+   0.3.4
 GLOBAL OPTIONS:
    --verbose, --vv                     verbose (default: false)
    --compress, --cc                    compress result to zip (default: false)
