@@ -598,29 +598,28 @@ func (p *passwords) FirefoxParse() error {
 		return err
 	}
 	keyLin := []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
-	meta, err := decrypt.DecodeMeta(metaBytes)
+	metaPBE, err := decrypt.NewASN1PBE(metaBytes)
 	if err != nil {
 		log.Error("decrypt meta data failed", err)
 		return err
 	}
+	// default master password is empty
 	var masterPwd []byte
-	m, err := decrypt.Meta(globalSalt, masterPwd, meta)
+	k, err := metaPBE.Decrypt(globalSalt, masterPwd)
 	if err != nil {
-		log.Error("decrypt firefox meta failed", err)
+		log.Error("decrypt firefox meta bytes failed", err)
 		return err
 	}
-	if bytes.Contains(m, []byte("password-check")) {
+	if bytes.Contains(k, []byte("password-check")) {
 		log.Debug("password-check success")
 		m := bytes.Compare(nssA102, keyLin)
 		if m == 0 {
-			var nss interface{}
-			nss, err = decrypt.DecodeNss(nssA11)
+			nssPBE, err := decrypt.NewASN1PBE(nssA11)
 			if err != nil {
 				log.Error("decode firefox nssA11 bytes failed", err)
 				return err
 			}
-
-			finallyKey, err := decrypt.Nss(globalSalt, masterPwd, nss)
+			finallyKey, err := nssPBE.Decrypt(globalSalt, masterPwd)
 			finallyKey = finallyKey[:24]
 			if err != nil {
 				log.Error("get firefox finally key failed")
@@ -631,13 +630,19 @@ func (p *passwords) FirefoxParse() error {
 				return err
 			}
 			for _, v := range allLogins {
-				userPBE, _ := decrypt.DecodeLogin(v.encryptUser)
-				pwdPBE, _ := decrypt.DecodeLogin(v.encryptPass)
-				user, err := decrypt.Des3Decrypt(finallyKey, userPBE.Iv, userPBE.Encrypted)
+				userPBE, err := decrypt.NewASN1PBE(v.encryptUser)
+				if err != nil {
+					log.Error("decode firefox user bytes failed", err)
+				}
+				pwdPBE, err := decrypt.NewASN1PBE(v.encryptPass)
+				if err != nil {
+					log.Error("decode firefox password bytes failed", err)
+				}
+				user, err := userPBE.Decrypt(finallyKey, masterPwd)
 				if err != nil {
 					log.Error(err)
 				}
-				pwd, err := decrypt.Des3Decrypt(finallyKey, pwdPBE.Iv, pwdPBE.Encrypted)
+				pwd, err := pwdPBE.Decrypt(finallyKey, masterPwd)
 				if err != nil {
 					log.Error(err)
 				}
