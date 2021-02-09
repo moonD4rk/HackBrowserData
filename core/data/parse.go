@@ -39,6 +39,7 @@ const (
 	ChromeCreditFile   = "Web Data"
 	ChromePasswordFile = "Login Data"
 	ChromeHistoryFile  = "History"
+	ChromeDownloadFile = "History"
 	ChromeCookieFile   = "Cookies"
 	ChromeBookmarkFile = "Bookmarks"
 	FirefoxCookieFile  = "cookies.sqlite"
@@ -51,6 +52,7 @@ var (
 	queryChromiumCredit   = `SELECT guid, name_on_card, expiration_month, expiration_year, card_number_encrypted FROM credit_cards`
 	queryChromiumLogin    = `SELECT origin_url, username_value, password_value, date_created FROM logins`
 	queryChromiumHistory  = `SELECT url, title, visit_count, last_visit_time FROM urls`
+	queryChromiumDownload = `SELECT target_path, tab_url, total_bytes, start_time, end_time, mime_type FROM downloads`
 	queryChromiumCookie   = `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`
 	queryFirefoxHistory   = `SELECT id, url, last_visit_date, title, visit_count FROM moz_places`
 	queryFirefoxBookMarks = `SELECT id, fk, type, dateAdded, title FROM moz_bookmarks`
@@ -447,6 +449,82 @@ func (h *historyData) OutPut(format, browser, dir string) error {
 	}
 }
 
+type downloads struct {
+	mainPath  string
+	downloads []download
+}
+
+func NewDownloads(main, sub string) Item {
+	return &downloads{mainPath: main}
+}
+
+func (d *downloads) ChromeParse(key []byte) error {
+	historyDB, err := sql.Open("sqlite3", ChromeDownloadFile)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := historyDB.Close(); err != nil {
+			log.Error(err)
+		}
+	}()
+	rows, err := historyDB.Query(queryChromiumDownload)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Error(err)
+		}
+	}()
+	for rows.Next() {
+		var (
+			targetPath, tabUrl, mimeType   string
+			totalBytes, startTime, endTime int64
+		)
+		err := rows.Scan(&targetPath, &tabUrl, &totalBytes, &startTime, &endTime, &mimeType)
+		data := download{
+			TargetPath: targetPath,
+			Url:        tabUrl,
+			TotalBytes: totalBytes,
+			StartTime:  utils.TimeEpochFormat(startTime),
+			EndTime:    utils.TimeEpochFormat(endTime),
+			MimiType:   mimeType,
+		}
+		if err != nil {
+			log.Error(err)
+		}
+		d.downloads = append(d.downloads, data)
+	}
+	return nil
+}
+
+func (d *downloads) FirefoxParse() error {
+	return nil
+}
+
+func (d *downloads) CopyDB() error {
+	return copyToLocalPath(d.mainPath, filepath.Base(d.mainPath))
+}
+
+func (d *downloads) Release() error {
+	return os.Remove(filepath.Base(d.mainPath))
+}
+
+func (d *downloads) OutPut(format, browser, dir string) error {
+	switch format {
+	case "csv":
+		err := d.outPutCsv(browser, dir)
+		return err
+	case "console":
+		d.outPutConsole()
+		return nil
+	default:
+		err := d.outPutJson(browser, dir)
+		return err
+	}
+}
+
 type passwords struct {
 	mainPath string
 	subPath  string
@@ -806,6 +884,14 @@ type (
 		VisitCount    int
 		LastVisitTime time.Time
 	}
+	download struct {
+		TargetPath string
+		Url        string
+		TotalBytes int64
+		StartTime  time.Time
+		EndTime    time.Time
+		MimiType   string
+	}
 	card struct {
 		GUID            string
 		Name            string
@@ -825,6 +911,18 @@ func (p passwords) Less(i, j int) bool {
 
 func (p passwords) Swap(i, j int) {
 	p.logins[i], p.logins[j] = p.logins[j], p.logins[i]
+}
+
+func (d downloads) Len() int {
+	return len(d.downloads)
+}
+
+func (d downloads) Less(i, j int) bool {
+	return d.downloads[i].StartTime.After(d.downloads[j].StartTime)
+}
+
+func (d downloads) Swap(i, j int) {
+	d.downloads[i], d.downloads[j] = d.downloads[j], d.downloads[i]
 }
 
 func copyToLocalPath(src, dst string) error {
