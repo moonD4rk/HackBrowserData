@@ -42,13 +42,13 @@ func (h *historyData) outPutJson(browser, dir string) error {
 	return nil
 }
 
-func (d *downloadHistoryData) outPutJson(browser, dir string) error {
-	filename := utils.FormatFileName(dir, browser, "download_history", "json")
-	err := writeToJson(filename, d.downloadHistory)
+func (d *downloads) outPutJson(browser, dir string) error {
+	filename := utils.FormatFileName(dir, browser, "download", "json")
+	err := writeToJson(filename, d.downloads)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s Get %d history, filename is %s \n", utils.Prefix, len(d.downloadHistory), filename)
+	fmt.Printf("%s Get %d history, filename is %s \n", utils.Prefix, len(d.downloads), filename)
 	return nil
 }
 
@@ -121,12 +121,12 @@ func (h *historyData) outPutCsv(browser, dir string) error {
 	return nil
 }
 
-func (d *downloadHistoryData) outPutCsv(browser, dir string) error {
-	filename := utils.FormatFileName(dir, browser, "download_history", "csv")
-	if err := writeToCsv(filename, d.downloadHistory); err != nil {
+func (d *downloads) outPutCsv(browser, dir string) error {
+	filename := utils.FormatFileName(dir, browser, "download", "csv")
+	if err := writeToCsv(filename, d.downloads); err != nil {
 		return err
 	}
-	fmt.Printf("%s Get %d download history, filename is %s \n", utils.Prefix, len(d.downloadHistory), filename)
+	fmt.Printf("%s Get %d download history, filename is %s \n", utils.Prefix, len(d.downloads), filename)
 	return nil
 }
 
@@ -205,8 +205,8 @@ func (h *historyData) outPutConsole() {
 	}
 }
 
-func (d *downloadHistoryData) outPutConsole() {
-	for _, v := range d.downloadHistory {
+func (d *downloads) outPutConsole() {
+	for _, v := range d.downloads {
 		fmt.Printf("%+v\n", v)
 	}
 }
