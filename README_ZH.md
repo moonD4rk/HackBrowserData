@@ -1,20 +1,19 @@
 # HackBrowserData
 
-hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|书签）的导出工具，支持全平台主流浏览器。
+hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookie|书签 | 信用卡 | 下载记录）的导出工具，支持全平台主流浏览器。
 
 
 >特别声明：此工具仅限于安全研究，用户承担因使用此工具而导致的所有法律和相关责任！作者不承担任何法律责任！
 
-### 各平台浏览器支持情况
+## 各平台浏览器支持情况
 
-#### Windows
+### Windows
 
-| 浏览器                      | 密码 | Cookie | 书签 | 历史记录 |
-| :--------------------------- | :------: | :----: | :------: | :-----: |
+| 浏览器        | 密码 | Cookie | 书签 | 历史记录 |
+| :------- | :------: | :----: | :------: | :-----: |
 | Google Chrome|    ✅     |   ✅    |    ✅     |    ✅    |
 | Google Chrome Beta|    ✅    |   ✅   |    ✅    |    ✅    |
 | Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
-| Firefox|    ✅     |   ✅    |    ✅     |    ✅    |
 | Microsoft Edge|    ✅     |   ✅    |    ✅     |    ✅    |
 | 360 极速浏览器    |    ✅     |   ✅    |    ✅     |    ✅    |
 | QQ 浏览器|    ✅     |   ✅    |    ✅     |    ✅    |
@@ -22,8 +21,13 @@ hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|�
 | Opera 浏览器 |    ✅    |    ✅    |    ✅    |    ✅    |
 | OperaGX 浏览器 |    ✅    |    ✅    |    ✅    |    ✅    |
 | Vivaldi 浏览器 |    ✅    |    ✅    |    ✅    |    ✅    |
+| Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Beta |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Dev |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox ESR |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Nightly |    ✅    |   ✅   |    ✅    |    ✅    |
 | IE 浏览器        |    ❌     |   ❌    |    ❌     |    ❌    |
-#### MacOS
+### MacOS
 
 由于 MacOS 的安全性设置，基于 `Chromium` 内核浏览器解密时**需要当前用户密码**
 
@@ -32,35 +36,44 @@ hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookies|�
 | Google Chrome  |    ✅     |   ✅    |    ✅     |    ✅    |
 | Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
 | Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
-| Firefox|    ✅     |   ✅    |    ✅     |    ✅    |
 | Microsoft Edge |    ✅     |   ✅    |    ✅     |    ✅    |
-| Brave 浏览器 |    ✅    |   ✅   |    ✅    |    ✅    |
-| Opera 浏览器 |    ✅    |    ✅    |    ✅    |    ✅    |
-| OperaGX 浏览器 |    ✅    |    ✅    |    ✅    |    ✅    |
-| Vivaldi 浏览器 |    ✅    |    ✅    |    ✅    |    ✅    |
+| Brave |    ✅    |   ✅   |    ✅    |    ✅    |
+| Opera |    ✅    |    ✅    |    ✅    |    ✅    |
+| OperaGX |    ✅    |    ✅    |    ✅    |    ✅    |
+| Vivaldi |    ✅    |    ✅    |    ✅    |    ✅    |
+| Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Beta |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Dev |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox ESR |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Nightly |    ✅    |   ✅   |    ✅    |    ✅    |
 | Safari   |    ❌     |   ❌    |    ❌     |    ❌|
 
-#### Linux
+### Linux
 
 | 浏览器    | 密码 | Cookie | 书签 | 历史记录 |
 | :------------ | :------: | :----: | :------: | :-----: |
 | Google Chrome |    ✅     |   ✅    |    ✅     |    ✅    |
 | Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
 | Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
-| Firefox       |    ✅     |   ✅    |    ✅     |    ✅    |
 | Microsoft Edge |    ✅    |   ✅   |    ✅    |    ✅    |
-| Brave 浏览器 |    ✅    |   ✅   |    ✅    |    ✅    |
-| Opera Browser |    ✅    |    ✅    |    ✅    |    ✅    |
-| Vivaldi Browser |    ✅    |    ✅    |    ✅    |    ✅    |
+| Brave |    ✅    |   ✅   |    ✅    |    ✅    |
+| Opera |    ✅    |    ✅    |    ✅    |    ✅    |
+| Vivaldi |    ✅    |    ✅    |    ✅    |    ✅    |
 | Chromium |    ✅     |   ✅    |    ✅     |    ✅    |
+| Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Beta |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Dev |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox ESR |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Nightly |    ✅    |   ✅   |    ✅    |    ✅    |
 
-### 安装运行
+## 安装运行
+### 安装
 
 可下载已编译好，直接运行的 [二进制文件 ](https://github.com/moonD4rk/HackBrowserData/releases) 
 
 > 某些情况下，这款安全工具会被 Windows Defender 或其他杀毒软件当作病毒从而无法执行，0.2.6 版本后将使用 UPX 做简单的压缩壳免杀，后续不再提供免杀做无谓的安全对抗。代码已全部开源，可自己修改编译。
 
-#### 自己编译
+### 从源码编译
 
 支持版本 `go 1.14+`
 
@@ -74,11 +87,11 @@ go get -v -t -d ./...
 go build
 ```
 
-##### 跨平台编译
+### 跨平台编译
 
 由于用到了 `go-sqlite3` 库，在跨平台编译时需提前安装支持目标平台的 `GCC` 工具，下面以 `MacOS` 下分别编译 `Windows` 和 `Linux` 程序为例：
 
-**Windows**
+#### Windows
 
 
 ```shell
@@ -87,7 +100,7 @@ brew install mingw-w64
 CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC="x86_64-w64-mingw32-gcc" go build
 ```
 
-**Linux**
+#### Linux
 
 ```shell
 brew install FiloSottile/musl-cross/musl-cross
@@ -95,7 +108,7 @@ brew install FiloSottile/musl-cross/musl-cross
 CC=x86_64-linux-musl-gcc CXX=x86_64-linux-musl-g++ GOARCH=amd64 GOOS=linux CGO_ENABLED=1 go build -ldflags "-linkmode external -extldflags -static"
 ```
 
-#### 运行
+### 运行
 
 双击直接运行，也可以命令行调整对应的命令
 
@@ -109,7 +122,7 @@ USAGE:
    Get all data(password/cookie/history/bookmark) from chrome
 
 VERSION:
-   0.3.4
+   0.3.5
 GLOBAL OPTIONS:
    --verbose, --vv                     verbose (default: false)
    --compress, --cc                    compress result to zip (default: false)
@@ -145,16 +158,16 @@ PS C:\test>  .\hack-browser-data.exe -b all -f json --dir results -cc
 [x]:  Compress success, zip filename is results/archive.zip
 ```
 
-### Contributors
+## Contributors
 
 ![](/CONTRIBUTORS.svg)
 
-### 404StarLink 2.0 - Galaxy
+## 404StarLink 2.0 - Galaxy
 ![](https://github.com/knownsec/404StarLink-Project/raw/master/logo.png)
 
 HackBrowserData 是 404Team [星链计划2.0](https://github.com/knownsec/404StarLink2.0-Galaxy) 中的一环，如果对 HackBrowserData有任何疑问又或是想要找小伙伴交流，可以参考[星链计划的加群方式](https://github.com/knownsec/404StarLink2.0-Galaxy#community)。
 
-### TODO
+## TODO
 
 [Desktop Browser Market Share Worldwide](https://gs.statcounter.com/browser-market-share/desktop/worldwide)
 
