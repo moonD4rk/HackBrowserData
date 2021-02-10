@@ -11,14 +11,18 @@ import (
 )
 
 const (
-	fireFoxProfilePath    = "/home/*/.mozilla/firefox/*.default*/"
-	chromeProfilePath     = "/home/*/.config/google-chrome/*/"
-	chromiumProfilePath   = "/home/*/.config/chromium/*/"
-	edgeProfilePath       = "/home/*/.config/microsoft-edge*/*/"
-	braveProfilePath      = "/home/*/.config/BraveSoftware/Brave-Browser/*/"
-	chromeBetaProfilePath = "/home/*/.config/google-chrome-beta/*/"
-	operaProfilePath      = "/home/*/.config/opera/"
-	vivaldiProfilePath    = "/home/*/.config/vivaldi/*/"
+	fireFoxProfilePath        = "/home/*/.mozilla/firefox/*.default-release/"
+	fireFoxBetaProfilePath    = "/home/*/.mozilla/firefox/*.default-beta/"
+	fireFoxDevProfilePath     = "/home/*/.mozilla/firefox/*.dev-edition-default/"
+	fireFoxNightlyProfilePath = "/home/*/.mozilla/firefox/*.default-nightly/"
+	fireFoxESRProfilePath     = "/home/*/.mozilla/firefox/*.default-esr/"
+	chromeProfilePath         = "/home/*/.config/google-chrome/*/"
+	chromiumProfilePath       = "/home/*/.config/chromium/*/"
+	edgeProfilePath           = "/home/*/.config/microsoft-edge*/*/"
+	braveProfilePath          = "/home/*/.config/BraveSoftware/Brave-Browser/*/"
+	chromeBetaProfilePath     = "/home/*/.config/google-chrome-beta/*/"
+	operaProfilePath          = "/home/*/.config/opera/"
+	vivaldiProfilePath        = "/home/*/.config/vivaldi/*/"
 )
 
 const (
@@ -42,6 +46,26 @@ var (
 		"firefox": {
 			ProfilePath: fireFoxProfilePath,
 			Name:        firefoxName,
+			New:         NewFirefox,
+		},
+		"firefox-beta": {
+			ProfilePath: fireFoxBetaProfilePath,
+			Name:        firefoxBetaName,
+			New:         NewFirefox,
+		},
+		"firefox-dev": {
+			ProfilePath: fireFoxDevProfilePath,
+			Name:        firefoxDevName,
+			New:         NewFirefox,
+		},
+		"firefox-nightly": {
+			ProfilePath: fireFoxNightlyProfilePath,
+			Name:        firefoxNightlyName,
+			New:         NewFirefox,
+		},
+		"firefox-esr": {
+			ProfilePath: fireFoxESRProfilePath,
+			Name:        firefoxESRName,
 			New:         NewFirefox,
 		},
 		"chrome": {
