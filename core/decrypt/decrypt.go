@@ -100,21 +100,21 @@ func (n NssPBE) Decrypt(globalSalt, masterPwd []byte) (key []byte, err error) {
 
 /* META Struct
 SEQUENCE (2 elem)
-  SEQUENCE (2 elem)
-    OBJECT IDENTIFIER
-    SEQUENCE (2 elem)
-      SEQUENCE (2 elem)
-        OBJECT IDENTIFIER
-        SEQUENCE (4 elem)
-          OCTET STRING (32 byte)
-          INTEGER 1
-          INTEGER 32
-          SEQUENCE (1 elem)
-            OBJECT IDENTIFIER
-      SEQUENCE (2 elem)
-        OBJECT IDENTIFIER
-        OCTET STRING (14 byte)
-  OCTET STRING (16 byte)
+	SEQUENCE (2 elem)
+    	OBJECT IDENTIFIER
+    	SEQUENCE (2 elem)
+      	SEQUENCE (2 elem)
+        	OBJECT IDENTIFIER
+        	SEQUENCE (4 elem)
+          	OCTET STRING (32 byte)
+          		INTEGER 1
+          		INTEGER 32
+          		SEQUENCE (1 elem)
+            	OBJECT IDENTIFIER
+      	SEQUENCE (2 elem)
+        	OBJECT IDENTIFIER
+        	OCTET STRING (14 byte)
+  	OCTET STRING (16 byte)
 */
 type MetaPBE struct {
 	MetaSequenceA
@@ -176,7 +176,7 @@ func PKCS5UnPadding(src []byte) []byte {
 	return src[:(length - unpad)]
 }
 
-// Des3Decrypt use for decrypt firefox PBE
+// des3Decrypt use for decrypt firefox PBE
 func des3Decrypt(key, iv []byte, src []byte) ([]byte, error) {
 	block, err := des.NewTripleDESCipher(key)
 	if err != nil {
@@ -201,11 +201,11 @@ func PaddingZero(s []byte, l int) []byte {
 	}
 }
 
-/*
+/* Login Struct
 SEQUENCE (3 elem)
 	OCTET STRING (16 byte)
 	SEQUENCE (2 elem)
-		OBJECT IDENTIFIER 1.2.840.113549.3.7 des-EDE3-CBC (RSADSI encryptionAlgorithm)
+		OBJECT IDENTIFIER
 		OCTET STRING (8 byte)
 	OCTET STRING (16 byte)
 */
