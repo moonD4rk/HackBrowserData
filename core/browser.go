@@ -145,7 +145,7 @@ func (c *Chromium) GetAllItems() ([]data.Item, error) {
 	for item, choice := range chromiumItems {
 		m, err := getItemPath(c.profilePath, choice.mainFile)
 		if err != nil {
-			log.Errorf("%s find %s file failed, ERR:%s", c.name, item, err)
+			log.Debugf("%s find %s file failed, ERR:%s", c.name, item, err)
 			continue
 		}
 		i := choice.newItem(m, "")
@@ -161,7 +161,7 @@ func (c *Chromium) GetItem(itemName string) (data.Item, error) {
 	if item, ok := chromiumItems[itemName]; ok {
 		m, err := getItemPath(c.profilePath, item.mainFile)
 		if err != nil {
-			log.Errorf("%s find %s file failed, ERR:%s", c.name, item.mainFile, err)
+			log.Debugf("%s find %s file failed, ERR:%s", c.name, item.mainFile, err)
 		}
 		i := item.newItem(m, "")
 		return i, nil
@@ -192,13 +192,13 @@ func (f *Firefox) GetAllItems() ([]data.Item, error) {
 		if choice.subFile != "" {
 			sub, err = getItemPath(f.profilePath, choice.subFile)
 			if err != nil {
-				log.Errorf("%s find %s file failed, ERR:%s", f.name, item, err)
+				log.Debugf("%s find %s file failed, ERR:%s", f.name, item, err)
 				continue
 			}
 		}
 		main, err = getItemPath(f.profilePath, choice.mainFile)
 		if err != nil {
-			log.Errorf("%s find %s file failed, ERR:%s", f.name, item, err)
+			log.Debugf("%s find %s file failed, ERR:%s", f.name, item, err)
 			continue
 		}
 		i := choice.newItem(main, sub)
@@ -218,12 +218,12 @@ func (f *Firefox) GetItem(itemName string) (data.Item, error) {
 		if item.subFile != "" {
 			sub, err = getItemPath(f.profilePath, item.subFile)
 			if err != nil {
-				log.Errorf("%s find %s file failed, ERR:%s", f.name, item.subFile, err)
+				log.Debugf("%s find %s file failed, ERR:%s", f.name, item.subFile, err)
 			}
 		}
 		main, err = getItemPath(f.profilePath, item.mainFile)
 		if err != nil {
-			log.Errorf("%s find %s file failed, ERR:%s", f.name, item.mainFile, err)
+			log.Debugf("%s find %s file failed, ERR:%s", f.name, item.mainFile, err)
 		}
 		i := item.newItem(main, sub)
 		log.Debugf("%s find %s file success", f.name, item.mainFile)
