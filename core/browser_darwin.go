@@ -10,15 +10,19 @@ import (
 )
 
 const (
-	chromeProfilePath     = "/Users/*/Library/Application Support/Google/Chrome/*/"
-	chromeBetaProfilePath = "/Users/*/Library/Application Support/Google/Chrome Beta/*/"
-	chromiumProfilePath   = "/Users/*/Library/Application Support/Chromium/*/"
-	edgeProfilePath       = "/Users/*/Library/Application Support/Microsoft Edge/*/"
-	fireFoxProfilePath    = "/Users/*/Library/Application Support/Firefox/Profiles/*.default*/"
-	braveProfilePath      = "/Users/*/Library/Application Support/BraveSoftware/Brave-Browser/*/"
-	operaProfilePath      = "/Users/*/Library/Application Support/com.operasoftware.Opera/"
-	operaGXProfilePath    = "/Users/*/Library/Application Support/com.operasoftware.OperaGX/"
-	vivaldiProfilePath    = "/Users/*/Library/Application Support/Vivaldi/*/"
+	fireFoxProfilePath        = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-release/"
+	fireFoxBetaProfilePath    = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-beta/"
+	fireFoxDevProfilePath     = "/Users/*/Library/Application Support/Firefox/Profiles/*.dev-edition-default/"
+	fireFoxNightlyProfilePath = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-nightly/"
+	fireFoxESRProfilePath     = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-esr/"
+	chromeProfilePath         = "/Users/*/Library/Application Support/Google/Chrome/*/"
+	chromeBetaProfilePath     = "/Users/*/Library/Application Support/Google/Chrome Beta/*/"
+	chromiumProfilePath       = "/Users/*/Library/Application Support/Chromium/*/"
+	edgeProfilePath           = "/Users/*/Library/Application Support/Microsoft Edge/*/"
+	braveProfilePath          = "/Users/*/Library/Application Support/BraveSoftware/Brave-Browser/*/"
+	operaProfilePath          = "/Users/*/Library/Application Support/com.operasoftware.Opera/"
+	operaGXProfilePath        = "/Users/*/Library/Application Support/com.operasoftware.OperaGX/"
+	vivaldiProfilePath        = "/Users/*/Library/Application Support/Vivaldi/*/"
 )
 
 const (
@@ -42,6 +46,26 @@ var (
 		"firefox": {
 			ProfilePath: fireFoxProfilePath,
 			Name:        firefoxName,
+			New:         NewFirefox,
+		},
+		"firefox-beta": {
+			ProfilePath: fireFoxBetaProfilePath,
+			Name:        firefoxBetaName,
+			New:         NewFirefox,
+		},
+		"firefox-dev": {
+			ProfilePath: fireFoxDevProfilePath,
+			Name:        firefoxDevName,
+			New:         NewFirefox,
+		},
+		"firefox-nightly": {
+			ProfilePath: fireFoxNightlyProfilePath,
+			Name:        firefoxNightlyName,
+			New:         NewFirefox,
+		},
+		"firefox-esr": {
+			ProfilePath: fireFoxESRProfilePath,
+			Name:        firefoxESRName,
 			New:         NewFirefox,
 		},
 		"chrome": {

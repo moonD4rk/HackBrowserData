@@ -12,17 +12,21 @@ import (
 )
 
 const (
-	chromeName     = "Chrome"
-	chromeBetaName = "Chrome Beta"
-	chromiumName   = "Chromium"
-	edgeName       = "Microsoft Edge"
-	firefoxName    = "Firefox"
-	speed360Name   = "360speed"
-	qqBrowserName  = "qq"
-	braveName      = "Brave"
-	operaName      = "Opera"
-	operaGXName    = "OperaGX"
-	vivaldiName    = "Vivaldi"
+	chromeName         = "Chrome"
+	chromeBetaName     = "Chrome Beta"
+	chromiumName       = "Chromium"
+	edgeName           = "Microsoft Edge"
+	firefoxName        = "Firefox"
+	firefoxBetaName    = "Firefox Beta"
+	firefoxDevName     = "Firefox Dev"
+	firefoxNightlyName = "Firefox Nightly"
+	firefoxESRName     = "Firefox ESR"
+	speed360Name       = "360speed"
+	qqBrowserName      = "qq"
+	braveName          = "Brave"
+	operaName          = "Opera"
+	operaGXName        = "OperaGX"
+	vivaldiName        = "Vivaldi"
 )
 
 type Browser interface {
