@@ -11,11 +11,11 @@ import (
 )
 
 const (
-	fireFoxProfilePath        = "/home/*/.mozilla/firefox/*.default-release/"
-	fireFoxBetaProfilePath    = "/home/*/.mozilla/firefox/*.default-beta/"
-	fireFoxDevProfilePath     = "/home/*/.mozilla/firefox/*.dev-edition-default/"
-	fireFoxNightlyProfilePath = "/home/*/.mozilla/firefox/*.default-nightly/"
-	fireFoxESRProfilePath     = "/home/*/.mozilla/firefox/*.default-esr/"
+	fireFoxProfilePath        = "/home/*/.mozilla/firefox/*.default-release*/"
+	fireFoxBetaProfilePath    = "/home/*/.mozilla/firefox/*.default-beta*/"
+	fireFoxDevProfilePath     = "/home/*/.mozilla/firefox/*.dev-edition-default*/"
+	fireFoxNightlyProfilePath = "/home/*/.mozilla/firefox/*.default-nightly*/"
+	fireFoxESRProfilePath     = "/home/*/.mozilla/firefox/*.default-esr*/"
 	chromeProfilePath         = "/home/*/.config/google-chrome/*/"
 	chromiumProfilePath       = "/home/*/.config/chromium/*/"
 	edgeProfilePath           = "/home/*/.config/microsoft-edge*/*/"

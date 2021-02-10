@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	fireFoxProfilePath        = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-release/"
-	fireFoxBetaProfilePath    = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-beta/"
-	fireFoxDevProfilePath     = "/Users/*/Library/Application Support/Firefox/Profiles/*.dev-edition-default/"
-	fireFoxNightlyProfilePath = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-nightly/"
-	fireFoxESRProfilePath     = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-esr/"
+	fireFoxProfilePath        = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-release*/"
+	fireFoxBetaProfilePath    = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-beta*/"
+	fireFoxDevProfilePath     = "/Users/*/Library/Application Support/Firefox/Profiles/*.dev-edition-default*/"
+	fireFoxNightlyProfilePath = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-nightly*/"
+	fireFoxESRProfilePath     = "/Users/*/Library/Application Support/Firefox/Profiles/*.default-esr*/"
 	chromeProfilePath         = "/Users/*/Library/Application Support/Google/Chrome/*/"
 	chromeBetaProfilePath     = "/Users/*/Library/Application Support/Google/Chrome Beta/*/"
 	chromiumProfilePath       = "/Users/*/Library/Application Support/Chromium/*/"
