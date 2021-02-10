@@ -13,11 +13,11 @@ import (
 )
 
 const (
-	firefoxProfilePath        = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-release/"
-	fireFoxBetaProfilePath    = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-beta/"
-	fireFoxDevProfilePath     = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.dev-edition-default/"
-	fireFoxNightlyProfilePath = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-nightly/"
-	fireFoxESRProfilePath     = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-esr/"
+	firefoxProfilePath        = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-release*/"
+	fireFoxBetaProfilePath    = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-beta*/"
+	fireFoxDevProfilePath     = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.dev-edition-default*/"
+	fireFoxNightlyProfilePath = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-nightly*/"
+	fireFoxESRProfilePath     = "/AppData/Roaming/Mozilla/Firefox/Profiles/*.default-esr*/"
 	chromeProfilePath         = "/AppData/Local/Google/Chrome/User Data/*/"
 	chromeKeyPath             = "/AppData/Local/Google/Chrome/User Data/Local State"
 	chromeBetaProfilePath     = "/AppData/Local/Google/Chrome Beta/User Data/*/"
