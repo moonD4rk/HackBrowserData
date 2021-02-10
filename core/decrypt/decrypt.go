@@ -217,9 +217,9 @@ type LoginPBE struct {
 
 type LoginSequence struct {
 	asn1.ObjectIdentifier
-	Iv []byte
+	IV []byte
 }
 
 func (l LoginPBE) Decrypt(globalSalt, masterPwd []byte) (key []byte, err error) {
-	return des3Decrypt(globalSalt, l.Iv, l.Encrypted)
+	return des3Decrypt(globalSalt, l.IV, l.Encrypted)
 }
