@@ -552,7 +552,7 @@ func (d *downloads) FirefoxParse() error {
 				Url:		url,
 				TotalBytes: fileSize.Int(),
 				StartTime:	utils.TimeStampFormat(dateAdded / 1000000),
-				EndTime:	utils.TimeStampFormat(endTime.Int() / 1000000),
+				EndTime:	utils.TimeStampFormat(endTime.Int() / 1000),
 			})
 		}
 		tempMap[place_id] = url
