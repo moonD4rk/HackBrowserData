@@ -491,7 +491,7 @@ func (d *downloads) ChromeParse(key []byte) error {
 			TotalBytes: totalBytes,
 			StartTime:  utils.TimeEpochFormat(startTime),
 			EndTime:    utils.TimeEpochFormat(endTime),
-			MimiType:   mimeType,
+			MimeType:   mimeType,
 		}
 		if err != nil {
 			log.Error(err)
@@ -953,7 +953,7 @@ type (
 		TotalBytes int64
 		StartTime  time.Time
 		EndTime    time.Time
-		MimiType   string
+		MimeType   string
 	}
 	card struct {
 		GUID            string
