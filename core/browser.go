@@ -52,7 +52,7 @@ const (
 )
 
 var (
-	errItemNotSupported    = errors.New(`item not supported, default is "all", choose from history|password|bookmark|cookie`)
+	errItemNotSupported    = errors.New(`item not supported, default is "all", choose from history|download|password|bookmark|cookie`)
 	errBrowserNotSupported = errors.New("browser not supported")
 	errChromeSecretIsEmpty = errors.New("chrome secret is empty")
 	errDbusSecretIsEmpty   = errors.New("dbus secret key is empty")
@@ -104,6 +104,10 @@ var (
 		history: {
 			mainFile: data.FirefoxDataFile,
 			newItem:  data.NewHistoryData,
+		},
+		download: {
+			mainFile: data.FirefoxDataFile,
+			newItem:  data.NewDownloads,
 		},
 		password: {
 			mainFile: data.FirefoxKey4File,

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"time"
+	"strings"
 
 	"hack-browser-data/core/decrypt"
 	"hack-browser-data/log"
@@ -55,6 +56,7 @@ var (
 	queryChromiumDownload = `SELECT target_path, tab_url, total_bytes, start_time, end_time, mime_type FROM downloads`
 	queryChromiumCookie   = `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`
 	queryFirefoxHistory   = `SELECT id, url, last_visit_date, title, visit_count FROM moz_places`
+	queryFirefoxDownload  = `SELECT place_id, GROUP_CONCAT(content) , url, dateAdded FROM (SELECT * FROM moz_annos INNER JOIN moz_places ON moz_annos.place_id=moz_places.id) t GROUP BY place_id`
 	queryFirefoxBookMarks = `SELECT id, fk, type, dateAdded, title FROM moz_bookmarks`
 	queryFirefoxCookie    = `SELECT name, value, host, path, creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
 	queryMetaData         = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
@@ -500,9 +502,63 @@ func (d *downloads) ChromeParse(key []byte) error {
 }
 
 func (d *downloads) FirefoxParse() error {
+	var (
+		err         	error
+		keyDB       	*sql.DB
+		downloadRows	*sql.Rows
+		tempMap     	map[int64]string
+	)
+	tempMap = make(map[int64]string)
+	keyDB, err = sql.Open("sqlite3", FirefoxDataFile)
+	if err != nil {
+		return err
+	}
+	_, err = keyDB.Exec(closeJournalMode)
+	if err != nil {
+		log.Error(err)
+	}
+	defer func() {
+		if err := keyDB.Close(); err != nil {
+			log.Error(err)
+		}
+	}()
+	downloadRows, err = keyDB.Query(queryFirefoxDownload)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	defer func() {
+		if err := downloadRows.Close(); err != nil {
+			log.Error(err)
+		}
+	}()
+	for downloadRows.Next() {
+		var (
+		    content, url 		string
+			place_id, dateAdded	int64
+		)
+		err = downloadRows.Scan(&place_id, &content, &url, &dateAdded)
+		if err != nil {
+			log.Warn(err)
+		}
+		contentList := strings.Split(content, ",{")
+		if len(contentList) > 1 {
+			path := contentList[0]
+			json := "{" + contentList[1]
+			endTime := gjson.Get(json, "endTime")
+			fileSize:= gjson.Get(json, "fileSize")
+			d.downloads = append(d.downloads, download{
+				TargetPath:	path,
+				Url:		url,
+				TotalBytes: fileSize.Int(),
+				StartTime:	utils.TimeStampFormat(dateAdded / 1000000),
+				EndTime:	utils.TimeStampFormat(endTime.Int() / 1000000),
+			})
+		}
+		tempMap[place_id] = url
+	}
 	return nil
 }
-
 func (d *downloads) CopyDB() error {
 	return copyToLocalPath(d.mainPath, filepath.Base(d.mainPath))
 }
