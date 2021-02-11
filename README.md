@@ -4,30 +4,34 @@
 
 [中文说明](https://github.com/moonD4rk/HackBrowserData/blob/master/README_ZH.md) 
 
-hack-browser-data is an open-source tool that could help you decrypt data ( passwords|bookmarks|cookies|history ) from the browser. It supports the most popular browsers on the market and runs on Windows, macOS and Linux.
+hack-browser-data is an open-source tool that could help you decrypt data ( password|bookmark|cookie|history|credit card|downloads link ) from the browser. It supports the most popular browsers on the market and runs on Windows, macOS and Linux.
 
 > Statement: This tool is limited to security research only, and the user assumes all legal and related responsibilities arising from its use! The author assumes no legal responsibility!
 
-### Supported Browser
+## Supported Browser
 
-#### Windows
+### Windows
 | Browser                             | Password | Cookie | Bookmark | History |
 | :---------------------------------- | :------: | :----: | :------: | :-----: |
 | Google Chrome |    ✅    |   ✅   |    ✅    |    ✅    |
 | Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
 | Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
-| Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
 | Microsoft Edge |    ✅    |   ✅   |    ✅    |    ✅    |
-| 360 Speed Browser |    ✅    |   ✅   |    ✅    |    ✅    |
-| QQ Browser |    ✅    |   ✅   |    ✅    |    ✅    |
-| Brave Browser |    ✅    |   ✅   |    ✅    |    ✅    |
-| Opera Browser |    ✅    |    ✅    |    ✅    |    ✅    |
-| OperaGX Browser |    ✅    |    ✅    |    ✅    |    ✅    |
-| Vivaldi Browser |    ✅    |    ✅    |    ✅    |    ✅    |
+| 360 Speed |    ✅    |   ✅   |    ✅    |    ✅    |
+| QQ |    ✅    |   ✅   |    ✅    |    ✅    |
+| Brave |    ✅    |   ✅   |    ✅    |    ✅    |
+| Opera |    ✅    |    ✅    |    ✅    |    ✅    |
+| OperaGX |    ✅    |    ✅    |    ✅    |    ✅    |
+| Vivaldi |    ✅    |    ✅    |    ✅    |    ✅    |
+| Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Beta |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Dev |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox ESR |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Nightly |    ✅    |   ✅   |    ✅    |    ✅    |
 | Internet Explorer |    ❌    |   ❌   |    ❌    |    ❌    |
 
 
-#### MacOS
+### MacOS
 
 Based on Apple's security policy, some browsers **require a current user password** to decrypt.
 
@@ -36,27 +40,37 @@ Based on Apple's security policy, some browsers **require a current user passwor
 | Google Chrome |    ✅    |   ✅   |    ✅    |    ✅    |
 | Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
 | Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
-| Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
 | Microsoft Edge |    ✅    |   ✅   |    ✅    |    ✅    |
-| Brave Browser |    ✅    |   ✅   |    ✅    |    ✅    |
-| Opera Browser |    ✅    |    ✅    |    ✅    |    ✅    |
-| OperaGX Browser |    ✅    |    ✅    |    ✅    |    ✅    |
-| Vivaldi Browser |    ✅    |    ✅    |    ✅    |    ✅    |
+| Brave |    ✅    |   ✅   |    ✅    |    ✅    |
+| Opera |    ✅    |    ✅    |    ✅    |    ✅    |
+| OperaGX |    ✅    |    ✅    |    ✅    |    ✅    |
+| Vivaldi |    ✅    |    ✅    |    ✅    |    ✅    |
+| Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Beta |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Dev |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox ESR |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Nightly |    ✅    |   ✅   |    ✅    |    ✅    |
 | Safari |    ❌    |   ❌   |    ❌    |    ❌    |
 
-#### Linux
+### Linux
 
 | Browser                             | Password | Cookie | Bookmark | History |
 | :---------------------------------- | :------: | :----: | :------: | :-----: |
 | Google Chrome |    ✅    |   ✅   |    ✅    |    ✅    |
 | Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
 | Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
-| Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
 | Microsoft Edge Dev |    ✅    |   ✅   |    ✅    |    ✅    |
-| Brave Browser |    ✅    |   ✅   |    ✅    |    ✅    |
-| Opera Browser |    ✅    |    ✅    |    ✅    |    ✅    |
-| Vivaldi Browser |    ✅    |    ✅    |    ✅    |    ✅    |
+| Brave |    ✅    |   ✅   |    ✅    |    ✅    |
+| Opera |    ✅    |    ✅    |    ✅    |    ✅    |
+| Vivaldi |    ✅    |    ✅    |    ✅    |    ✅    |
+| Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Beta |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Dev |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox ESR |    ✅    |   ✅   |    ✅    |    ✅    |
+| Firefox Nightly |    ✅    |   ✅   |    ✅    |    ✅    |
 
+
+## Getting started
 
 ### Install
 
@@ -64,7 +78,7 @@ Installation of hack-browser-data is dead-simple, just download [the release for
 
 > In some situations, this security tool will be treated as a virus by Windows Defender or other antivirus software and can not be executed, after version 0.2.6 will use UPX try to simply bypass, then no longer with antivirus software to do unnecessary security confrontations.The code is all open source, you can modify and compile by yourself.
 
-#### Building from source
+### Building from source
 
 support `go 1.14+`
 
@@ -78,11 +92,11 @@ go get -v -t -d ./...
 go build
 ```
 
-##### Cross compile
+### Cross compile
 
 Need install target OS's `gcc` library, here's an example of use `Mac` building for `Windows` and `Linux`
 
-**Windows**
+#### For Windows
 
 ```shell
 brew install mingw-w64
@@ -90,7 +104,7 @@ brew install mingw-w64
 CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC="x86_64-w64-mingw32-gcc" go build
 ```
 
-**Linux**
+#### For Linux
 
 ````shell
 brew install FiloSottile/musl-cross/musl-cross
@@ -98,7 +112,7 @@ brew install FiloSottile/musl-cross/musl-cross
 CC=x86_64-linux-musl-gcc CXX=x86_64-linux-musl-g++ GOARCH=amd64 GOOS=linux CGO_ENABLED=1 go build -ldflags "-linkmode external -extldflags -static"
 ````
 
-#### Run
+### Run
 
 You can double-click to run, or use command line.
 
@@ -112,7 +126,7 @@ USAGE:
    Get all data(password/cookie/history/bookmark) from chrome
 
 VERSION:
-   0.3.4
+   0.3.5
 GLOBAL OPTIONS:
    --verbose, --vv                     verbose (default: false)
    --compress, --cc                    compress result to zip (default: false)
@@ -147,7 +161,7 @@ PS C:\test>  .\hack-browser-data.exe -b all -f json --dir results -cc
 [x]:  Get 6 history, filename is results/chrome_history.json
 [x]:  Compress success, zip filename is results/archive.zip
 ```
-#### Run with custom browser profile path
+### Run with custom browser profile path
 
 ```
 PS C:\Users\User\Desktop> .\hack-browser-data.exe -b edge -p 'C:\Users\User\AppData\Local\Microsoft\Edge\User Data\Default' -k 'C:\Users\User\AppData\Local\Microsoft\Edge\User Data\Local State'
@@ -168,18 +182,18 @@ PS C:\Users\User\Desktop> .\hack-browser-data.exe -b edge -p 'C:\Users\User\AppD
 [x]:  Get 0 passwords, filename is results/microsoft_edge_password.csv
 ```
 
-### Contributors
+## Contributors
 
 ![](/CONTRIBUTORS.svg)
 
 
-### 404StarLink 2.0 - Galaxy
+## 404StarLink 2.0 - Galaxy
 ![](https://github.com/knownsec/404StarLink-Project/raw/master/logo.png)
 
 HackBrowserData is a part of 404Team [StarLink-Galaxy](https://github.com/knownsec/404StarLink2.0-Galaxy), if you have any questions about HackBrowserData or want to find a partner to communicate with，please refer to the [Starlink group](https://github.com/knownsec/404StarLink2.0-Galaxy#community).
 
 
-### TODO
+## TODO
 
 [Desktop Browser Market Share Worldwide](https://gs.statcounter.com/browser-market-share/desktop/worldwide)
 

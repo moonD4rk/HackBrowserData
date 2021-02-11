@@ -12,17 +12,21 @@ import (
 )
 
 const (
-	chromeName     = "Chrome"
-	chromeBetaName = "Chrome Beta"
-	chromiumName   = "Chromium"
-	edgeName       = "Microsoft Edge"
-	firefoxName    = "Firefox"
-	speed360Name   = "360speed"
-	qqBrowserName  = "qq"
-	braveName      = "Brave"
-	operaName      = "Opera"
-	operaGXName    = "OperaGX"
-	vivaldiName    = "Vivaldi"
+	chromeName         = "Chrome"
+	chromeBetaName     = "Chrome Beta"
+	chromiumName       = "Chromium"
+	edgeName           = "Microsoft Edge"
+	firefoxName        = "Firefox"
+	firefoxBetaName    = "Firefox Beta"
+	firefoxDevName     = "Firefox Dev"
+	firefoxNightlyName = "Firefox Nightly"
+	firefoxESRName     = "Firefox ESR"
+	speed360Name       = "360speed"
+	qqBrowserName      = "qq"
+	braveName          = "Brave"
+	operaName          = "Opera"
+	operaGXName        = "OperaGX"
+	vivaldiName        = "Vivaldi"
 )
 
 type Browser interface {
@@ -35,10 +39,10 @@ type Browser interface {
 	// GetSecretKey return browser secret key
 	GetSecretKey() []byte
 
-	// GetAllItems return all of items (password|bookmark|cookie|history)
+	// GetAllItems return all items (password|bookmark|cookie|history)
 	GetAllItems() ([]data.Item, error)
 
-	// GetItem return single one from password|bookmark|cookie|history
+	// GetItem return single one from the password|bookmark|cookie|history
 	GetItem(itemName string) (data.Item, error)
 }
 
@@ -125,7 +129,7 @@ type Chromium struct {
 	secretKey   []byte
 }
 
-// NewChromium return chromium browser interface
+// NewChromium return Chromium browser interface
 func NewChromium(profile, key, name, storage string) (Browser, error) {
 	return &Chromium{profilePath: profile, keyPath: key, name: name, storage: storage}, nil
 }
@@ -139,13 +143,13 @@ func (c *Chromium) GetSecretKey() []byte {
 }
 
 // GetAllItems return all chromium items from browser
-// if can't find item path, log error then continue
+// if can't find the item path, log error then continue
 func (c *Chromium) GetAllItems() ([]data.Item, error) {
 	var items []data.Item
 	for item, choice := range chromiumItems {
 		m, err := getItemPath(c.profilePath, choice.mainFile)
 		if err != nil {
-			log.Errorf("%s find %s file failed, ERR:%s", c.name, item, err)
+			log.Debugf("%s find %s file failed, ERR:%s", c.name, item, err)
 			continue
 		}
 		i := choice.newItem(m, "")
@@ -161,7 +165,7 @@ func (c *Chromium) GetItem(itemName string) (data.Item, error) {
 	if item, ok := chromiumItems[itemName]; ok {
 		m, err := getItemPath(c.profilePath, item.mainFile)
 		if err != nil {
-			log.Errorf("%s find %s file failed, ERR:%s", c.name, item.mainFile, err)
+			log.Debugf("%s find %s file failed, ERR:%s", c.name, item.mainFile, err)
 		}
 		i := item.newItem(m, "")
 		return i, nil
@@ -192,13 +196,13 @@ func (f *Firefox) GetAllItems() ([]data.Item, error) {
 		if choice.subFile != "" {
 			sub, err = getItemPath(f.profilePath, choice.subFile)
 			if err != nil {
-				log.Errorf("%s find %s file failed, ERR:%s", f.name, item, err)
+				log.Debugf("%s find %s file failed, ERR:%s", f.name, item, err)
 				continue
 			}
 		}
 		main, err = getItemPath(f.profilePath, choice.mainFile)
 		if err != nil {
-			log.Errorf("%s find %s file failed, ERR:%s", f.name, item, err)
+			log.Debugf("%s find %s file failed, ERR:%s", f.name, item, err)
 			continue
 		}
 		i := choice.newItem(main, sub)
@@ -218,12 +222,12 @@ func (f *Firefox) GetItem(itemName string) (data.Item, error) {
 		if item.subFile != "" {
 			sub, err = getItemPath(f.profilePath, item.subFile)
 			if err != nil {
-				log.Errorf("%s find %s file failed, ERR:%s", f.name, item.subFile, err)
+				log.Debugf("%s find %s file failed, ERR:%s", f.name, item.subFile, err)
 			}
 		}
 		main, err = getItemPath(f.profilePath, item.mainFile)
 		if err != nil {
-			log.Errorf("%s find %s file failed, ERR:%s", f.name, item.mainFile, err)
+			log.Debugf("%s find %s file failed, ERR:%s", f.name, item.mainFile, err)
 		}
 		i := item.newItem(main, sub)
 		log.Debugf("%s find %s file success", f.name, item.mainFile)
@@ -238,13 +242,13 @@ func (f *Firefox) GetName() string {
 }
 
 // GetSecretKey for firefox is always nil
-// this method use to implement Browser interface
+// this method used to implement Browser interface
 func (f *Firefox) GetSecretKey() []byte {
 	return nil
 }
 
 // InitSecretKey for firefox is always nil
-// this method use to implement Browser interface
+// this method used to implement Browser interface
 func (f *Firefox) InitSecretKey() error {
 	return nil
 }
@@ -316,7 +320,7 @@ func getItemPath(profilePath, file string) (string, error) {
 	return "", fmt.Errorf("find %s failed", file)
 }
 
-// getKeyPath try get key file path with browser's profile path
+// getKeyPath try to get key file path with the browser's profile path
 // default key file path is in the parent directory of the profile dir, and name is [Local State]
 func getKeyPath(profilePath string) (string, error) {
 	if _, err := os.Stat(filepath.Clean(profilePath)); os.IsNotExist(err) {
