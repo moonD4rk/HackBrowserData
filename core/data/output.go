@@ -222,3 +222,27 @@ func (c *creditCards) outPutConsole() {
 		fmt.Printf("%+v\n", v)
 	}
 }
+
+func (b *bookmarks) outPutAllInOneConsole(name string) {
+	utils.Result[name+"_bookmarks"] = b.bookmarks
+}
+
+func (c *cookies) outPutAllInOneConsole(name string) {
+	utils.Result[name+"_cookies"] = c.cookies
+}
+
+func (h *historyData) outPutAllInOneConsole(name string) {
+	utils.Result[name+"_history"] = h.history
+}
+
+func (d *downloads) outPutAllInOneConsole(name string) {
+	utils.Result[name+"_downloads"] = d.downloads
+}
+
+func (p *passwords) outPutAllInOneConsole(name string) {
+	utils.Result[name+"_logins"] = p.logins
+}
+
+func (c *creditCards) outPutAllInOneConsole(name string) {
+	utils.Result[name+"_cards"] = c.cards
+}

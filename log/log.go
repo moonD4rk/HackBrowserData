@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+var AllInOne bool
+
 type Level int
 
 const (
@@ -79,11 +81,15 @@ func Debug(v ...interface{}) {
 }
 
 func Warn(v ...interface{}) {
-	formatLogger.doLog(LevelWarn, v...)
+	if AllInOne == false {
+		formatLogger.doLog(LevelWarn, v...)
+	}
 }
 
 func Error(v ...interface{}) {
-	formatLogger.doLog(LevelError, v...)
+	if AllInOne == false {
+		formatLogger.doLog(LevelError, v...)
+	}
 }
 
 func Errorf(format string, v ...interface{}) {

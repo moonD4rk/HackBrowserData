@@ -4,17 +4,21 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
+	"hack-browser-data/log"
 	"io/ioutil"
 	"os"
 	"path"
 	"strings"
 	"time"
-
-	"hack-browser-data/log"
 )
 
 const Prefix = "[x]: "
 
+var Result map[string]interface{}
+
+func init() {
+	Result = make(map[string]interface{})
+}
 func IntToBool(a int) bool {
 	switch a {
 	case 0, -1:

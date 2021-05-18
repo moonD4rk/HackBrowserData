@@ -1,13 +1,15 @@
 package cmd
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"github.com/urfave/cli/v2"
 	"hack-browser-data/core"
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
 	"os"
 	"strings"
-
-	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -16,8 +18,10 @@ var (
 	outputFormat      string
 	verbose           bool
 	compress          bool
+	allInOne          bool
 	customProfilePath string
 	customKeyPath     string
+	results           map[string]interface{}
 )
 
 func Execute() {
@@ -29,6 +33,7 @@ func Execute() {
 		Flags: []cli.Flag{
 			&cli.BoolFlag{Name: "verbose", Aliases: []string{"vv"}, Destination: &verbose, Value: false, Usage: "verbose"},
 			&cli.BoolFlag{Name: "compress", Aliases: []string{"cc"}, Destination: &compress, Value: false, Usage: "compress result to zip"},
+			&cli.BoolFlag{Name: "all-in-one", Aliases: []string{"one"}, Destination: &allInOne, Value: false, Usage: "All the results are output as a file after json serialization or directly output to the console"},
 			&cli.StringFlag{Name: "browser", Aliases: []string{"b"}, Destination: &browserName, Value: "all", Usage: "available browsers: all|" + strings.Join(core.ListBrowser(), "|")},
 			&cli.StringFlag{Name: "results-dir", Aliases: []string{"dir"}, Destination: &exportDir, Value: "results", Usage: "export dir"},
 			&cli.StringFlag{Name: "format", Aliases: []string{"f"}, Destination: &outputFormat, Value: "csv", Usage: "format, csv|json|console"},
@@ -37,6 +42,11 @@ func Execute() {
 		},
 		HideHelpCommand: true,
 		Action: func(c *cli.Context) error {
+			log.AllInOne = allInOne
+			if allInOne {
+				outputFormat = "aconsole"
+			}
+
 			var (
 				browsers []core.Browser
 				err      error
@@ -96,16 +106,31 @@ func Execute() {
 					if err != nil {
 						log.Error(err)
 					}
+
 					err = item.OutPut(outputFormat, name, exportDir)
 					if err != nil {
 						log.Error(err)
 					}
 				}
 			}
-			if compress {
+
+			if compress && allInOne == false {
 				err = utils.Compress(exportDir)
 				if err != nil {
 					log.Error(err)
+				}
+			}
+
+			if allInOne {
+				utils.Result["status"] = "success"
+				w := new(bytes.Buffer)
+				enc := json.NewEncoder(w)
+				enc.SetEscapeHTML(false)
+				err = enc.Encode(utils.Result)
+				if err != nil {
+					fmt.Println("{\"status\":\"error\"}")
+				} else {
+					fmt.Println(w.String())
 				}
 			}
 			return nil

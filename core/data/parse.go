@@ -186,6 +186,9 @@ func (b *bookmarks) OutPut(format, browser, dir string) error {
 	case "console":
 		b.outPutConsole()
 		return nil
+	case "aconsole":
+		b.outPutAllInOneConsole(strings.ToLower(browser))
+		return nil
 	default:
 		err := b.outPutJson(browser, dir)
 		return err
@@ -319,6 +322,9 @@ func (c *cookies) OutPut(format, browser, dir string) error {
 	case "console":
 		c.outPutConsole()
 		return nil
+	case "aconsole":
+		c.outPutAllInOneConsole(strings.ToLower(browser))
+		return nil
 	default:
 		err := c.outPutJson(browser, dir)
 		return err
@@ -444,6 +450,9 @@ func (h *historyData) OutPut(format, browser, dir string) error {
 		return err
 	case "console":
 		h.outPutConsole()
+		return nil
+	case "aconsole":
+		h.outPutAllInOneConsole(strings.ToLower(browser))
 		return nil
 	default:
 		err := h.outPutJson(browser, dir)
@@ -575,6 +584,9 @@ func (d *downloads) OutPut(format, browser, dir string) error {
 		return err
 	case "console":
 		d.outPutConsole()
+		return nil
+	case "aconsole":
+		d.outPutAllInOneConsole(strings.ToLower(browser))
 		return nil
 	default:
 		err := d.outPutJson(browser, dir)
@@ -747,6 +759,9 @@ func (p *passwords) OutPut(format, browser, dir string) error {
 	case "console":
 		p.outPutConsole()
 		return nil
+	case "aconsole":
+		p.outPutAllInOneConsole(strings.ToLower(browser))
+		return nil
 	default:
 		err := p.outPutJson(browser, dir)
 		return err
@@ -830,6 +845,9 @@ func (c *creditCards) OutPut(format, browser, dir string) error {
 		return err
 	case "console":
 		c.outPutConsole()
+		return nil
+	case "aconsole":
+		c.outPutAllInOneConsole(strings.ToLower(browser))
 		return nil
 	default:
 		err := c.outPutJson(browser, dir)
