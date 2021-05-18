@@ -41,9 +41,12 @@ jobs:
               run: echo "RELEASE=hack-browser-data-${{ github.event.release.tag_name}}-${{ matrix.releaseos}}-32bit" >> $GITHUB_ENV
             - if: matrix.arch == 'amd64'
               run: echo "RELEASE=hack-browser-data-${{ github.event.release.tag_name}}-${{ matrix.releaseos}}-64bit" >> $GITHUB_ENV
-            - if: matrix.os == 'windows-latest'
+            - if: matrix.os == 'windows-latest' && matrix.arch == 'amd64'
               shell: powershell
               run: echo "RELEASE=hack-browser-data-${{ github.event.release.tag_name}}-${{ matrix.releaseos}}-64bit" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+            - if: matrix.os == 'windows-latest' && matrix.arch == '386'
+              shell: powershell
+              run: echo "RELEASE=hack-browser-data-${{ github.event.release.tag_name}}-${{ matrix.releaseos}}-32bit" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
             - uses: actions/checkout@v2
             - name: Build ${{ matrix.goos }}/${{ matrix.arch }}
               run: go build -ldflags '-w -s' -o ${{ matrix.bin }}
