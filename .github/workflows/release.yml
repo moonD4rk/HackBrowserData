@@ -142,4 +142,3 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{\"body\": \"${HASH_TABLE}\"}" \
             "${RELEASE_URL}";
-
