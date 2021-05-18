@@ -21,7 +21,6 @@ var (
 	allInOne          bool
 	customProfilePath string
 	customKeyPath     string
-	results           map[string]interface{}
 )
 
 func Execute() {
