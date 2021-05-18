@@ -1,145 +1,145 @@
 name: Build Hack-Browser-Data Release
 on:
-    release:
-        types: [created]
+  release:
+    types: [created]
 
 jobs:
-    build:
-        name: Build Binary
-        runs-on: ${{ matrix.os }}
-        strategy:
-            matrix:
-                os: [windows-latest, macos-latest, ubuntu-latest]
-                arch: [amd64, '386']
-                include:
-                    - os: windows-latest
-                      goos: windows
-                      bin: 'hack-browser-data.exe'
-                      args: -9
-                      releaseos: windows
-                    - os: macos-latest
-                      goos: darwin
-                      bin: 'hack-browser-data'
-                      args: -9
-                      releaseos: osx
-                    - os: ubuntu-latest
-                      goos: linux
-                      bin: 'hack-browser-data'
-                      args: -9
-                      releaseos: linux
-                exclude:
-                    - os: macos-latest
-                      arch: '386'
-        steps:
-            - name: Set up Go
-              uses: actions/setup-go@v2
-              with:
-                go-version: 1.15
-            - if: matrix.os == 'ubuntu-latest'
-              run: sudo apt-get update && sudo apt-get install -y gcc-multilib
-            - if: matrix.arch == '386'
-              run: echo "RELEASE=hack-browser-data-${{ github.event.release.tag_name}}-${{ matrix.releaseos}}-32bit" >> $GITHUB_ENV
-            - if: matrix.arch == 'amd64'
-              run: echo "RELEASE=hack-browser-data-${{ github.event.release.tag_name}}-${{ matrix.releaseos}}-64bit" >> $GITHUB_ENV
-            - if: matrix.os == 'windows-latest' && matrix.arch == 'amd64'
-              shell: powershell
-              run: echo "RELEASE=hack-browser-data-${{ github.event.release.tag_name}}-${{ matrix.releaseos}}-64bit" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-            - if: matrix.os == 'windows-latest' && matrix.arch == '386'
-              shell: powershell
-              run: echo "RELEASE=hack-browser-data-${{ github.event.release.tag_name}}-${{ matrix.releaseos}}-32bit" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-            - uses: actions/checkout@v2
-            - name: Build ${{ matrix.goos }}/${{ matrix.arch }}
-              run: go build -ldflags '-w -s' -o ${{ matrix.bin }}
-              env:
-                GOOS: ${{ matrix.goos }}
-                GOARCH: ${{ matrix.arch }}
-                CGO_ENABLED: 1
-            - uses: svenstaro/upx-action@v2
-              with:
-                args: ${{ matrix.args }}
-                file: ${{ matrix.bin }}
-            - name: Upload to artifacts
-              uses: actions/upload-artifact@v2
-              with:
-                name: ${{ env.RELEASE }}
-                path: ${{ matrix.bin }}
-    package:
-        name: Package Assets
-        runs-on: ubuntu-latest
-        needs: build
-        steps:
-            - uses: actions/checkout@v2
-            - uses: actions/download-artifact@v2
-              with:
-                path: bin
-            - name: Package Releases
-              run: |
-                mkdir releases;
-                for RELEASE_DIR in bin/*
-                do
-                  echo "Creating release $RELEASE_DIR"
-                  for BINARY in $RELEASE_DIR/*
-                  do
-                    chmod 777 $BINARY;
-                    cp $BINARY .;
-                    zip -r releases/$(basename $RELEASE_DIR).zip \
-                      $(basename ${BINARY}) \
-                      README.md \
-                      README_ZH.md;
-                    rm $BINARY;
-                  done
-                done
-            - name: Upload to artifacts
-              uses: actions/upload-artifact@v2
-              with:
-                name: releases
-                path: releases/*.zip
+  build:
+    name: Build Binary
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        arch: [amd64, '386']
+        include:
+          - os: windows-latest
+            goos: windows
+            bin: 'hack-browser-data.exe'
+            args: -9
+            releaseos: windows
+          - os: macos-latest
+            goos: darwin
+            bin: 'hack-browser-data'
+            args: -9
+            releaseos: osx
+          - os: ubuntu-latest
+            goos: linux
+            bin: 'hack-browser-data'
+            args: -9
+            releaseos: linux
+        exclude:
+          - os: macos-latest
+            arch: '386'
+          - os: windows-latest
+            arch: '386'
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.15
+      - if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y gcc-multilib
+      - if: matrix.arch == '386'
+        run: echo "RELEASE=hack-browser-data-${{ github.event.release.tag_name}}-${{ matrix.releaseos}}-32bit" >> $GITHUB_ENV
+      - if: matrix.arch == 'amd64'
+        run: echo "RELEASE=hack-browser-data-${{ github.event.release.tag_name}}-${{ matrix.releaseos}}-64bit" >> $GITHUB_ENV
+      - if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: echo "RELEASE=hack-browser-data-${{ github.event.release.tag_name}}-${{ matrix.releaseos}}-64bit" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+      - uses: actions/checkout@v2
+      - name: Build ${{ matrix.goos }}/${{ matrix.arch }}
+        run: go build -ldflags '-w -s' -o ${{ matrix.bin }}
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: 1
+      - uses: svenstaro/upx-action@v2
+        with:
+          args: ${{ matrix.args }}
+          file: ${{ matrix.bin }}
+      - name: Upload to artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.RELEASE }}
+          path: ${{ matrix.bin }}
+  package:
+    name: Package Assets
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          path: bin
+      - name: Package Releases
+        run: |
+          mkdir releases;
+          for RELEASE_DIR in bin/*
+          do
+            echo "Creating release $RELEASE_DIR"
+            for BINARY in $RELEASE_DIR/*
+            do
+              chmod 777 $BINARY;
+              cp $BINARY .;
+              zip -r releases/$(basename $RELEASE_DIR).zip \
+                $(basename ${BINARY}) \
+                README.md \
+                README_ZH.md;
+              rm $BINARY;
+            done
+          done
+      - name: Upload to artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: releases
+          path: releases/*.zip
 
-    upload:
-        name: Upload to the Release
-        runs-on: ubuntu-latest
-        needs: package
-        steps:
-            - uses: actions/download-artifact@v2
-              with:
-                name: releases
-                path: releases/
-            - name: Upload Archives to Release
-              env:
-                UPLOAD_URL: ${{ github.event.release.upload_url }}
-                API_HEADER: "Accept: application/vnd.github.v3+json"
-                AUTH_HEADER: "Authorization: token ${{ secrets.GITHUB_TOKEN }}"
-              run: |
-                UPLOAD_URL=$(echo -n $UPLOAD_URL | sed s/\{.*//g)
-                for FILE in releases/*
-                do
-                  echo "Uploading ${FILE}";
-                  curl \
-                    -H "${API_HEADER}" \
-                    -H "${AUTH_HEADER}" \
-                    -H "Content-Type: $(file -b --mime-type ${FILE})" \
-                    --data-binary "@${FILE}" \
-                    "${UPLOAD_URL}?name=$(basename ${FILE})";
-                done
-            - name: Generate SHA256 Hashes
-              env:
-                API_HEADER: "Accept: application/vnd.github.v3+json"
-                AUTH_HEADER: "Authorization: token ${{ secrets.GITHUB_TOKEN }}"
-                RELEASE_URL: ${{ github.event.release.url }}
-              run: |
-                HASH_TABLE="| SHA256 Hash | Filename |"
-                HASH_TABLE="${HASH_TABLE}\n|-----|-----|\n"
-                for FILE in releases/*
-                do
-                  FILENAME=$(basename ${FILE})
-                  HASH=$(sha256sum ${FILE} | cut -d ' ' -f 1)
-                  HASH_TABLE="${HASH_TABLE}|${HASH}|${FILENAME}|\n"
-                done
-                echo "${HASH_TABLE}"
-                curl \
-                  -XPATCH \
-                  -H "${API_HEADER}" \
-                  -H "${AUTH_HEADER}" \
-                  -H "Content-Type: application/json" \
-                  -d "{\"body\": \"${HASH_TABLE}\"}" \
-                  "${RELEASE_URL}";
+  upload:
+    name: Upload to the Release
+    runs-on: ubuntu-latest
+    needs: package
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: releases
+          path: releases/
+      - name: Upload Archives to Release
+        env:
+          UPLOAD_URL: ${{ github.event.release.upload_url }}
+          API_HEADER: "Accept: application/vnd.github.v3+json"
+          AUTH_HEADER: "Authorization: token ${{ secrets.GITHUB_TOKEN }}"
+        run: |
+          UPLOAD_URL=$(echo -n $UPLOAD_URL | sed s/\{.*//g)
+          for FILE in releases/*
+          do
+            echo "Uploading ${FILE}";
+            curl \
+              -H "${API_HEADER}" \
+              -H "${AUTH_HEADER}" \
+              -H "Content-Type: $(file -b --mime-type ${FILE})" \
+              --data-binary "@${FILE}" \
+              "${UPLOAD_URL}?name=$(basename ${FILE})";
+          done
+      - name: Generate SHA256 Hashes
+        env:
+          API_HEADER: "Accept: application/vnd.github.v3+json"
+          AUTH_HEADER: "Authorization: token ${{ secrets.GITHUB_TOKEN }}"
+          RELEASE_URL: ${{ github.event.release.url }}
+        run: |
+          HASH_TABLE="| SHA256 Hash | Filename |"
+          HASH_TABLE="${HASH_TABLE}\n|-----|-----|\n"
+          for FILE in releases/*
+          do
+            FILENAME=$(basename ${FILE})
+            HASH=$(sha256sum ${FILE} | cut -d ' ' -f 1)
+            HASH_TABLE="${HASH_TABLE}|${HASH}|${FILENAME}|\n"
+          done
+          echo "${HASH_TABLE}"
+          curl \
+            -XPATCH \
+            -H "${API_HEADER}" \
+            -H "${AUTH_HEADER}" \
+            -H "Content-Type: application/json" \
+            -d "{\"body\": \"${HASH_TABLE}\"}" \
+            "${RELEASE_URL}";
+
