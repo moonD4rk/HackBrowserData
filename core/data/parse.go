@@ -57,7 +57,7 @@ var (
 	queryChromiumCookie   = `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`
 	queryFirefoxHistory   = `SELECT id, url, last_visit_date, title, visit_count FROM moz_places`
 	queryFirefoxDownload  = `SELECT place_id, GROUP_CONCAT(content), url, dateAdded FROM (SELECT * FROM moz_annos INNER JOIN moz_places ON moz_annos.place_id=moz_places.id) t GROUP BY place_id`
-	queryFirefoxBookMarks = `SELECT id, fk, type, dateAdded, title FROM moz_bookmarks`
+	queryFirefoxBookMarks = `SELECT id, url, type, dateAdded, title FROM (SELECT * FROM moz_bookmarks INNER JOIN moz_places ON moz_bookmarks.fk=moz_places.id)`
 	queryFirefoxCookie    = `SELECT name, value, host, path, creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
 	queryMetaData         = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
 	queryNssPrivate       = `SELECT a11, a102 from nssPrivate`
@@ -146,10 +146,10 @@ func (b *bookmarks) FirefoxParse() error {
 	}
 	for bookmarkRows.Next() {
 		var (
-			id, fk, bType, dateAdded int64
-			title                    string
+			id, bType, dateAdded int64
+			title, url           string
 		)
-		err = bookmarkRows.Scan(&id, &fk, &bType, &dateAdded, &title)
+		err = bookmarkRows.Scan(&id, &url, &bType, &dateAdded, &title)
 		if err != nil {
 			log.Warn(err)
 		}
