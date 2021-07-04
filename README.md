@@ -76,7 +76,7 @@ Based on Apple's security policy, some browsers **require a current user passwor
 
 Installation of hack-browser-data is dead-simple, just download [the release for your system](https://github.com/moonD4rk/HackBrowserData/releases) and run the binary.
 
-> In some situations, this security tool will be treated as a virus by Windows Defender or other antivirus software and can not be executed, after version 0.2.6 will use UPX try to simply bypass, then no longer with antivirus software to do unnecessary security confrontations.The code is all open source, you can modify and compile by yourself.
+> In some situations, this security tool will be treated as a virus by Windows Defender or other antivirus software and can not be executed. The code is all open source, you can modify and compile by yourself.
 
 ### Building from source
 
@@ -126,7 +126,7 @@ USAGE:
    Get all data(password/cookie/history/bookmark) from chrome
 
 VERSION:
-   0.3.5
+   0.3.6
 GLOBAL OPTIONS:
    --verbose, --vv                     verbose (default: false)
    --compress, --cc                    compress result to zip (default: false)
@@ -181,6 +181,12 @@ PS C:\Users\User\Desktop> .\hack-browser-data.exe -b edge -p 'C:\Users\User\AppD
 [x]:  Get 29 history, filename is results/microsoft_edge_history.csv
 [x]:  Get 0 passwords, filename is results/microsoft_edge_password.csv
 ```
+
+### Some other projects based on HackBrowserData
+[Sharp-HackBrowserData](https://github.com/S3cur3Th1sSh1t/Sharp-HackBrowserData)
+[Reflective-HackBrowserData](https://github.com/idiotc4t/Reflective-HackBrowserData)
+...
+
 
 ## Contributors
 
