@@ -4,141 +4,135 @@ on:
         types: [created]
 
 jobs:
-    build:
-        name: Build Binary
-        runs-on: ${{ matrix.os }}
-        strategy:
-            matrix:
-                os: [windows-latest, macos-latest, ubuntu-latest]
-                arch: [amd64, '386']
-                include:
-                    - os: windows-latest
-                      goos: windows
-                      bin: 'hack-browser-data.exe'
-                      args: -9
-                      releaseos: windows
-                    - os: macos-latest
-                      goos: darwin
-                      bin: 'hack-browser-data'
-                      args: -9
-                      releaseos: osx
-                    - os: ubuntu-latest
-                      goos: linux
-                      bin: 'hack-browser-data'
-                      args: -9
-                      releaseos: linux
-                exclude:
-                    - os: macos-latest
-                      arch: '386'
-                    - os: windows-latest
-                      arch: '386'
-        steps:
-            - name: Set up Go
-              uses: actions/setup-go@v2
-              with:
-                go-version: 1.15
-            - if: matrix.os == 'ubuntu-latest'
-              run: sudo apt-get update && sudo apt-get install -y gcc-multilib
-            - if: matrix.arch == '386'
-              run: echo "RELEASE=hack-browser-data-${{ github.event.release.tag_name}}-${{ matrix.releaseos}}-32bit" >> $GITHUB_ENV
-            - if: matrix.arch == 'amd64'
-              run: echo "RELEASE=hack-browser-data-${{ github.event.release.tag_name}}-${{ matrix.releaseos}}-64bit" >> $GITHUB_ENV
-            - if: matrix.os == 'windows-latest'
-              shell: powershell
-              run: echo "RELEASE=hack-browser-data-${{ github.event.release.tag_name}}-${{ matrix.releaseos}}-64bit" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-            - uses: actions/checkout@v2
-            - name: Build ${{ matrix.goos }}/${{ matrix.arch }}
-              run: go build -ldflags '-w -s' -o ${{ matrix.bin }}
-              env:
-                GOOS: ${{ matrix.goos }}
-                GOARCH: ${{ matrix.arch }}
-                CGO_ENABLED: 1
-            - uses: svenstaro/upx-action@v2
-              with:
-                args: ${{ matrix.args }}
-                file: ${{ matrix.bin }}
-            - name: Upload to artifacts
-              uses: actions/upload-artifact@v2
-              with:
-                name: ${{ env.RELEASE }}
-                path: ${{ matrix.bin }}
-    package:
-        name: Package Assets
-        runs-on: ubuntu-latest
-        needs: build
-        steps:
-            - uses: actions/checkout@v2
-            - uses: actions/download-artifact@v2
-              with:
-                path: bin
-            - name: Package Releases
-              run: |
-                mkdir releases;
-                for RELEASE_DIR in bin/*
-                do
-                  echo "Creating release $RELEASE_DIR"
-                  for BINARY in $RELEASE_DIR/*
-                  do
-                    chmod 777 $BINARY;
-                    cp $BINARY .;
-                    zip -r releases/$(basename $RELEASE_DIR).zip \
-                      $(basename ${BINARY}) \
-                      README.md \
-                      README_ZH.md;
-                    rm $BINARY;
-                  done
-                done
-            - name: Upload to artifacts
-              uses: actions/upload-artifact@v2
-              with:
-                name: releases
-                path: releases/*.zip
+  build:
+    runs-on: ubuntu-latest
 
-    upload:
-        name: Upload to the Release
-        runs-on: ubuntu-latest
-        needs: package
-        steps:
-            - uses: actions/download-artifact@v2
-              with:
-                name: releases
-                path: releases/
-            - name: Upload Archives to Release
-              env:
-                UPLOAD_URL: ${{ github.event.release.upload_url }}
-                API_HEADER: "Accept: application/vnd.github.v3+json"
-                AUTH_HEADER: "Authorization: token ${{ secrets.GITHUB_TOKEN }}"
-              run: |
-                UPLOAD_URL=$(echo -n $UPLOAD_URL | sed s/\{.*//g)
-                for FILE in releases/*
-                do
-                  echo "Uploading ${FILE}";
-                  curl \
-                    -H "${API_HEADER}" \
-                    -H "${AUTH_HEADER}" \
-                    -H "Content-Type: $(file -b --mime-type ${FILE})" \
-                    --data-binary "@${FILE}" \
-                    "${UPLOAD_URL}?name=$(basename ${FILE})";
-                done
-            - name: Generate SHA256 Hashes
-              env:
-                API_HEADER: "Accept: application/vnd.github.v3+json"
-                AUTH_HEADER: "Authorization: token ${{ secrets.GITHUB_TOKEN }}"
-                RELEASE_URL: ${{ github.event.release.url }}
-              run: |
-                HASH_TABLE="| SHA256 Hash | Filename |"
-                HASH_TABLE="${HASH_TABLE}\n|-----|-----|\n"
-                for FILE in releases/*
-                do
-                  FILENAME=$(basename ${FILE})
-                  HASH=$(sha256sum ${FILE} | cut -d ' ' -f 1)
-                  HASH_TABLE="${HASH_TABLE}|${HASH}|${FILENAME}|\n"
-                done
-                echo "${HASH_TABLE}"
-                curl \
-                  -XPATCH \
-                  -H "${API_HEADER}" \
-                  -H "${AUTH_HEADER}" \
-                  -H "Content-Type: application/json" \
-                  -d "{\"body\": \"${HASH_TABLE}\"}" \
-                  "${RELEASE_URL}";
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v1
+
+      - name: Use Golang
+        uses: actions/setup-go@v1
+        with:
+          go-version: "1.15"
+      
+      -
+        name: Build with xgo
+        uses: crazy-max/ghaction-xgo@v1
+        with:
+          xgo_version: latest
+          go_version: ${{ matrix.go_version }}
+          dest: build
+          prefix: hack-browser-data
+          targets: windows/amd64,windows/386,linux/386,linux/amd64,linux/arm,linux/arm64,darwin/amd64
+          v: true
+          x: false
+          race: false
+          ldflags: -s -w
+          buildmode: default
+
+      - name: Set Variable
+        run: |
+          echo "RELEASE_WIN32=hack-browser-data-${{ github.event.release.tag_name}}windows-32bit" >> $GITHUB_ENV
+          echo "RELEASE_WIN64=hack-browser-data-${{ github.event.release.tag_name}}windows-64bit" >> $GITHUB_ENV
+          echo "RELEASE_OSX=hack-browser-data-${{ github.event.release.tag_name}}osx-64bit" >> $GITHUB_ENV
+          echo "RELEASE_Linux386=hack-browser-data-${{ github.event.release.tag_name}}linux-386" >> $GITHUB_ENV
+          echo "RELEASE_LinuxARM64=hack-browser-data-${{ github.event.release.tag_name}}linux-arm64" >> $GITHUB_ENV
+          echo "RELEASE_LinuxAMD64=hack-browser-data-${{ github.event.release.tag_name}}linux-amd64" >> $GITHUB_ENV
+          echo "RELEASE_LinuxARM=hack-browser-data-${{ github.event.release.tag_name}}linux-arm" >> $GITHUB_ENV
+      - name: Build zip
+        run: |
+          mv build/hack-browser-data-windows*386.exe "$RELEASE_WIN32".exe 
+          mv build/hack-browser-data-windows*amd64.exe "$RELEASE_WIN64".exe
+          mv build/hack-browser-data-linux-*386 "$RELEASE_Linux386"
+          mv build/hack-browser-data-linux-*amd64 "$RELEASE_LinuxAMD64"
+          mv build/hack-browser-data-linux-*arm64 "$RELEASE_LinuxARM64"
+          mv build/hack-browser-data-linux-*arm-* "$RELEASE_LinuxARM"
+          mv build/hack-browser-data-darwin-*amd64 "$RELEASE_OSX"
+          zip "$RELEASE_WIN32".zip "$RELEASE_WIN32".exe 
+          zip "$RELEASE_WIN64".zip "$RELEASE_WIN64".exe           
+          zip "$RELEASE_Linux386".zip "$RELEASE_Linux386"          
+          zip "$RELEASE_LinuxAMD64".zip "$RELEASE_LinuxAMD64"          
+          zip "$RELEASE_LinuxARM64".zip "$RELEASE_Linux386"          
+          zip "$RELEASE_LinuxARM".zip "$RELEASE_LinuxARM"          
+          zip "$RELEASE_OSX".zip "$RELEASE_OSX"          
+      - name: Create Release
+        id: create_release
+        uses: monkeyWie/create-release@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: true
+
+      - name: Upload Release - Windows 64bit
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./${{ env.RELEASE_WIN64 }}.zip
+          asset_name: ${{ env.RELEASE_WIN64 }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload Release - Windows 32bit 
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./${{ env.RELEASE_WIN32 }}.zip
+          asset_name: ${{ env.RELEASE_WIN32 }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload Release - Linux amd64
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./${{ env.RELEASE_LinuxAMD64 }}.zip
+          asset_name: ${{ env.RELEASE_LinuxAMD64 }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload Release - Linux 386
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./${{ env.RELEASE_Linux386 }}.zip
+          asset_name: ${{ env.RELEASE_Linux386 }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload Release - Linux arm64
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./${{ env.RELEASE_LinuxARM64 }}.zip
+          asset_name: ${{ env.RELEASE_LinuxARM64 }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload Release - Linux arm
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./${{ env.RELEASE_LinuxARM }}.zip
+          asset_name: ${{ env.RELEASE_LinuxARM }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload Release - Darwin amd64
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./${{ env.RELEASE_OSX }}.zip
+          asset_name: ${{ env.RELEASE_OSX }}.zip
+          asset_content_type: application/zip
