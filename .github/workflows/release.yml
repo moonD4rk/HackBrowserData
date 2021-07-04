@@ -33,13 +33,13 @@ jobs:
 
       - name: Set Variable
         run: |
-          echo "RELEASE_WIN32=hack-browser-data-${{ github.event.release.tag_name}}windows-32bit" >> $GITHUB_ENV
-          echo "RELEASE_WIN64=hack-browser-data-${{ github.event.release.tag_name}}windows-64bit" >> $GITHUB_ENV
-          echo "RELEASE_OSX=hack-browser-data-${{ github.event.release.tag_name}}osx-64bit" >> $GITHUB_ENV
-          echo "RELEASE_Linux386=hack-browser-data-${{ github.event.release.tag_name}}linux-386" >> $GITHUB_ENV
-          echo "RELEASE_LinuxARM64=hack-browser-data-${{ github.event.release.tag_name}}linux-arm64" >> $GITHUB_ENV
-          echo "RELEASE_LinuxAMD64=hack-browser-data-${{ github.event.release.tag_name}}linux-amd64" >> $GITHUB_ENV
-          echo "RELEASE_LinuxARM=hack-browser-data-${{ github.event.release.tag_name}}linux-arm" >> $GITHUB_ENV
+          echo "RELEASE_WIN32=hack-browser-data-${{ github.event.release.tag_name}}-windows-32bit" >> $GITHUB_ENV
+          echo "RELEASE_WIN64=hack-browser-data-${{ github.event.release.tag_name}}-windows-64bit" >> $GITHUB_ENV
+          echo "RELEASE_OSX=hack-browser-data-${{ github.event.release.tag_name}}-osx-64bit" >> $GITHUB_ENV
+          echo "RELEASE_Linux386=hack-browser-data-${{ github.event.release.tag_name}}-linux-386" >> $GITHUB_ENV
+          echo "RELEASE_LinuxARM64=hack-browser-data-${{ github.event.release.tag_name}}-linux-arm64" >> $GITHUB_ENV
+          echo "RELEASE_LinuxAMD64=hack-browser-data-${{ github.event.release.tag_name}}-linux-amd64" >> $GITHUB_ENV
+          echo "RELEASE_LinuxARM=hack-browser-data-${{ github.event.release.tag_name}}-linux-arm" >> $GITHUB_ENV
       - name: Build zip
         run: |
           mv build/hack-browser-data-windows*386.exe "$RELEASE_WIN32".exe 
