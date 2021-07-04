@@ -1,11 +1,12 @@
 package cmd
 
 import (
+	"os"
+	"strings"
+
 	"hack-browser-data/core"
 	"hack-browser-data/log"
 	"hack-browser-data/utils"
-	"os"
-	"strings"
 
 	"github.com/urfave/cli/v2"
 )
@@ -25,7 +26,7 @@ func Execute() {
 		Name:  "hack-browser-data",
 		Usage: "Export passwords/cookies/history/bookmarks from browser",
 		UsageText: "[hack-browser-data -b chrome -f json -dir results -cc]\n 	Get all data(password/cookie/history/bookmark) from chrome",
-		Version: "0.3.5",
+		Version: "0.3.6",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{Name: "verbose", Aliases: []string{"vv"}, Destination: &verbose, Value: false, Usage: "verbose"},
 			&cli.BoolFlag{Name: "compress", Aliases: []string{"cc"}, Destination: &compress, Value: false, Usage: "compress result to zip"},
