@@ -1,9 +1,9 @@
 # HackBrowserData
 
-hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookie|书签 | 信用卡 | 下载记录）的导出工具，支持全平台主流浏览器。
+hack-browser-data 是一个浏览器数据（密码 | 历史记录 | Cookie | 书签 | 信用卡 | 下载记录）的导出工具，支持全平台主流浏览器。
 
 
->特别声明：此工具仅限于安全研究，用户承担因使用此工具而导致的所有法律和相关责任！作者不承担任何法律责任！
+> 特别声明：此工具仅限于安全研究，用户承担因使用此工具而导致的所有法律和相关责任！作者不承担任何法律责任！
 
 ## 各平台浏览器支持情况
 
@@ -27,6 +27,7 @@ hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookie|�
 | Firefox ESR |    ✅    |   ✅   |    ✅    |    ✅    |
 | Firefox Nightly |    ✅    |   ✅   |    ✅    |    ✅    |
 | IE 浏览器        |    ❌     |   ❌    |    ❌     |    ❌    |
+
 ### MacOS
 
 由于 MacOS 的安全性设置，基于 `Chromium` 内核浏览器解密时**需要当前用户密码**
@@ -69,15 +70,15 @@ hack-browser-data 是一个解密浏览器数据（密码|历史记录|Cookie|�
 ## 安装运行
 ### 安装
 
-可下载已编译好，直接运行的 [二进制文件 ](https://github.com/moonD4rk/HackBrowserData/releases) 
+可下载已编译好，可直接运行的 [二进制文件](https://github.com/moonD4rk/HackBrowserData/releases)
 
-> 某些情况下，这款安全工具会被 Windows Defender 或其他杀毒软件当作病毒从而无法执行。代码自已全部开源，可己修改编译。
+> 某些情况下，这款安全工具会被 Windows Defender 或其他杀毒软件当作病毒导致无法执行。代码已经全部开源，可自行编译。
 
 ### 从源码编译
 
 支持版本 `go 1.14+`
 
-```bash
+``` bash
 git clone https://github.com/moonD4rk/HackBrowserData
 
 cd HackBrowserData
@@ -93,8 +94,7 @@ go build
 
 #### Windows
 
-
-```shell
+``` shell
 brew install mingw-w64
 
 CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC="x86_64-w64-mingw32-gcc" go build
@@ -102,15 +102,14 @@ CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC="x86_64-w64-mingw32-gcc" go build
 
 #### Linux
 
-```shell
+``` shell
 brew install FiloSottile/musl-cross/musl-cross
 
 CC=x86_64-linux-musl-gcc CXX=x86_64-linux-musl-g++ GOARCH=amd64 GOOS=linux CGO_ENABLED=1 go build -ldflags "-linkmode external -extldflags -static"
 ```
 
 ### 运行
-
-双击直接运行，也可以命令行调整对应的命令
+双击直接运行，也可以使用命令行调用相应的命令。
 
 ```
 PS C:\test> .\hack-browser-data.exe -h
@@ -134,7 +133,7 @@ GLOBAL OPTIONS:
    --help, -h                          show help (default: false)
    --version, -v                       print the version (default: false)
 
-PS C:\test>  .\hack-browser-data.exe -b all -f json --dir results -cc
+PS C:\test>  .\hack-browser-data.exe -b all -f json --dir results --cc
 [x]:  Get 44 cookies, filename is results/microsoft_edge_cookie.json
 [x]:  Get 54 history, filename is results/microsoft_edge_history.json
 [x]:  Get 1 passwords, filename is results/microsoft_edge_password.json
@@ -164,12 +163,12 @@ PS C:\test>  .\hack-browser-data.exe -b all -f json --dir results -cc
 
 ## Contributors
 
-![](/CONTRIBUTORS.svg)
+![贡献者](/CONTRIBUTORS.svg)
 
 ## 404StarLink 2.0 - Galaxy
-![](https://github.com/knownsec/404StarLink-Project/raw/master/logo.png)
+![星链计划](https://github.com/knownsec/404StarLink-Project/raw/master/logo.png)
 
-HackBrowserData 是 404Team [星链计划2.0](https://github.com/knownsec/404StarLink2.0-Galaxy) 中的一环，如果对 HackBrowserData有任何疑问又或是想要找小伙伴交流，可以参考[星链计划的加群方式](https://github.com/knownsec/404StarLink2.0-Galaxy#community)。
+HackBrowserData 是 404Team [星链计划2.0](https://github.com/knownsec/404StarLink2.0-Galaxy) 中的一环，如果对 HackBrowserData 有任何疑问又或是想要找小伙伴交流，可以参考[星链计划的加群方式](https://github.com/knownsec/404StarLink2.0-Galaxy#community)。
 
 ## TODO
 
