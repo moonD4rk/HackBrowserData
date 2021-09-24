@@ -19,6 +19,7 @@ var (
 	errSecurityKeyIsEmpty = errors.New("input [security find-generic-password -wa 'Chrome'] in terminal")
 	errDecryptFailed      = errors.New("decrypt failed, password is empty")
 	errDecodeASN1Failed   = errors.New("decode ASN1 data failed")
+	errEncryptedLength    = errors.New("length of encrypted password less than block size")
 )
 
 type ASN1PBE interface {
@@ -164,7 +165,7 @@ func aes128CBCDecrypt(key, iv, encryptPass []byte) ([]byte, error) {
 	}
 	encryptLen := len(encryptPass)
 	if encryptLen < block.BlockSize() {
-		return nil, err
+		return nil, errEncryptedLength
 	}
 
 	dst := make([]byte, encryptLen)
