@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"hack-browser-data/core/data"
-	"hack-browser-data/log"
+	"github.com/moonD4rk/HackBrowserData/core/data"
+	"github.com/moonD4rk/HackBrowserData/log"
 )
 
 const (

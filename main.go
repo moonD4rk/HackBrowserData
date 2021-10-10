@@ -1,7 +1,7 @@
 package main
 
 import (
-	"hack-browser-data/cmd"
+	"github.com/moonD4rk/HackBrowserData/cmd"
 )
 
 func main() {

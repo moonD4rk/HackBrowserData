@@ -7,7 +7,7 @@ import (
 	"os"
 	"sort"
 
-	"hack-browser-data/utils"
+	"github.com/moonD4rk/HackBrowserData/utils"
 
 	"github.com/jszwec/csvutil"
 )

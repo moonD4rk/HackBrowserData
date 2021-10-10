@@ -4,9 +4,9 @@ import (
 	"os"
 	"strings"
 
-	"hack-browser-data/core"
-	"hack-browser-data/log"
-	"hack-browser-data/utils"
+	"github.com/moonD4rk/HackBrowserData/core"
+	"github.com/moonD4rk/HackBrowserData/log"
+	"github.com/moonD4rk/HackBrowserData/utils"
 
 	"github.com/urfave/cli/v2"
 )

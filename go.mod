@@ -1,4 +1,4 @@
-module hack-browser-data
+module github.com/moonD4rk/HackBrowserData
 
 go 1.14
 

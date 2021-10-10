@@ -3,7 +3,7 @@ package core
 import (
 	"crypto/sha1"
 
-	"hack-browser-data/log"
+	"github.com/moonD4rk/HackBrowserData/log"
 
 	"github.com/godbus/dbus/v5"
 	keyring "github.com/ppacher/go-dbus-keyring"
