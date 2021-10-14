@@ -198,6 +198,8 @@ PS C:\Users\User\Desktop> .\hack-browser-data.exe -b edge -p 'C:\Users\User\AppD
 
 HackBrowserData is a part of 404Team [StarLink-Galaxy](https://github.com/knownsec/404StarLink2.0-Galaxy), if you have any questions about HackBrowserData or want to find a partner to communicate with，please refer to the [Starlink group](https://github.com/knownsec/404StarLink2.0-Galaxy#community).
 
+##  JetBrains OS licenses
+`hack-browser-data` had been being developed with `GoLand` IDE under the **free JetBrains Open Source license(s)** granted by JetBrains s.r.o., hence I would like to express my thanks here.
 
 ## TODO
 

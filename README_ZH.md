@@ -170,6 +170,10 @@ PS C:\test>  .\hack-browser-data.exe -b all -f json --dir results --cc
 
 HackBrowserData 是 404Team [星链计划2.0](https://github.com/knownsec/404StarLink2.0-Galaxy) 中的一环，如果对 HackBrowserData 有任何疑问又或是想要找小伙伴交流，可以参考[星链计划的加群方式](https://github.com/knownsec/404StarLink2.0-Galaxy#community)。
 
+## JetBrains 开源证书支持
+
+`hack-browser-data` 项目一直以来都是在 JetBrains 公司旗下的 GoLand 集成开发环境中进行开发，基于 **free JetBrains Open Source license(s)** 正版免费授权，在此表达我的谢意。
+
 ## TODO
 
 [Desktop Browser Market Share Worldwide](https://gs.statcounter.com/browser-market-share/desktop/worldwide)
