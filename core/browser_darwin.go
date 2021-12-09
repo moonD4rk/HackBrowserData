@@ -23,6 +23,7 @@ const (
 	operaProfilePath          = "/Users/*/Library/Application Support/com.operasoftware.Opera/"
 	operaGXProfilePath        = "/Users/*/Library/Application Support/com.operasoftware.OperaGX/"
 	vivaldiProfilePath        = "/Users/*/Library/Application Support/Vivaldi/*/"
+	coccocProfilePath         = "/Users/*/Library/Application Support/Coccoc/*/"
 )
 
 const (
@@ -33,6 +34,7 @@ const (
 	braveStorageName      = "Brave"
 	operaStorageName      = "Opera"
 	vivaldiStorageName    = "Vivaldi"
+	coccocStorageName     = "CocCoc"
 )
 
 var (
@@ -114,6 +116,12 @@ var (
 			ProfilePath: vivaldiProfilePath,
 			Name:        vivaldiName,
 			Storage:     vivaldiStorageName,
+			New:         NewChromium,
+		},
+		"coccoc": {
+			ProfilePath: coccocProfilePath,
+			Name:        coccocName,
+			Storage:     coccocStorageName,
 			New:         NewChromium,
 		},
 	}

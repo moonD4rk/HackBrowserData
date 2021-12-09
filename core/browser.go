@@ -27,6 +27,7 @@ const (
 	operaName          = "Opera"
 	operaGXName        = "OperaGX"
 	vivaldiName        = "Vivaldi"
+	coccocName         = "CocCoc"
 )
 
 type Browser interface {
