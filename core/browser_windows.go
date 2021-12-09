@@ -38,6 +38,8 @@ const (
 	vivaldiKeyPath            = "/AppData/Local/Vivaldi/Local State"
 	coccocProfilePath         = "/AppData/Local/CocCoc/Browser/User Data/Default/"
 	coccocKeyPath             = "/AppData/Local/CocCoc/Browser/Local State"
+	yandexProfilePath         = "/AppData/Local/Yandex/YandexBrowser/User Data/Default"
+	yandexKeyPath             = "/AppData/Local/Yandex/YandexBrowser/Local State"
 )
 
 var (
@@ -135,6 +137,12 @@ var (
 			ProfilePath: os.Getenv("USERPROFILE") + coccocProfilePath,
 			KeyPath:     os.Getenv("USERPROFILE") + coccocKeyPath,
 			Name:        coccocName,
+			New:         NewChromium,
+		},
+		"yandex": {
+			ProfilePath: os.Getenv("USERPROFILE") + yandexProfilePath,
+			KeyPath:     os.Getenv("USERPROFILE") + yandexKeyPath,
+			Name:        yandexName,
 			New:         NewChromium,
 		},
 	}
