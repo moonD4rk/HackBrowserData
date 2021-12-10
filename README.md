@@ -4,9 +4,9 @@
 
 [中文说明](https://github.com/moonD4rk/HackBrowserData/blob/master/README_ZH.md) 
 
-hack-browser-data is an open-source tool that could help you decrypt data ( password|bookmark|cookie|history|credit card|downloads link ) from the browser. It supports the most popular browsers on the market and runs on Windows, macOS and Linux.
+`HackBrowserData` is an open-source tool that could help you decrypt data ( password|bookmark|cookie|history|credit card|downloads link ) from the browser. It supports the most popular browsers on the market and runs on Windows, macOS and Linux.
 
-> Statement: This tool is limited to security research only, and the user assumes all legal and related responsibilities arising from its use! The author assumes no legal responsibility!
+> Disclaimer: This tool is limited to security research only, and the user assumes all legal and related responsibilities arising from its use! The author assumes no legal responsibility!
 
 ## Supported Browser
 
@@ -23,6 +23,8 @@ hack-browser-data is an open-source tool that could help you decrypt data ( pass
 | Opera |    ✅    |    ✅    |    ✅    |    ✅    |
 | OperaGX |    ✅    |    ✅    |    ✅    |    ✅    |
 | Vivaldi |    ✅    |    ✅    |    ✅    |    ✅    |
+| Yandex |    ✅    |    ✅    |    ✅    |    ✅    |
+| CocCoc |    ✅    |    ✅    |    ✅    |    ✅    |
 | Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
 | Firefox Beta |    ✅    |   ✅   |    ✅    |    ✅    |
 | Firefox Dev |    ✅    |   ✅   |    ✅    |    ✅    |
@@ -36,7 +38,7 @@ hack-browser-data is an open-source tool that could help you decrypt data ( pass
 Based on Apple's security policy, some browsers **require a current user password** to decrypt.
 
 | Browser                             | Password | Cookie | Bookmark | History |
-| :---------------------------------- | :------: | :----: | :------: | :-----: |
+| :------- | :------: | :----: | :------: | :-----: |
 | Google Chrome |    ✅    |   ✅   |    ✅    |    ✅    |
 | Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
 | Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
@@ -45,6 +47,8 @@ Based on Apple's security policy, some browsers **require a current user passwor
 | Opera |    ✅    |    ✅    |    ✅    |    ✅    |
 | OperaGX |    ✅    |    ✅    |    ✅    |    ✅    |
 | Vivaldi |    ✅    |    ✅    |    ✅    |    ✅    |
+| Yandex |    ✅    |    ✅    |    ✅    |    ✅    |
+| CocCoc |    ✅    |    ✅    |    ✅    |    ✅    |
 | Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
 | Firefox Beta |    ✅    |   ✅   |    ✅    |    ✅    |
 | Firefox Dev |    ✅    |   ✅   |    ✅    |    ✅    |
@@ -55,7 +59,7 @@ Based on Apple's security policy, some browsers **require a current user passwor
 ### Linux
 
 | Browser                             | Password | Cookie | Bookmark | History |
-| :---------------------------------- | :------: | :----: | :------: | :-----: |
+| :---- | :------: | :----: | :------: | :-----: |
 | Google Chrome |    ✅    |   ✅   |    ✅    |    ✅    |
 | Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
 | Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
@@ -74,7 +78,7 @@ Based on Apple's security policy, some browsers **require a current user passwor
 
 ### Install
 
-Installation of hack-browser-data is dead-simple, just download [the release for your system](https://github.com/moonD4rk/HackBrowserData/releases) and run the binary.
+Installation of `HackBrowserData` is dead-simple, just download [the release for your system](https://github.com/moonD4rk/HackBrowserData/releases) and run the binary.
 
 > In some situations, this security tool will be treated as a virus by Windows Defender or other antivirus software and can not be executed. The code is all open source, you can modify and compile by yourself.
 
@@ -86,8 +90,6 @@ support `go 1.14+`
 git clone https://github.com/moonD4rk/HackBrowserData
 
 cd HackBrowserData
-
-go get -v -t -d ./...
 
 go build
 ```
@@ -126,7 +128,7 @@ USAGE:
    Get all data(password/cookie/history/bookmark) from chrome
 
 VERSION:
-   0.3.6
+   0.3.7
 GLOBAL OPTIONS:
    --verbose, --vv                     verbose (default: false)
    --compress, --cc                    compress result to zip (default: false)
@@ -184,6 +186,7 @@ PS C:\Users\User\Desktop> .\hack-browser-data.exe -b edge -p 'C:\Users\User\AppD
 
 ### Some other projects based on HackBrowserData
 [Sharp-HackBrowserData](https://github.com/S3cur3Th1sSh1t/Sharp-HackBrowserData)
+
 [Reflective-HackBrowserData](https://github.com/idiotc4t/Reflective-HackBrowserData)
 ...
 
@@ -194,32 +197,10 @@ PS C:\Users\User\Desktop> .\hack-browser-data.exe -b edge -p 'C:\Users\User\AppD
 
 
 ## 404StarLink 2.0 - Galaxy
-![](https://github.com/knownsec/404StarLink-Project/raw/master/logo.png)
-
-HackBrowserData is a part of 404Team [StarLink-Galaxy](https://github.com/knownsec/404StarLink2.0-Galaxy), if you have any questions about HackBrowserData or want to find a partner to communicate with，please refer to the [Starlink group](https://github.com/knownsec/404StarLink2.0-Galaxy#community).
+`HackBrowserData` is a part of 404Team [StarLink-Galaxy](https://github.com/knownsec/404StarLink2.0-Galaxy), if you have any questions about `HackBrowserData` or want to find a partner to communicate with，please refer to the [Starlink group](https://github.com/knownsec/404StarLink2.0-Galaxy#community).
+<a href="https://github.com/knownsec/404StarLink2.0-Galaxy" target="_blank"><img src="https://raw.githubusercontent.com/knownsec/404StarLink-Project/master/logo.png" align="middle"/></a>
 
 ##  JetBrains OS licenses
-`hack-browser-data` had been being developed with `GoLand` IDE under the **free JetBrains Open Source license(s)** granted by JetBrains s.r.o., hence I would like to express my thanks here.
-
-## TODO
-
-[Desktop Browser Market Share Worldwide](https://gs.statcounter.com/browser-market-share/desktop/worldwide)
-
-| Chrome | Safari | Firefox | Edge Legacy | IE |  Other  |
-| :------:| :------: | :----: | :------: | :-----: | :--: |
-| 68.33% |    9.4% | 8.91% |   4.41% |    3%    |  3%  |
-
-[Desktop Browser Market Share China](https://gs.statcounter.com/browser-market-share/desktop/china)
-
-| Chrome | 360 Safe | Firefox | QQ Browser |  IE   | Sogou Explorer |
-| :----- | :------: | :-----: | :--------: | :---: | :------------: |
-| 39.85% |  22.26%  |  9.28%  |    6.5%    | 5.65% |     4.74%      |
-
-- [x] Chrome
-- [x] QQ browser
-- [x] Edge
-- [x] 360 speed browser
-- [x] Firefox
-- [ ] Safari
-- [ ] IE
+``HackBrowserData`` had been being developed with `GoLand` IDE under the **free JetBrains Open Source license(s)** granted by JetBrains s.r.o., hence I would like to express my thanks here.
+<a href="https://www.jetbrains.com/?from=HackBrowserData" target="_blank"><img src="https://raw.githubusercontent.com/moonD4rk/staticfiles/master/picture/jetbrains-variant-4.png" width="256" align="middle"/></a>
 

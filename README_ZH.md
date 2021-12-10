@@ -1,9 +1,9 @@
 # HackBrowserData
 
-hack-browser-data 是一个浏览器数据（密码 | 历史记录 | Cookie | 书签 | 信用卡 | 下载记录）的导出工具，支持全平台主流浏览器。
+`HackBrowserData` 是一个浏览器数据（密码 | 历史记录 | Cookie | 书签 | 信用卡 | 下载记录）的导出工具，支持全平台主流浏览器。
 
 
-> 特别声明：此工具仅限于安全研究，用户承担因使用此工具而导致的所有法律和相关责任！作者不承担任何法律责任！
+> 免责声明：此工具仅限于安全研究，用户承担因使用此工具而导致的所有法律和相关责任！作者不承担任何法律责任！
 
 ## 各平台浏览器支持情况
 
@@ -16,11 +16,13 @@ hack-browser-data 是一个浏览器数据（密码 | 历史记录 | Cookie | �
 | Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
 | Microsoft Edge|    ✅     |   ✅    |    ✅     |    ✅    |
 | 360 极速浏览器    |    ✅     |   ✅    |    ✅     |    ✅    |
-| QQ 浏览器|    ✅     |   ✅    |    ✅     |    ✅    |
-| Brave 浏览器 |    ✅    |   ✅   |    ✅    |    ✅    |
-| Opera 浏览器 |    ✅    |    ✅    |    ✅    |    ✅    |
-| OperaGX 浏览器 |    ✅    |    ✅    |    ✅    |    ✅    |
-| Vivaldi 浏览器 |    ✅    |    ✅    |    ✅    |    ✅    |
+| QQ |    ✅     |   ✅    |    ✅     |    ✅    |
+| Brave  |    ✅    |   ✅   |    ✅    |    ✅    |
+| Opera  |    ✅    |    ✅    |    ✅    |    ✅    |
+| OperaGX  |    ✅    |    ✅    |    ✅    |    ✅    |
+| Vivaldi  |    ✅    |    ✅    |    ✅    |    ✅    |
+| Yandex |    ✅    |    ✅    |    ✅    |    ✅    |
+| CocCoc |    ✅    |    ✅    |    ✅    |    ✅    |
 | Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
 | Firefox Beta |    ✅    |   ✅   |    ✅    |    ✅    |
 | Firefox Dev |    ✅    |   ✅   |    ✅    |    ✅    |
@@ -32,8 +34,8 @@ hack-browser-data 是一个浏览器数据（密码 | 历史记录 | Cookie | �
 
 由于 MacOS 的安全性设置，基于 `Chromium` 内核浏览器解密时**需要当前用户密码**
 
-| 浏览器                   | 密码 | Cookie | 书签 | 历史记录 |
-| :--------------------------- | :------: | :----: | :------: | :-----: |
+| 浏览器    | 密码 | Cookie | 书签 | 历史记录 |
+| :--- | :------: | :----: | :------: | :-----: |
 | Google Chrome  |    ✅     |   ✅    |    ✅     |    ✅    |
 | Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
 | Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
@@ -42,6 +44,8 @@ hack-browser-data 是一个浏览器数据（密码 | 历史记录 | Cookie | �
 | Opera |    ✅    |    ✅    |    ✅    |    ✅    |
 | OperaGX |    ✅    |    ✅    |    ✅    |    ✅    |
 | Vivaldi |    ✅    |    ✅    |    ✅    |    ✅    |
+| Yandex |    ✅    |    ✅    |    ✅    |    ✅    |
+| CocCoc |    ✅    |    ✅    |    ✅    |    ✅    |
 | Firefox |    ✅    |   ✅   |    ✅    |    ✅    |
 | Firefox Beta |    ✅    |   ✅   |    ✅    |    ✅    |
 | Firefox Dev |    ✅    |   ✅   |    ✅    |    ✅    |
@@ -52,7 +56,7 @@ hack-browser-data 是一个浏览器数据（密码 | 历史记录 | Cookie | �
 ### Linux
 
 | 浏览器    | 密码 | Cookie | 书签 | 历史记录 |
-| :------------ | :------: | :----: | :------: | :-----: |
+| :----- | :------: | :----: | :------: | :-----: |
 | Google Chrome |    ✅     |   ✅    |    ✅     |    ✅    |
 | Google Chrome Beta |    ✅    |   ✅   |    ✅    |    ✅    |
 | Chromium |    ✅    |    ✅    |    ✅    |    ✅    |
@@ -121,7 +125,7 @@ USAGE:
    Get all data(password/cookie/history/bookmark) from chrome
 
 VERSION:
-   0.3.6
+   0.3.7
 GLOBAL OPTIONS:
    --verbose, --vv                     verbose (default: false)
    --compress, --cc                    compress result to zip (default: false)
@@ -159,6 +163,7 @@ PS C:\test>  .\hack-browser-data.exe -b all -f json --dir results --cc
 
 ### 基于此工具的一些其他项目
 [Sharp-HackBrowserData](https://github.com/S3cur3Th1sSh1t/Sharp-HackBrowserData)
+
 [Reflective-HackBrowserData](https://github.com/idiotc4t/Reflective-HackBrowserData)
 
 ## Contributors
@@ -166,32 +171,12 @@ PS C:\test>  .\hack-browser-data.exe -b all -f json --dir results --cc
 ![贡献者](/CONTRIBUTORS.svg)
 
 ## 404StarLink 2.0 - Galaxy
-![星链计划](https://github.com/knownsec/404StarLink-Project/raw/master/logo.png)
+`HackBrowserData` 是 404Team [星链计划2.0](https://github.com/knownsec/404StarLink2.0-Galaxy) 中的一环，如果对 HackBrowserData 有任何疑问又或是想要找小伙伴交流，可以参考[星链计划的加群方式](https://github.com/knownsec/404StarLink2.0-Galaxy#community)。
 
-HackBrowserData 是 404Team [星链计划2.0](https://github.com/knownsec/404StarLink2.0-Galaxy) 中的一环，如果对 HackBrowserData 有任何疑问又或是想要找小伙伴交流，可以参考[星链计划的加群方式](https://github.com/knownsec/404StarLink2.0-Galaxy#community)。
+<a href="https://github.com/knownsec/404StarLink2.0-Galaxy" target="_blank"><img src="https://raw.githubusercontent.com/knownsec/404StarLink-Project/master/logo.png" align="middle"/></a>
 
 ## JetBrains 开源证书支持
 
-`hack-browser-data` 项目一直以来都是在 JetBrains 公司旗下的 GoLand 集成开发环境中进行开发，基于 **free JetBrains Open Source license(s)** 正版免费授权，在此表达我的谢意。
+`HackBrowserData` 项目一直以来都是在 JetBrains 公司旗下的 `GoLand` 集成开发环境中进行开发，基于 **free JetBrains Open Source license(s)** 正版免费授权，在此表达我的谢意。
 
-## TODO
-
-[Desktop Browser Market Share Worldwide](https://gs.statcounter.com/browser-market-share/desktop/worldwide)
-
-| Chrome | Safari | Firefox | Edge Legacy |  IE  | Other |
-| :----: | :----: | :-----: | :---------: | :--: | :---: |
-| 68.33% |  9.4%  |  8.91%  |    4.41%    |  3%  |  3%   |
-
-[Desktop Browser Market Share China](https://gs.statcounter.com/browser-market-share/desktop/china)
-
-| Chrome | 360 Safe | Firefox | QQ Browser |  IE   | Sogou Explorer |
-| :----- | :------: | :-----: | :--------: | :---: | :------------: |
-| 39.85% |  22.26%  |  9.28%  |    6.5%    | 5.65% |     4.74%      |
-
-- [x] Chrome
-- [x] QQ browser
-- [x] Edge
-- [x] 360 speed browser
-- [x] Firefox
-- [ ] Safari
-- [ ] IE
+<a href="https://www.jetbrains.com/?from=HackBrowserData" target="_blank"><img src="https://raw.githubusercontent.com/moonD4rk/staticfiles/master/picture/jetbrains-variant-4.png" width="256" align="middle"/></a>
