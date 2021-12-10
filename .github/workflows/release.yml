@@ -1,7 +1,7 @@
 name: Build Hack-Browser-Data Release
 on:
-    release:
-        types: [created]
+  release:
+    types: [created]
 
 jobs:
   build:
@@ -14,8 +14,8 @@ jobs:
       - name: Use Golang
         uses: actions/setup-go@v1
         with:
-          go-version: "1.15"
-      
+          go-version: "1.17.2"
+
       -
         name: Build with xgo
         uses: crazy-max/ghaction-xgo@v1
@@ -24,7 +24,8 @@ jobs:
           go_version: ${{ matrix.go_version }}
           dest: build
           prefix: hack-browser-data
-          targets: windows/amd64,windows/386,linux/386,linux/amd64,linux/arm,linux/arm64,darwin/amd64
+          #          targets: windows/amd64,windows/386,linux/386,linux/amd64,linux/arm,linux/arm64,darwin/amd64
+          targets: windows/amd64,windows/386,darwin/amd64,linux/arm
           v: true
           x: false
           race: false
@@ -36,95 +37,53 @@ jobs:
           echo "RELEASE_WIN32=hack-browser-data-${{ github.event.release.tag_name}}-windows-32bit" >> $GITHUB_ENV
           echo "RELEASE_WIN64=hack-browser-data-${{ github.event.release.tag_name}}-windows-64bit" >> $GITHUB_ENV
           echo "RELEASE_OSX=hack-browser-data-${{ github.event.release.tag_name}}-osx-64bit" >> $GITHUB_ENV
-          echo "RELEASE_Linux386=hack-browser-data-${{ github.event.release.tag_name}}-linux-386" >> $GITHUB_ENV
-          echo "RELEASE_LinuxARM64=hack-browser-data-${{ github.event.release.tag_name}}-linux-arm64" >> $GITHUB_ENV
-          echo "RELEASE_LinuxAMD64=hack-browser-data-${{ github.event.release.tag_name}}-linux-amd64" >> $GITHUB_ENV
           echo "RELEASE_LinuxARM=hack-browser-data-${{ github.event.release.tag_name}}-linux-arm" >> $GITHUB_ENV
+      # echo "RELEASE_Linux386=hack-browser-data-${{ github.event.release.tag_name}}-linux-386" >> $GITHUB_ENV
+      # echo "RELEASE_LinuxARM64=hack-browser-data-${{ github.event.release.tag_name}}-linux-arm64" >> $GITHUB_ENV
+      # echo "RELEASE_LinuxAMD64=hack-browser-data-${{ github.event.release.tag_name}}-linux-amd64" >> $GITHUB_ENV
       - name: Build zip
         run: |
-          mv build/hack-browser-data-windows*386.exe "$RELEASE_WIN32".exe 
+          mv build/hack-browser-data-windows*386.exe "$RELEASE_WIN32".exe
           mv build/hack-browser-data-windows*amd64.exe "$RELEASE_WIN64".exe
-          mv build/hack-browser-data-linux-*386 "$RELEASE_Linux386"
-          mv build/hack-browser-data-linux-*amd64 "$RELEASE_LinuxAMD64"
-          mv build/hack-browser-data-linux-*arm64 "$RELEASE_LinuxARM64"
-          mv build/hack-browser-data-linux-*arm-* "$RELEASE_LinuxARM"
           mv build/hack-browser-data-darwin-*amd64 "$RELEASE_OSX"
-          zip "$RELEASE_WIN32".zip "$RELEASE_WIN32".exe 
-          zip "$RELEASE_WIN64".zip "$RELEASE_WIN64".exe           
-          zip "$RELEASE_Linux386".zip "$RELEASE_Linux386"          
-          zip "$RELEASE_LinuxAMD64".zip "$RELEASE_LinuxAMD64"          
-          zip "$RELEASE_LinuxARM64".zip "$RELEASE_Linux386"          
-          zip "$RELEASE_LinuxARM".zip "$RELEASE_LinuxARM"          
-          zip "$RELEASE_OSX".zip "$RELEASE_OSX"          
+          mv build/hack-browser-data-linux-*arm-* "$RELEASE_LinuxARM"
+          # mv build/hack-browser-data-linux-*arm64 "$RELEASE_LinuxARM64"
+          # mv build/hack-browser-data-linux-*386 "$RELEASE_Linux386"
+          # mv build/hack-browser-data-linux-*amd64 "$RELEASE_LinuxAMD64"
+          zip "$RELEASE_WIN32".zip "$RELEASE_WIN32".exe
+          zip "$RELEASE_WIN64".zip "$RELEASE_WIN64".exe
+          zip "$RELEASE_OSX".zip "$RELEASE_OSX"
+          zip "$RELEASE_LinuxARM".zip "$RELEASE_LinuxARM"
+          echo ${{ github.ref }}
+          # zip "$RELEASE_Linux386".zip "$RELEASE_Linux386"
+          # zip "$RELEASE_LinuxAMD64".zip "$RELEASE_LinuxAMD64"
+          # zip "$RELEASE_LinuxARM64".zip "$RELEASE_Linux386"
+
+
       - name: Create Release
         id: create_release
-        uses: monkeyWie/create-release@master
+        uses: release-drafter/release-drafter@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: true
 
       - name: Upload Release - Windows 64bit
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./${{ env.RELEASE_WIN64 }}.zip
           asset_name: ${{ env.RELEASE_WIN64 }}.zip
           asset_content_type: application/zip
 
-      - name: Upload Release - Windows 32bit 
+      - name: Upload Release - Windows 32bit
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./${{ env.RELEASE_WIN32 }}.zip
           asset_name: ${{ env.RELEASE_WIN32 }}.zip
-          asset_content_type: application/zip
-
-      - name: Upload Release - Linux amd64
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./${{ env.RELEASE_LinuxAMD64 }}.zip
-          asset_name: ${{ env.RELEASE_LinuxAMD64 }}.zip
-          asset_content_type: application/zip
-
-      - name: Upload Release - Linux 386
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./${{ env.RELEASE_Linux386 }}.zip
-          asset_name: ${{ env.RELEASE_Linux386 }}.zip
-          asset_content_type: application/zip
-
-      - name: Upload Release - Linux arm64
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./${{ env.RELEASE_LinuxARM64 }}.zip
-          asset_name: ${{ env.RELEASE_LinuxARM64 }}.zip
-          asset_content_type: application/zip
-
-      - name: Upload Release - Linux arm
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./${{ env.RELEASE_LinuxARM }}.zip
-          asset_name: ${{ env.RELEASE_LinuxARM }}.zip
           asset_content_type: application/zip
 
       - name: Upload Release - Darwin amd64
@@ -132,7 +91,46 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./${{ env.RELEASE_OSX }}.zip
           asset_name: ${{ env.RELEASE_OSX }}.zip
           asset_content_type: application/zip
+
+      - name: Upload Release - Linux arm
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ env.RELEASE_LinuxARM }}.zip
+          asset_name: ${{ env.RELEASE_LinuxARM }}.zip
+          asset_content_type: application/zip
+
+#      - name: Upload Release - Linux amd64
+#        uses: actions/upload-release-asset@v1.0.1
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        with:
+#          upload_url: ${{ steps.create_release.outputs.upload_url }}
+#          asset_path: ./${{ env.RELEASE_LinuxAMD64 }}.zip
+#          asset_name: ${{ env.RELEASE_LinuxAMD64 }}.zip
+#          asset_content_type: application/zip
+
+#      - name: Upload Release - Linux 386
+#        uses: actions/upload-release-asset@v1.0.1
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        with:
+#          upload_url: ${{ steps.create_release.outputs.upload_url }}
+#          asset_path: ./${{ env.RELEASE_Linux386 }}.zip
+#          asset_name: ${{ env.RELEASE_Linux386 }}.zip
+#          asset_content_type: application/zip
+
+#      - name: Upload Release - Linux arm64
+#        uses: actions/upload-release-asset@v1.0.1
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        with:
+#          upload_url: ${{ steps.create_release.outputs.upload_url }}
+#          asset_name: ${{ env.RELEASE_LinuxARM64 }}.zip
+#          asset_content_type: application/zip
