@@ -24,6 +24,7 @@ const (
 	operaGXProfilePath        = "/Users/*/Library/Application Support/com.operasoftware.OperaGX/"
 	vivaldiProfilePath        = "/Users/*/Library/Application Support/Vivaldi/*/"
 	coccocProfilePath         = "/Users/*/Library/Application Support/Coccoc/*/"
+	yandexProfilePath         = "/Users/*/Library/Application Support/Yandex/YandexBrowser/*/"
 )
 
 const (
@@ -35,6 +36,7 @@ const (
 	operaStorageName      = "Opera"
 	vivaldiStorageName    = "Vivaldi"
 	coccocStorageName     = "CocCoc"
+	yandexStorageName     = "Yandex"
 )
 
 var (
@@ -122,6 +124,12 @@ var (
 			ProfilePath: coccocProfilePath,
 			Name:        coccocName,
 			Storage:     coccocStorageName,
+			New:         NewChromium,
+		},
+		"yandex": {
+			ProfilePath: yandexProfilePath,
+			Name:        yandexName,
+			Storage:     yandexStorageName,
 			New:         NewChromium,
 		},
 	}
