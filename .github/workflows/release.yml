@@ -1,7 +1,8 @@
-name: Build Hack-Browser-Data Release
+name: Release HackBrowserData
 on:
-  release:
-    types: [created]
+  push:
+    branches:
+      - master
 
 jobs:
   build:
@@ -24,13 +25,13 @@ jobs:
           go_version: ${{ matrix.go_version }}
           dest: build
           prefix: hack-browser-data
-          #          targets: windows/amd64,windows/386,linux/386,linux/amd64,linux/arm,linux/arm64,darwin/amd64
-          targets: windows/amd64,windows/386,darwin/amd64,linux/arm
+          targets: windows/amd64,windows/386,linux/386,linux/amd64,linux/arm,linux/arm64,darwin/amd64
+          # targets: windows/amd64,windows/386,darwin/amd64,linux/arm
           v: true
           x: false
           race: false
           ldflags: -s -w
-          buildmode: default
+          buildmode: default 
 
       - name: Set Variable
         run: |
@@ -38,26 +39,25 @@ jobs:
           echo "RELEASE_WIN64=hack-browser-data-${{ github.event.release.tag_name}}-windows-64bit" >> $GITHUB_ENV
           echo "RELEASE_OSX=hack-browser-data-${{ github.event.release.tag_name}}-osx-64bit" >> $GITHUB_ENV
           echo "RELEASE_LinuxARM=hack-browser-data-${{ github.event.release.tag_name}}-linux-arm" >> $GITHUB_ENV
-      # echo "RELEASE_Linux386=hack-browser-data-${{ github.event.release.tag_name}}-linux-386" >> $GITHUB_ENV
-      # echo "RELEASE_LinuxARM64=hack-browser-data-${{ github.event.release.tag_name}}-linux-arm64" >> $GITHUB_ENV
-      # echo "RELEASE_LinuxAMD64=hack-browser-data-${{ github.event.release.tag_name}}-linux-amd64" >> $GITHUB_ENV
+          echo "RELEASE_Linux386=hack-browser-data-${{ github.event.release.tag_name}}-linux-386" >> $GITHUB_ENV
+          echo "RELEASE_LinuxARM64=hack-browser-data-${{ github.event.release.tag_name}}-linux-arm64" >> $GITHUB_ENV
+          echo "RELEASE_LinuxAMD64=hack-browser-data-${{ github.event.release.tag_name}}-linux-amd64" >> $GITHUB_ENV
       - name: Build zip
         run: |
           mv build/hack-browser-data-windows*386.exe "$RELEASE_WIN32".exe
           mv build/hack-browser-data-windows*amd64.exe "$RELEASE_WIN64".exe
           mv build/hack-browser-data-darwin-*amd64 "$RELEASE_OSX"
           mv build/hack-browser-data-linux-*arm-* "$RELEASE_LinuxARM"
-          # mv build/hack-browser-data-linux-*arm64 "$RELEASE_LinuxARM64"
-          # mv build/hack-browser-data-linux-*386 "$RELEASE_Linux386"
-          # mv build/hack-browser-data-linux-*amd64 "$RELEASE_LinuxAMD64"
+          mv build/hack-browser-data-linux-*arm64 "$RELEASE_LinuxARM64"
+          mv build/hack-browser-data-linux-*386 "$RELEASE_Linux386"
+          mv build/hack-browser-data-linux-*amd64 "$RELEASE_LinuxAMD64"
           zip "$RELEASE_WIN32".zip "$RELEASE_WIN32".exe
           zip "$RELEASE_WIN64".zip "$RELEASE_WIN64".exe
           zip "$RELEASE_OSX".zip "$RELEASE_OSX"
           zip "$RELEASE_LinuxARM".zip "$RELEASE_LinuxARM"
-          echo ${{ github.ref }}
-          # zip "$RELEASE_Linux386".zip "$RELEASE_Linux386"
-          # zip "$RELEASE_LinuxAMD64".zip "$RELEASE_LinuxAMD64"
-          # zip "$RELEASE_LinuxARM64".zip "$RELEASE_Linux386"
+          zip "$RELEASE_Linux386".zip "$RELEASE_Linux386"
+          zip "$RELEASE_LinuxAMD64".zip "$RELEASE_LinuxAMD64"
+          zip "$RELEASE_LinuxARM64".zip "$RELEASE_Linux386"
 
 
       - name: Create Release
@@ -106,31 +106,32 @@ jobs:
           asset_name: ${{ env.RELEASE_LinuxARM }}.zip
           asset_content_type: application/zip
 
-#      - name: Upload Release - Linux amd64
-#        uses: actions/upload-release-asset@v1.0.1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
-#          asset_path: ./${{ env.RELEASE_LinuxAMD64 }}.zip
-#          asset_name: ${{ env.RELEASE_LinuxAMD64 }}.zip
-#          asset_content_type: application/zip
+      - name: Upload Release - Linux amd64
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ env.RELEASE_LinuxAMD64 }}.zip
+          asset_name: ${{ env.RELEASE_LinuxAMD64 }}.zip
+          asset_content_type: application/zip
 
-#      - name: Upload Release - Linux 386
-#        uses: actions/upload-release-asset@v1.0.1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
-#          asset_path: ./${{ env.RELEASE_Linux386 }}.zip
-#          asset_name: ${{ env.RELEASE_Linux386 }}.zip
-#          asset_content_type: application/zip
+      - name: Upload Release - Linux 386
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ env.RELEASE_Linux386 }}.zip
+          asset_name: ${{ env.RELEASE_Linux386 }}.zip
+          asset_content_type: application/zip
 
-#      - name: Upload Release - Linux arm64
-#        uses: actions/upload-release-asset@v1.0.1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
-#          asset_name: ${{ env.RELEASE_LinuxARM64 }}.zip
-#          asset_content_type: application/zip
+      - name: Upload Release - Linux arm64
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_name: ${{ env.RELEASE_LinuxARM64 }}.zip
+          asset_content_type: application/zip
+          asset_path: ./${{ env.RELEASE_LinuxARM64 }}.zip
