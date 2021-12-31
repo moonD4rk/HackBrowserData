@@ -3,11 +3,11 @@ package core
 import (
 	"crypto/sha1"
 
-	"hack-browser-data/log"
-
 	"github.com/godbus/dbus/v5"
 	keyring "github.com/ppacher/go-dbus-keyring"
 	"golang.org/x/crypto/pbkdf2"
+
+	"hack-browser-data/pkg/log"
 )
 
 const (

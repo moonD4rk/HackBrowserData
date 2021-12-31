@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"hack-browser-data/core/decrypt"
-	"hack-browser-data/log"
+	"hack-browser-data/pkg/log"
 	"hack-browser-data/utils"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -657,14 +657,14 @@ func (p *passwords) FirefoxParse() error {
 	keyLin := []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 	metaPBE, err := decrypt.NewASN1PBE(metaBytes)
 	if err != nil {
-		log.Error("decrypt meta data failed", err)
+		log.Error("decrypter meta data failed", err)
 		return err
 	}
 	// default master password is empty
 	var masterPwd []byte
 	k, err := metaPBE.Decrypt(globalSalt, masterPwd)
 	if err != nil {
-		log.Error("decrypt firefox meta bytes failed", err)
+		log.Error("decrypter firefox meta bytes failed", err)
 		return err
 	}
 	if bytes.Contains(k, []byte("password-check")) {
@@ -703,7 +703,7 @@ func (p *passwords) FirefoxParse() error {
 				if err != nil {
 					log.Error(err)
 				}
-				log.Debug("decrypt firefox success")
+				log.Debug("decrypter firefox success")
 				p.logins = append(p.logins, loginData{
 					LoginUrl:   v.LoginUrl,
 					UserName:   string(decrypt.PKCS5UnPadding(user)),

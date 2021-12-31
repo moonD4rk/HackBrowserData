@@ -16,7 +16,7 @@ import (
 var (
 	errSecurityKeyIsEmpty = errors.New("input [security find-generic-password -wa 'Chrome'] in terminal")
 	errPasswordIsEmpty    = errors.New("password is empty")
-	errDecryptFailed      = errors.New("decrypt encrypt value failed")
+	errDecryptFailed      = errors.New("decrypter encrypt value failed")
 	errDecodeASN1Failed   = errors.New("decode ASN1 data failed")
 	errEncryptedLength    = errors.New("length of encrypted password less than block size")
 )
@@ -189,7 +189,7 @@ func PKCS5UnPadding(src []byte) []byte {
 	return src[:(length - unpad)]
 }
 
-// des3Decrypt use for decrypt firefox PBE
+// des3Decrypt use for decrypter firefox PBE
 func des3Decrypt(key, iv []byte, src []byte) ([]byte, error) {
 	block, err := des.NewTripleDESCipher(key)
 	if err != nil {
