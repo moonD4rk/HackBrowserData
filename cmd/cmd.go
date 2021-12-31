@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"hack-browser-data/core"
-	"hack-browser-data/log"
+	"hack-browser-data/pkg/log"
 	"hack-browser-data/utils"
 
 	"github.com/urfave/cli/v2"
