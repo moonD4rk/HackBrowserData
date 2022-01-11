@@ -7,6 +7,8 @@ import (
 
 	"hack-browser-data/pkg/browser/consts"
 	"hack-browser-data/utils"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type ChromiumHistory []history
@@ -47,5 +49,53 @@ func (c *ChromiumHistory) Parse(masterKey []byte) error {
 }
 
 func (c *ChromiumHistory) Name() string {
+	return "history"
+}
+
+type FirefoxHistory []history
+
+func (f *FirefoxHistory) Parse(masterKey []byte) error {
+	var (
+		err         error
+		keyDB       *sql.DB
+		historyRows *sql.Rows
+	)
+	keyDB, err = sql.Open("sqlite3", consts.FirefoxHistoryFilename)
+	if err != nil {
+		return err
+	}
+	_, err = keyDB.Exec(closeJournalMode)
+	if err != nil {
+		return err
+	}
+	defer keyDB.Close()
+	historyRows, err = keyDB.Query(queryFirefoxHistory)
+	if err != nil {
+		return err
+	}
+	defer historyRows.Close()
+	for historyRows.Next() {
+		var (
+			id, visitDate int64
+			url, title    string
+			visitCount    int
+		)
+		if err = historyRows.Scan(&id, &url, &visitDate, &title, &visitCount); err != nil {
+			fmt.Println(err)
+		}
+		*f = append(*f, history{
+			Title:         title,
+			Url:           url,
+			VisitCount:    visitCount,
+			LastVisitTime: utils.TimeStampFormat(visitDate / 1000000),
+		})
+	}
+	sort.Slice(*f, func(i, j int) bool {
+		return (*f)[i].VisitCount < (*f)[j].VisitCount
+	})
+	return nil
+}
+
+func (f *FirefoxHistory) Name() string {
 	return "history"
 }

@@ -14,10 +14,13 @@ const (
 	YandexPassword = "Ya PassMan Data"
 	YandexCredit   = "Ya Credit Cards"
 
-	FirefoxKey    = "key4.db"
-	FirefoxCookie = "cookies.sqlite"
-	FirefoxLogin  = "logins.json"
-	FirefoxData   = "places.sqlite"
+	FirefoxKey4     = "key4.db"
+	FirefoxCookie   = "cookies.sqlite"
+	FirefoxPassword = "logins.json"
+	FirefoxData     = "places.sqlite"
+
+	UnknownItem   = "unknown item"
+	UnSupportItem = "unsupport item"
 )
 
 // item's renamed filename
@@ -34,10 +37,11 @@ const (
 	YandexPasswordFilename = "YandexPasswordFilename"
 	YandexCreditFilename   = "YandexCreditFilename"
 
-	// TODO: add all firefox's filename
-
-	FirefoxKey4DBFilename = "FirefoxKey4DBFilename"
-	FirefoxCookieFilename = "FirefoxCookieFilename"
-	FirefoxLoginFilename  = "FirefoxLoginFilename"
-	FirefoxDataFilename   = "FirefoxDataFilename"
+	FirefoxKey4Filename     = "FirefoxKey4DBFilename"
+	FirefoxCookieFilename   = "FirefoxCookieFilename"
+	FirefoxPasswordFilename = "FirefoxPasswordFilename"
+	FirefoxDownloadFilename = "FirefoxDownloadFilename"
+	FirefoxHistoryFilename  = "FirefoxHistoryFilename"
+	FirefoxBookmarkFilename = "FirefoxBookmarkFilename"
+	FirefoxDataFilename     = "FirefoxDataFilename"
 )
