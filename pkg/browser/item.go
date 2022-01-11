@@ -14,9 +14,12 @@ const (
 	chromiumBookmark
 	chromiumHistory
 	chromiumDownload
-	chromiumCreditcard
+	chromiumCreditCard
 	chromiumLocalStorage
 	chromiumExtension
+
+	yandexPassword
+	yandexCreditCard
 
 	firefoxKey4
 	firefoxPassword
@@ -24,7 +27,7 @@ const (
 	firefoxBookmark
 	firefoxHistory
 	firefoxDownload
-	firefoxCreditcard
+	firefoxCreditCard
 	firefoxLocalStorage
 	firefoxExtension
 )
@@ -43,18 +46,36 @@ func (i item) DefaultName() string {
 		return consts.ChromiumDownload
 	case chromiumLocalStorage:
 		return consts.ChromiumLocalStorage
-	case chromiumCreditcard:
+	case chromiumCreditCard:
 		return consts.ChromiumCredit
 	case chromiumExtension:
-		return "unsupport item"
+		return consts.UnknownItem
 	case chromiumHistory:
 		return consts.ChromiumHistory
+	case yandexPassword:
+		return consts.YandexPassword
+	case yandexCreditCard:
+		return consts.YandexCredit
+	case firefoxKey4:
+		return consts.FirefoxKey4
 	case firefoxPassword:
-		return consts.FirefoxLogin
+		return consts.FirefoxPassword
 	case firefoxCookie:
+		return consts.FirefoxCookie
+	case firefoxBookmark:
 		return consts.FirefoxData
+	case firefoxDownload:
+		return consts.FirefoxData
+	case firefoxLocalStorage:
+		return consts.UnSupportItem
+	case firefoxCreditCard:
+		return consts.UnSupportItem
+	case firefoxHistory:
+		return consts.FirefoxData
+	case firefoxExtension:
+		return consts.UnSupportItem
 	default:
-		return "unknown item"
+		return consts.UnknownItem
 	}
 }
 
@@ -72,18 +93,32 @@ func (i item) FileName() string {
 		return consts.ChromiumDownloadFilename
 	case chromiumLocalStorage:
 		return consts.ChromiumLocalStorageFilename
-	case chromiumCreditcard:
+	case chromiumCreditCard:
 		return consts.ChromiumCreditFilename
-	case chromiumExtension:
-		return "unsupport item"
 	case chromiumHistory:
 		return consts.ChromiumHistoryFilename
+	case chromiumExtension:
+		return consts.UnSupportItem
+	case firefoxKey4:
+		return consts.FirefoxKey4Filename
 	case firefoxPassword:
-		return consts.FirefoxLoginFilename
+		return consts.FirefoxPasswordFilename
 	case firefoxCookie:
-		return consts.FirefoxDataFilename
+		return consts.FirefoxCookieFilename
+	case firefoxBookmark:
+		return consts.FirefoxBookmarkFilename
+	case firefoxDownload:
+		return consts.FirefoxDownloadFilename
+	case firefoxLocalStorage:
+		return consts.UnSupportItem
+	case firefoxCreditCard:
+		return consts.UnSupportItem
+	case firefoxHistory:
+		return consts.FirefoxHistoryFilename
+	case firefoxExtension:
+		return consts.UnSupportItem
 	default:
-		return "unknown item"
+		return consts.UnknownItem
 	}
 }
 
@@ -101,16 +136,22 @@ func (i item) NewBrowsingData() data.BrowsingData {
 		return &data.ChromiumDownload{}
 	case chromiumLocalStorage:
 		return nil
-	case chromiumCreditcard:
+	case chromiumCreditCard:
 		return &data.ChromiumCreditCard{}
 	case chromiumExtension:
 		return nil
 	case chromiumHistory:
 		return &data.ChromiumHistory{}
 	case firefoxPassword:
-		return nil
+		return &data.FirefoxPassword{}
 	case firefoxCookie:
-		return nil
+		return &data.FirefoxCookie{}
+	case firefoxBookmark:
+		return &data.FirefoxBookmark{}
+	case firefoxDownload:
+		return &data.FirefoxDownload{}
+	case firefoxHistory:
+		return &data.FirefoxHistory{}
 	default:
 		return nil
 	}

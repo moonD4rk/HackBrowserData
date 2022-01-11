@@ -10,21 +10,30 @@ import (
 )
 
 var (
-	browserList = map[string]struct {
+	chromiumList = map[string]struct {
 		browserInfo *browserInfo
 		items       []item
-		New         func(browser *browserInfo, items []item) *chromium
+		// New         func(browser *browserInfo, items []item) *firefox
 	}{
 		"chrome": {
 			browserInfo: chromeInfo,
 			items:       defaultChromiumItems,
-			New:         newBrowser,
+			// New:         newBrowser,
 		},
-		// "edge": {
-		// 	browserInfo: edgeInfo,
-		// 	items:       defaultChromiumItems,
-		// 	New:         newBrowser,
-		// },
+		"edge": {
+			browserInfo: edgeInfo,
+			items:       defaultChromiumItems,
+			// New:         newBrowser,
+		},
+	}
+	firefoxList = map[string]struct {
+		browserInfo *browserInfo
+		items       []item
+	}{
+		"firefox": {
+			browserInfo: firefoxInfo,
+			items:       defaultFirefoxItems,
+		},
 	}
 )
 
@@ -56,9 +65,8 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 	var chromeSalt = []byte("saltysalt")
 	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157
 	key := pbkdf2.Key(chromeSecret, chromeSalt, 1003, 16, sha1.New)
-	c.masterKey = key
-	return c.masterKey, nil
-
+	c.browserInfo.masterKey = key
+	return c.browserInfo.masterKey, nil
 }
 
 var (
@@ -71,6 +79,10 @@ var (
 		name:        edgeName,
 		storage:     edgeStorageName,
 		profilePath: edgeProfilePath,
+	}
+	firefoxInfo = &browserInfo{
+		name:        firefoxName,
+		profilePath: fireFoxProfilePath,
 	}
 )
 

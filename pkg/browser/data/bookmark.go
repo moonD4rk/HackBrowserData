@@ -1,6 +1,8 @@
 package data
 
 import (
+	"database/sql"
+	"fmt"
 	"sort"
 
 	"github.com/tidwall/gjson"
@@ -60,5 +62,51 @@ func getBookmarkChildren(value gjson.Result, w *ChromiumBookmark) (children gjso
 }
 
 func (c *ChromiumBookmark) Name() string {
+	return "bookmark"
+}
+
+type FirefoxBookmark []bookmark
+
+func (f *FirefoxBookmark) Parse(masterKey []byte) error {
+	var (
+		err          error
+		keyDB        *sql.DB
+		bookmarkRows *sql.Rows
+	)
+	keyDB, err = sql.Open("sqlite3", consts.FirefoxBookmarkFilename)
+	if err != nil {
+		return err
+	}
+	_, err = keyDB.Exec(closeJournalMode)
+	defer keyDB.Close()
+
+	bookmarkRows, err = keyDB.Query(queryFirefoxBookMark)
+	if err != nil {
+		return err
+	}
+	defer bookmarkRows.Close()
+	for bookmarkRows.Next() {
+		var (
+			id, bType, dateAdded int64
+			title, url           string
+		)
+		if err = bookmarkRows.Scan(&id, &url, &bType, &dateAdded, &title); err != nil {
+			fmt.Println(err)
+		}
+		*f = append(*f, bookmark{
+			ID:        id,
+			Name:      title,
+			Type:      utils.BookMarkType(bType),
+			URL:       url,
+			DateAdded: utils.TimeStampFormat(dateAdded / 1000000),
+		})
+	}
+	sort.Slice(*f, func(i, j int) bool {
+		return (*f)[i].DateAdded.After((*f)[j].DateAdded)
+	})
+	return nil
+}
+
+func (f *FirefoxBookmark) Name() string {
 	return "bookmark"
 }

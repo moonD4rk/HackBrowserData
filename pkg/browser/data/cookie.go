@@ -8,6 +8,8 @@ import (
 	"hack-browser-data/pkg/browser/consts"
 	"hack-browser-data/pkg/decrypter"
 	"hack-browser-data/utils"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type ChromiumCookie []cookie
@@ -70,5 +72,45 @@ func (c *ChromiumCookie) Parse(masterKey []byte) error {
 }
 
 func (c *ChromiumCookie) Name() string {
+	return "cookie"
+}
+
+type FirefoxCookie []cookie
+
+func (f *FirefoxCookie) Parse(masterKey []byte) error {
+	cookieDB, err := sql.Open("sqlite3", consts.FirefoxCookieFilename)
+	if err != nil {
+		return err
+	}
+	defer cookieDB.Close()
+	rows, err := cookieDB.Query(queryFirefoxCookie)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var (
+			name, value, host, path string
+			isSecure, isHttpOnly    int
+			creationTime, expiry    int64
+		)
+		if err = rows.Scan(&name, &value, &host, &path, &creationTime, &expiry, &isSecure, &isHttpOnly); err != nil {
+			fmt.Println(err)
+		}
+		*f = append(*f, cookie{
+			KeyName:    name,
+			Host:       host,
+			Path:       path,
+			IsSecure:   utils.IntToBool(isSecure),
+			IsHTTPOnly: utils.IntToBool(isHttpOnly),
+			CreateDate: utils.TimeStampFormat(creationTime / 1000000),
+			ExpireDate: utils.TimeStampFormat(expiry),
+			Value:      value,
+		})
+	}
+	return nil
+}
+
+func (f *FirefoxCookie) Name() string {
 	return "cookie"
 }

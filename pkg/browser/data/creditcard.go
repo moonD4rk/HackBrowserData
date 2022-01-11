@@ -6,6 +6,8 @@ import (
 
 	"hack-browser-data/pkg/browser/consts"
 	"hack-browser-data/pkg/decrypter"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type ChromiumCreditCard []card
