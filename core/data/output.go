@@ -17,7 +17,7 @@ var (
 )
 
 func (b *bookmarks) outPutJson(browser, dir string) error {
-	filename := utils.FormatFileName(dir, browser, "bookmark", "json")
+	filename := utils.FormatFilename(dir, browser, "bookmark", "json")
 	sort.Slice(b.bookmarks, func(i, j int) bool {
 		return b.bookmarks[i].ID < b.bookmarks[j].ID
 	})
@@ -30,7 +30,7 @@ func (b *bookmarks) outPutJson(browser, dir string) error {
 }
 
 func (h *historyData) outPutJson(browser, dir string) error {
-	filename := utils.FormatFileName(dir, browser, "history", "json")
+	filename := utils.FormatFilename(dir, browser, "history", "json")
 	sort.Slice(h.history, func(i, j int) bool {
 		return h.history[i].VisitCount > h.history[j].VisitCount
 	})
@@ -43,7 +43,7 @@ func (h *historyData) outPutJson(browser, dir string) error {
 }
 
 func (d *downloads) outPutJson(browser, dir string) error {
-	filename := utils.FormatFileName(dir, browser, "download", "json")
+	filename := utils.FormatFilename(dir, browser, "download", "json")
 	err := writeToJson(filename, d.downloads)
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func (d *downloads) outPutJson(browser, dir string) error {
 }
 
 func (p *passwords) outPutJson(browser, dir string) error {
-	filename := utils.FormatFileName(dir, browser, "password", "json")
+	filename := utils.FormatFilename(dir, browser, "password", "json")
 	err := writeToJson(filename, p.logins)
 	if err != nil {
 		return err
@@ -63,7 +63,7 @@ func (p *passwords) outPutJson(browser, dir string) error {
 }
 
 func (c *cookies) outPutJson(browser, dir string) error {
-	filename := utils.FormatFileName(dir, browser, "cookie", "json")
+	filename := utils.FormatFilename(dir, browser, "cookie", "json")
 	err := writeToJson(filename, c.cookies)
 	if err != nil {
 		return err
@@ -73,7 +73,7 @@ func (c *cookies) outPutJson(browser, dir string) error {
 }
 
 func (c *creditCards) outPutJson(browser, dir string) error {
-	filename := utils.FormatFileName(dir, browser, "credit", "json")
+	filename := utils.FormatFilename(dir, browser, "credit", "json")
 	err := writeToJson(filename, c.cards)
 	if err != nil {
 		return err
@@ -104,7 +104,7 @@ func writeToJson(filename string, data interface{}) error {
 }
 
 func (b *bookmarks) outPutCsv(browser, dir string) error {
-	filename := utils.FormatFileName(dir, browser, "bookmark", "csv")
+	filename := utils.FormatFilename(dir, browser, "bookmark", "csv")
 	if err := writeToCsv(filename, b.bookmarks); err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (b *bookmarks) outPutCsv(browser, dir string) error {
 }
 
 func (h *historyData) outPutCsv(browser, dir string) error {
-	filename := utils.FormatFileName(dir, browser, "history", "csv")
+	filename := utils.FormatFilename(dir, browser, "history", "csv")
 	if err := writeToCsv(filename, h.history); err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func (h *historyData) outPutCsv(browser, dir string) error {
 }
 
 func (d *downloads) outPutCsv(browser, dir string) error {
-	filename := utils.FormatFileName(dir, browser, "download", "csv")
+	filename := utils.FormatFilename(dir, browser, "download", "csv")
 	if err := writeToCsv(filename, d.downloads); err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (d *downloads) outPutCsv(browser, dir string) error {
 }
 
 func (p *passwords) outPutCsv(browser, dir string) error {
-	filename := utils.FormatFileName(dir, browser, "password", "csv")
+	filename := utils.FormatFilename(dir, browser, "password", "csv")
 	if err := writeToCsv(filename, p.logins); err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func (p *passwords) outPutCsv(browser, dir string) error {
 }
 
 func (c *cookies) outPutCsv(browser, dir string) error {
-	filename := utils.FormatFileName(dir, browser, "cookie", "csv")
+	filename := utils.FormatFilename(dir, browser, "cookie", "csv")
 	var tempSlice []cookie
 	for _, v := range c.cookies {
 		tempSlice = append(tempSlice, v...)
@@ -153,7 +153,7 @@ func (c *cookies) outPutCsv(browser, dir string) error {
 }
 
 func (c *creditCards) outPutCsv(browser, dir string) error {
-	filename := utils.FormatFileName(dir, browser, "credit", "csv")
+	filename := utils.FormatFilename(dir, browser, "credit", "csv")
 	var tempSlice []card
 	for _, v := range c.cards {
 		tempSlice = append(tempSlice, v...)

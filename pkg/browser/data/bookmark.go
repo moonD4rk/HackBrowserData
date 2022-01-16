@@ -96,7 +96,7 @@ func (f *FirefoxBookmark) Parse(masterKey []byte) error {
 		*f = append(*f, bookmark{
 			ID:        id,
 			Name:      title,
-			Type:      utils.BookMarkType(bType),
+			Type:      utils.BookmarkType(bType),
 			URL:       url,
 			DateAdded: utils.TimeStampFormat(dateAdded / 1000000),
 		})

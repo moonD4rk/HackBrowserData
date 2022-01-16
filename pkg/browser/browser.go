@@ -12,17 +12,40 @@ import (
 	"hack-browser-data/pkg/browser/data"
 )
 
+type Browser interface {
+	GetName() string
+
+	GetMasterKey() ([]byte, error)
+
+	GetBrowsingData() []data.BrowsingData
+
+	CopyItemFileToLocal() error
+}
+
 var (
 	// home dir path not for android and ios
 	homeDir, _ = os.UserHomeDir()
 )
 
-func PickBrowsers(name string) {
-
+func PickBrowsers(name string) []Browser {
+	var browsers []Browser
+	chromiumList := pickChromium(name)
+	for _, b := range chromiumList {
+		if b != nil {
+			browsers = append(browsers, b)
+		}
+	}
+	firefoxList := pickFirefox(name)
+	for _, b := range firefoxList {
+		if b != nil {
+			browsers = append(browsers, b)
+		}
+	}
+	return browsers
 }
 
-func PickChromium(name string) []*chromium {
-	var browsers []*chromium
+func pickChromium(name string) []Browser {
+	var browsers []Browser
 	name = strings.ToLower(name)
 	if name == "all" {
 		for _, choice := range chromiumList {
@@ -45,25 +68,21 @@ func PickChromium(name string) []*chromium {
 	return nil
 }
 
-func PickFirefox(name string) []*firefox {
-	var browsers []*firefox
+func pickFirefox(name string) []Browser {
+	var browsers []Browser
 	name = strings.ToLower(name)
 	if name == "all" || name == "firefox" {
 		for _, v := range firefoxList {
-			b, err := newFirefox(v.browserInfo, v.items)
+			multiFirefox, err := newMultiFirefox(v.browserInfo, v.items)
 			if err != nil {
 				panic(err)
 			}
-			// b := v.New(v.browserInfo, v.items)
-			browsers = append(browsers, b...)
+			for _, browser := range multiFirefox {
+				browsers = append(browsers, browser)
+			}
 		}
 		return browsers
 	}
-	// if choice, ok := browserList[name]; ok {
-	// 	b := choice.New(choice.browserInfo, choice.items)
-	// 	browsers = append(browsers, b)
-	// 	return browsers
-	// }
 	return nil
 }
 
@@ -71,25 +90,6 @@ type chromium struct {
 	browserInfo *browserInfo
 	items       []item
 	itemPaths   map[item]string
-}
-
-func (c *chromium) GetProfilePath() string {
-	return c.browserInfo.profilePath
-}
-
-func (c *chromium) GetStorageName() string {
-	return c.browserInfo.storage
-}
-
-func (c *chromium) GetBrowserName() string {
-	return c.browserInfo.name
-}
-
-type firefox struct {
-	browserInfo    *browserInfo
-	items          []item
-	itemPaths      map[item]string
-	multiItemPaths map[string]map[item]string
 }
 
 // NewBrowser 根据浏览器信息生成 Browser Interface
@@ -106,8 +106,57 @@ func newChromium(info *browserInfo, items []item) (*chromium, error) {
 	return c, err
 }
 
+func (c *chromium) GetName() string {
+	return c.browserInfo.name
+}
+
+func (c *chromium) GetBrowsingData() []data.BrowsingData {
+	var browsingData []data.BrowsingData
+	for item := range c.itemPaths {
+		d := item.NewBrowsingData()
+		if d != nil {
+			browsingData = append(browsingData, d)
+		}
+	}
+	return browsingData
+}
+
+func (c *chromium) CopyItemFileToLocal() error {
+	for item, sourcePath := range c.itemPaths {
+		var dstFilename = item.FileName()
+		locals, _ := filepath.Glob("*")
+		for _, v := range locals {
+			if v == dstFilename {
+				err := os.Remove(dstFilename)
+				// TODO: Should Continue all iteration error
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		// TODO: Handle read file error
+		sourceFile, err := ioutil.ReadFile(sourcePath)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		err = ioutil.WriteFile(dstFilename, sourceFile, 0777)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type firefox struct {
+	browserInfo    *browserInfo
+	items          []item
+	itemPaths      map[item]string
+	multiItemPaths map[string]map[item]string
+}
+
 // newFirefox
-func newFirefox(info *browserInfo, items []item) ([]*firefox, error) {
+func newMultiFirefox(info *browserInfo, items []item) ([]*firefox, error) {
 	f := &firefox{
 		browserInfo: info,
 		items:       items,
@@ -125,7 +174,6 @@ func newFirefox(info *browserInfo, items []item) ([]*firefox, error) {
 			},
 			items:     items,
 			itemPaths: value,
-			// multiItemPaths: value,
 		})
 	}
 	return firefoxList, nil
@@ -138,7 +186,7 @@ func getFirefoxItemAbsPath(profilePath string, items []item) (map[string]map[ite
 	return multiItemPaths, err
 }
 
-func (f *firefox) copyItemFileToLocal() error {
+func (f *firefox) CopyItemFileToLocal() error {
 	for item, sourcePath := range f.itemPaths {
 		var dstFilename = item.FileName()
 		locals, _ := filepath.Glob("*")
@@ -163,39 +211,6 @@ func (f *firefox) copyItemFileToLocal() error {
 		}
 	}
 	return nil
-	// for name, itemPaths := range f.multiItemPaths {
-	// 	for item, path := range itemPaths {
-	// 		var dstFilename = item.FileName()
-	// 		locals, _ := filepath.Glob("*")
-	// 		for _, v := range locals {
-	// 			if v == dstFilename {
-	// 				// TODO: Should Continue all iteration error
-	// 				err := os.Remove(dstFilename)
-	// 				if err != nil {
-	// 					return err
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// 	// 	if v == dstFilename {
-	// 	// 		err := os.Remove(dstFilename)
-	// 	// 		if err != nil {
-	// 	// 			return err
-	// 	// 		}
-	// 	// 	}
-	// 	// }
-	// 	//
-	// 	// // TODO: Handle read file name error
-	// 	// sourceFile, err := ioutil.ReadFile(sourcePath)
-	// 	// if err != nil {
-	// 	// 	fmt.Println(err.Error())
-	// 	// }
-	// 	// err = ioutil.WriteFile(dstFilename, sourceFile, 0777)
-	// 	// if err != nil {
-	// 	// 	return err
-	// 	// }
-	// }
-	// return nil
 }
 
 func firefoxWalkFunc(items []item, multiItemPaths map[string]map[item]string) filepath.WalkFunc {
@@ -239,49 +254,11 @@ func getChromiumItemAbsPath(profilePath string, items []item) (map[item]string, 
 	return itemPaths, err
 }
 
-func (c *chromium) copyItemFileToLocal() error {
-	for item, sourcePath := range c.itemPaths {
-		var dstFilename = item.FileName()
-		locals, _ := filepath.Glob("*")
-		for _, v := range locals {
-			if v == dstFilename {
-				err := os.Remove(dstFilename)
-				// TODO: Should Continue all iteration error
-				if err != nil {
-					return err
-				}
-			}
-		}
-
-		// TODO: Handle read file name error
-		sourceFile, err := ioutil.ReadFile(sourcePath)
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		err = ioutil.WriteFile(dstFilename, sourceFile, 0777)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (c *chromium) GetBrowsingData() []data.BrowsingData {
-	var browsingData []data.BrowsingData
-	for item := range c.itemPaths {
-		if item != chromiumKey {
-			d := item.NewBrowsingData()
-			browsingData = append(browsingData, d)
-		}
-	}
-	return browsingData
-}
-
 func (f *firefox) GetMasterKey() ([]byte, error) {
 	return f.browserInfo.masterKey, nil
 }
 
-func (f *firefox) GetBrowserName() string {
+func (f *firefox) GetName() string {
 	return f.browserInfo.name
 }
 
@@ -295,6 +272,16 @@ func (f *firefox) GetBrowsingData() []data.BrowsingData {
 	}
 	return browsingData
 }
+func ListBrowser() []string {
+	var l []string
+	for c := range chromiumList {
+		l = append(l, c)
+	}
+	for f := range firefoxList {
+		l = append(l, f)
+	}
+	return l
+}
 
 type browserInfo struct {
 	name        string
@@ -307,6 +294,7 @@ const (
 	chromeName  = "Chrome"
 	edgeName    = "Edge"
 	firefoxName = "Firefox"
+	yandexName  = "Yandex"
 )
 
 var defaultFirefoxItems = []item{
@@ -319,6 +307,18 @@ var defaultFirefoxItems = []item{
 	firefoxCreditCard,
 	firefoxLocalStorage,
 	firefoxExtension,
+}
+
+var defaultYandexItems = []item{
+	chromiumKey,
+	yandexPassword,
+	chromiumCookie,
+	chromiumBookmark,
+	chromiumHistory,
+	chromiumDownload,
+	yandexCreditCard,
+	chromiumLocalStorage,
+	chromiumExtension,
 }
 
 var defaultChromiumItems = []item{

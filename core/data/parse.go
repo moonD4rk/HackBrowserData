@@ -159,7 +159,7 @@ func (b *bookmarks) FirefoxParse() error {
 		b.bookmarks = append(b.bookmarks, bookmark{
 			ID:        id,
 			Name:      title,
-			Type:      utils.BookMarkType(bType),
+			Type:      utils.BookmarkType(bType),
 			URL:       bookmarkUrl,
 			DateAdded: utils.TimeStampFormat(dateAdded / 1000000),
 		})
