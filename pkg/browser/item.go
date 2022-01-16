@@ -67,13 +67,13 @@ func (i item) DefaultName() string {
 	case firefoxDownload:
 		return consts.FirefoxData
 	case firefoxLocalStorage:
-		return consts.UnSupportItem
+		return consts.UnsupportedItem
 	case firefoxCreditCard:
-		return consts.UnSupportItem
+		return consts.UnsupportedItem
 	case firefoxHistory:
 		return consts.FirefoxData
 	case firefoxExtension:
-		return consts.UnSupportItem
+		return consts.UnsupportedItem
 	default:
 		return consts.UnknownItem
 	}
@@ -98,7 +98,11 @@ func (i item) FileName() string {
 	case chromiumHistory:
 		return consts.ChromiumHistoryFilename
 	case chromiumExtension:
-		return consts.UnSupportItem
+		return consts.UnsupportedItem
+	case yandexPassword:
+		return consts.ChromiumPasswordFilename
+	case yandexCreditCard:
+		return consts.ChromiumCreditFilename
 	case firefoxKey4:
 		return consts.FirefoxKey4Filename
 	case firefoxPassword:
@@ -110,13 +114,13 @@ func (i item) FileName() string {
 	case firefoxDownload:
 		return consts.FirefoxDownloadFilename
 	case firefoxLocalStorage:
-		return consts.UnSupportItem
+		return consts.UnsupportedItem
 	case firefoxCreditCard:
-		return consts.UnSupportItem
+		return consts.UnsupportedItem
 	case firefoxHistory:
 		return consts.FirefoxHistoryFilename
 	case firefoxExtension:
-		return consts.UnSupportItem
+		return consts.UnsupportedItem
 	default:
 		return consts.UnknownItem
 	}
@@ -142,6 +146,10 @@ func (i item) NewBrowsingData() data.BrowsingData {
 		return nil
 	case chromiumHistory:
 		return &data.ChromiumHistory{}
+	case yandexPassword:
+		return &data.ChromiumPassword{}
+	case yandexCreditCard:
+		return &data.ChromiumCreditCard{}
 	case firefoxPassword:
 		return &data.FirefoxPassword{}
 	case firefoxCookie:

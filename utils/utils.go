@@ -23,7 +23,7 @@ func IntToBool(a int) bool {
 	return true
 }
 
-func BookMarkType(a int64) string {
+func BookmarkType(a int64) string {
 	switch a {
 	case 1:
 		return "url"
@@ -66,7 +66,7 @@ func WriteFile(filename string, data []byte) error {
 	return err
 }
 
-func FormatFileName(dir, browser, filename, format string) string {
+func FormatFilename(dir, browser, filename, format string) string {
 	r := strings.Replace(strings.TrimSpace(strings.ToLower(browser)), " ", "_", -1)
 	p := path.Join(dir, fmt.Sprintf("%s_%s.%s", r, filename, format))
 	return p

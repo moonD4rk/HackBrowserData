@@ -5,10 +5,12 @@ import (
 	"testing"
 
 	"hack-browser-data/pkg/browser/outputter"
+	"hack-browser-data/pkg/log"
 )
 
 func TestPickChromium(t *testing.T) {
-	browsers := PickChromium("all")
+	browsers := pickChromium("chrome")
+	log.InitLog("debug")
 	filetype := "json"
 	dir := "result"
 	output := outputter.NewOutPutter(filetype)
@@ -17,21 +19,16 @@ func TestPickChromium(t *testing.T) {
 	}
 	for _, b := range browsers {
 		fmt.Printf("%+v\n", b)
-		if err := b.copyItemFileToLocal(); err != nil {
+		if err := b.CopyItemFileToLocal(); err != nil {
 			panic(err)
 		}
 		masterKey, err := b.GetMasterKey()
 		if err != nil {
 			fmt.Println(err)
 		}
-		browserName := b.GetBrowserName()
+		browserName := b.GetName()
 		multiData := b.GetBrowsingData()
-		// TODO: 优化获取 Data 逻辑
 		for _, data := range multiData {
-			if data == nil {
-				fmt.Println(data)
-				continue
-			}
 			if err := data.Parse(masterKey); err != nil {
 				fmt.Println(err)
 			}
@@ -48,7 +45,7 @@ func TestPickChromium(t *testing.T) {
 }
 
 func TestPickFirefox(t *testing.T) {
-	browsers := PickFirefox("all")
+	browsers := pickFirefox("all")
 	filetype := "json"
 	dir := "result"
 	output := outputter.NewOutPutter(filetype)
@@ -57,16 +54,15 @@ func TestPickFirefox(t *testing.T) {
 	}
 	for _, b := range browsers {
 		fmt.Printf("%+v\n", b)
-		if err := b.copyItemFileToLocal(); err != nil {
+		if err := b.CopyItemFileToLocal(); err != nil {
 			panic(err)
 		}
 		masterKey, err := b.GetMasterKey()
 		if err != nil {
 			fmt.Println(err)
 		}
-		browserName := b.GetBrowserName()
+		browserName := b.GetName()
 		multiData := b.GetBrowsingData()
-		// TODO: 优化获取 Data 逻辑
 		for _, data := range multiData {
 			if err := data.Parse(masterKey); err != nil {
 				fmt.Println(err)

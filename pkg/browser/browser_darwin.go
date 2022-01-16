@@ -18,12 +18,10 @@ var (
 		"chrome": {
 			browserInfo: chromeInfo,
 			items:       defaultChromiumItems,
-			// New:         newBrowser,
 		},
 		"edge": {
 			browserInfo: edgeInfo,
 			items:       defaultChromiumItems,
-			// New:         newBrowser,
 		},
 	}
 	firefoxList = map[string]struct {
@@ -47,7 +45,7 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 		stdout, stderr bytes.Buffer
 	)
 	// $ security find-generic-password -wa 'Chrome'
-	cmd = exec.Command("security", "find-generic-password", "-wa", c.GetStorageName())
+	cmd = exec.Command("security", "find-generic-password", "-wa", c.browserInfo.storage)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
@@ -66,7 +64,7 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157
 	key := pbkdf2.Key(chromeSecret, chromeSalt, 1003, 16, sha1.New)
 	c.browserInfo.masterKey = key
-	return c.browserInfo.masterKey, nil
+	return key, nil
 }
 
 var (
@@ -82,7 +80,7 @@ var (
 	}
 	firefoxInfo = &browserInfo{
 		name:        firefoxName,
-		profilePath: fireFoxProfilePath,
+		profilePath: firefoxProfilePath,
 	}
 )
 
@@ -98,8 +96,9 @@ const (
 	coccocProfilePath     = "/Library/Application Support/Coccoc/"
 	yandexProfilePath     = "/Library/Application Support/Yandex/YandexBrowser/"
 
-	fireFoxProfilePath = "/Library/Application Support/Firefox/Profiles/"
+	firefoxProfilePath = "/Library/Application Support/Firefox/Profiles/"
 )
+
 const (
 	chromeStorageName     = "Chrome"
 	chromeBetaStorageName = "Chrome"

@@ -19,8 +19,8 @@ const (
 	FirefoxPassword = "logins.json"
 	FirefoxData     = "places.sqlite"
 
-	UnknownItem   = "unknown item"
-	UnSupportItem = "unsupport item"
+	UnknownItem     = "unknown item"
+	UnsupportedItem = "unsupported item"
 )
 
 // item's renamed filename

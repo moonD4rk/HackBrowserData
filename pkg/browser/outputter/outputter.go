@@ -3,7 +3,6 @@ package outputter
 import (
 	"encoding/csv"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -73,7 +72,6 @@ func (o *outPutter) CreateFile(dirname, filename string) (*os.File, error) {
 	var err error
 	p := filepath.Join(dirname, filename)
 	file, err = os.OpenFile(p, os.O_TRUNC|os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	fmt.Println(err)
 	if err != nil {
 		return nil, err
 	}
