@@ -7,8 +7,8 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"hack-browser-data/pkg/browser/consts"
-	"hack-browser-data/utils"
+	"hack-browser-data/internal/browser/consts"
+	"hack-browser-data/internal/utils"
 )
 
 type ChromiumBookmark []bookmark

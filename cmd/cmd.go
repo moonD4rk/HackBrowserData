@@ -5,11 +5,11 @@ import (
 	"os"
 	"strings"
 
-	"hack-browser-data/pkg/browser"
-	"hack-browser-data/pkg/browser/outputter"
-	"hack-browser-data/pkg/log"
-
 	"github.com/urfave/cli/v2"
+
+	"hack-browser-data/internal/browser"
+	"hack-browser-data/internal/browser/outputter"
+	"hack-browser-data/internal/log"
 )
 
 var (
@@ -26,7 +26,7 @@ func Execute() {
 		Name:  "hack-browser-data",
 		Usage: "Export passwords/cookies/history/bookmarks from browser",
 		UsageText: "[hack-browser-data -b chrome -f json -dir results -cc]\n 	Get all data(password/cookie/history/bookmark) from chrome",
-		Version: "0.3.7",
+		Version: "0.3.8",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{Name: "verbose", Aliases: []string{"vv"}, Destination: &verbose, Value: false, Usage: "verbose"},
 			&cli.BoolFlag{Name: "compress", Aliases: []string{"cc"}, Destination: &compress, Value: false, Usage: "compress result to zip"},
@@ -46,7 +46,7 @@ func Execute() {
 			} else {
 				log.InitLog("error")
 			}
-			browsers = browser.PickBrowsers(browserName)
+			browsers = browser.PickBrowser(browserName)
 
 			output := outputter.NewOutPutter(outputFormat)
 			if err := output.MakeDir(exportDir); err != nil {

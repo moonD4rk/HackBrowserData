@@ -9,9 +9,9 @@ import (
 	"sort"
 	"time"
 
-	"hack-browser-data/pkg/browser/consts"
-	"hack-browser-data/pkg/decrypter"
-	"hack-browser-data/utils"
+	"hack-browser-data/internal/browser/consts"
+	decrypter2 "hack-browser-data/internal/decrypter"
+	"hack-browser-data/internal/utils"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tidwall/gjson"
@@ -47,12 +47,12 @@ func (c *ChromiumPassword) Parse(masterKey []byte) error {
 		}
 		if len(pwd) > 0 {
 			if masterKey == nil {
-				password, err = decrypter.DPApi(pwd)
+				password, err = decrypter2.DPApi(pwd)
 				if err != nil {
 					fmt.Println(err)
 				}
 			} else {
-				password, err = decrypter.ChromePass(masterKey, pwd)
+				password, err = decrypter2.ChromePass(masterKey, pwd)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -84,7 +84,7 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 	if err != nil {
 		return err
 	}
-	metaPBE, err := decrypter.NewASN1PBE(metaBytes)
+	metaPBE, err := decrypter2.NewASN1PBE(metaBytes)
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 	if bytes.Contains(k, []byte("password-check")) {
 		m := bytes.Compare(nssA102, keyLin)
 		if m == 0 {
-			nssPBE, err := decrypter.NewASN1PBE(nssA11)
+			nssPBE, err := decrypter2.NewASN1PBE(nssA11)
 			if err != nil {
 				return err
 			}
@@ -111,11 +111,11 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 				return err
 			}
 			for _, v := range allLogin {
-				userPBE, err := decrypter.NewASN1PBE(v.encryptUser)
+				userPBE, err := decrypter2.NewASN1PBE(v.encryptUser)
 				if err != nil {
 					return err
 				}
-				pwdPBE, err := decrypter.NewASN1PBE(v.encryptPass)
+				pwdPBE, err := decrypter2.NewASN1PBE(v.encryptPass)
 				if err != nil {
 					return err
 				}
@@ -129,8 +129,8 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 				}
 				*f = append(*f, loginData{
 					LoginUrl:   v.LoginUrl,
-					UserName:   string(decrypter.PKCS5UnPadding(user)),
-					Password:   string(decrypter.PKCS5UnPadding(pwd)),
+					UserName:   string(decrypter2.PKCS5UnPadding(user)),
+					Password:   string(decrypter2.PKCS5UnPadding(pwd)),
 					CreateDate: v.CreateDate,
 				})
 			}

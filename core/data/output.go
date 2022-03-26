@@ -7,9 +7,9 @@ import (
 	"os"
 	"sort"
 
-	"hack-browser-data/utils"
-
 	"github.com/jszwec/csvutil"
+
+	"hack-browser-data/internal/utils"
 )
 
 var (

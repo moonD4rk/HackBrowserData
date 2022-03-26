@@ -7,7 +7,7 @@ import (
 	keyring "github.com/ppacher/go-dbus-keyring"
 	"golang.org/x/crypto/pbkdf2"
 
-	"hack-browser-data/pkg/log"
+	"hack-browser-data/internal/log"
 )
 
 const (
