@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sort"
 
-	"hack-browser-data/pkg/browser/consts"
-	"hack-browser-data/utils"
+	"hack-browser-data/internal/browser/consts"
+	"hack-browser-data/internal/utils"
 
 	_ "github.com/mattn/go-sqlite3"
 )

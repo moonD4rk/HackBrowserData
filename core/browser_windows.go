@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"hack-browser-data/core/decrypt"
-	"hack-browser-data/utils"
+	"hack-browser-data/internal/utils"
 
 	"github.com/tidwall/gjson"
 )

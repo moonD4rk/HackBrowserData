@@ -6,9 +6,9 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"hack-browser-data/pkg/browser/consts"
-	"hack-browser-data/pkg/decrypter"
-	"hack-browser-data/utils"
+	"hack-browser-data/internal/browser/consts"
+	"hack-browser-data/internal/decrypter"
+	"hack-browser-data/internal/utils"
 )
 
 var (

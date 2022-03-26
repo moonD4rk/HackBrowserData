@@ -4,10 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 
-	"hack-browser-data/pkg/browser/consts"
-	"hack-browser-data/pkg/decrypter"
-
 	_ "github.com/mattn/go-sqlite3"
+
+	"hack-browser-data/internal/browser/consts"
+	"hack-browser-data/internal/decrypter"
 )
 
 type ChromiumCreditCard []card

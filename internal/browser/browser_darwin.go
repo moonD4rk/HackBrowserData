@@ -13,7 +13,6 @@ var (
 	chromiumList = map[string]struct {
 		browserInfo *browserInfo
 		items       []item
-		// New         func(browser *browserInfo, items []item) *firefox
 	}{
 		"chrome": {
 			browserInfo: chromeInfo,
@@ -22,6 +21,38 @@ var (
 		"edge": {
 			browserInfo: edgeInfo,
 			items:       defaultChromiumItems,
+		},
+		"chromium": {
+			browserInfo: chromiumInfo,
+			items:       defaultChromiumItems,
+		},
+		"chrome-beta": {
+			browserInfo: chromeBetaInfo,
+			items:       defaultChromiumItems,
+		},
+		"opera": {
+			browserInfo: operaInfo,
+			items:       defaultChromiumItems,
+		},
+		"opera-gx": {
+			browserInfo: operaGXInfo,
+			items:       defaultChromiumItems,
+		},
+		"vivaldi": {
+			browserInfo: vivaldiInfo,
+			items:       defaultChromiumItems,
+		},
+		"coccoc": {
+			browserInfo: coccocInfo,
+			items:       defaultChromiumItems,
+		},
+		"brave": {
+			browserInfo: braveInfo,
+			items:       defaultChromiumItems,
+		},
+		"yandex": {
+			browserInfo: yandexInfo,
+			items:       defaultYandexItems,
 		},
 	}
 	firefoxList = map[string]struct {
@@ -63,26 +94,12 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 	var chromeSalt = []byte("saltysalt")
 	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157
 	key := pbkdf2.Key(chromeSecret, chromeSalt, 1003, 16, sha1.New)
-	c.browserInfo.masterKey = key
-	return key, nil
+	if key != nil {
+		c.browserInfo.masterKey = key
+		return key, nil
+	}
+	return nil, errors.New("macOS wrong security command")
 }
-
-var (
-	chromeInfo = &browserInfo{
-		name:        chromeName,
-		storage:     chromeStorageName,
-		profilePath: chromeProfilePath,
-	}
-	edgeInfo = &browserInfo{
-		name:        edgeName,
-		storage:     edgeStorageName,
-		profilePath: edgeProfilePath,
-	}
-	firefoxInfo = &browserInfo{
-		name:        firefoxName,
-		profilePath: firefoxProfilePath,
-	}
-)
 
 const (
 	chromeProfilePath     = "/Library/Application Support/Google/Chrome/"
@@ -109,4 +126,61 @@ const (
 	vivaldiStorageName    = "Vivaldi"
 	coccocStorageName     = "CocCoc"
 	yandexStorageName     = "Yandex"
+)
+
+var (
+	chromeInfo = &browserInfo{
+		name:        chromeName,
+		storage:     chromeStorageName,
+		profilePath: chromeProfilePath,
+	}
+	chromiumInfo = &browserInfo{
+		name:        chromiumName,
+		storage:     chromiumStorageName,
+		profilePath: chromiumProfilePath,
+	}
+	chromeBetaInfo = &browserInfo{
+		name:        chromeBetaName,
+		storage:     chromeBetaStorageName,
+		profilePath: chromeBetaProfilePath,
+	}
+	operaInfo = &browserInfo{
+		name:        operaName,
+		profilePath: operaProfilePath,
+		storage:     operaStorageName,
+	}
+	operaGXInfo = &browserInfo{
+		name:        operaGXName,
+		profilePath: operaGXProfilePath,
+		storage:     operaStorageName,
+	}
+	edgeInfo = &browserInfo{
+		name:        edgeName,
+		storage:     edgeStorageName,
+		profilePath: edgeProfilePath,
+	}
+	braveInfo = &browserInfo{
+		name:        braveName,
+		profilePath: braveProfilePath,
+		storage:     braveStorageName,
+	}
+	vivaldiInfo = &browserInfo{
+		name:        vivaldiName,
+		storage:     vivaldiStorageName,
+		profilePath: vivaldiProfilePath,
+	}
+	coccocInfo = &browserInfo{
+		name:        coccocName,
+		storage:     coccocStorageName,
+		profilePath: coccocProfilePath,
+	}
+	yandexInfo = &browserInfo{
+		name:        yandexName,
+		storage:     yandexStorageName,
+		profilePath: yandexProfilePath,
+	}
+	firefoxInfo = &browserInfo{
+		name:        firefoxName,
+		profilePath: firefoxProfilePath,
+	}
 )

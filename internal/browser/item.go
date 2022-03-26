@@ -1,8 +1,8 @@
 package browser
 
 import (
-	"hack-browser-data/pkg/browser/consts"
-	"hack-browser-data/pkg/browser/data"
+	"hack-browser-data/internal/browser/consts"
+	data2 "hack-browser-data/internal/browser/data"
 )
 
 type item int
@@ -126,40 +126,40 @@ func (i item) FileName() string {
 	}
 }
 
-func (i item) NewBrowsingData() data.BrowsingData {
+func (i item) NewBrowsingData() data2.BrowsingData {
 	switch i {
 	case chromiumKey:
 		return nil
 	case chromiumPassword:
-		return &data.ChromiumPassword{}
+		return &data2.ChromiumPassword{}
 	case chromiumCookie:
-		return &data.ChromiumCookie{}
+		return &data2.ChromiumCookie{}
 	case chromiumBookmark:
-		return &data.ChromiumBookmark{}
+		return &data2.ChromiumBookmark{}
 	case chromiumDownload:
-		return &data.ChromiumDownload{}
+		return &data2.ChromiumDownload{}
 	case chromiumLocalStorage:
 		return nil
 	case chromiumCreditCard:
-		return &data.ChromiumCreditCard{}
+		return &data2.ChromiumCreditCard{}
 	case chromiumExtension:
 		return nil
 	case chromiumHistory:
-		return &data.ChromiumHistory{}
+		return &data2.ChromiumHistory{}
 	case yandexPassword:
-		return &data.ChromiumPassword{}
+		return &data2.ChromiumPassword{}
 	case yandexCreditCard:
-		return &data.ChromiumCreditCard{}
+		return &data2.ChromiumCreditCard{}
 	case firefoxPassword:
-		return &data.FirefoxPassword{}
+		return &data2.FirefoxPassword{}
 	case firefoxCookie:
-		return &data.FirefoxCookie{}
+		return &data2.FirefoxCookie{}
 	case firefoxBookmark:
-		return &data.FirefoxBookmark{}
+		return &data2.FirefoxBookmark{}
 	case firefoxDownload:
-		return &data.FirefoxDownload{}
+		return &data2.FirefoxDownload{}
 	case firefoxHistory:
-		return &data.FirefoxHistory{}
+		return &data2.FirefoxHistory{}
 	default:
 		return nil
 	}

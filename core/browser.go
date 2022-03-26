@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"hack-browser-data/core/data"
-	"hack-browser-data/pkg/log"
+	"hack-browser-data/internal/log"
 )
 
 const (

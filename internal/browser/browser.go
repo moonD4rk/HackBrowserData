@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"hack-browser-data/pkg/browser/data"
+	"hack-browser-data/internal/browser/data"
 )
 
 type Browser interface {
@@ -27,16 +27,16 @@ var (
 	homeDir, _ = os.UserHomeDir()
 )
 
-func PickBrowsers(name string) []Browser {
+func PickBrowser(name string) []Browser {
 	var browsers []Browser
-	chromiumList := pickChromium(name)
-	for _, b := range chromiumList {
+	clist := pickChromium(name)
+	for _, b := range clist {
 		if b != nil {
 			browsers = append(browsers, b)
 		}
 	}
-	firefoxList := pickFirefox(name)
-	for _, b := range firefoxList {
+	flist := pickFirefox(name)
+	for _, b := range flist {
 		if b != nil {
 			browsers = append(browsers, b)
 		}
@@ -49,11 +49,14 @@ func pickChromium(name string) []Browser {
 	name = strings.ToLower(name)
 	if name == "all" {
 		for _, choice := range chromiumList {
-			b, err := newChromium(choice.browserInfo, choice.items)
-			if err != nil {
+			if b, err := newChromium(choice.browserInfo, choice.items); err == nil {
+				browsers = append(browsers, b)
+			} else {
+				if strings.Contains(err.Error(), "profile path is not exist") {
+					continue
+				}
 				panic(err)
 			}
-			browsers = append(browsers, b)
 		}
 		return browsers
 	}
@@ -72,8 +75,8 @@ func pickFirefox(name string) []Browser {
 	var browsers []Browser
 	name = strings.ToLower(name)
 	if name == "all" || name == "firefox" {
-		for _, v := range firefoxList {
-			multiFirefox, err := newMultiFirefox(v.browserInfo, v.items)
+		for _, b := range firefoxList {
+			multiFirefox, err := newMultiFirefox(b.browserInfo, b.items)
 			if err != nil {
 				panic(err)
 			}
@@ -163,6 +166,10 @@ func newMultiFirefox(info *browserInfo, items []item) ([]*firefox, error) {
 	}
 	multiItemPaths, err := getFirefoxItemAbsPath(f.browserInfo.profilePath, f.items)
 	if err != nil {
+		if strings.Contains(err.Error(), "profile path is not exist") {
+			fmt.Println(err)
+			return nil, nil
+		}
 		panic(err)
 	}
 	var firefoxList []*firefox
@@ -182,6 +189,10 @@ func newMultiFirefox(info *browserInfo, items []item) ([]*firefox, error) {
 func getFirefoxItemAbsPath(profilePath string, items []item) (map[string]map[item]string, error) {
 	var multiItemPaths = make(map[string]map[item]string)
 	absProfilePath := path.Join(homeDir, filepath.Clean(profilePath))
+	// TODO: Handle read file error
+	if !isFileExist(absProfilePath) {
+		return nil, fmt.Errorf("%s profile path is not exist", absProfilePath)
+	}
 	err := filepath.Walk(absProfilePath, firefoxWalkFunc(items, multiItemPaths))
 	return multiItemPaths, err
 }
@@ -250,6 +261,10 @@ func chromiumWalkFunc(items []item, itemPaths map[item]string) filepath.WalkFunc
 func getChromiumItemAbsPath(profilePath string, items []item) (map[item]string, error) {
 	var itemPaths = make(map[item]string)
 	absProfilePath := path.Join(homeDir, filepath.Clean(profilePath))
+	// TODO: Handle file path is not exist
+	if !isFileExist(absProfilePath) {
+		return nil, fmt.Errorf("%s profile path is not exist", absProfilePath)
+	}
 	err := filepath.Walk(absProfilePath, chromiumWalkFunc(items, itemPaths))
 	return itemPaths, err
 }
@@ -272,6 +287,7 @@ func (f *firefox) GetBrowsingData() []data.BrowsingData {
 	}
 	return browsingData
 }
+
 func ListBrowser() []string {
 	var l []string
 	for c := range chromiumList {
@@ -283,6 +299,13 @@ func ListBrowser() []string {
 	return l
 }
 
+func isFileExist(path string) bool {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
 type browserInfo struct {
 	name        string
 	storage     string
@@ -291,10 +314,23 @@ type browserInfo struct {
 }
 
 const (
-	chromeName  = "Chrome"
-	edgeName    = "Edge"
-	firefoxName = "Firefox"
-	yandexName  = "Yandex"
+	chromeName         = "Chrome"
+	chromeBetaName     = "Chrome Beta"
+	chromiumName       = "Chromium"
+	edgeName           = "Microsoft Edge"
+	firefoxName        = "Firefox"
+	firefoxBetaName    = "Firefox Beta"
+	firefoxDevName     = "Firefox Dev"
+	firefoxNightlyName = "Firefox Nightly"
+	firefoxESRName     = "Firefox ESR"
+	speed360Name       = "360speed"
+	qqBrowserName      = "QQ"
+	braveName          = "Brave"
+	operaName          = "Opera"
+	operaGXName        = "OperaGX"
+	vivaldiName        = "Vivaldi"
+	coccocName         = "CocCoc"
+	yandexName         = "Yandex"
 )
 
 var defaultFirefoxItems = []item{

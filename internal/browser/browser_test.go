@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"hack-browser-data/pkg/browser/outputter"
-	"hack-browser-data/pkg/log"
+	"hack-browser-data/internal/browser/outputter"
+	"hack-browser-data/internal/log"
 )
 
 func TestPickChromium(t *testing.T) {
@@ -42,6 +42,16 @@ func TestPickChromium(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestPickBrowsers(t *testing.T) {
+	browsers := PickBrowser("all")
+	for _, v := range browsers {
+		fmt.Println(v.GetName())
+	}
+	// filetype := "json"
+	// dir := "result"
+	// output := outputter.NewOutPutter(filetype)
 }
 
 func TestPickFirefox(t *testing.T) {
