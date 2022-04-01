@@ -44,6 +44,15 @@ func TestPickChromium(t *testing.T) {
 	}
 }
 
+func TestGetChromiumItemAbsPath(t *testing.T) {
+	p := `/Library/Application Support/Google/Chrome/`
+	s, err := getChromiumItemPath(p, defaultChromiumItems)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(s)
+}
+
 func TestPickBrowsers(t *testing.T) {
 	browsers := PickBrowser("all")
 	for _, v := range browsers {

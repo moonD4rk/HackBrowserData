@@ -6,7 +6,7 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"hack-browser-data/internal/browser/consts"
+	"hack-browser-data/internal/browser/item"
 	"hack-browser-data/internal/decrypter"
 	"hack-browser-data/internal/utils"
 )
@@ -14,7 +14,7 @@ import (
 var (
 	chromiumList = map[string]struct {
 		browserInfo *browserInfo
-		items       []item
+		items       []item.Item
 	}{
 		"chrome": {
 			browserInfo: chromeInfo,
@@ -31,7 +31,7 @@ var (
 	}
 	firefoxList = map[string]struct {
 		browserInfo *browserInfo
-		items       []item
+		items       []item.Item
 	}{
 		"firefox": {
 			browserInfo: firefoxInfo,
@@ -45,7 +45,7 @@ var (
 )
 
 func (c *chromium) GetMasterKey() ([]byte, error) {
-	keyFile, err := utils.ReadFile(consts.ChromiumKeyFilename)
+	keyFile, err := utils.ReadFile(item.TempChromiumKey)
 	if err != nil {
 		return nil, err
 	}

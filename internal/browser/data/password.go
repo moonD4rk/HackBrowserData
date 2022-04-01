@@ -9,7 +9,7 @@ import (
 	"sort"
 	"time"
 
-	"hack-browser-data/internal/browser/consts"
+	"hack-browser-data/internal/browser/item"
 	decrypter2 "hack-browser-data/internal/decrypter"
 	"hack-browser-data/internal/utils"
 
@@ -20,7 +20,7 @@ import (
 type ChromiumPassword []loginData
 
 func (c *ChromiumPassword) Parse(masterKey []byte) error {
-	loginDB, err := sql.Open("sqlite3", consts.ChromiumPasswordFilename)
+	loginDB, err := sql.Open("sqlite3", item.TempChromiumPassword)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func (c *ChromiumPassword) Name() string {
 type FirefoxPassword []loginData
 
 func (f *FirefoxPassword) Parse(masterKey []byte) error {
-	globalSalt, metaBytes, nssA11, nssA102, err := getFirefoxDecryptKey(consts.FirefoxKey4Filename)
+	globalSalt, metaBytes, nssA11, nssA102, err := getFirefoxDecryptKey(item.FirefoxKey4Filename)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 			if err != nil {
 				return err
 			}
-			allLogin, err := getFirefoxLoginData(consts.FirefoxPasswordFilename)
+			allLogin, err := getFirefoxLoginData(item.FirefoxPasswordFilename)
 			if err != nil {
 				return err
 			}

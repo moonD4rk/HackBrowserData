@@ -7,12 +7,14 @@ import (
 	"os/exec"
 
 	"golang.org/x/crypto/pbkdf2"
+
+	"hack-browser-data/internal/browser/item"
 )
 
 var (
 	chromiumList = map[string]struct {
 		browserInfo *browserInfo
-		items       []item
+		items       []item.Item
 	}{
 		"chrome": {
 			browserInfo: chromeInfo,
@@ -57,7 +59,7 @@ var (
 	}
 	firefoxList = map[string]struct {
 		browserInfo *browserInfo
-		items       []item
+		items       []item.Item
 	}{
 		"firefox": {
 			browserInfo: firefoxInfo,
