@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	"hack-browser-data/internal/browser/consts"
+	"hack-browser-data/internal/browser/item"
 	"hack-browser-data/internal/decrypter"
 	"hack-browser-data/internal/utils"
 
@@ -15,7 +15,7 @@ import (
 type ChromiumCookie []cookie
 
 func (c *ChromiumCookie) Parse(masterKey []byte) error {
-	cookieDB, err := sql.Open("sqlite3", consts.ChromiumCookieFilename)
+	cookieDB, err := sql.Open("sqlite3", item.ChromiumCookieFilename)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (c *ChromiumCookie) Name() string {
 type FirefoxCookie []cookie
 
 func (f *FirefoxCookie) Parse(masterKey []byte) error {
-	cookieDB, err := sql.Open("sqlite3", consts.FirefoxCookieFilename)
+	cookieDB, err := sql.Open("sqlite3", item.FirefoxCookieFilename)
 	if err != nil {
 		return err
 	}

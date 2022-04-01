@@ -7,14 +7,14 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"hack-browser-data/internal/browser/consts"
+	"hack-browser-data/internal/browser/item"
 	"hack-browser-data/internal/utils"
 )
 
 type ChromiumBookmark []bookmark
 
 func (c *ChromiumBookmark) Parse(masterKey []byte) error {
-	bookmarks, err := utils.ReadFile(consts.ChromiumBookmarkFilename)
+	bookmarks, err := utils.ReadFile(item.ChromiumBookmarkFilename)
 	if err != nil {
 		return err
 	}
@@ -26,6 +26,7 @@ func (c *ChromiumBookmark) Parse(masterKey []byte) error {
 			return true
 		})
 	}
+	// TODO: 使用泛型重构
 	sort.Slice(*c, func(i, j int) bool {
 		return (*c)[i].DateAdded.After((*c)[j].DateAdded)
 	})
@@ -73,7 +74,7 @@ func (f *FirefoxBookmark) Parse(masterKey []byte) error {
 		keyDB        *sql.DB
 		bookmarkRows *sql.Rows
 	)
-	keyDB, err = sql.Open("sqlite3", consts.FirefoxBookmarkFilename)
+	keyDB, err = sql.Open("sqlite3", item.FirefoxBookmarkFilename)
 	if err != nil {
 		return err
 	}

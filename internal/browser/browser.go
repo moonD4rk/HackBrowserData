@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"hack-browser-data/internal/browser/data"
+	"hack-browser-data/internal/browser/item"
 )
 
 type Browser interface {
@@ -75,8 +76,8 @@ func pickFirefox(name string) []Browser {
 	var browsers []Browser
 	name = strings.ToLower(name)
 	if name == "all" || name == "firefox" {
-		for _, b := range firefoxList {
-			multiFirefox, err := newMultiFirefox(b.browserInfo, b.items)
+		for _, f := range firefoxList {
+			multiFirefox, err := newMultiFirefox(f.browserInfo, f.items)
 			if err != nil {
 				panic(err)
 			}
@@ -91,17 +92,22 @@ func pickFirefox(name string) []Browser {
 
 type chromium struct {
 	browserInfo *browserInfo
-	items       []item
-	itemPaths   map[item]string
+	items       []item.Item
+	itemPaths   map[item.Item]string
 }
 
-// NewBrowser 根据浏览器信息生成 Browser Interface
-func newChromium(info *browserInfo, items []item) (*chromium, error) {
+// newChromium 根据浏览器信息生成 Browser Interface
+func newChromium(info *browserInfo, items []item.Item) (*chromium, error) {
 	c := &chromium{
 		browserInfo: info,
 		items:       items,
 	}
-	itemsPaths, err := getChromiumItemAbsPath(c.browserInfo.profilePath, c.items)
+	absProfilePath := path.Join(homeDir, filepath.Clean(c.browserInfo.profilePath))
+	// TODO: Handle file path is not exist
+	if !isFileExist(absProfilePath) {
+		return nil, fmt.Errorf("%s profile path is not exist", absProfilePath)
+	}
+	itemsPaths, err := getChromiumItemPath(absProfilePath, c.items)
 	if err != nil {
 		return nil, err
 	}
@@ -153,13 +159,13 @@ func (c *chromium) CopyItemFileToLocal() error {
 
 type firefox struct {
 	browserInfo    *browserInfo
-	items          []item
-	itemPaths      map[item]string
-	multiItemPaths map[string]map[item]string
+	items          []item.Item
+	itemPaths      map[item.Item]string
+	multiItemPaths map[string]map[item.Item]string
 }
 
 // newFirefox
-func newMultiFirefox(info *browserInfo, items []item) ([]*firefox, error) {
+func newMultiFirefox(info *browserInfo, items []item.Item) ([]*firefox, error) {
 	f := &firefox{
 		browserInfo: info,
 		items:       items,
@@ -186,8 +192,8 @@ func newMultiFirefox(info *browserInfo, items []item) ([]*firefox, error) {
 	return firefoxList, nil
 }
 
-func getFirefoxItemAbsPath(profilePath string, items []item) (map[string]map[item]string, error) {
-	var multiItemPaths = make(map[string]map[item]string)
+func getFirefoxItemAbsPath(profilePath string, items []item.Item) (map[string]map[item.Item]string, error) {
+	var multiItemPaths = make(map[string]map[item.Item]string)
 	absProfilePath := path.Join(homeDir, filepath.Clean(profilePath))
 	// TODO: Handle read file error
 	if !isFileExist(absProfilePath) {
@@ -224,7 +230,7 @@ func (f *firefox) CopyItemFileToLocal() error {
 	return nil
 }
 
-func firefoxWalkFunc(items []item, multiItemPaths map[string]map[item]string) filepath.WalkFunc {
+func firefoxWalkFunc(items []item.Item, multiItemPaths map[string]map[item.Item]string) filepath.WalkFunc {
 	return func(path string, info fs.FileInfo, err error) error {
 		for _, v := range items {
 			if info.Name() == v.DefaultName() {
@@ -232,7 +238,7 @@ func firefoxWalkFunc(items []item, multiItemPaths map[string]map[item]string) fi
 				if _, exist := multiItemPaths[parentDir]; exist {
 					multiItemPaths[parentDir][v] = path
 				} else {
-					multiItemPaths[parentDir] = map[item]string{v: path}
+					multiItemPaths[parentDir] = map[item.Item]string{v: path}
 				}
 			}
 		}
@@ -242,31 +248,6 @@ func firefoxWalkFunc(items []item, multiItemPaths map[string]map[item]string) fi
 
 func getParentDir(absPath string) string {
 	return filepath.Base(filepath.Dir(absPath))
-}
-
-func chromiumWalkFunc(items []item, itemPaths map[item]string) filepath.WalkFunc {
-	return func(path string, info os.FileInfo, err error) error {
-		for _, item := range items {
-			if item.DefaultName() == info.Name() && item == chromiumKey {
-				itemPaths[item] = path
-			}
-			if item.DefaultName() == info.Name() && strings.Contains(path, "Default") {
-				itemPaths[item] = path
-			}
-		}
-		return err
-	}
-}
-
-func getChromiumItemAbsPath(profilePath string, items []item) (map[item]string, error) {
-	var itemPaths = make(map[item]string)
-	absProfilePath := path.Join(homeDir, filepath.Clean(profilePath))
-	// TODO: Handle file path is not exist
-	if !isFileExist(absProfilePath) {
-		return nil, fmt.Errorf("%s profile path is not exist", absProfilePath)
-	}
-	err := filepath.Walk(absProfilePath, chromiumWalkFunc(items, itemPaths))
-	return itemPaths, err
 }
 
 func (f *firefox) GetMasterKey() ([]byte, error) {
@@ -333,38 +314,38 @@ const (
 	yandexName         = "Yandex"
 )
 
-var defaultFirefoxItems = []item{
-	firefoxKey4,
-	firefoxPassword,
-	firefoxCookie,
-	firefoxBookmark,
-	firefoxHistory,
-	firefoxDownload,
-	firefoxCreditCard,
-	firefoxLocalStorage,
-	firefoxExtension,
+var defaultFirefoxItems = []item.Item{
+	item.firefoxKey4,
+	item.firefoxPassword,
+	item.firefoxCookie,
+	item.firefoxBookmark,
+	item.firefoxHistory,
+	item.firefoxDownload,
+	item.firefoxCreditCard,
+	item.firefoxLocalStorage,
+	item.firefoxExtension,
 }
 
-var defaultYandexItems = []item{
-	chromiumKey,
-	yandexPassword,
-	chromiumCookie,
-	chromiumBookmark,
-	chromiumHistory,
-	chromiumDownload,
-	yandexCreditCard,
-	chromiumLocalStorage,
-	chromiumExtension,
+var defaultYandexItems = []item.Item{
+	item.chromiumKey,
+	item.yandexPassword,
+	item.chromiumCookie,
+	item.chromiumBookmark,
+	item.chromiumHistory,
+	item.chromiumDownload,
+	item.yandexCreditCard,
+	item.chromiumLocalStorage,
+	item.chromiumExtension,
 }
 
-var defaultChromiumItems = []item{
-	chromiumKey,
-	chromiumPassword,
-	chromiumCookie,
-	chromiumBookmark,
-	chromiumHistory,
-	chromiumDownload,
-	chromiumCreditCard,
-	chromiumLocalStorage,
-	chromiumExtension,
+var defaultChromiumItems = []item.Item{
+	item.chromiumKey,
+	item.chromiumPassword,
+	item.chromiumCookie,
+	item.chromiumBookmark,
+	item.chromiumHistory,
+	item.chromiumDownload,
+	item.chromiumCreditCard,
+	item.chromiumLocalStorage,
+	item.chromiumExtension,
 }

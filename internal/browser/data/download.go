@@ -8,7 +8,7 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"hack-browser-data/internal/browser/consts"
+	"hack-browser-data/internal/browser/item"
 	"hack-browser-data/internal/utils"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -17,7 +17,7 @@ import (
 type ChromiumDownload []download
 
 func (c *ChromiumDownload) Parse(masterKey []byte) error {
-	historyDB, err := sql.Open("sqlite3", consts.ChromiumDownloadFilename)
+	historyDB, err := sql.Open("sqlite3", item.ChromiumDownloadFilename)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func (f *FirefoxDownload) Parse(masterKey []byte) error {
 		keyDB        *sql.DB
 		downloadRows *sql.Rows
 	)
-	keyDB, err = sql.Open("sqlite3", consts.FirefoxDownloadFilename)
+	keyDB, err = sql.Open("sqlite3", item.FirefoxDownloadFilename)
 	if err != nil {
 		return err
 	}
