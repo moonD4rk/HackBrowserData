@@ -185,7 +185,7 @@ History
 *.sqlite-shm
 *.sqlite-wal
 
-Chromium*
-Firefox*
+#Chromium*
+#Firefox*
 result/
 results/
