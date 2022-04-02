@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"hack-browser-data/internal/browser/data"
+	"hack-browser-data/internal/data"
 	"hack-browser-data/internal/item"
 )
 

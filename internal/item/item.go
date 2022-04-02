@@ -1,34 +1,7 @@
 package item
 
 import (
-	"hack-browser-data/internal/browser/data"
-)
-
-type Item int
-
-const (
-	ChromiumKey Item = iota
-	ChromiumPassword
-	ChromiumCookie
-	ChromiumBookmark
-	ChromiumHistory
-	ChromiumDownload
-	ChromiumCreditCard
-	ChromiumLocalStorage
-	ChromiumExtension
-
-	YandexPassword
-	YandexCreditCard
-
-	FirefoxKey4
-	FirefoxPassword
-	FirefoxCookie
-	FirefoxBookmark
-	FirefoxHistory
-	FirefoxDownload
-	FirefoxCreditCard
-	FirefoxLocalStorage
-	FirefoxExtension
+	data2 "hack-browser-data/internal/data"
 )
 
 var DefaultFirefox = []Item{
@@ -66,6 +39,33 @@ var DefaultChromium = []Item{
 	ChromiumLocalStorage,
 	ChromiumExtension,
 }
+
+type Item int
+
+const (
+	ChromiumKey Item = iota
+	ChromiumPassword
+	ChromiumCookie
+	ChromiumBookmark
+	ChromiumHistory
+	ChromiumDownload
+	ChromiumCreditCard
+	ChromiumLocalStorage
+	ChromiumExtension
+
+	YandexPassword
+	YandexCreditCard
+
+	FirefoxKey4
+	FirefoxPassword
+	FirefoxCookie
+	FirefoxBookmark
+	FirefoxHistory
+	FirefoxDownload
+	FirefoxCreditCard
+	FirefoxLocalStorage
+	FirefoxExtension
+)
 
 func (i Item) FileName() string {
 	switch i {
@@ -161,40 +161,40 @@ func (i Item) String() string {
 	}
 }
 
-func (i Item) NewBrowsingData() data.BrowsingData {
+func (i Item) NewBrowsingData() data2.BrowsingData {
 	switch i {
 	case ChromiumKey:
 		return nil
 	case ChromiumPassword:
-		return &data.ChromiumPassword{}
+		return &data2.ChromiumPassword{}
 	case ChromiumCookie:
-		return &data.ChromiumCookie{}
+		return &data2.ChromiumCookie{}
 	case ChromiumBookmark:
-		return &data.ChromiumBookmark{}
+		return &data2.ChromiumBookmark{}
 	case ChromiumDownload:
-		return &data.ChromiumDownload{}
+		return &data2.ChromiumDownload{}
 	case ChromiumLocalStorage:
 		return nil
 	case ChromiumCreditCard:
-		return &data.ChromiumCreditCard{}
+		return &data2.ChromiumCreditCard{}
 	case ChromiumExtension:
 		return nil
 	case ChromiumHistory:
-		return &data.ChromiumHistory{}
+		return &data2.ChromiumHistory{}
 	case YandexPassword:
-		return &data.ChromiumPassword{}
+		return &data2.ChromiumPassword{}
 	case YandexCreditCard:
-		return &data.ChromiumCreditCard{}
+		return &data2.ChromiumCreditCard{}
 	case FirefoxPassword:
-		return &data.FirefoxPassword{}
+		return &data2.FirefoxPassword{}
 	case FirefoxCookie:
-		return &data.FirefoxCookie{}
+		return &data2.FirefoxCookie{}
 	case FirefoxBookmark:
-		return &data.FirefoxBookmark{}
+		return &data2.FirefoxBookmark{}
 	case FirefoxDownload:
-		return &data.FirefoxDownload{}
+		return &data2.FirefoxDownload{}
 	case FirefoxHistory:
-		return &data.FirefoxHistory{}
+		return &data2.FirefoxHistory{}
 	default:
 		return nil
 	}

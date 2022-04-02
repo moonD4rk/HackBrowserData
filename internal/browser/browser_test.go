@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"hack-browser-data/internal/browser/outputter"
 	"hack-browser-data/internal/log"
+	"hack-browser-data/internal/outputter"
 )
 
 func TestPickChromium(t *testing.T) {

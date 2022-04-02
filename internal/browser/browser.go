@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	"hack-browser-data/internal/browser/data"
+	"hack-browser-data/internal/data"
 )
 
 type Browser interface {

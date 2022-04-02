@@ -10,7 +10,7 @@ import (
 	"github.com/gocarina/gocsv"
 	jsoniter "github.com/json-iterator/go"
 
-	"hack-browser-data/internal/browser/data"
+	"hack-browser-data/internal/data"
 )
 
 type outPutter struct {
