@@ -7,6 +7,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	"hack-browser-data/internal/browser/item"
+
 	"hack-browser-data/internal/decrypter"
 )
 

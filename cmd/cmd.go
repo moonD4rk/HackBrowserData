@@ -8,8 +8,8 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"hack-browser-data/internal/browser"
-	"hack-browser-data/internal/browser/outputter"
 	"hack-browser-data/internal/log"
+	"hack-browser-data/internal/outputter"
 )
 
 var (
