@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"hack-browser-data/internal/browser/data"
-	"hack-browser-data/internal/browser/item"
+	"hack-browser-data/internal/item"
 )
 
 type chromium struct {
@@ -21,15 +21,15 @@ type chromium struct {
 	itemPaths   map[item.Item]string
 }
 
-// newChromium 根据浏览器信息生成 Browser Interface
-func newChromium(name, storage, profilePath string, items []item.Item) (*chromium, error) {
+// New 根据浏览器信息生成 Browser Interface
+func New(name, storage, profilePath string, items []item.Item) (*chromium, error) {
 	c := &chromium{
 		name:        name,
 		storage:     storage,
 		profilePath: profilePath,
 		items:       items,
 	}
-	absProfilePath := path.Join(homeDir, filepath.Clean(c.browserInfo.profilePath))
+	absProfilePath := path.Join(homeDir, filepath.Clean(c.ProfilePath))
 	// TODO: Handle file path is not exist
 	if !isFileExist(absProfilePath) {
 		return nil, fmt.Errorf("%s profile path is not exist", absProfilePath)
@@ -59,7 +59,7 @@ func (c *chromium) GetBrowsingData() []data.BrowsingData {
 
 func (c *chromium) CopyItemFileToLocal() error {
 	for item, sourcePath := range c.itemPaths {
-		var dstFilename = item.FileName()
+		var dstFilename = item.TempName()
 		locals, _ := filepath.Glob("*")
 		for _, v := range locals {
 			if v == dstFilename {
@@ -94,7 +94,7 @@ func chromiumWalkFunc(items []item.Item, itemPaths map[item.Item]string) filepat
 	return func(path string, info os.FileInfo, err error) error {
 		for _, it := range items {
 			switch {
-			case it.DefaultName() == info.Name():
+			case it.FileName() == info.Name():
 				if it == it.chromiumKey {
 					itemPaths[it] = path
 				}

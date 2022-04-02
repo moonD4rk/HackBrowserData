@@ -7,14 +7,16 @@ import (
 	"github.com/tidwall/gjson"
 
 	"hack-browser-data/internal/browser/item"
+
 	"hack-browser-data/internal/decrypter"
+	item2 "hack-browser-data/internal/item"
 	"hack-browser-data/internal/utils"
 )
 
 var (
 	chromiumList = map[string]struct {
 		browserInfo *browserInfo
-		items       []item.Item
+		items       []item2.Item
 	}{
 		"chrome": {
 			browserInfo: chromeInfo,
@@ -31,7 +33,7 @@ var (
 	}
 	firefoxList = map[string]struct {
 		browserInfo *browserInfo
-		items       []item.Item
+		items       []item2.Item
 	}{
 		"firefox": {
 			browserInfo: firefoxInfo,

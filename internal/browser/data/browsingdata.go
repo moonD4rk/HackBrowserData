@@ -1,6 +1,8 @@
 package data
 
-import "time"
+import (
+	"time"
+)
 
 type BrowsingData interface {
 	Parse(masterKey []byte) error

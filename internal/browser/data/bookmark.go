@@ -8,10 +8,15 @@ import (
 	"github.com/tidwall/gjson"
 
 	"hack-browser-data/internal/browser/item"
+
+	item2 "hack-browser-data/internal/item"
 	"hack-browser-data/internal/utils"
 )
 
-type ChromiumBookmark []bookmark
+type ChromiumBookmark struct {
+	bookmarks []bookmark
+	item      item2.Item
+}
 
 func (c *ChromiumBookmark) Parse(masterKey []byte) error {
 	bookmarks, err := utils.ReadFile(item.ChromiumBookmarkFilename)
@@ -27,8 +32,8 @@ func (c *ChromiumBookmark) Parse(masterKey []byte) error {
 		})
 	}
 	// TODO: 使用泛型重构
-	sort.Slice(*c, func(i, j int) bool {
-		return (*c)[i].DateAdded.After((*c)[j].DateAdded)
+	sort.Slice(c.bookmarks, func(i, j int) bool {
+		return (c.bookmarks)[i].DateAdded.After((c.bookmarks)[j].DateAdded)
 	})
 	return nil
 }
