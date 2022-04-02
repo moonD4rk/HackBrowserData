@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/crypto/pbkdf2"
 
-	"hack-browser-data/internal/browser/item"
+	"hack-browser-data/internal/item"
 )
 
 var (
@@ -18,43 +18,43 @@ var (
 	}{
 		"chrome": {
 			browserInfo: chromeInfo,
-			items:       defaultChromiumItems,
+			items:       item.DefaultChromium,
 		},
 		"edge": {
 			browserInfo: edgeInfo,
-			items:       defaultChromiumItems,
+			items:       item.DefaultChromium,
 		},
 		"chromium": {
 			browserInfo: chromiumInfo,
-			items:       defaultChromiumItems,
+			items:       item.DefaultChromium,
 		},
 		"chrome-beta": {
 			browserInfo: chromeBetaInfo,
-			items:       defaultChromiumItems,
+			items:       item.DefaultChromium,
 		},
 		"opera": {
 			browserInfo: operaInfo,
-			items:       defaultChromiumItems,
+			items:       item.DefaultChromium,
 		},
 		"opera-gx": {
 			browserInfo: operaGXInfo,
-			items:       defaultChromiumItems,
+			items:       item.DefaultChromium,
 		},
 		"vivaldi": {
 			browserInfo: vivaldiInfo,
-			items:       defaultChromiumItems,
+			items:       item.DefaultChromium,
 		},
 		"coccoc": {
 			browserInfo: coccocInfo,
-			items:       defaultChromiumItems,
+			items:       item.DefaultChromium,
 		},
 		"brave": {
 			browserInfo: braveInfo,
-			items:       defaultChromiumItems,
+			items:       item.DefaultChromium,
 		},
 		"yandex": {
 			browserInfo: yandexInfo,
-			items:       defaultYandexItems,
+			items:       item.DefaultYandex,
 		},
 	}
 	firefoxList = map[string]struct {
