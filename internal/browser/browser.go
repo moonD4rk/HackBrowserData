@@ -4,7 +4,8 @@ import (
 	"os"
 	"strings"
 
-	"hack-browser-data/internal/data"
+	"hack-browser-data/internal/browingdata"
+	"hack-browser-data/internal/browser/chromium"
 )
 
 type Browser interface {
@@ -12,13 +13,13 @@ type Browser interface {
 
 	GetMasterKey() ([]byte, error)
 
-	GetBrowsingData() []data.BrowsingData
+	GetBrowsingData() []browingdata.Source
 
 	CopyItemFileToLocal() error
 }
 
 var (
-	// home dir path not for android and ios
+	// home dir path for all platforms
 	homeDir, _ = os.UserHomeDir()
 )
 
@@ -43,8 +44,8 @@ func pickChromium(name string) []Browser {
 	var browsers []Browser
 	name = strings.ToLower(name)
 	if name == "all" {
-		for _, choice := range chromiumList {
-			if b, err := newChromium(choice.browserInfo, choice.items); err == nil {
+		for _, c := range chromiumList {
+			if b, err := chromium.New(c.name, c.profilePath, c.storage, c.items); err == nil {
 				browsers = append(browsers, b)
 			} else {
 				if strings.Contains(err.Error(), "profile path is not exist") {
@@ -95,30 +96,20 @@ func ListBrowser() []string {
 	return l
 }
 
-func isFileExist(path string) bool {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return false
-	}
-	return true
-}
-
 type browserInfo struct {
-	name        string
-	storage     string
-	profilePath string
-	masterKey   []byte
+	masterKey []byte
 }
 
 const (
 	chromeName         = "Chrome"
 	chromeBetaName     = "Chrome Beta"
-	chromiumName       = "Chromium"
+	chromiumName       = "ChromiumBookmark"
 	edgeName           = "Microsoft Edge"
-	firefoxName        = "Firefox"
-	firefoxBetaName    = "Firefox Beta"
-	firefoxDevName     = "Firefox Dev"
-	firefoxNightlyName = "Firefox Nightly"
-	firefoxESRName     = "Firefox ESR"
+	firefoxName        = "FirefoxBookmark"
+	firefoxBetaName    = "FirefoxBookmark Beta"
+	firefoxDevName     = "FirefoxBookmark Dev"
+	firefoxNightlyName = "FirefoxBookmark Nightly"
+	firefoxESRName     = "FirefoxBookmark ESR"
 	speed360Name       = "360speed"
 	qqBrowserName      = "QQ"
 	braveName          = "Brave"

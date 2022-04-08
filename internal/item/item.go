@@ -1,7 +1,7 @@
 package item
 
 import (
-	data2 "hack-browser-data/internal/data"
+	data2 "hack-browser-data/internal/browingdata"
 )
 
 var DefaultFirefox = []Item{
@@ -161,7 +161,9 @@ func (i Item) String() string {
 	}
 }
 
-func (i Item) NewBrowsingData() data2.BrowsingData {
+// NewBrowsingData returns a new Source instance.
+// TODO: remove this function
+func (i Item) NewBrowsingData() data2.Source {
 	switch i {
 	case ChromiumKey:
 		return nil

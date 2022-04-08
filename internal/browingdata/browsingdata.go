@@ -1,13 +1,56 @@
-package data
+package browingdata
 
 import (
 	"time"
+
+	"hack-browser-data/internal/item"
 )
 
-type BrowsingData interface {
+type BrowsingData struct {
+	sources map[item.Item]Source
+}
+
+type Source interface {
 	Parse(masterKey []byte) error
 
 	Name() string
+}
+
+func New(sources []item.Item) *BrowsingData {
+	bd := &BrowsingData{
+		sources: make(map[item.Item]Source),
+	}
+	bd.addSource(sources)
+	return bd
+}
+
+func (b *BrowsingData) addSource(sources []item.Item) {
+	for _, source := range sources {
+		switch source {
+		case item.ChromiumPassword:
+			b.sources[source] = &ChromiumPassword{}
+		case item.ChromiumCookie:
+			b.sources[source] = &ChromiumCookie{}
+		case item.ChromiumBookmark:
+			b.sources[source] = &ChromiumBookmark{}
+		case item.ChromiumHistory:
+			b.sources[source] = &ChromiumHistory{}
+		case item.ChromiumDownload:
+			b.sources[source] = &ChromiumDownload{}
+		case item.ChromiumCreditCard:
+			b.sources[source] = &ChromiumCreditCard{}
+		case item.FirefoxPassword:
+			b.sources[source] = &FirefoxPassword{}
+		case item.FirefoxCookie:
+			b.sources[source] = &FirefoxCookie{}
+		case item.FirefoxBookmark:
+			b.sources[source] = &FirefoxBookmark{}
+		case item.FirefoxHistory:
+			b.sources[source] = &FirefoxHistory{}
+		case item.FirefoxDownload:
+			b.sources[source] = &FirefoxDownload{}
+		}
+	}
 }
 
 const (
@@ -33,13 +76,6 @@ type (
 		Password    string
 		LoginUrl    string
 		CreateDate  time.Time
-	}
-	bookmark struct {
-		ID        int64
-		Name      string
-		Type      string
-		URL       string
-		DateAdded time.Time
 	}
 	cookie struct {
 		Host         string

@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
-	"hack-browser-data/internal/data"
+	"hack-browser-data/internal/browingdata"
 	"hack-browser-data/internal/item"
+	"hack-browser-data/internal/utils/fileutil"
+	"hack-browser-data/internal/utils/typeutil"
 )
 
 type chromium struct {
@@ -21,24 +22,26 @@ type chromium struct {
 	itemPaths   map[item.Item]string
 }
 
-// New 根据浏览器信息生成 Browser Interface
+// New creates a new instance of chromium browser, fill item's path if item is exist.
 func New(name, storage, profilePath string, items []item.Item) (*chromium, error) {
+
+	// TODO: Handle file path is not exist
+	if !fileutil.FolderExists(profilePath) {
+		return nil, fmt.Errorf("%s profile path is not exist: %s", name, profilePath)
+	}
+	itemsPaths, err := getChromiumItemPath(profilePath, items)
+	if err != nil {
+		return nil, err
+	}
+
 	c := &chromium{
 		name:        name,
 		storage:     storage,
 		profilePath: profilePath,
-		items:       items,
+		items:       typeutil.Keys(itemsPaths),
+		itemPaths:   itemsPaths,
 	}
-	absProfilePath := path.Join(homeDir, filepath.Clean(c.ProfilePath))
-	// TODO: Handle file path is not exist
-	if !isFileExist(absProfilePath) {
-		return nil, fmt.Errorf("%s profile path is not exist", absProfilePath)
-	}
-	itemsPaths, err := getChromiumItemPath(absProfilePath, c.items)
-	if err != nil {
-		return nil, err
-	}
-	c.itemPaths = itemsPaths
+	// new browsing data
 	return c, err
 }
 
@@ -46,8 +49,9 @@ func (c *chromium) GetName() string {
 	return c.name
 }
 
-func (c *chromium) GetBrowsingData() []data.BrowsingData {
-	var browsingData []data.BrowsingData
+func (c *chromium) GetBrowsingData() []browingdata.Source {
+	var browsingData []browingdata.Source
+	data := browingdata.New(c.items)
 	for item := range c.itemPaths {
 		d := item.NewBrowsingData()
 		if d != nil {
@@ -95,9 +99,10 @@ func chromiumWalkFunc(items []item.Item, itemPaths map[item.Item]string) filepat
 		for _, it := range items {
 			switch {
 			case it.FileName() == info.Name():
-				if it == it.chromiumKey {
+				if it == item.ChromiumKey {
 					itemPaths[it] = path
 				}
+				// TODO: Handle file path is not in Default folder
 				if strings.Contains(path, "Default") {
 					itemPaths[it] = path
 				}

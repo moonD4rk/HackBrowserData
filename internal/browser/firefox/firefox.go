@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"hack-browser-data/internal/data"
+	"hack-browser-data/internal/browingdata"
 	"hack-browser-data/internal/item"
 )
 
@@ -117,8 +117,8 @@ func (f *firefox) GetName() string {
 	return f.name
 }
 
-func (f *firefox) GetBrowsingData() []data.BrowsingData {
-	var browsingData []data.BrowsingData
+func (f *firefox) GetBrowsingData() []browingdata.Source {
+	var browsingData []browingdata.Source
 	for item := range f.itemPaths {
 		d := item.NewBrowsingData()
 		if d != nil {

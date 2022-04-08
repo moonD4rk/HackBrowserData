@@ -1,25 +1,30 @@
-package data
+package browingdata
 
 import (
 	"database/sql"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/tidwall/gjson"
 
-	"hack-browser-data/internal/browser/item"
-
-	item2 "hack-browser-data/internal/item"
+	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/utils"
+	"hack-browser-data/internal/utils/fileutil"
 )
 
-type ChromiumBookmark struct {
-	bookmarks []bookmark
-	item      item2.Item
+type ChromiumBookmark []bookmark
+
+type bookmark struct {
+	ID        int64
+	Name      string
+	Type      string
+	URL       string
+	DateAdded time.Time
 }
 
 func (c *ChromiumBookmark) Parse(masterKey []byte) error {
-	bookmarks, err := utils.ReadFile(item.ChromiumBookmarkFilename)
+	bookmarks, err := fileutil.ReadFile("bookmark")
 	if err != nil {
 		return err
 	}
@@ -32,8 +37,8 @@ func (c *ChromiumBookmark) Parse(masterKey []byte) error {
 		})
 	}
 	// TODO: 使用泛型重构
-	sort.Slice(c.bookmarks, func(i, j int) bool {
-		return (c.bookmarks)[i].DateAdded.After((c.bookmarks)[j].DateAdded)
+	sort.Slice(*c, func(i, j int) bool {
+		return (*c)[i].DateAdded.After((*c)[j].DateAdded)
 	})
 	return nil
 }

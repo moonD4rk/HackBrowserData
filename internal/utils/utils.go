@@ -53,11 +53,6 @@ func TimeEpochFormat(epoch int64) time.Time {
 	return t
 }
 
-func ReadFile(filename string) (string, error) {
-	s, err := ioutil.ReadFile(filename)
-	return string(s), err
-}
-
 func WriteFile(filename string, data []byte) error {
 	err := ioutil.WriteFile(filename, data, 0644)
 	if err != nil {
