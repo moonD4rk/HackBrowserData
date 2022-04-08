@@ -23,10 +23,10 @@ var (
 
 func Execute() {
 	app := &cli.App{
-		Name:  "hack-browser-data",
+		Name:  "hack-browser-browingdata",
 		Usage: "Export passwords/cookies/history/bookmarks from browser",
-		UsageText: "[hack-browser-data -b chrome -f json -dir results -cc]\n 	Get all data(password/cookie/history/bookmark) from chrome",
-		Version: "0.3.8",
+		UsageText: "[hack-browser-browingdata -b chrome -f json -dir results -cc]\n 	Get all browingdata(password/cookie/history/bookmark) from chrome",
+		Version: "0.4.0",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{Name: "verbose", Aliases: []string{"vv"}, Destination: &verbose, Value: false, Usage: "verbose"},
 			&cli.BoolFlag{Name: "compress", Aliases: []string{"cc"}, Destination: &compress, Value: false, Usage: "compress result to zip"},
@@ -88,9 +88,9 @@ func Execute() {
 
 // func Execute() {
 // 	app := &cli.App{
-// 		Name:  "hack-browser-data",
+// 		Name:  "hack-browser-browingdata",
 // 		Usage: "Export passwords/cookies/history/bookmarks from browser",
-// 		UsageText: "[hack-browser-data -b chrome -f json -dir results -cc]\n 	Get all data(password/cookie/history/bookmark) from chrome",
+// 		UsageText: "[hack-browser-browingdata -b chrome -f json -dir results -cc]\n 	Get all browingdata(password/cookie/history/bookmark) from chrome",
 // 		Version: "0.3.7",
 // 		Flags: []cli.Flag{
 // 			&cli.BoolFlag{Name: "verbose", Aliases: []string{"vv"}, Destination: &verbose, Value: false, Usage: "verbose"},

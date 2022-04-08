@@ -16,8 +16,8 @@ import (
 var (
 	errSecurityKeyIsEmpty = errors.New("input [security find-generic-password -wa 'Chrome'] in terminal")
 	errPasswordIsEmpty    = errors.New("password is empty")
-	errDecryptFailed      = errors.New("decrypter encrypt value failed")
-	errDecodeASN1Failed   = errors.New("decode ASN1 data failed")
+	errDecryptFailed      = errors.New("decrypt encrypted value failed")
+	errDecodeASN1Failed   = errors.New("decode ASN1 browingdata failed")
 	errEncryptedLength    = errors.New("length of encrypted password less than block size")
 )
 

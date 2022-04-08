@@ -10,7 +10,7 @@ import (
 	"github.com/gocarina/gocsv"
 	jsoniter "github.com/json-iterator/go"
 
-	"hack-browser-data/internal/data"
+	"hack-browser-data/internal/browingdata"
 )
 
 type outPutter struct {
@@ -35,7 +35,7 @@ func (o *outPutter) MakeDir(dir string) error {
 	return nil
 }
 
-func (o *outPutter) Write(data data.BrowsingData, writer *os.File) error {
+func (o *outPutter) Write(data browingdata.Source, writer *os.File) error {
 	switch o.json {
 	case true:
 		encoder := jsoniter.NewEncoder(writer)
