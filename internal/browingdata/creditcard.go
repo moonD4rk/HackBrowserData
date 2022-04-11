@@ -6,15 +6,14 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	"hack-browser-data/internal/browser/item"
-
 	"hack-browser-data/internal/decrypter"
+	"hack-browser-data/internal/item"
 )
 
 type ChromiumCreditCard []card
 
 func (c *ChromiumCreditCard) Parse(masterKey []byte) error {
-	creditDB, err := sql.Open("sqlite3", item.TempChromiumCredit)
+	creditDB, err := sql.Open("sqlite3", item.TempChromiumCreditCard)
 	if err != nil {
 		return err
 	}

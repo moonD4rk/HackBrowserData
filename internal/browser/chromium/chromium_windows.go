@@ -4,8 +4,11 @@ import (
 	"encoding/base64"
 	"errors"
 
-	"github.com/smallstep/cli/utils"
 	"github.com/tidwall/gjson"
+
+	"hack-browser-data/internal/decrypter"
+	"hack-browser-data/internal/item"
+	"hack-browser-data/internal/utils/fileutil"
 )
 
 var (
@@ -13,7 +16,7 @@ var (
 )
 
 func (c *chromium) GetMasterKey() ([]byte, error) {
-	keyFile, err := utils.ReadFile(item.TempChromiumKey)
+	keyFile, err := fileutil.ReadFile(item.TempChromiumKey)
 	if err != nil {
 		return nil, err
 	}
@@ -23,8 +26,8 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 		if err != nil {
 			return nil, errDecodeMasterKeyFailed
 		}
-		c.browserInfo.masterKey, err = decrypter.DPApi(pureKey[5:])
-		return c.browserInfo.masterKey, err
+		c.masterKey, err = decrypter.DPApi(pureKey[5:])
+		return c.masterKey, err
 	}
 	return nil, nil
 }

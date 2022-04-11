@@ -22,65 +22,65 @@ type chromium struct {
 	itemPaths   map[item.Item]string
 }
 
-// New creates a new instance of chromium browser, fill item's path if item is exist.
+// New create instance of chromium browser, fill item's path if item is existed.
 func New(name, storage, profilePath string, items []item.Item) (*chromium, error) {
-
+	c := &chromium{
+		name:    name,
+		storage: storage,
+	}
 	// TODO: Handle file path is not exist
 	if !fileutil.FolderExists(profilePath) {
 		return nil, fmt.Errorf("%s profile path is not exist: %s", name, profilePath)
 	}
-	itemsPaths, err := getChromiumItemPath(profilePath, items)
+	masterKey, err := c.GetMasterKey()
 	if err != nil {
 		return nil, err
 	}
-
-	c := &chromium{
-		name:        name,
-		storage:     storage,
-		profilePath: profilePath,
-		items:       typeutil.Keys(itemsPaths),
-		itemPaths:   itemsPaths,
+	itemsPaths, err := c.getItemPath(profilePath, items)
+	if err != nil {
+		return nil, err
 	}
-	// new browsing data
+	c.masterKey = masterKey
+	c.profilePath = profilePath
+	c.itemPaths = itemsPaths
+	c.items = typeutil.Keys(itemsPaths)
 	return c, err
+}
+
+func (c *chromium) GetItems() []item.Item {
+	return c.items
+}
+
+func (c *chromium) GetItemPaths() map[item.Item]string {
+	return c.itemPaths
 }
 
 func (c *chromium) GetName() string {
 	return c.name
 }
 
-func (c *chromium) GetBrowsingData() []browingdata.Source {
-	var browsingData []browingdata.Source
-	data := browingdata.New(c.items)
-	for item := range c.itemPaths {
-		d := item.NewBrowsingData()
-		if d != nil {
-			browsingData = append(browsingData, d)
-		}
+func (c *chromium) GetBrowsingData() (*browingdata.Data, error) {
+	b := browingdata.New(c.items)
+
+	if err := c.copyItemToLocal(); err != nil {
+		return nil, err
 	}
-	return browsingData
+	if err := b.Recovery(c.masterKey); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
-func (c *chromium) CopyItemFileToLocal() error {
-	for item, sourcePath := range c.itemPaths {
-		var dstFilename = item.TempName()
-		locals, _ := filepath.Glob("*")
-		for _, v := range locals {
-			if v == dstFilename {
-				err := os.Remove(dstFilename)
-				// TODO: Should Continue all iteration error
-				if err != nil {
-					return err
-				}
-			}
-		}
-
+func (c *chromium) copyItemToLocal() error {
+	for i, path := range c.itemPaths {
+		// var dstFilename = item.TempName()
+		var filename = i.String()
 		// TODO: Handle read file error
-		sourceFile, err := ioutil.ReadFile(sourcePath)
+		d, err := ioutil.ReadFile(path)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		err = ioutil.WriteFile(dstFilename, sourceFile, 0777)
+		err = ioutil.WriteFile(filename, d, 0777)
 		if err != nil {
 			return err
 		}
@@ -88,7 +88,7 @@ func (c *chromium) CopyItemFileToLocal() error {
 	return nil
 }
 
-func getChromiumItemPath(profilePath string, items []item.Item) (map[item.Item]string, error) {
+func (c *chromium) getItemPath(profilePath string, items []item.Item) (map[item.Item]string, error) {
 	var itemPaths = make(map[item.Item]string)
 	err := filepath.Walk(profilePath, chromiumWalkFunc(items, itemPaths))
 	return itemPaths, err
@@ -102,7 +102,7 @@ func chromiumWalkFunc(items []item.Item, itemPaths map[item.Item]string) filepat
 				if it == item.ChromiumKey {
 					itemPaths[it] = path
 				}
-				// TODO: Handle file path is not in Default folder
+				// TODO: check file path is not in Default folder
 				if strings.Contains(path, "Default") {
 					itemPaths[it] = path
 				}

@@ -3,23 +3,24 @@ package browingdata
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"sort"
 
-	"hack-browser-data/internal/browser/item"
+	_ "github.com/mattn/go-sqlite3"
 
 	"hack-browser-data/internal/decrypter"
+	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/utils"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type ChromiumCookie []cookie
 
 func (c *ChromiumCookie) Parse(masterKey []byte) error {
-	cookieDB, err := sql.Open("sqlite3", item.ChromiumCookieFilename)
+	cookieDB, err := sql.Open("sqlite3", item.TempChromiumCookie)
 	if err != nil {
 		return err
 	}
+	defer os.Remove(item.TempChromiumCookie)
 	defer cookieDB.Close()
 	rows, err := cookieDB.Query(queryChromiumCookie)
 	if err != nil {
@@ -79,7 +80,7 @@ func (c *ChromiumCookie) Name() string {
 type FirefoxCookie []cookie
 
 func (f *FirefoxCookie) Parse(masterKey []byte) error {
-	cookieDB, err := sql.Open("sqlite3", item.FirefoxCookieFilename)
+	cookieDB, err := sql.Open("sqlite3", item.TempFirefoxCookie)
 	if err != nil {
 		return err
 	}

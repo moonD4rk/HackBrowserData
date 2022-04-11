@@ -3,6 +3,7 @@ package browingdata
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"sort"
 	"time"
 
@@ -11,6 +12,8 @@ import (
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/utils"
 	"hack-browser-data/internal/utils/fileutil"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type ChromiumBookmark []bookmark
@@ -24,10 +27,11 @@ type bookmark struct {
 }
 
 func (c *ChromiumBookmark) Parse(masterKey []byte) error {
-	bookmarks, err := fileutil.ReadFile("bookmark")
+	bookmarks, err := fileutil.ReadFile(item.TempChromiumBookmark)
 	if err != nil {
 		return err
 	}
+	defer os.Remove(item.TempChromiumBookmark)
 	r := gjson.Parse(bookmarks)
 	if r.Exists() {
 		roots := r.Get("roots")
@@ -84,12 +88,13 @@ func (f *FirefoxBookmark) Parse(masterKey []byte) error {
 		keyDB        *sql.DB
 		bookmarkRows *sql.Rows
 	)
-	keyDB, err = sql.Open("sqlite3", item.FirefoxBookmarkFilename)
+	keyDB, err = sql.Open("sqlite3", item.TempFirefoxBookmark)
 	if err != nil {
 		return err
 	}
-	_, err = keyDB.Exec(closeJournalMode)
+	defer os.RemoveAll(item.TempFirefoxBookmark)
 	defer keyDB.Close()
+	_, err = keyDB.Exec(closeJournalMode)
 
 	bookmarkRows, err = keyDB.Query(queryFirefoxBookMark)
 	if err != nil {

@@ -29,17 +29,16 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 	if stderr.Len() > 0 {
 		return nil, errors.New(stderr.String())
 	}
-	temp := stdout.Bytes()
-	chromeSecret := temp[:len(temp)-1]
+	chromeSecret := bytes.TrimSpace(stdout.Bytes())
 	if chromeSecret == nil {
 		return nil, ErrWrongSecurityCommand
 	}
 	var chromeSalt = []byte("saltysalt")
 	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157
 	key := pbkdf2.Key(chromeSecret, chromeSalt, 1003, 16, sha1.New)
-	if key != nil {
-		c.browserInfo.masterKey = key
-		return key, nil
+	if key == nil {
+		return nil, ErrWrongSecurityCommand
 	}
-	return nil, errors.New("macOS wrong security command")
+	c.masterKey = key
+	return key, nil
 }

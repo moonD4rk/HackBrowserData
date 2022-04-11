@@ -5,17 +5,16 @@ import (
 	"fmt"
 	"sort"
 
-	"hack-browser-data/internal/browser/item"
-
-	"hack-browser-data/internal/utils"
-
 	_ "github.com/mattn/go-sqlite3"
+
+	"hack-browser-data/internal/item"
+	"hack-browser-data/internal/utils"
 )
 
 type ChromiumHistory []history
 
 func (c *ChromiumHistory) Parse(masterKey []byte) error {
-	historyDB, err := sql.Open("sqlite3", item.ChromiumHistoryFilename)
+	historyDB, err := sql.Open("sqlite3", item.TempChromiumHistory)
 	if err != nil {
 		return err
 	}
@@ -61,7 +60,7 @@ func (f *FirefoxHistory) Parse(masterKey []byte) error {
 		keyDB       *sql.DB
 		historyRows *sql.Rows
 	)
-	keyDB, err = sql.Open("sqlite3", item.FirefoxHistoryFilename)
+	keyDB, err = sql.Open("sqlite3", item.TempFirefoxHistory)
 	if err != nil {
 		return err
 	}
