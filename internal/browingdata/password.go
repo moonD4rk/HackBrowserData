@@ -9,13 +9,12 @@ import (
 	"sort"
 	"time"
 
-	"hack-browser-data/internal/browser/item"
-
-	decrypter2 "hack-browser-data/internal/decrypter"
-	"hack-browser-data/internal/utils"
-
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tidwall/gjson"
+
+	"hack-browser-data/internal/decrypter"
+	"hack-browser-data/internal/item"
+	"hack-browser-data/internal/utils"
 )
 
 type ChromiumPassword []loginData
@@ -48,12 +47,12 @@ func (c *ChromiumPassword) Parse(masterKey []byte) error {
 		}
 		if len(pwd) > 0 {
 			if masterKey == nil {
-				password, err = decrypter2.DPApi(pwd)
+				password, err = decrypter.DPApi(pwd)
 				if err != nil {
 					fmt.Println(err)
 				}
 			} else {
-				password, err = decrypter2.ChromePass(masterKey, pwd)
+				password, err = decrypter.ChromePass(masterKey, pwd)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -81,11 +80,11 @@ func (c *ChromiumPassword) Name() string {
 type FirefoxPassword []loginData
 
 func (f *FirefoxPassword) Parse(masterKey []byte) error {
-	globalSalt, metaBytes, nssA11, nssA102, err := getFirefoxDecryptKey(item.FirefoxKey4Filename)
+	globalSalt, metaBytes, nssA11, nssA102, err := getFirefoxDecryptKey(item.TempFirefoxKey4)
 	if err != nil {
 		return err
 	}
-	metaPBE, err := decrypter2.NewASN1PBE(metaBytes)
+	metaPBE, err := decrypter.NewASN1PBE(metaBytes)
 	if err != nil {
 		return err
 	}
@@ -98,7 +97,7 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 	if bytes.Contains(k, []byte("password-check")) {
 		m := bytes.Compare(nssA102, keyLin)
 		if m == 0 {
-			nssPBE, err := decrypter2.NewASN1PBE(nssA11)
+			nssPBE, err := decrypter.NewASN1PBE(nssA11)
 			if err != nil {
 				return err
 			}
@@ -107,16 +106,16 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 			if err != nil {
 				return err
 			}
-			allLogin, err := getFirefoxLoginData(item.FirefoxPasswordFilename)
+			allLogin, err := getFirefoxLoginData(item.TempFirefoxPassword)
 			if err != nil {
 				return err
 			}
 			for _, v := range allLogin {
-				userPBE, err := decrypter2.NewASN1PBE(v.encryptUser)
+				userPBE, err := decrypter.NewASN1PBE(v.encryptUser)
 				if err != nil {
 					return err
 				}
-				pwdPBE, err := decrypter2.NewASN1PBE(v.encryptPass)
+				pwdPBE, err := decrypter.NewASN1PBE(v.encryptPass)
 				if err != nil {
 					return err
 				}
@@ -130,8 +129,8 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 				}
 				*f = append(*f, loginData{
 					LoginUrl:   v.LoginUrl,
-					UserName:   string(decrypter2.PKCS5UnPadding(user)),
-					Password:   string(decrypter2.PKCS5UnPadding(pwd)),
+					UserName:   string(decrypter.PKCS5UnPadding(user)),
+					Password:   string(decrypter.PKCS5UnPadding(pwd)),
 					CreateDate: v.CreateDate,
 				})
 			}

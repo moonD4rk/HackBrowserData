@@ -13,15 +13,8 @@ type Browser interface {
 
 	GetMasterKey() ([]byte, error)
 
-	GetBrowsingData() []browingdata.Source
-
-	CopyItemFileToLocal() error
+	GetBrowsingData() (*browingdata.Data, error)
 }
-
-var (
-	// home dir path for all platforms
-	homeDir, _ = os.UserHomeDir()
-)
 
 func PickBrowser(name string) []Browser {
 	var browsers []Browser
@@ -45,7 +38,7 @@ func pickChromium(name string) []Browser {
 	name = strings.ToLower(name)
 	if name == "all" {
 		for _, c := range chromiumList {
-			if b, err := chromium.New(c.name, c.profilePath, c.storage, c.items); err == nil {
+			if b, err := chromium.New(c.name, c.storage, c.profilePath, c.items); err == nil {
 				browsers = append(browsers, b)
 			} else {
 				if strings.Contains(err.Error(), "profile path is not exist") {
@@ -56,8 +49,8 @@ func pickChromium(name string) []Browser {
 		}
 		return browsers
 	}
-	if choice, ok := chromiumList[name]; ok {
-		b, err := newChromium(choice.browserInfo, choice.items)
+	if c, ok := chromiumList[name]; ok {
+		b, err := chromium.New(c.name, c.storage, c.profilePath, c.items)
 		if err != nil {
 			panic(err)
 		}
@@ -71,15 +64,15 @@ func pickFirefox(name string) []Browser {
 	var browsers []Browser
 	name = strings.ToLower(name)
 	if name == "all" || name == "firefox" {
-		for _, f := range firefoxList {
-			multiFirefox, err := newMultiFirefox(f.browserInfo, f.items)
-			if err != nil {
-				panic(err)
-			}
-			for _, browser := range multiFirefox {
-				browsers = append(browsers, browser)
-			}
-		}
+		// for _, f := range firefoxList {
+		// multiFirefox, err := firefox(f.browserInfo, f.items)
+		// if err != nil {
+		// 	panic(err)
+		// }
+		// for _, browser := range multiFirefox {
+		// 	browsers = append(browsers, browser)
+		// }
+		// }
 		return browsers
 	}
 	return nil
@@ -96,9 +89,10 @@ func ListBrowser() []string {
 	return l
 }
 
-type browserInfo struct {
-	masterKey []byte
-}
+var (
+	// home dir path for all platforms
+	homeDir, _ = os.UserHomeDir()
+)
 
 const (
 	chromeName         = "Chrome"

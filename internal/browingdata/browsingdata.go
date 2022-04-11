@@ -6,8 +6,8 @@ import (
 	"hack-browser-data/internal/item"
 )
 
-type BrowsingData struct {
-	sources map[item.Item]Source
+type Data struct {
+	Sources map[item.Item]Source
 }
 
 type Source interface {
@@ -16,39 +16,49 @@ type Source interface {
 	Name() string
 }
 
-func New(sources []item.Item) *BrowsingData {
-	bd := &BrowsingData{
-		sources: make(map[item.Item]Source),
+func New(sources []item.Item) *Data {
+	bd := &Data{
+		Sources: make(map[item.Item]Source),
 	}
 	bd.addSource(sources)
 	return bd
 }
 
-func (b *BrowsingData) addSource(sources []item.Item) {
-	for _, source := range sources {
+func (d *Data) Recovery(masterKey []byte) error {
+
+	for _, source := range d.Sources {
+		if err := source.Parse(masterKey); err != nil {
+			panic(err)
+		}
+	}
+	return nil
+}
+
+func (d *Data) addSource(Sources []item.Item) {
+	for _, source := range Sources {
 		switch source {
 		case item.ChromiumPassword:
-			b.sources[source] = &ChromiumPassword{}
+			d.Sources[source] = &ChromiumPassword{}
 		case item.ChromiumCookie:
-			b.sources[source] = &ChromiumCookie{}
+			d.Sources[source] = &ChromiumCookie{}
 		case item.ChromiumBookmark:
-			b.sources[source] = &ChromiumBookmark{}
+			d.Sources[source] = &ChromiumBookmark{}
 		case item.ChromiumHistory:
-			b.sources[source] = &ChromiumHistory{}
+			d.Sources[source] = &ChromiumHistory{}
 		case item.ChromiumDownload:
-			b.sources[source] = &ChromiumDownload{}
+			d.Sources[source] = &ChromiumDownload{}
 		case item.ChromiumCreditCard:
-			b.sources[source] = &ChromiumCreditCard{}
+			d.Sources[source] = &ChromiumCreditCard{}
 		case item.FirefoxPassword:
-			b.sources[source] = &FirefoxPassword{}
+			d.Sources[source] = &FirefoxPassword{}
 		case item.FirefoxCookie:
-			b.sources[source] = &FirefoxCookie{}
+			d.Sources[source] = &FirefoxCookie{}
 		case item.FirefoxBookmark:
-			b.sources[source] = &FirefoxBookmark{}
+			d.Sources[source] = &FirefoxBookmark{}
 		case item.FirefoxHistory:
-			b.sources[source] = &FirefoxHistory{}
+			d.Sources[source] = &FirefoxHistory{}
 		case item.FirefoxDownload:
-			b.sources[source] = &FirefoxDownload{}
+			d.Sources[source] = &FirefoxDownload{}
 		}
 	}
 }

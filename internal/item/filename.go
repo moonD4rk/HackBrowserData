@@ -24,3 +24,28 @@ const (
 	UnknownItem     = "unknown item"
 	UnsupportedItem = "unsupported item"
 )
+
+const (
+	TempChromiumKey          = "chromiumKey"
+	TempChromiumPassword     = "password"
+	TempChromiumCookie       = "cookie"
+	TempChromiumBookmark     = "bookmark"
+	TempChromiumHistory      = "history"
+	TempChromiumDownload     = "download"
+	TempChromiumCreditCard   = "creditCard"
+	TempChromiumLocalStorage = "localStorage"
+	TempChromiumExtension    = "extension"
+
+	TempYandexPassword   = "yandexPassword"
+	TempYandexCreditCard = "yandexCreditCard"
+
+	TempFirefoxKey4         = "firefoxKey4"
+	TempFirefoxPassword     = "firefoxPassword"
+	TempFirefoxCookie       = "firefoxCookie"
+	TempFirefoxBookmark     = "firefoxBookmark"
+	TempFirefoxHistory      = "firefoxHistory"
+	TempFirefoxDownload     = "firefoxDownload"
+	TempFirefoxCreditCard   = ""
+	TempFirefoxLocalStorage = ""
+	TempFirefoxExtension    = ""
+)

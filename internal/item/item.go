@@ -1,45 +1,5 @@
 package item
 
-import (
-	data2 "hack-browser-data/internal/browingdata"
-)
-
-var DefaultFirefox = []Item{
-	FirefoxKey4,
-	FirefoxPassword,
-	FirefoxCookie,
-	FirefoxBookmark,
-	FirefoxHistory,
-	FirefoxDownload,
-	FirefoxCreditCard,
-	FirefoxLocalStorage,
-	FirefoxExtension,
-}
-
-var DefaultYandex = []Item{
-	ChromiumKey,
-	ChromiumCookie,
-	ChromiumBookmark,
-	ChromiumHistory,
-	ChromiumDownload,
-	ChromiumLocalStorage,
-	ChromiumExtension,
-	YandexPassword,
-	YandexCreditCard,
-}
-
-var DefaultChromium = []Item{
-	ChromiumKey,
-	ChromiumPassword,
-	ChromiumCookie,
-	ChromiumBookmark,
-	ChromiumHistory,
-	ChromiumDownload,
-	ChromiumCreditCard,
-	ChromiumLocalStorage,
-	ChromiumExtension,
-}
-
 type Item int
 
 const (
@@ -117,39 +77,39 @@ func (i Item) FileName() string {
 func (i Item) String() string {
 	switch i {
 	case ChromiumKey:
-		return "chromiumKey"
+		return TempChromiumKey
 	case ChromiumPassword:
-		return "password"
+		return TempChromiumPassword
 	case ChromiumCookie:
-		return "cookie"
+		return TempChromiumCookie
 	case ChromiumBookmark:
-		return "bookmark"
+		return TempChromiumBookmark
 	case ChromiumDownload:
-		return "download"
+		return TempChromiumDownload
 	case ChromiumLocalStorage:
-		return "localStorage"
+		return TempChromiumLocalStorage
 	case ChromiumCreditCard:
-		return "creditCard"
+		return TempChromiumCreditCard
 	case ChromiumExtension:
 		return UnsupportedItem
 	case ChromiumHistory:
-		return "history"
+		return TempChromiumExtension
 	case YandexPassword:
-		return "yandexPassword"
+		return TempYandexPassword
 	case YandexCreditCard:
-		return "yandexCreditCard"
+		return TempYandexCreditCard
 	case FirefoxKey4:
-		return "firefoxKey4"
+		return TempFirefoxKey4
 	case FirefoxPassword:
-		return "firefoxPassword"
+		return TempFirefoxPassword
 	case FirefoxCookie:
-		return "firefoxCookie"
+		return TempFirefoxPassword
 	case FirefoxBookmark:
-		return "firefoxBookmark"
+		return TempFirefoxBookmark
 	case FirefoxDownload:
-		return "firefoxDownload"
+		return TempFirefoxDownload
 	case FirefoxHistory:
-		return "firefoxHistory"
+		return TempFirefoxHistory
 	case FirefoxLocalStorage:
 		return UnsupportedItem
 	case FirefoxCreditCard:
@@ -161,43 +121,38 @@ func (i Item) String() string {
 	}
 }
 
-// NewBrowsingData returns a new Source instance.
-// TODO: remove this function
-func (i Item) NewBrowsingData() data2.Source {
-	switch i {
-	case ChromiumKey:
-		return nil
-	case ChromiumPassword:
-		return &data2.ChromiumPassword{}
-	case ChromiumCookie:
-		return &data2.ChromiumCookie{}
-	case ChromiumBookmark:
-		return &data2.ChromiumBookmark{}
-	case ChromiumDownload:
-		return &data2.ChromiumDownload{}
-	case ChromiumLocalStorage:
-		return nil
-	case ChromiumCreditCard:
-		return &data2.ChromiumCreditCard{}
-	case ChromiumExtension:
-		return nil
-	case ChromiumHistory:
-		return &data2.ChromiumHistory{}
-	case YandexPassword:
-		return &data2.ChromiumPassword{}
-	case YandexCreditCard:
-		return &data2.ChromiumCreditCard{}
-	case FirefoxPassword:
-		return &data2.FirefoxPassword{}
-	case FirefoxCookie:
-		return &data2.FirefoxCookie{}
-	case FirefoxBookmark:
-		return &data2.FirefoxBookmark{}
-	case FirefoxDownload:
-		return &data2.FirefoxDownload{}
-	case FirefoxHistory:
-		return &data2.FirefoxHistory{}
-	default:
-		return nil
-	}
+var DefaultFirefox = []Item{
+	FirefoxKey4,
+	FirefoxPassword,
+	FirefoxCookie,
+	FirefoxBookmark,
+	FirefoxHistory,
+	FirefoxDownload,
+	FirefoxCreditCard,
+	FirefoxLocalStorage,
+	FirefoxExtension,
+}
+
+var DefaultYandex = []Item{
+	ChromiumKey,
+	ChromiumCookie,
+	ChromiumBookmark,
+	ChromiumHistory,
+	ChromiumDownload,
+	ChromiumLocalStorage,
+	ChromiumExtension,
+	YandexPassword,
+	YandexCreditCard,
+}
+
+var DefaultChromium = []Item{
+	ChromiumKey,
+	ChromiumPassword,
+	ChromiumCookie,
+	ChromiumBookmark,
+	ChromiumHistory,
+	ChromiumDownload,
+	ChromiumCreditCard,
+	ChromiumLocalStorage,
+	ChromiumExtension,
 }
