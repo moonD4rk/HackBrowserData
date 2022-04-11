@@ -10,38 +10,7 @@ import (
 )
 
 func TestPickChromium(t *testing.T) {
-	// browsers := pickChromium("chrome")
-	// log.InitLog("debug")
-	// filetype := "json"
-	// // dir := "result"
-	// output := outputter.NewOutPutter(filetype)
-	// _ = output
-	// for _, b := range browsers {
-	// 	fmt.Printf("%+v\n", b)
-	// 	if err := b.CopyItemFileToLocal(); err != nil {
-	// 		panic(err)
-	// 	}
-	// 	_, err := b.GetMasterKey()
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 	}
-	// 	// browserName := b.GetName()
-	// 	data, err := b.GetBrowsingData()
-	// 	fmt.Println(data)
-	// 	// for _, data := range multiData {
-	// 	// 	if err := data.Parse(masterKey); err != nil {
-	// 	// 		fmt.Println(err)
-	// 	// 	}
-	// 	// 	filename := fmt.Sprintf("%s_%s.%s", browserName, data.Name(), filetype)
-	// 	// 	file, err := output.CreateFile(dir, filename)
-	// 	// 	if err != nil {
-	// 	// 		panic(err)
-	// 	// 	}
-	// 	// 	if err := output.Write(data, file); err != nil {
-	// 	// 		panic(err)
-	// 	// 	}
-	// 	// }
-	// }
+
 }
 
 func TestGetChromiumItemAbsPath(t *testing.T) {
@@ -55,7 +24,7 @@ func TestGetChromiumItemAbsPath(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	output := outputter.NewOutPutter("json")
+	output := outputter.New("json")
 
 	if err != nil {
 		t.Error(err)
@@ -74,18 +43,18 @@ func TestGetChromiumItemAbsPath(t *testing.T) {
 func TestPickBrowsers(t *testing.T) {
 	browsers := PickBrowser("all")
 	for _, v := range browsers {
-		fmt.Println(v.GetName())
+		fmt.Println(v.Name())
 	}
 	// filetype := "json"
 	// dir := "result"
-	// output := outputter.NewOutPutter(filetype)
+	// output := outputter.New(filetype)
 }
 
 // func TestPickFirefox(t *testing.T) {
 // 	browsers := pickFirefox("all")
 // 	filetype := "json"
 // 	dir := "result"
-// 	output := outputter.NewOutPutter(filetype)
+// 	output := outputter.New(filetype)
 // 	if err := output.MakeDir("result"); err != nil {
 // 		panic(err)
 // 	}
@@ -98,7 +67,7 @@ func TestPickBrowsers(t *testing.T) {
 // 		if err != nil {
 // 			fmt.Println(err)
 // 		}
-// 		browserName := b.GetName()
+// 		browserName := b.Name()
 // 		multiData := b.GetBrowsingData()
 // 		for _, data := range multiData {
 // 			if err := data.Parse(masterKey); err != nil {

@@ -3,6 +3,7 @@ package browingdata
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -20,6 +21,7 @@ func (c *ChromiumDownload) Parse(masterKey []byte) error {
 	if err != nil {
 		return err
 	}
+	defer os.Remove(item.TempChromiumDownload)
 	defer historyDB.Close()
 	rows, err := historyDB.Query(queryChromiumDownload)
 	if err != nil {
@@ -66,6 +68,8 @@ func (f *FirefoxDownload) Parse(masterKey []byte) error {
 	if err != nil {
 		return err
 	}
+	defer os.Remove(item.TempFirefoxDownload)
+	defer keyDB.Close()
 	_, err = keyDB.Exec(closeJournalMode)
 	if err != nil {
 		return err

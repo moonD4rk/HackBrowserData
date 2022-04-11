@@ -3,6 +3,7 @@ package browingdata
 import (
 	"database/sql"
 	"fmt"
+	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -17,6 +18,7 @@ func (c *ChromiumCreditCard) Parse(masterKey []byte) error {
 	if err != nil {
 		return err
 	}
+	defer os.Remove(item.TempChromiumCreditCard)
 	defer creditDB.Close()
 	rows, err := creditDB.Query(queryChromiumCredit)
 	if err != nil {

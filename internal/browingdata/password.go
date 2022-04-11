@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"sort"
 	"time"
 
@@ -24,6 +25,7 @@ func (c *ChromiumPassword) Parse(masterKey []byte) error {
 	if err != nil {
 		return err
 	}
+	defer os.Remove(item.TempChromiumPassword)
 	defer loginDB.Close()
 	rows, err := loginDB.Query(queryChromiumLogin)
 	if err != nil {

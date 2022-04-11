@@ -1,8 +1,11 @@
 package fileutil
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
+
+	"hack-browser-data/internal/item"
 )
 
 // FileExists checks if the file exists in the provided path
@@ -33,4 +36,22 @@ func FolderExists(foldername string) bool {
 func ReadFile(filename string) (string, error) {
 	s, err := ioutil.ReadFile(filename)
 	return string(s), err
+}
+
+// CopyItemToLocal copies the file from the provided path to the local path
+func CopyItemToLocal(itemPaths map[item.Item]string) error {
+	for i, path := range itemPaths {
+		// var dstFilename = item.TempName()
+		var filename = i.String()
+		// TODO: Handle read file error
+		d, err := ioutil.ReadFile(path)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		err = ioutil.WriteFile(filename, d, 0777)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

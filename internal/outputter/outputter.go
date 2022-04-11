@@ -18,7 +18,7 @@ type outPutter struct {
 	csv  bool
 }
 
-func NewOutPutter(flag string) *outPutter {
+func New(flag string) *outPutter {
 	o := &outPutter{}
 	if flag == "json" {
 		o.json = true
