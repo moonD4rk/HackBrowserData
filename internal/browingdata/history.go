@@ -66,6 +66,8 @@ func (f *FirefoxHistory) Parse(masterKey []byte) error {
 	if err != nil {
 		return err
 	}
+	defer os.Remove(item.TempFirefoxHistory)
+	defer keyDB.Close()
 	_, err = keyDB.Exec(closeJournalMode)
 	if err != nil {
 		return err

@@ -156,6 +156,7 @@ func getFirefoxDecryptKey(key4file string) (item1, item2, a11, a102 []byte, err 
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
+	defer os.Remove(key4file)
 	defer keyDB.Close()
 
 	if err = keyDB.QueryRow(queryMetaData).Scan(&item1, &item2); err != nil {
@@ -173,6 +174,7 @@ func getFirefoxLoginData(loginJson string) (l []loginData, err error) {
 	if err != nil {
 		return nil, err
 	}
+	defer os.Remove(loginJson)
 	h := gjson.GetBytes(s, "logins")
 	if h.Exists() {
 		for _, v := range h.Array() {

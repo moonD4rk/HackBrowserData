@@ -92,7 +92,7 @@ func (f *FirefoxBookmark) Parse(masterKey []byte) error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(item.TempFirefoxBookmark)
+	defer os.Remove(item.TempFirefoxBookmark)
 	defer keyDB.Close()
 	_, err = keyDB.Exec(closeJournalMode)
 
