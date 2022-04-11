@@ -100,7 +100,7 @@ package firefox
 // 	return f.masterKey, nil
 // }
 //
-// func (f *firefox) GetName() string {
+// func (f *firefox) Name() string {
 // 	return f.name
 // }
 //

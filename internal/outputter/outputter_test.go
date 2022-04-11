@@ -6,9 +6,9 @@ import (
 )
 
 func TestNewOutPutter(t *testing.T) {
-	out := NewOutPutter("json")
+	out := New("json")
 	if out == nil {
-		t.Error("NewOutPutter() returned nil")
+		t.Error("New() returned nil")
 	}
 	f, err := out.CreateFile("results", "test.json")
 	if err != nil {

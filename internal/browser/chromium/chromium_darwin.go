@@ -4,13 +4,18 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"errors"
+	"os"
 	"os/exec"
+	"strings"
 
 	"golang.org/x/crypto/pbkdf2"
+
+	"hack-browser-data/internal/item"
 )
 
 var (
-	ErrWrongSecurityCommand = errors.New("macOS wrong security command")
+	ErrWrongSecurityCommand   = errors.New("macOS wrong security command")
+	ErrCouldNotFindInKeychain = errors.New("macOS could not find in keychain")
 )
 
 func (c *chromium) GetMasterKey() ([]byte, error) {
@@ -18,6 +23,10 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 		cmd            *exec.Cmd
 		stdout, stderr bytes.Buffer
 	)
+	// don't need chromium key file for macOS
+	defer os.Remove(item.TempChromiumKey)
+	// defer os.Remove(item.TempChromiumKey)
+	// Get the master key from the keychain
 	// $ security find-generic-password -wa 'Chrome'
 	cmd = exec.Command("security", "find-generic-password", "-wa", c.storage)
 	cmd.Stdout = &stdout
@@ -27,6 +36,9 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 		return nil, err
 	}
 	if stderr.Len() > 0 {
+		if strings.Contains(stderr.String(), "could not be found") {
+			return nil, ErrCouldNotFindInKeychain
+		}
 		return nil, errors.New(stderr.String())
 	}
 	chromeSecret := bytes.TrimSpace(stdout.Bytes())

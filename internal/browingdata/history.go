@@ -3,6 +3,7 @@ package browingdata
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"sort"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -18,6 +19,7 @@ func (c *ChromiumHistory) Parse(masterKey []byte) error {
 	if err != nil {
 		return err
 	}
+	defer os.Remove(item.TempChromiumHistory)
 	defer historyDB.Close()
 	rows, err := historyDB.Query(queryChromiumHistory)
 	if err != nil {

@@ -32,30 +32,17 @@ func New(name, storage, profilePath string, items []item.Item) (*chromium, error
 	if !fileutil.FolderExists(profilePath) {
 		return nil, fmt.Errorf("%s profile path is not exist: %s", name, profilePath)
 	}
-	masterKey, err := c.GetMasterKey()
-	if err != nil {
-		return nil, err
-	}
 	itemsPaths, err := c.getItemPath(profilePath, items)
 	if err != nil {
 		return nil, err
 	}
-	c.masterKey = masterKey
 	c.profilePath = profilePath
 	c.itemPaths = itemsPaths
 	c.items = typeutil.Keys(itemsPaths)
 	return c, err
 }
 
-func (c *chromium) GetItems() []item.Item {
-	return c.items
-}
-
-func (c *chromium) GetItemPaths() map[item.Item]string {
-	return c.itemPaths
-}
-
-func (c *chromium) GetName() string {
+func (c *chromium) Name() string {
 	return c.name
 }
 
@@ -65,6 +52,13 @@ func (c *chromium) GetBrowsingData() (*browingdata.Data, error) {
 	if err := c.copyItemToLocal(); err != nil {
 		return nil, err
 	}
+
+	masterKey, err := c.GetMasterKey()
+	if err != nil {
+		return nil, err
+	}
+
+	c.masterKey = masterKey
 	if err := b.Recovery(c.masterKey); err != nil {
 		return nil, err
 	}

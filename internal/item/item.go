@@ -93,7 +93,7 @@ func (i Item) String() string {
 	case ChromiumExtension:
 		return UnsupportedItem
 	case ChromiumHistory:
-		return TempChromiumExtension
+		return TempChromiumHistory
 	case YandexPassword:
 		return TempYandexPassword
 	case YandexCreditCard:

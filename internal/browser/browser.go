@@ -1,6 +1,7 @@
 package browser
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -9,10 +10,10 @@ import (
 )
 
 type Browser interface {
-	GetName() string
+	Name() string
 
 	GetMasterKey() ([]byte, error)
-
+	// GetBrowsingData returns the browsing data for the browser.
 	GetBrowsingData() (*browingdata.Data, error)
 }
 
@@ -52,7 +53,11 @@ func pickChromium(name string) []Browser {
 	if c, ok := chromiumList[name]; ok {
 		b, err := chromium.New(c.name, c.storage, c.profilePath, c.items)
 		if err != nil {
-			panic(err)
+			if strings.Contains(err.Error(), "profile path is not exist") {
+				fmt.Println(err.Error())
+			} else {
+				panic(err)
+			}
 		}
 		browsers = append(browsers, b)
 		return browsers
@@ -97,13 +102,13 @@ var (
 const (
 	chromeName         = "Chrome"
 	chromeBetaName     = "Chrome Beta"
-	chromiumName       = "ChromiumBookmark"
+	chromiumName       = "Chromium"
 	edgeName           = "Microsoft Edge"
-	firefoxName        = "FirefoxBookmark"
-	firefoxBetaName    = "FirefoxBookmark Beta"
-	firefoxDevName     = "FirefoxBookmark Dev"
-	firefoxNightlyName = "FirefoxBookmark Nightly"
-	firefoxESRName     = "FirefoxBookmark ESR"
+	firefoxName        = "Firefox"
+	firefoxBetaName    = "Firefox Beta"
+	firefoxDevName     = "Firefox Dev"
+	firefoxNightlyName = "Firefox Nightly"
+	firefoxESRName     = "Firefox ESR"
 	speed360Name       = "360speed"
 	qqBrowserName      = "QQ"
 	braveName          = "Brave"
