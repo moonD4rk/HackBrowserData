@@ -103,7 +103,7 @@ func (i Item) String() string {
 	case FirefoxPassword:
 		return TempFirefoxPassword
 	case FirefoxCookie:
-		return TempFirefoxPassword
+		return TempFirefoxCookie
 	case FirefoxBookmark:
 		return TempFirefoxBookmark
 	case FirefoxDownload:

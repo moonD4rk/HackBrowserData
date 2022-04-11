@@ -84,6 +84,7 @@ func (f *FirefoxCookie) Parse(masterKey []byte) error {
 	if err != nil {
 		return err
 	}
+	defer os.Remove(item.TempFirefoxCookie)
 	defer cookieDB.Close()
 	rows, err := cookieDB.Query(queryFirefoxCookie)
 	if err != nil {

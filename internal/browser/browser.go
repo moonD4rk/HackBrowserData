@@ -7,6 +7,7 @@ import (
 
 	"hack-browser-data/internal/browingdata"
 	"hack-browser-data/internal/browser/chromium"
+	"hack-browser-data/internal/browser/firefox"
 )
 
 type Browser interface {
@@ -69,15 +70,15 @@ func pickFirefox(name string) []Browser {
 	var browsers []Browser
 	name = strings.ToLower(name)
 	if name == "all" || name == "firefox" {
-		// for _, f := range firefoxList {
-		// multiFirefox, err := firefox(f.browserInfo, f.items)
-		// if err != nil {
-		// 	panic(err)
-		// }
-		// for _, browser := range multiFirefox {
-		// 	browsers = append(browsers, browser)
-		// }
-		// }
+		for _, v := range firefoxList {
+			multiFirefox, err := firefox.New(v.name, v.storage, v.profilePath, v.items)
+			if err != nil {
+				panic(err)
+			}
+			for _, browser := range multiFirefox {
+				browsers = append(browsers, browser)
+			}
+		}
 		return browsers
 	}
 	return nil
