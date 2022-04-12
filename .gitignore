@@ -178,7 +178,6 @@ config.toml
 Bookmarks
 Login Data
 Cookies
-hack-browser-data
 History
 *.db
 *.sqlite
