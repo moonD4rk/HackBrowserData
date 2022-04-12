@@ -2,13 +2,13 @@ package browingdata
 
 import (
 	"database/sql"
-	"fmt"
 	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 
 	"hack-browser-data/internal/decrypter"
 	"hack-browser-data/internal/item"
+	"hack-browser-data/internal/log"
 )
 
 type ChromiumCreditCard []card
@@ -31,7 +31,7 @@ func (c *ChromiumCreditCard) Parse(masterKey []byte) error {
 			value, encryptValue     []byte
 		)
 		if err := rows.Scan(&guid, &name, &month, &year, &encryptValue); err != nil {
-			fmt.Println(err)
+			log.Warn(err)
 		}
 		creditCardInfo := card{
 			GUID:            guid,

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"hack-browser-data/internal/item"
+	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -86,7 +87,7 @@ func (f *FirefoxDownload) Parse(masterKey []byte) error {
 			placeID, dateAdded int64
 		)
 		if err = downloadRows.Scan(&placeID, &content, &url, &dateAdded); err != nil {
-			fmt.Println(err)
+			log.Warn(err)
 		}
 		contentList := strings.Split(content, ",{")
 		if len(contentList) > 1 {

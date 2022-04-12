@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"hack-browser-data/internal/item"
+	"hack-browser-data/internal/log"
 )
 
 type Data struct {
@@ -28,7 +29,7 @@ func (d *Data) Recovery(masterKey []byte) error {
 
 	for _, source := range d.Sources {
 		if err := source.Parse(masterKey); err != nil {
-			panic(err)
+			log.Error(err)
 		}
 	}
 	return nil

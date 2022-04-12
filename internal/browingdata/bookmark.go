@@ -2,7 +2,6 @@ package browingdata
 
 import (
 	"database/sql"
-	"fmt"
 	"os"
 	"sort"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	"hack-browser-data/internal/item"
+	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils"
 	"hack-browser-data/internal/utils/fileutil"
 
@@ -107,7 +107,7 @@ func (f *FirefoxBookmark) Parse(masterKey []byte) error {
 			title, url           string
 		)
 		if err = bookmarkRows.Scan(&id, &url, &bType, &dateAdded, &title); err != nil {
-			fmt.Println(err)
+			log.Warn(err)
 		}
 		*f = append(*f, bookmark{
 			ID:        id,
