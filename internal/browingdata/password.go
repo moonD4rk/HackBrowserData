@@ -54,7 +54,9 @@ func (c *ChromiumPassword) Parse(masterKey []byte) error {
 			} else {
 				password, err = decrypter.ChromePass(masterKey, pwd)
 			}
-			log.Error(err)
+			if err != nil {
+				log.Error(err)
+			}
 		}
 		if create > time.Now().Unix() {
 			login.CreateDate = utils.TimeEpochFormat(create)

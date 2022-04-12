@@ -40,7 +40,7 @@ func (c *ChromiumBookmark) Parse(masterKey []byte) error {
 			return true
 		})
 	}
-	// TODO: 使用泛型重构
+	// TODO: refactor with go generics
 	sort.Slice(*c, func(i, j int) bool {
 		return (*c)[i].DateAdded.After((*c)[j].DateAdded)
 	})
@@ -95,7 +95,9 @@ func (f *FirefoxBookmark) Parse(masterKey []byte) error {
 	defer os.Remove(item.TempFirefoxBookmark)
 	defer keyDB.Close()
 	_, err = keyDB.Exec(closeJournalMode)
-
+	if err != nil {
+		log.Error(err)
+	}
 	bookmarkRows, err = keyDB.Query(queryFirefoxBookMark)
 	if err != nil {
 		return err

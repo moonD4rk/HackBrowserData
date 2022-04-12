@@ -18,7 +18,7 @@ type Browser interface {
 	GetBrowsingData() (*browingdata.Data, error)
 }
 
-func PickBrowser(name string) []Browser {
+func PickBrowser(name string) ([]Browser, error) {
 	var browsers []Browser
 	clist := pickChromium(name)
 	for _, b := range clist {
@@ -32,7 +32,7 @@ func PickBrowser(name string) []Browser {
 			browsers = append(browsers, b)
 		}
 	}
-	return browsers
+	return browsers, nil
 }
 
 func pickChromium(name string) []Browser {

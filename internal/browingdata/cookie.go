@@ -58,7 +58,9 @@ func (c *ChromiumCookie) Parse(masterKey []byte) error {
 			} else {
 				value, err = decrypter.ChromePass(masterKey, encryptValue)
 			}
-			log.Error(err)
+			if err != nil {
+				log.Error(err)
+			}
 		}
 		cookie.Value = string(value)
 		*c = append(*c, cookie)
