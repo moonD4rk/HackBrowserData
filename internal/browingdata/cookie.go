@@ -2,7 +2,6 @@ package browingdata
 
 import (
 	"database/sql"
-	"fmt"
 	"os"
 	"sort"
 
@@ -10,6 +9,7 @@ import (
 
 	"hack-browser-data/internal/decrypter"
 	"hack-browser-data/internal/item"
+	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils"
 )
 
@@ -35,7 +35,7 @@ func (c *ChromiumCookie) Parse(masterKey []byte) error {
 			value, encryptValue                           []byte
 		)
 		if err = rows.Scan(&key, &encryptValue, &host, &path, &createDate, &expireDate, &isSecure, &isHTTPOnly, &hasExpire, &isPersistent); err != nil {
-			fmt.Println(err)
+			log.Warn(err)
 		}
 
 		cookie := cookie{
@@ -52,17 +52,13 @@ func (c *ChromiumCookie) Parse(masterKey []byte) error {
 		}
 		// TODO: replace DPAPI
 		if len(encryptValue) > 0 {
+			var err error
 			if masterKey == nil {
 				value, err = decrypter.DPApi(encryptValue)
-				if err != nil {
-					fmt.Println(err)
-				}
 			} else {
 				value, err = decrypter.ChromePass(masterKey, encryptValue)
-				if err != nil {
-					fmt.Println(err)
-				}
 			}
+			log.Error(err)
 		}
 		cookie.Value = string(value)
 		*c = append(*c, cookie)
@@ -98,7 +94,7 @@ func (f *FirefoxCookie) Parse(masterKey []byte) error {
 			creationTime, expiry    int64
 		)
 		if err = rows.Scan(&name, &value, &host, &path, &creationTime, &expiry, &isSecure, &isHttpOnly); err != nil {
-			fmt.Println(err)
+			log.Warn(err)
 		}
 		*f = append(*f, cookie{
 			KeyName:    name,

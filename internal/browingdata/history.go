@@ -2,13 +2,13 @@ package browingdata
 
 import (
 	"database/sql"
-	"fmt"
 	"os"
 	"sort"
 
 	_ "github.com/mattn/go-sqlite3"
 
 	"hack-browser-data/internal/item"
+	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils"
 )
 
@@ -34,7 +34,7 @@ func (c *ChromiumHistory) Parse(masterKey []byte) error {
 		)
 		// TODO: handle rows error
 		if err := rows.Scan(&url, &title, &visitCount, &lastVisitTime); err != nil {
-			fmt.Println(err)
+			log.Warn(err)
 		}
 		data := history{
 			Url:           url,
@@ -85,7 +85,7 @@ func (f *FirefoxHistory) Parse(masterKey []byte) error {
 			visitCount    int
 		)
 		if err = historyRows.Scan(&id, &url, &visitDate, &title, &visitCount); err != nil {
-			fmt.Println(err)
+			log.Warn(err)
 		}
 		*f = append(*f, history{
 			Title:         title,

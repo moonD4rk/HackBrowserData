@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/base64"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"sort"
@@ -15,6 +14,7 @@ import (
 
 	"hack-browser-data/internal/decrypter"
 	"hack-browser-data/internal/item"
+	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils"
 )
 
@@ -40,7 +40,7 @@ func (c *ChromiumPassword) Parse(masterKey []byte) error {
 			create        int64
 		)
 		if err := rows.Scan(&url, &username, &pwd, &create); err != nil {
-			fmt.Println(err)
+			log.Warn(err)
 		}
 		login := loginData{
 			UserName:    username,
@@ -48,17 +48,13 @@ func (c *ChromiumPassword) Parse(masterKey []byte) error {
 			LoginUrl:    url,
 		}
 		if len(pwd) > 0 {
+			var err error
 			if masterKey == nil {
 				password, err = decrypter.DPApi(pwd)
-				if err != nil {
-					fmt.Println(err)
-				}
 			} else {
 				password, err = decrypter.ChromePass(masterKey, pwd)
-				if err != nil {
-					fmt.Println(err)
-				}
 			}
+			log.Error(err)
 		}
 		if create > time.Now().Unix() {
 			login.CreateDate = utils.TimeEpochFormat(create)
