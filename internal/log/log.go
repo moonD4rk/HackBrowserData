@@ -97,3 +97,11 @@ func Warnf(format string, v ...interface{}) {
 func Debugf(format string, v ...interface{}) {
 	formatLogger.doLogf(LevelDebug, format, v...)
 }
+
+// NewSugaredLogger(os.Stdout, DebugLevel).Configure(func(sl *SugaredLogger) {
+// 	sl.SetName("stdLogger")
+// 	sl.ReportCaller = true
+// 	// auto enable console color
+// 	sl.Formatter.(*TextFormatter).EnableColor = color.SupportColor()
+//  sl.Formatter.SetCallerSkip(1)
+// })
