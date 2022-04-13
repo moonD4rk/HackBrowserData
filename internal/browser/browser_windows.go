@@ -98,9 +98,9 @@ var (
 	qqBrowserProfilePath  = homeDir + "/AppData/Local/Tencent/QQBrowser/User Data/"
 	operaProfilePath      = homeDir + "/AppData/Roaming/Opera Software/Opera Stable/"
 	operaGXProfilePath    = homeDir + "/AppData/Roaming/Opera Software/Opera GX Stable/"
-	vivaldiProfilePath    = homeDir + "/AppData/Local/Vivaldi/User Data/Default/"
-	coccocProfilePath     = homeDir + "/AppData/Local/CocCoc/Browser/User Data/Default/"
-	yandexProfilePath     = homeDir + "/AppData/Local/Yandex/YandexBrowser/User Data/Default"
+	vivaldiProfilePath    = homeDir + "/AppData/Local/Vivaldi/User Data/"
+	coccocProfilePath     = homeDir + "/AppData/Local/CocCoc/Browser/User Data/"
+	yandexProfilePath     = homeDir + "/AppData/Local/Yandex/YandexBrowser/User Data/"
 
 	firefoxProfilePath = homeDir + "/AppData/Roaming/Mozilla/Firefox/Profiles/"
 )
