@@ -72,6 +72,7 @@ func pickFirefox(name string) []Browser {
 	if name == "all" || name == "firefox" {
 		for _, v := range firefoxList {
 			multiFirefox, err := firefox.New(v.name, v.storage, v.profilePath, v.items)
+			// TODO: Handle error
 			if err != nil {
 				panic(err)
 			}
@@ -101,21 +102,22 @@ var (
 )
 
 const (
-	chromeName         = "Chrome"
-	chromeBetaName     = "Chrome Beta"
-	chromiumName       = "Chromium"
-	edgeName           = "Microsoft Edge"
+	chromeName     = "Chrome"
+	chromeBetaName = "Chrome Beta"
+	chromiumName   = "Chromium"
+	edgeName       = "Microsoft Edge"
+	speed360Name   = "360speed"
+	qqBrowserName  = "QQ"
+	braveName      = "Brave"
+	operaName      = "Opera"
+	operaGXName    = "OperaGX"
+	vivaldiName    = "Vivaldi"
+	coccocName     = "CocCoc"
+	yandexName     = "Yandex"
+
 	firefoxName        = "Firefox"
 	firefoxBetaName    = "Firefox Beta"
 	firefoxDevName     = "Firefox Dev"
 	firefoxNightlyName = "Firefox Nightly"
 	firefoxESRName     = "Firefox ESR"
-	speed360Name       = "360speed"
-	qqBrowserName      = "QQ"
-	braveName          = "Brave"
-	operaName          = "Opera"
-	operaGXName        = "OperaGX"
-	vivaldiName        = "Vivaldi"
-	coccocName         = "CocCoc"
-	yandexName         = "Yandex"
 )
