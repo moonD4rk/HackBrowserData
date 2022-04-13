@@ -3,70 +3,104 @@
 package browser
 
 import (
-	item2 "hack-browser-data/internal/item"
+	"hack-browser-data/internal/item"
 )
 
 var (
 	chromiumList = map[string]struct {
-		browserInfo *browserInfo
-		items       []item2.Item
+		name        string
+		profilePath string
+		storage     string
+		items       []item.Item
 	}{
 		"chrome": {
-			browserInfo: chromeInfo,
-			items:       defaultChromiumItems,
+			name:        chromeName,
+			profilePath: chromeProfilePath,
+			items:       item.DefaultChromium,
 		},
 		"edge": {
-			browserInfo: edgeInfo,
-			items:       defaultChromiumItems,
+			name:        edgeName,
+			profilePath: edgeProfilePath,
+			items:       item.DefaultChromium,
+		},
+		"chromium": {
+			name:        chromiumName,
+			profilePath: chromiumProfilePath,
+			items:       item.DefaultChromium,
+		},
+		"chrome-beta": {
+			name:        chromeBetaName,
+			profilePath: chromeBetaProfilePath,
+			items:       item.DefaultChromium,
+		},
+		"opera": {
+			name:        operaName,
+			profilePath: operaProfilePath,
+			items:       item.DefaultChromium,
+		},
+		"opera-gx": {
+			name:        operaGXName,
+			profilePath: operaGXProfilePath,
+			items:       item.DefaultChromium,
+		},
+		"vivaldi": {
+			name:        vivaldiName,
+			profilePath: vivaldiProfilePath,
+			items:       item.DefaultChromium,
+		},
+		"coccoc": {
+			name:        coccocName,
+			profilePath: coccocProfilePath,
+			items:       item.DefaultChromium,
+		},
+		"brave": {
+			name:        braveName,
+			profilePath: braveProfilePath,
+			items:       item.DefaultChromium,
 		},
 		"yandex": {
-			browserInfo: yandexInfo,
-			items:       defaultYandexItems,
+			name:        yandexName,
+			profilePath: yandexProfilePath,
+			items:       item.DefaultYandex,
+		},
+		"360": {
+			name:        speed360Name,
+			profilePath: speed360ProfilePath,
+			items:       item.DefaultChromium,
+		},
+		"qq": {
+			name:        qqBrowserName,
+			profilePath: qqBrowserProfilePath,
+			items:       item.DefaultChromium,
 		},
 	}
 	firefoxList = map[string]struct {
-		browserInfo *browserInfo
-		items       []item2.Item
+		name        string
+		storage     string
+		profilePath string
+		items       []item.Item
 	}{
 		"firefox": {
-			browserInfo: firefoxInfo,
-			items:       defaultFirefoxItems,
+			name:        firefoxName,
+			profilePath: firefoxProfilePath,
+			items:       item.DefaultFirefox,
 		},
 	}
 )
 
 var (
-	chromeInfo = &browserInfo{
-		name:        chromeName,
-		profilePath: chromeProfilePath,
-	}
-	edgeInfo = &browserInfo{
-		name:        edgeName,
-		profilePath: edgeProfilePath,
-	}
-	yandexInfo = &browserInfo{
-		name:        yandexName,
-		profilePath: edgeProfilePath,
-	}
-	firefoxInfo = &browserInfo{
-		name:        firefoxName,
-		profilePath: firefoxProfilePath,
-	}
-)
+	chromeProfilePath     = homeDir + "/AppData/Local/Google/Chrome/User Data/"
+	chromeBetaProfilePath = homeDir + "/AppData/Local/Google/Chrome Beta/User Data/"
+	chromiumProfilePath   = homeDir + "/AppData/Local/Chromium/User Data/"
+	edgeProfilePath       = homeDir + "/AppData/Local/Microsoft/Edge/User Data/"
+	braveProfilePath      = homeDir + "/AppData/Local/BraveSoftware/Brave-Browser/User Data/"
+	speed360ProfilePath   = homeDir + "/AppData/Local/360chrome/Chrome/User Data/"
+	qqBrowserProfilePath  = homeDir + "/AppData/Local/Tencent/QQBrowser/User Data/"
+	operaProfilePath      = homeDir + "/AppData/Roaming/Opera Software/Opera Stable/"
+	operaGXProfilePath    = homeDir + "/AppData/Roaming/Opera Software/Opera GX Stable/"
+	vivaldiProfilePath    = homeDir + "/AppData/Local/Vivaldi/User Data/Default/"
+	coccocProfilePath     = homeDir + "/AppData/Local/CocCoc/Browser/User Data/Default/"
+	yandexProfilePath     = homeDir + "/AppData/Local/Yandex/YandexBrowser/User Data/Default"
 
-const (
-	chromeProfilePath     = "/AppData/Local/Google/Chrome/User Data/"
-	chromeBetaProfilePath = "/AppData/Local/Google/Chrome Beta/User Data/"
-	chromiumProfilePath   = "/AppData/Local/Chromium/User Data/"
-	edgeProfilePath       = "/AppData/Local/Microsoft/Edge/User Data/"
-	braveProfilePath      = "/AppData/Local/BraveSoftware/Brave-Browser/User Data/"
-	speed360ProfilePath   = "/AppData/Local/360chrome/Chrome/User Data/"
-	qqBrowserProfilePath  = "/AppData/Local/Tencent/QQBrowser/User Data/"
-	operaProfilePath      = "/AppData/Roaming/Opera Software/Opera Stable/"
-	operaGXProfilePath    = "/AppData/Roaming/Opera Software/Opera GX Stable/"
-	vivaldiProfilePath    = "/AppData/Local/Vivaldi/User Data/Default/"
-	coccocProfilePath     = "/AppData/Local/CocCoc/Browser/User Data/Default/"
-	yandexProfilePath     = "/AppData/Local/Yandex/YandexBrowser/User Data/Default"
-
-	firefoxProfilePath = "/AppData/Roaming/Mozilla/Firefox/Profiles"
+	firefoxProfilePath = homeDir + "/AppData/Roaming/Mozilla/Firefox/Profiles/"
 )
