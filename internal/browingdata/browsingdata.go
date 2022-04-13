@@ -50,6 +50,10 @@ func (d *Data) addSource(Sources []item.Item) {
 			d.Sources[source] = &ChromiumDownload{}
 		case item.ChromiumCreditCard:
 			d.Sources[source] = &ChromiumCreditCard{}
+		case item.YandexPassword:
+			d.Sources[source] = &YandexPassword{}
+		case item.YandexCreditCard:
+			d.Sources[source] = &YandexCreditCard{}
 		case item.FirefoxPassword:
 			d.Sources[source] = &FirefoxPassword{}
 		case item.FirefoxCookie:
