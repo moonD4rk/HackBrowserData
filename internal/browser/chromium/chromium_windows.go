@@ -3,6 +3,7 @@ package chromium
 import (
 	"encoding/base64"
 	"errors"
+	"os"
 
 	"github.com/tidwall/gjson"
 
@@ -20,6 +21,7 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer os.Remove(keyFile)
 	encryptedKey := gjson.Get(keyFile, "os_crypt.encrypted_key")
 	if encryptedKey.Exists() {
 		pureKey, err := base64.StdEncoding.DecodeString(encryptedKey.String())
