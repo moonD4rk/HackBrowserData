@@ -106,7 +106,7 @@ func (c *YandexPassword) Parse(masterKey []byte) error {
 			encryptPass: pwd,
 			LoginUrl:    url,
 		}
-		log.Debug(login)
+
 		if len(pwd) > 0 {
 			var err error
 			if masterKey == nil {

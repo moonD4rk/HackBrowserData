@@ -43,6 +43,7 @@ func pickChromium(name string) []Browser {
 			if b, err := chromium.New(c.name, c.storage, c.profilePath, c.items); err == nil {
 				browsers = append(browsers, b)
 			} else {
+				// TODO: show which browser find failed
 				if strings.Contains(err.Error(), "profile path is not exist") {
 					continue
 				}
@@ -74,7 +75,11 @@ func pickFirefox(name string) []Browser {
 			multiFirefox, err := firefox.New(v.name, v.storage, v.profilePath, v.items)
 			// TODO: Handle error
 			if err != nil {
-				panic(err)
+				if strings.Contains(err.Error(), "profile path is not exist") {
+					fmt.Println(err.Error())
+				} else {
+					panic(err)
+				}
 			}
 			for _, browser := range multiFirefox {
 				browsers = append(browsers, browser)
