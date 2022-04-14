@@ -2,7 +2,6 @@ package browingdata
 
 import (
 	"database/sql"
-	"fmt"
 	"os"
 	"sort"
 	"strings"
@@ -35,7 +34,7 @@ func (c *ChromiumDownload) Parse(masterKey []byte) error {
 			totalBytes, startTime, endTime int64
 		)
 		if err := rows.Scan(&targetPath, &tabUrl, &totalBytes, &startTime, &endTime, &mimeType); err != nil {
-			fmt.Println(err)
+			log.Warn(err)
 		}
 		data := download{
 			TargetPath: targetPath,

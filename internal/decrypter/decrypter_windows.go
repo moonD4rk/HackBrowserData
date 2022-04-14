@@ -16,6 +16,19 @@ func ChromePass(key, encryptPass []byte) ([]byte, error) {
 	}
 }
 
+func ChromePassForYandex(key, encryptPass []byte) ([]byte, error) {
+	if len(encryptPass) > 15 {
+		// remove Prefix 'v10'
+		// gcmBlockSize         = 16
+		// gcmTagSize           = 16
+		// gcmMinimumTagSize    = 12 // NIST SP 800-38D recommends tags with 12 or more bytes.
+		// gcmStandardNonceSize = 12
+		return aesGCMDecrypt(encryptPass[12:], key, encryptPass[0:12])
+	} else {
+		return nil, errPasswordIsEmpty
+	}
+}
+
 // chromium > 80 https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_win.cc
 func aesGCMDecrypt(crypted, key, nounce []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
