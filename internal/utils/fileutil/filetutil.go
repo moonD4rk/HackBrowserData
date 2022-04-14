@@ -1,11 +1,16 @@
 package fileutil
 
 import (
+	"archive/zip"
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
+	"path/filepath"
 
 	"hack-browser-data/internal/item"
+	"hack-browser-data/internal/log"
 )
 
 // FileExists checks if the file exists in the provided path
@@ -55,3 +60,60 @@ func CopyItemToLocal(itemPaths map[item.Item]string) error {
 	}
 	return nil
 }
+
+func ParentDir(p string) string {
+	return filepath.Dir(p)
+}
+
+func BaseDir(p string) string {
+	return filepath.Base(p)
+}
+
+func ParentBaseDir(p string) string {
+	return BaseDir(ParentDir(p))
+}
+
+func CompressDir(dir string) error {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		log.Error(err)
+	}
+	var b = new(bytes.Buffer)
+	zw := zip.NewWriter(b)
+	for _, f := range files {
+		fw, _ := zw.Create(f.Name())
+		fileName := path.Join(dir, f.Name())
+		fileContent, err := ioutil.ReadFile(fileName)
+		if err != nil {
+			zw.Close()
+			return err
+		}
+		_, err = fw.Write(fileContent)
+		if err != nil {
+			zw.Close()
+			return err
+		}
+		err = os.Remove(fileName)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	if err := zw.Close(); err != nil {
+		return err
+	}
+	filename := filepath.Join(dir, "archive.zip")
+	outFile, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	_, err = b.WriteTo(outFile)
+	if err != nil {
+		return err
+	}
+	log.Debugf("Compress success, zip filename is %s", filename)
+	return nil
+}
+
+// func CleanProfilePath(p string) string {
+//
+// }

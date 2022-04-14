@@ -9,6 +9,7 @@ import (
 
 	"hack-browser-data/internal/browingdata"
 	"hack-browser-data/internal/item"
+	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils/fileutil"
 	"hack-browser-data/internal/utils/typeutil"
 )
@@ -24,20 +25,19 @@ type firefox struct {
 
 // New returns a new firefox instance.
 func New(name, storage, profilePath string, items []item.Item) ([]*firefox, error) {
+	if !fileutil.FolderExists(profilePath) {
+		return nil, fmt.Errorf("%s profile path is not exist: %s", name, profilePath)
+	}
 	f := &firefox{
 		name:        name,
 		storage:     storage,
 		profilePath: profilePath,
 		items:       items,
 	}
-	if !fileutil.FolderExists(profilePath) {
-		return nil, fmt.Errorf("%s profile path is not exist: %s", name, profilePath)
-	}
-
 	multiItemPaths, err := f.getMultiItemPath(f.profilePath, f.items)
 	if err != nil {
 		if strings.Contains(err.Error(), "profile path is not exist") {
-			fmt.Println(err)
+			log.Error(err)
 			return nil, nil
 		}
 		return nil, err
@@ -55,7 +55,6 @@ func New(name, storage, profilePath string, items []item.Item) ([]*firefox, erro
 
 func (f *firefox) getMultiItemPath(profilePath string, items []item.Item) (map[string]map[item.Item]string, error) {
 	var multiItemPaths = make(map[string]map[item.Item]string)
-
 	err := filepath.Walk(profilePath, firefoxWalkFunc(items, multiItemPaths))
 	return multiItemPaths, err
 }
@@ -81,20 +80,16 @@ func firefoxWalkFunc(items []item.Item, multiItemPaths map[string]map[item.Item]
 	return func(path string, info fs.FileInfo, err error) error {
 		for _, v := range items {
 			if info.Name() == v.FileName() {
-				parentDir := getParentDir(path)
-				if _, exist := multiItemPaths[parentDir]; exist {
-					multiItemPaths[parentDir][v] = path
+				parentBaseDir := fileutil.ParentBaseDir(path)
+				if _, exist := multiItemPaths[parentBaseDir]; exist {
+					multiItemPaths[parentBaseDir][v] = path
 				} else {
-					multiItemPaths[parentDir] = map[item.Item]string{v: path}
+					multiItemPaths[parentBaseDir] = map[item.Item]string{v: path}
 				}
 			}
 		}
 		return err
 	}
-}
-
-func getParentDir(absPath string) string {
-	return filepath.Base(filepath.Dir(absPath))
 }
 
 func (f *firefox) GetMasterKey() ([]byte, error) {

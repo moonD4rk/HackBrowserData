@@ -1,13 +1,14 @@
 package browser
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
 	"hack-browser-data/internal/browingdata"
 	"hack-browser-data/internal/browser/chromium"
 	"hack-browser-data/internal/browser/firefox"
+	"hack-browser-data/internal/log"
+	"hack-browser-data/internal/utils/fileutil"
 )
 
 type Browser interface {
@@ -18,15 +19,15 @@ type Browser interface {
 	GetBrowsingData() (*browingdata.Data, error)
 }
 
-func PickBrowser(name string) ([]Browser, error) {
+func PickBrowser(name, profile string) ([]Browser, error) {
 	var browsers []Browser
-	clist := pickChromium(name)
+	clist := pickChromium(name, profile)
 	for _, b := range clist {
 		if b != nil {
 			browsers = append(browsers, b)
 		}
 	}
-	flist := pickFirefox(name)
+	flist := pickFirefox(name, profile)
 	for _, b := range flist {
 		if b != nil {
 			browsers = append(browsers, b)
@@ -35,9 +36,27 @@ func PickBrowser(name string) ([]Browser, error) {
 	return browsers, nil
 }
 
-func pickChromium(name string) []Browser {
+func PickBrowserByProfilePath(name, profile string) ([]Browser, error) {
+	var browsers []Browser
+	clist := pickChromium(name, profile)
+	for _, b := range clist {
+		if b != nil {
+			browsers = append(browsers, b)
+		}
+	}
+	flist := pickFirefox(name, profile)
+	for _, b := range flist {
+		if b != nil {
+			browsers = append(browsers, b)
+		}
+	}
+	return browsers, nil
+}
+
+func pickChromium(name, profile string) []Browser {
 	var browsers []Browser
 	name = strings.ToLower(name)
+	// TODO: add support for 「all」 flag and set profilePath
 	if name == "all" {
 		for _, c := range chromiumList {
 			if b, err := chromium.New(c.name, c.storage, c.profilePath, c.items); err == nil {
@@ -53,10 +72,13 @@ func pickChromium(name string) []Browser {
 		return browsers
 	}
 	if c, ok := chromiumList[name]; ok {
-		b, err := chromium.New(c.name, c.storage, c.profilePath, c.items)
+		if profile == "" {
+			profile = c.profilePath
+		}
+		b, err := chromium.New(c.name, c.storage, profile, c.items)
 		if err != nil {
 			if strings.Contains(err.Error(), "profile path is not exist") {
-				fmt.Println(err.Error())
+				log.Error(err.Error())
 			} else {
 				panic(err)
 			}
@@ -67,16 +89,21 @@ func pickChromium(name string) []Browser {
 	return nil
 }
 
-func pickFirefox(name string) []Browser {
+func pickFirefox(name, profile string) []Browser {
 	var browsers []Browser
 	name = strings.ToLower(name)
 	if name == "all" || name == "firefox" {
 		for _, v := range firefoxList {
-			multiFirefox, err := firefox.New(v.name, v.storage, v.profilePath, v.items)
+			if profile == "" {
+				profile = v.profilePath
+			} else {
+				profile = fileutil.ParentDir(profile)
+			}
+			multiFirefox, err := firefox.New(v.name, v.storage, profile, v.items)
 			// TODO: Handle error
 			if err != nil {
 				if strings.Contains(err.Error(), "profile path is not exist") {
-					fmt.Println(err.Error())
+					log.Error(err.Error())
 				} else {
 					panic(err)
 				}

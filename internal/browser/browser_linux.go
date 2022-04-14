@@ -72,13 +72,13 @@ var (
 
 var (
 	firefoxProfilePath    = homeDir + "/.mozilla/firefox/"
-	chromeProfilePath     = homeDir + "/.config/google-chrome/"
-	chromiumProfilePath   = homeDir + "/.config/chromium/"
-	edgeProfilePath       = homeDir + "/.config/microsoft-edge*/"
-	braveProfilePath      = homeDir + "/.config/BraveSoftware/Brave-Browser/"
-	chromeBetaProfilePath = homeDir + "/.config/google-chrome-beta/"
-	operaProfilePath      = homeDir + "/.config/opera/"
-	vivaldiProfilePath    = homeDir + "/.config/vivaldi/"
+	chromeProfilePath     = homeDir + "/.config/google-chrome/Default/"
+	chromiumProfilePath   = homeDir + "/.config/chromium/Default/"
+	edgeProfilePath       = homeDir + "/.config/microsoft-edge*/Default/"
+	braveProfilePath      = homeDir + "/.config/BraveSoftware/Brave-Browser/Default/"
+	chromeBetaProfilePath = homeDir + "/.config/google-chrome-beta/Default/"
+	operaProfilePath      = homeDir + "/.config/opera/Default/"
+	vivaldiProfilePath    = homeDir + "/.config/vivaldi/Default/"
 )
 
 const (
