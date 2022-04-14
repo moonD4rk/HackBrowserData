@@ -89,16 +89,16 @@ var (
 )
 
 var (
-	chromeProfilePath     = homeDir + "/Library/Application Support/Google/Chrome/"
-	chromeBetaProfilePath = homeDir + "/Library/Application Support/Google/Chrome Beta/"
-	chromiumProfilePath   = homeDir + "/Library/Application Support/Chromium/"
-	edgeProfilePath       = homeDir + "/Library/Application Support/Microsoft Edge/"
-	braveProfilePath      = homeDir + "/Library/Application Support/BraveSoftware/Brave-Browser/"
-	operaProfilePath      = homeDir + "/Library/Application Support/com.operasoftware.Opera/"
-	operaGXProfilePath    = homeDir + "/Library/Application Support/com.operasoftware.OperaGX/"
-	vivaldiProfilePath    = homeDir + "/Library/Application Support/Vivaldi/"
-	coccocProfilePath     = homeDir + "/Library/Application Support/Coccoc/"
-	yandexProfilePath     = homeDir + "/Library/Application Support/Yandex/YandexBrowser/"
+	chromeProfilePath     = homeDir + "/Library/Application Support/Google/Chrome/Default/"
+	chromeBetaProfilePath = homeDir + "/Library/Application Support/Google/Chrome Beta/Default/"
+	chromiumProfilePath   = homeDir + "/Library/Application Support/Chromium/Default/"
+	edgeProfilePath       = homeDir + "/Library/Application Support/Microsoft Edge/Default/"
+	braveProfilePath      = homeDir + "/Library/Application Support/BraveSoftware/Brave-Browser/Default/"
+	operaProfilePath      = homeDir + "/Library/Application Support/com.operasoftware.Opera/Default/"
+	operaGXProfilePath    = homeDir + "/Library/Application Support/com.operasoftware.OperaGX/Default/"
+	vivaldiProfilePath    = homeDir + "/Library/Application Support/Vivaldi/Default/"
+	coccocProfilePath     = homeDir + "/Library/Application Support/Coccoc/Default/"
+	yandexProfilePath     = homeDir + "/Library/Application Support/Yandex/YandexBrowser/Default/"
 
 	firefoxProfilePath = homeDir + "/Library/Application Support/Firefox/Profiles/"
 )

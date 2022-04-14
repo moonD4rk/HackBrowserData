@@ -84,11 +84,13 @@ func (c *chromium) copyItemToLocal() error {
 
 func (c *chromium) getItemPath(profilePath string, items []item.Item) (map[item.Item]string, error) {
 	var itemPaths = make(map[item.Item]string)
-	err := filepath.Walk(profilePath, chromiumWalkFunc(items, itemPaths))
+	parentDir := fileutil.ParentDir(profilePath)
+	baseDir := fileutil.BaseDir(profilePath)
+	err := filepath.Walk(parentDir, chromiumWalkFunc(items, itemPaths, baseDir))
 	return itemPaths, err
 }
 
-func chromiumWalkFunc(items []item.Item, itemPaths map[item.Item]string) filepath.WalkFunc {
+func chromiumWalkFunc(items []item.Item, itemPaths map[item.Item]string, baseDir string) filepath.WalkFunc {
 	return func(path string, info os.FileInfo, err error) error {
 		for _, it := range items {
 			switch {
@@ -96,8 +98,7 @@ func chromiumWalkFunc(items []item.Item, itemPaths map[item.Item]string) filepat
 				if it == item.ChromiumKey {
 					itemPaths[it] = path
 				}
-				// TODO: check file path is not in Default folder
-				if strings.Contains(path, "Default") {
+				if strings.Contains(path, baseDir) {
 					itemPaths[it] = path
 				}
 			}

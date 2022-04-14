@@ -1,19 +1,13 @@
 package utils
 
 import (
-	"archive/zip"
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"strings"
 	"time"
-
-	"hack-browser-data/internal/log"
 )
-
-const Prefix = "[x]: "
 
 func IntToBool(a int) bool {
 	switch a {
@@ -71,43 +65,5 @@ func MakeDir(dirName string) error {
 	if _, err := os.Stat(dirName); os.IsNotExist(err) {
 		return os.Mkdir(dirName, 0700)
 	}
-	return nil
-}
-
-func Compress(exportDir string) error {
-	files, err := ioutil.ReadDir(exportDir)
-	if err != nil {
-		log.Error(err)
-	}
-	var b = new(bytes.Buffer)
-	zw := zip.NewWriter(b)
-	for _, f := range files {
-		fw, _ := zw.Create(f.Name())
-		fileName := path.Join(exportDir, f.Name())
-		fileContent, err := ioutil.ReadFile(fileName)
-		if err != nil {
-			zw.Close()
-			return err
-		}
-		_, err = fw.Write(fileContent)
-		if err != nil {
-			zw.Close()
-			return err
-		}
-		err = os.Remove(fileName)
-		if err != nil {
-			log.Error(err)
-		}
-	}
-	if err := zw.Close(); err != nil {
-		return err
-	}
-	zipName := exportDir + `/archive.zip`
-	outFile, _ := os.Create(zipName)
-	_, err = b.WriteTo(outFile)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("%s Compress success, zip filename is %s \n", Prefix, zipName)
 	return nil
 }

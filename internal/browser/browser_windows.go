@@ -89,18 +89,18 @@ var (
 )
 
 var (
-	chromeProfilePath     = homeDir + "/AppData/Local/Google/Chrome/User Data/"
-	chromeBetaProfilePath = homeDir + "/AppData/Local/Google/Chrome Beta/User Data/"
-	chromiumProfilePath   = homeDir + "/AppData/Local/Chromium/User Data/"
-	edgeProfilePath       = homeDir + "/AppData/Local/Microsoft/Edge/User Data/"
-	braveProfilePath      = homeDir + "/AppData/Local/BraveSoftware/Brave-Browser/User Data/"
-	speed360ProfilePath   = homeDir + "/AppData/Local/360chrome/Chrome/User Data/"
-	qqBrowserProfilePath  = homeDir + "/AppData/Local/Tencent/QQBrowser/User Data/"
-	operaProfilePath      = homeDir + "/AppData/Roaming/Opera Software/Opera Stable/"
-	operaGXProfilePath    = homeDir + "/AppData/Roaming/Opera Software/Opera GX Stable/"
-	vivaldiProfilePath    = homeDir + "/AppData/Local/Vivaldi/User Data/"
-	coccocProfilePath     = homeDir + "/AppData/Local/CocCoc/Browser/User Data/"
-	yandexProfilePath     = homeDir + "/AppData/Local/Yandex/YandexBrowser/User Data/"
+	chromeProfilePath     = homeDir + "/AppData/Local/Google/Chrome/User Data/Default/"
+	chromeBetaProfilePath = homeDir + "/AppData/Local/Google/Chrome Beta/User Data/Default/"
+	chromiumProfilePath   = homeDir + "/AppData/Local/Chromium/User Data/Default/"
+	edgeProfilePath       = homeDir + "/AppData/Local/Microsoft/Edge/User Data/Default/"
+	braveProfilePath      = homeDir + "/AppData/Local/BraveSoftware/Brave-Browser/User Data/Default/"
+	speed360ProfilePath   = homeDir + "/AppData/Local/360chrome/Chrome/User Data/Default/"
+	qqBrowserProfilePath  = homeDir + "/AppData/Local/Tencent/QQBrowser/User Data/Default/"
+	operaProfilePath      = homeDir + "/AppData/Roaming/Opera Software/Opera Stable/Default/"
+	operaGXProfilePath    = homeDir + "/AppData/Roaming/Opera Software/Opera GX Stable/Default/"
+	vivaldiProfilePath    = homeDir + "/AppData/Local/Vivaldi/User Data/Default/"
+	coccocProfilePath     = homeDir + "/AppData/Local/CocCoc/Browser/User Data/Default/"
+	yandexProfilePath     = homeDir + "/AppData/Local/Yandex/YandexBrowser/User Data/Default/"
 
 	firefoxProfilePath = homeDir + "/AppData/Roaming/Mozilla/Firefox/Profiles/"
 )
