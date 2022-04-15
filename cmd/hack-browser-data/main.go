@@ -38,22 +38,20 @@ func Execute() {
 			&cli.StringFlag{Name: "browser", Aliases: []string{"b"}, Destination: &browserName, Value: "all", Usage: "available browsers: all|" + strings.Join(browser.ListBrowser(), "|")},
 			&cli.StringFlag{Name: "results-dir", Aliases: []string{"dir"}, Destination: &outputDir, Value: "results", Usage: "export dir"},
 			&cli.StringFlag{Name: "format", Aliases: []string{"f"}, Destination: &outputFormat, Value: "csv", Usage: "format, csv|json|console"},
-			&cli.StringFlag{Name: "profile-dir-path", Aliases: []string{"p"}, Destination: &profilePath, Value: "", Usage: "custom profile dir path, get with chrome://version"},
+			&cli.StringFlag{Name: "profile-path", Aliases: []string{"p"}, Destination: &profilePath, Value: "", Usage: "custom profile dir path, get with chrome://version"},
 		},
 		HideHelpCommand: true,
 		Action: func(c *cli.Context) error {
 			if verbose {
-				log.InitLog("debug")
+				log.Init("debug")
 			} else {
-				log.InitLog("error")
+				log.Init("error")
 			}
 			var (
 				browsers []browser.Browser
 				err      error
 			)
-			// if profilePath != "" {
-			// 	browsers, err = browser.PickBrowserByProfilePath(browserName, profilePath)
-			// }
+			log.Debugf("browser: %s", browserName)
 			browsers, err = browser.PickBrowser(browserName, profilePath)
 			if err != nil {
 				log.Error(err)

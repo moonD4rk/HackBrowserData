@@ -36,40 +36,25 @@ func PickBrowser(name, profile string) ([]Browser, error) {
 	return browsers, nil
 }
 
-func PickBrowserByProfilePath(name, profile string) ([]Browser, error) {
-	var browsers []Browser
-	clist := pickChromium(name, profile)
-	for _, b := range clist {
-		if b != nil {
-			browsers = append(browsers, b)
-		}
-	}
-	flist := pickFirefox(name, profile)
-	for _, b := range flist {
-		if b != nil {
-			browsers = append(browsers, b)
-		}
-	}
-	return browsers, nil
-}
-
 func pickChromium(name, profile string) []Browser {
 	var browsers []Browser
 	name = strings.ToLower(name)
 	// TODO: add support for 「all」 flag and set profilePath
 	if name == "all" {
-		for _, c := range chromiumList {
-			if b, err := chromium.New(c.name, c.storage, c.profilePath, c.items); err == nil {
+		for _, v := range chromiumList {
+			if b, err := chromium.New(v.name, v.storage, v.profilePath, v.items); err == nil {
+				log.Infof("find browser %s success", b.Name())
 				browsers = append(browsers, b)
 			} else {
 				// TODO: show which browser find failed
 				if strings.Contains(err.Error(), "profile path is not exist") {
+					log.Infof("find browser %s failed, profile path is not exist", v.name)
 					continue
+				} else {
+					log.Error("new chromium error:", err)
 				}
-				panic(err)
 			}
 		}
-		return browsers
 	}
 	if c, ok := chromiumList[name]; ok {
 		if profile == "" {
@@ -78,15 +63,14 @@ func pickChromium(name, profile string) []Browser {
 		b, err := chromium.New(c.name, c.storage, profile, c.items)
 		if err != nil {
 			if strings.Contains(err.Error(), "profile path is not exist") {
-				log.Error(err.Error())
+				log.Infof("find browser %s failed, profile path is not exist", c.name)
 			} else {
-				panic(err)
+				log.Error("new chromium error:", err)
 			}
 		}
 		browsers = append(browsers, b)
-		return browsers
 	}
-	return nil
+	return browsers
 }
 
 func pickFirefox(name, profile string) []Browser {
@@ -99,18 +83,19 @@ func pickFirefox(name, profile string) []Browser {
 			} else {
 				profile = fileutil.ParentDir(profile)
 			}
-			multiFirefox, err := firefox.New(v.name, v.storage, profile, v.items)
-			// TODO: Handle error
-			if err != nil {
+			if multiFirefox, err := firefox.New(v.name, v.storage, profile, v.items); err == nil {
+				for _, b := range multiFirefox {
+					log.Infof("find browser: %s success", b.Name())
+					browsers = append(browsers, b)
+				}
+			} else {
 				if strings.Contains(err.Error(), "profile path is not exist") {
-					log.Error(err.Error())
+					log.Infof("find browser: %s failed, profile path is not exist", v.name)
 				} else {
-					panic(err)
+					log.Error(err)
 				}
 			}
-			for _, browser := range multiFirefox {
-				browsers = append(browsers, browser)
-			}
+
 		}
 		return browsers
 	}

@@ -11,6 +11,7 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 
 	"hack-browser-data/internal/item"
+	"hack-browser-data/internal/log"
 )
 
 var (
@@ -52,5 +53,6 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 		return nil, ErrWrongSecurityCommand
 	}
 	c.masterKey = key
+	log.Infof("%s initialized master key success", c.name)
 	return key, nil
 }
