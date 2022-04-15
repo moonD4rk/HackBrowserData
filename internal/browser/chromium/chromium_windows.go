@@ -9,6 +9,7 @@ import (
 
 	"hack-browser-data/internal/decrypter"
 	"hack-browser-data/internal/item"
+	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils/fileutil"
 )
 
@@ -29,6 +30,7 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 			return nil, errDecodeMasterKeyFailed
 		}
 		c.masterKey, err = decrypter.DPApi(pureKey[5:])
+		log.Infof("%s initialized master key success", c.name)
 		return c.masterKey, err
 	}
 	return nil, nil
