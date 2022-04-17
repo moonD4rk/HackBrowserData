@@ -52,7 +52,7 @@ func CopyItemToLocal(itemPaths map[item.Item]string) error {
 		// TODO: Handle read file error
 		d, err := ioutil.ReadFile(p)
 		if err != nil {
-			fmt.Println(err.Error())
+			log.Error(err.Error())
 		}
 		err = ioutil.WriteFile(filename, d, 0777)
 		if err != nil {
@@ -63,7 +63,8 @@ func CopyItemToLocal(itemPaths map[item.Item]string) error {
 }
 
 func Filename(browser, item, ext string) string {
-	return strings.ToLower(fmt.Sprintf("%s_%s.%s", browser, item, ext))
+	replace := strings.NewReplacer(" ", "_", ".", "_", "-", "_")
+	return strings.ToLower(fmt.Sprintf("%s_%s.%s", replace.Replace(browser), item, ext))
 }
 
 func ParentDir(p string) string {
@@ -106,7 +107,7 @@ func CompressDir(dir string) error {
 	if err := zw.Close(); err != nil {
 		return err
 	}
-	filename := filepath.Join(dir, "archive.zip")
+	filename := filepath.Join(dir, fmt.Sprintf("%s.zip", dir))
 	outFile, err := os.Create(filename)
 	if err != nil {
 		return err
@@ -115,6 +116,6 @@ func CompressDir(dir string) error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("Compress success, zip filename is %s", filename)
+	log.Noticef("compress success, zip filename is %s", filename)
 	return nil
 }

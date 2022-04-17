@@ -26,7 +26,7 @@ type firefox struct {
 // New returns a new firefox instance.
 func New(name, storage, profilePath string, items []item.Item) ([]*firefox, error) {
 	if !fileutil.FolderExists(profilePath) {
-		return nil, fmt.Errorf("%s profile path is not exist: %s", name, profilePath)
+		return nil, fmt.Errorf("%s profile folder is not exist: %s", name, profilePath)
 	}
 	f := &firefox{
 		name:        name,
@@ -36,7 +36,7 @@ func New(name, storage, profilePath string, items []item.Item) ([]*firefox, erro
 	}
 	multiItemPaths, err := f.getMultiItemPath(f.profilePath, f.items)
 	if err != nil {
-		if strings.Contains(err.Error(), "profile path is not exist") {
+		if strings.Contains(err.Error(), "profile folder is not exist") {
 			log.Error(err)
 			return nil, nil
 		}
@@ -45,7 +45,7 @@ func New(name, storage, profilePath string, items []item.Item) ([]*firefox, erro
 	var firefoxList []*firefox
 	for name, itemPaths := range multiItemPaths {
 		firefoxList = append(firefoxList, &firefox{
-			name:      name,
+			name:      fmt.Sprintf("firefox-%s", name),
 			items:     typeutil.Keys(itemPaths),
 			itemPaths: itemPaths,
 		})
@@ -66,7 +66,7 @@ func (f *firefox) copyItemToLocal() error {
 		// TODO: Handle read file error
 		d, err := ioutil.ReadFile(path)
 		if err != nil {
-			fmt.Println(err.Error())
+			return err
 		}
 		err = ioutil.WriteFile(filename, d, 0777)
 		if err != nil {
@@ -100,7 +100,7 @@ func (f *firefox) Name() string {
 	return f.name
 }
 
-func (f *firefox) GetBrowsingData() (*browingdata.Data, error) {
+func (f *firefox) BrowsingData() (*browingdata.Data, error) {
 	b := browingdata.New(f.items)
 
 	if err := f.copyItemToLocal(); err != nil {

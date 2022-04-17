@@ -17,7 +17,7 @@ func Init(l string) {
 	}
 }
 
-const template = "hack-browser-data [{{level}}] [{{caller}}] {{message}} {{data}} {{extra}}\n"
+const template = "[{{level}}] [{{caller}}] {{message}} {{data}} {{extra}}\n"
 
 // NewStdLogger instance
 func newStdLogger(level slog.Level) *slog.SugaredLogger {

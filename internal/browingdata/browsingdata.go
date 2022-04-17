@@ -2,11 +2,15 @@ package browingdata
 
 import (
 	"path"
-	"time"
 
+	"hack-browser-data/internal/browingdata/bookmark"
+	"hack-browser-data/internal/browingdata/cookie"
+	"hack-browser-data/internal/browingdata/creditcard"
+	"hack-browser-data/internal/browingdata/download"
+	"hack-browser-data/internal/browingdata/history"
+	"hack-browser-data/internal/browingdata/password"
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
-	"hack-browser-data/internal/outputter"
 	"hack-browser-data/internal/utils/fileutil"
 )
 
@@ -38,18 +42,18 @@ func (d *Data) Recovery(masterKey []byte) error {
 	return nil
 }
 
-func (d *Data) Output(dir, browserName, output string) {
-	outputter := outputter.New(output)
+func (d *Data) Output(dir, browserName, flag string) {
+	output := NewOutPutter(flag)
 
 	for _, source := range d.Sources {
 
-		filename := fileutil.Filename(browserName, source.Name(), outputter.Ext())
+		filename := fileutil.Filename(browserName, source.Name(), output.Ext())
 
-		f, err := outputter.CreateFile(dir, filename)
+		f, err := output.CreateFile(dir, filename)
 		if err != nil {
 			log.Error(err)
 		}
-		if err := outputter.Write(source, f); err != nil {
+		if err := output.Write(source, f); err != nil {
 			log.Error(err)
 		}
 		log.Noticef("output to file %s success", path.Join(dir, filename))
@@ -60,94 +64,31 @@ func (d *Data) addSource(Sources []item.Item) {
 	for _, source := range Sources {
 		switch source {
 		case item.ChromiumPassword:
-			d.Sources[source] = &ChromiumPassword{}
+			d.Sources[source] = &password.ChromiumPassword{}
 		case item.ChromiumCookie:
-			d.Sources[source] = &ChromiumCookie{}
+			d.Sources[source] = &cookie.ChromiumCookie{}
 		case item.ChromiumBookmark:
-			d.Sources[source] = &ChromiumBookmark{}
+			d.Sources[source] = &bookmark.ChromiumBookmark{}
 		case item.ChromiumHistory:
-			d.Sources[source] = &ChromiumHistory{}
+			d.Sources[source] = &history.ChromiumHistory{}
 		case item.ChromiumDownload:
-			d.Sources[source] = &ChromiumDownload{}
+			d.Sources[source] = &download.ChromiumDownload{}
 		case item.ChromiumCreditCard:
-			d.Sources[source] = &ChromiumCreditCard{}
+			d.Sources[source] = &creditcard.ChromiumCreditCard{}
 		case item.YandexPassword:
-			d.Sources[source] = &YandexPassword{}
+			d.Sources[source] = &password.YandexPassword{}
 		case item.YandexCreditCard:
-			d.Sources[source] = &YandexCreditCard{}
+			d.Sources[source] = &creditcard.YandexCreditCard{}
 		case item.FirefoxPassword:
-			d.Sources[source] = &FirefoxPassword{}
+			d.Sources[source] = &password.FirefoxPassword{}
 		case item.FirefoxCookie:
-			d.Sources[source] = &FirefoxCookie{}
+			d.Sources[source] = &cookie.FirefoxCookie{}
 		case item.FirefoxBookmark:
-			d.Sources[source] = &FirefoxBookmark{}
+			d.Sources[source] = &bookmark.FirefoxBookmark{}
 		case item.FirefoxHistory:
-			d.Sources[source] = &FirefoxHistory{}
+			d.Sources[source] = &history.FirefoxHistory{}
 		case item.FirefoxDownload:
-			d.Sources[source] = &FirefoxDownload{}
+			d.Sources[source] = &download.FirefoxDownload{}
 		}
 	}
 }
-
-const (
-	queryChromiumCredit   = `SELECT guid, name_on_card, expiration_month, expiration_year, card_number_encrypted, billing_address_id, nickname FROM credit_cards`
-	queryChromiumLogin    = `SELECT origin_url, username_value, password_value, date_created FROM logins`
-	queryYandexLogin      = `SELECT action_url, username_value, password_value, date_created FROM logins`
-	queryChromiumHistory  = `SELECT url, title, visit_count, last_visit_time FROM urls`
-	queryChromiumDownload = `SELECT target_path, tab_url, total_bytes, start_time, end_time, mime_type FROM downloads`
-	queryChromiumCookie   = `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`
-	queryFirefoxHistory   = `SELECT id, url, last_visit_date, title, visit_count FROM moz_places where title not null`
-	queryFirefoxDownload  = `SELECT place_id, GROUP_CONCAT(content), url, dateAdded FROM (SELECT * FROM moz_annos INNER JOIN moz_places ON moz_annos.place_id=moz_places.id) t GROUP BY place_id`
-	queryFirefoxBookMark  = `SELECT id, url, type, dateAdded, title FROM (SELECT * FROM moz_bookmarks INNER JOIN moz_places ON moz_bookmarks.fk=moz_places.id)`
-	queryFirefoxCookie    = `SELECT name, value, host, path, creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
-	queryMetaData         = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
-	queryNssPrivate       = `SELECT a11, a102 from nssPrivate`
-	closeJournalMode      = `PRAGMA journal_mode=off`
-)
-
-type (
-	loginData struct {
-		UserName    string
-		encryptPass []byte
-		encryptUser []byte
-		Password    string
-		LoginUrl    string
-		CreateDate  time.Time
-	}
-	cookie struct {
-		Host         string
-		Path         string
-		KeyName      string
-		encryptValue []byte
-		Value        string
-		IsSecure     bool
-		IsHTTPOnly   bool
-		HasExpire    bool
-		IsPersistent bool
-		CreateDate   time.Time
-		ExpireDate   time.Time
-	}
-	history struct {
-		Title         string
-		Url           string
-		VisitCount    int
-		LastVisitTime time.Time
-	}
-	download struct {
-		TargetPath string
-		Url        string
-		TotalBytes int64
-		StartTime  time.Time
-		EndTime    time.Time
-		MimeType   string
-	}
-	card struct {
-		GUID            string
-		Name            string
-		ExpirationYear  string
-		ExpirationMonth string
-		CardNumber      string
-		Address         string
-		NickName        string
-	}
-)

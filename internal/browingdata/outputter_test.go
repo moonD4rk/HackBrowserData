@@ -1,4 +1,4 @@
-package outputter
+package browingdata
 
 import (
 	"os"
@@ -6,7 +6,7 @@ import (
 )
 
 func TestNewOutPutter(t *testing.T) {
-	out := New("json")
+	out := NewOutPutter("json")
 	if out == nil {
 		t.Error("New() returned nil")
 	}

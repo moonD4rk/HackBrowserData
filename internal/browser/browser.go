@@ -9,14 +9,14 @@ import (
 	"hack-browser-data/internal/browser/firefox"
 	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils/fileutil"
+	"hack-browser-data/internal/utils/typeutil"
 )
 
 type Browser interface {
+	// Name is browser's name
 	Name() string
-
-	GetMasterKey() ([]byte, error)
-	// GetBrowsingData returns the browsing data for the browser.
-	GetBrowsingData() (*browingdata.Data, error)
+	// BrowsingData returns all browsing data in the browser.
+	BrowsingData() (*browingdata.Data, error)
 }
 
 func PickBrowser(name, profile string) ([]Browser, error) {
@@ -47,11 +47,11 @@ func pickChromium(name, profile string) []Browser {
 				browsers = append(browsers, b)
 			} else {
 				// TODO: show which browser find failed
-				if strings.Contains(err.Error(), "profile path is not exist") {
-					log.Infof("find browser %s failed, profile path is not exist", v.name)
+				if strings.Contains(err.Error(), "profile folder is not exist") {
+					log.Errorf("find browser %s failed, profile folder is not exist, maybe not installed", v.name)
 					continue
 				} else {
-					log.Error("new chromium error:", err)
+					log.Errorf("new chromium error:", err)
 				}
 			}
 		}
@@ -62,10 +62,10 @@ func pickChromium(name, profile string) []Browser {
 		}
 		b, err := chromium.New(c.name, c.storage, profile, c.items)
 		if err != nil {
-			if strings.Contains(err.Error(), "profile path is not exist") {
-				log.Infof("find browser %s failed, profile path is not exist", c.name)
+			if strings.Contains(err.Error(), "profile folder is not exist") {
+				log.Fatalf("find browser %s failed, profile folder is not exist, maybe not installed", c.name)
 			} else {
-				log.Error("new chromium error:", err)
+				log.Fatalf("new chromium error:", err)
 			}
 		}
 		browsers = append(browsers, b)
@@ -89,8 +89,8 @@ func pickFirefox(name, profile string) []Browser {
 					browsers = append(browsers, b)
 				}
 			} else {
-				if strings.Contains(err.Error(), "profile path is not exist") {
-					log.Noticef("find browser firefox %s failed, profile path is not exist", v.name)
+				if strings.Contains(err.Error(), "profile folder is not exist") {
+					log.Errorf("find browser firefox %s failed, profile folder is not exist", v.name)
 				} else {
 					log.Error(err)
 				}
@@ -104,12 +104,8 @@ func pickFirefox(name, profile string) []Browser {
 
 func ListBrowser() []string {
 	var l []string
-	for c := range chromiumList {
-		l = append(l, c)
-	}
-	for f := range firefoxList {
-		l = append(l, f)
-	}
+	l = append(l, typeutil.Keys(chromiumList)...)
+	l = append(l, typeutil.Keys(firefoxList)...)
 	return l
 }
 

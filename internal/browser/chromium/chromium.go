@@ -30,7 +30,7 @@ func New(name, storage, profilePath string, items []item.Item) (*chromium, error
 	}
 	// TODO: Handle file path is not exist
 	if !fileutil.FolderExists(profilePath) {
-		return nil, fmt.Errorf("%s profile path is not exist: %s", name, profilePath)
+		return nil, fmt.Errorf("%s profile folder is not exist: %s", name, profilePath)
 	}
 	itemsPaths, err := c.getItemPath(profilePath, items)
 	if err != nil {
@@ -46,7 +46,7 @@ func (c *chromium) Name() string {
 	return c.name
 }
 
-func (c *chromium) GetBrowsingData() (*browingdata.Data, error) {
+func (c *chromium) BrowsingData() (*browingdata.Data, error) {
 	b := browingdata.New(c.items)
 
 	if err := c.copyItemToLocal(); err != nil {
@@ -72,7 +72,7 @@ func (c *chromium) copyItemToLocal() error {
 		// TODO: Handle read file error
 		d, err := ioutil.ReadFile(path)
 		if err != nil {
-			fmt.Println(err.Error())
+			return err
 		}
 		err = ioutil.WriteFile(filename, d, 0777)
 		if err != nil {

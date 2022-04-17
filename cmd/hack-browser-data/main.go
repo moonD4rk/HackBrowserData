@@ -28,14 +28,14 @@ func Execute() {
 	app := &cli.App{
 		Name:      "hack-browser-data",
 		Usage:     "Export passwords/cookies/history/bookmarks from browser",
-		UsageText: "[hack-browser-data -b chrome -f json -dir results -cc]\nGet all browingdata(password/cookie/history/bookmark) from browser",
+		UsageText: "[hack-browser-data -b chrome -f json -dir results -cc]\nExport all browingdata(password/cookie/history/bookmark) from browser\nGithub Link: https://github.com/moonD4rk/HackBrowserData",
 		Version:   "0.4.0",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{Name: "verbose", Aliases: []string{"vv"}, Destination: &verbose, Value: false, Usage: "verbose"},
-			&cli.BoolFlag{Name: "compress", Aliases: []string{"cc"}, Destination: &compress, Value: false, Usage: "compress result to zip"},
+			&cli.BoolFlag{Name: "compress", Aliases: []string{"zip"}, Destination: &compress, Value: false, Usage: "compress result to zip"},
 			&cli.StringFlag{Name: "browser", Aliases: []string{"b"}, Destination: &browserName, Value: "all", Usage: "available browsers: all|" + strings.Join(browser.ListBrowser(), "|")},
 			&cli.StringFlag{Name: "results-dir", Aliases: []string{"dir"}, Destination: &outputDir, Value: "results", Usage: "export dir"},
-			&cli.StringFlag{Name: "format", Aliases: []string{"f"}, Destination: &outputFormat, Value: "csv", Usage: "format, csv|json|console"},
+			&cli.StringFlag{Name: "format", Aliases: []string{"f"}, Destination: &outputFormat, Value: "csv", Usage: "file name csv|json"},
 			&cli.StringFlag{Name: "profile-path", Aliases: []string{"p"}, Destination: &profilePath, Value: "", Usage: "custom profile dir path, get with chrome://version"},
 		},
 		HideHelpCommand: true,
@@ -56,11 +56,11 @@ func Execute() {
 			}
 
 			for _, b := range browsers {
-				data, err := b.GetBrowsingData()
+				data, err := b.BrowsingData()
 				if err != nil {
 					log.Error(err)
 				}
-				data.Output(outputDir, browserName, outputFormat)
+				data.Output(outputDir, b.Name(), outputFormat)
 			}
 			if compress {
 				if err = fileutil.CompressDir(outputDir); err != nil {
