@@ -12,11 +12,8 @@ github.com/godbus/dbus/v5 v5.1.0/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5x
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
 github.com/gookit/color v1.5.0 h1:1Opow3+BWDwqor78DcJkJCIwnkviFi+rrOANki9BUFw=
 github.com/gookit/color v1.5.0/go.mod h1:43aQb+Zerm/BWh2GnrgOQm7ffz7tvQXEKV6BFMl7wAo=
-github.com/gookit/goutil v0.4.4/go.mod h1:qlGVh0PI+WnWSjYnIocfz/7tkeogxL6+EDNP1mRe+7o=
 github.com/gookit/goutil v0.5.0 h1:SrbfjqZ8iprxJOfKZVT0yGJ4/82afr4Qa0RQwON19I4=
 github.com/gookit/goutil v0.5.0/go.mod h1:pq1eTibwb2wN96jrci0xy7xogWzzo9CihOQJEAvz4yQ=
-github.com/gookit/slog v0.2.1 h1:EI47PlvpoPwxwkNTYaevN6iBNjo9nBxo0aQLiq+MTdk=
-github.com/gookit/slog v0.2.1/go.mod h1:CsbWzAaZA2FjLuGzvfTAR/QvFisZG31deOcZ05H++NI=
 github.com/gookit/slog v0.2.2-0.20220415153407-dd89ed7b0448 h1:7kNDAgYDAu/5X+PbFfzGToaKJiDcghKv7B4XOGosrPM=
 github.com/gookit/slog v0.2.2-0.20220415153407-dd89ed7b0448/go.mod h1:9Sh1Utw3LVG0kqN++ankdfrCVQ7yixKDL1+YrYvIulU=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
@@ -57,6 +54,8 @@ golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACk
 golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad/go.mod h1:jdWPYTVW3xRLrWPugEBEK3UY2ZEsg3UU495nc5E+M+I=
 golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3 h1:0es+/5331RGQPcXlMfP+WrnIIS6dNnNRe0WB02W0F4M=
 golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
+golang.org/x/exp v0.0.0-20220414153411-bcd21879b8fd h1:zVFyTKZN/Q7mNRWSs1GOYnHM9NiFSJ54YVRsD0rNWT4=
+golang.org/x/exp v0.0.0-20220414153411-bcd21879b8fd/go.mod h1:lgLbSvA5ygNOMpwM/9anMpWVlVJ7Z+cHWq/eFuinpGE=
 golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
 golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20191026070338-33540a1f6037/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=

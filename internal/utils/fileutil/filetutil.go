@@ -45,11 +45,11 @@ func ReadFile(filename string) (string, error) {
 
 // CopyItemToLocal copies the file from the provided path to the local path
 func CopyItemToLocal(itemPaths map[item.Item]string) error {
-	for i, path := range itemPaths {
+	for i, p := range itemPaths {
 		// var dstFilename = item.TempName()
 		var filename = i.String()
 		// TODO: Handle read file error
-		d, err := ioutil.ReadFile(path)
+		d, err := ioutil.ReadFile(p)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
@@ -113,7 +113,3 @@ func CompressDir(dir string) error {
 	log.Debugf("Compress success, zip filename is %s", filename)
 	return nil
 }
-
-// func CleanProfilePath(p string) string {
-//
-// }

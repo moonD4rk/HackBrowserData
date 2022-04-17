@@ -15,7 +15,7 @@ import (
 	"hack-browser-data/internal/decrypter"
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
-	"hack-browser-data/internal/utils"
+	"hack-browser-data/internal/utils/typeutil"
 )
 
 type ChromiumPassword []loginData
@@ -59,9 +59,9 @@ func (c *ChromiumPassword) Parse(masterKey []byte) error {
 			}
 		}
 		if create > time.Now().Unix() {
-			login.CreateDate = utils.TimeEpochFormat(create)
+			login.CreateDate = typeutil.TimeEpoch(create)
 		} else {
-			login.CreateDate = utils.TimeStampFormat(create)
+			login.CreateDate = typeutil.TimeStamp(create)
 		}
 		login.Password = string(password)
 		*c = append(*c, login)
@@ -119,9 +119,9 @@ func (c *YandexPassword) Parse(masterKey []byte) error {
 			}
 		}
 		if create > time.Now().Unix() {
-			login.CreateDate = utils.TimeEpochFormat(create)
+			login.CreateDate = typeutil.TimeEpoch(create)
 		} else {
-			login.CreateDate = utils.TimeStampFormat(create)
+			login.CreateDate = typeutil.TimeStamp(create)
 		}
 		login.Password = string(password)
 		*c = append(*c, login)
@@ -252,7 +252,7 @@ func getFirefoxLoginData(loginJson string) (l []loginData, err error) {
 			}
 			m.encryptUser = user
 			m.encryptPass = pass
-			m.CreateDate = utils.TimeStampFormat(v.Get("timeCreated").Int() / 1000)
+			m.CreateDate = typeutil.TimeStamp(v.Get("timeCreated").Int() / 1000)
 			l = append(l, m)
 		}
 	}

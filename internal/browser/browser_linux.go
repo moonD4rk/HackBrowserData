@@ -74,7 +74,7 @@ var (
 	firefoxProfilePath    = homeDir + "/.mozilla/firefox/"
 	chromeProfilePath     = homeDir + "/.config/google-chrome/Default/"
 	chromiumProfilePath   = homeDir + "/.config/chromium/Default/"
-	edgeProfilePath       = homeDir + "/.config/microsoft-edge*/Default/"
+	edgeProfilePath       = homeDir + "/.config/microsoft-edge/Default/"
 	braveProfilePath      = homeDir + "/.config/BraveSoftware/Brave-Browser/Default/"
 	chromeBetaProfilePath = homeDir + "/.config/google-chrome-beta/Default/"
 	operaProfilePath      = homeDir + "/.config/opera/Default/"

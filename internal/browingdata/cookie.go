@@ -10,7 +10,7 @@ import (
 	"hack-browser-data/internal/decrypter"
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
-	"hack-browser-data/internal/utils"
+	"hack-browser-data/internal/utils/typeutil"
 )
 
 type ChromiumCookie []cookie
@@ -43,12 +43,12 @@ func (c *ChromiumCookie) Parse(masterKey []byte) error {
 			Host:         host,
 			Path:         path,
 			encryptValue: encryptValue,
-			IsSecure:     utils.IntToBool(isSecure),
-			IsHTTPOnly:   utils.IntToBool(isHTTPOnly),
-			HasExpire:    utils.IntToBool(hasExpire),
-			IsPersistent: utils.IntToBool(isPersistent),
-			CreateDate:   utils.TimeEpochFormat(createDate),
-			ExpireDate:   utils.TimeEpochFormat(expireDate),
+			IsSecure:     typeutil.IntToBool(isSecure),
+			IsHTTPOnly:   typeutil.IntToBool(isHTTPOnly),
+			HasExpire:    typeutil.IntToBool(hasExpire),
+			IsPersistent: typeutil.IntToBool(isPersistent),
+			CreateDate:   typeutil.TimeEpoch(createDate),
+			ExpireDate:   typeutil.TimeEpoch(expireDate),
 		}
 		// TODO: replace DPAPI
 		if len(encryptValue) > 0 {
@@ -102,10 +102,10 @@ func (f *FirefoxCookie) Parse(masterKey []byte) error {
 			KeyName:    name,
 			Host:       host,
 			Path:       path,
-			IsSecure:   utils.IntToBool(isSecure),
-			IsHTTPOnly: utils.IntToBool(isHttpOnly),
-			CreateDate: utils.TimeStampFormat(creationTime / 1000000),
-			ExpireDate: utils.TimeStampFormat(expiry),
+			IsSecure:   typeutil.IntToBool(isSecure),
+			IsHTTPOnly: typeutil.IntToBool(isHttpOnly),
+			CreateDate: typeutil.TimeStamp(creationTime / 1000000),
+			ExpireDate: typeutil.TimeStamp(expiry),
 			Value:      value,
 		})
 	}
