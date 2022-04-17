@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goVer: [1.14, 1.15]
+        goVer: [1.18]
 
     steps:
     - name: Set up Go ${{ matrix.goVer }}
@@ -23,7 +23,7 @@ jobs:
         go get -v -t -d ./...
         go get gopkg.in/check.v1
     - name: Build
-      run: go build -v .
+      run: go build -v ./...
 
     - name: Format
       run: diff -u <(echo -n) <(gofmt -d .)
