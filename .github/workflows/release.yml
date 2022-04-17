@@ -15,7 +15,7 @@ jobs:
       - name: Use Golang
         uses: actions/setup-go@v1
         with:
-          go-version: "1.17.2"
+          go-version: "1.18"
 
       -
         name: Build with xgo
@@ -25,6 +25,7 @@ jobs:
           go_version: ${{ matrix.go_version }}
           dest: build
           prefix: hack-browser-data
+          pkg: cmd/hack-browser-data
           targets: windows/amd64,windows/386,linux/386,linux/amd64,linux/arm,linux/arm64,darwin/amd64
           # targets: windows/amd64,windows/386,darwin/amd64,linux/arm
           v: true
@@ -35,13 +36,13 @@ jobs:
 
       - name: Set Variable
         run: |
-          echo "RELEASE_WIN32=hack-browser-data-${{ github.event.release.tag_name}}-windows-32bit" >> $GITHUB_ENV
-          echo "RELEASE_WIN64=hack-browser-data-${{ github.event.release.tag_name}}-windows-64bit" >> $GITHUB_ENV
-          echo "RELEASE_OSX=hack-browser-data-${{ github.event.release.tag_name}}-osx-64bit" >> $GITHUB_ENV
-          echo "RELEASE_LinuxARM=hack-browser-data-${{ github.event.release.tag_name}}-linux-arm" >> $GITHUB_ENV
-          echo "RELEASE_Linux386=hack-browser-data-${{ github.event.release.tag_name}}-linux-386" >> $GITHUB_ENV
-          echo "RELEASE_LinuxARM64=hack-browser-data-${{ github.event.release.tag_name}}-linux-arm64" >> $GITHUB_ENV
-          echo "RELEASE_LinuxAMD64=hack-browser-data-${{ github.event.release.tag_name}}-linux-amd64" >> $GITHUB_ENV
+          echo "RELEASE_WIN32=hack-browser-data-${{ github.event.release.tag_name}}windows-32bit" >> $GITHUB_ENV
+          echo "RELEASE_WIN64=hack-browser-data-${{ github.event.release.tag_name}}windows-64bit" >> $GITHUB_ENV
+          echo "RELEASE_OSX=hack-browser-data-${{ github.event.release.tag_name}}osx-64bit" >> $GITHUB_ENV
+          echo "RELEASE_LinuxARM=hack-browser-data-${{ github.event.release.tag_name}}linux-arm" >> $GITHUB_ENV
+          echo "RELEASE_Linux386=hack-browser-data-${{ github.event.release.tag_name}}linux-386" >> $GITHUB_ENV
+          echo "RELEASE_LinuxARM64=hack-browser-data-${{ github.event.release.tag_name}}linux-arm64" >> $GITHUB_ENV
+          echo "RELEASE_LinuxAMD64=hack-browser-data-${{ github.event.release.tag_name}}linux-amd64" >> $GITHUB_ENV
       - name: Build zip
         run: |
           mv build/hack-browser-data-windows*386.exe "$RELEASE_WIN32".exe
