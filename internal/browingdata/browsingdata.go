@@ -1,10 +1,13 @@
 package browingdata
 
 import (
+	"path"
 	"time"
 
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
+	"hack-browser-data/internal/outputter"
+	"hack-browser-data/internal/utils/fileutil"
 )
 
 type Data struct {
@@ -33,6 +36,24 @@ func (d *Data) Recovery(masterKey []byte) error {
 		}
 	}
 	return nil
+}
+
+func (d *Data) Output(dir, browserName, output string) {
+	outputter := outputter.New(output)
+
+	for _, source := range d.Sources {
+
+		filename := fileutil.Filename(browserName, source.Name(), outputter.Ext())
+
+		f, err := outputter.CreateFile(dir, filename)
+		if err != nil {
+			log.Error(err)
+		}
+		if err := outputter.Write(source, f); err != nil {
+			log.Error(err)
+		}
+		log.Noticef("output to file %s success", path.Join(dir, filename))
+	}
 }
 
 func (d *Data) addSource(Sources []item.Item) {
@@ -69,7 +90,7 @@ func (d *Data) addSource(Sources []item.Item) {
 }
 
 const (
-	queryChromiumCredit   = `SELECT guid, name_on_card, expiration_month, expiration_year, card_number_encrypted FROM credit_cards`
+	queryChromiumCredit   = `SELECT guid, name_on_card, expiration_month, expiration_year, card_number_encrypted, billing_address_id, nickname FROM credit_cards`
 	queryChromiumLogin    = `SELECT origin_url, username_value, password_value, date_created FROM logins`
 	queryYandexLogin      = `SELECT action_url, username_value, password_value, date_created FROM logins`
 	queryChromiumHistory  = `SELECT url, title, visit_count, last_visit_time FROM urls`
@@ -126,5 +147,7 @@ type (
 		ExpirationYear  string
 		ExpirationMonth string
 		CardNumber      string
+		Address         string
+		NickName        string
 	}
 )

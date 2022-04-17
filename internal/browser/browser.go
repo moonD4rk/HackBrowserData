@@ -85,12 +85,12 @@ func pickFirefox(name, profile string) []Browser {
 			}
 			if multiFirefox, err := firefox.New(v.name, v.storage, profile, v.items); err == nil {
 				for _, b := range multiFirefox {
-					log.Noticef("find browser: firefox %s success", b.Name())
+					log.Noticef("find browser firefox %s success", b.Name())
 					browsers = append(browsers, b)
 				}
 			} else {
 				if strings.Contains(err.Error(), "profile path is not exist") {
-					log.Noticef("find browser: firefox %s failed, profile path is not exist", v.name)
+					log.Noticef("find browser firefox %s failed, profile path is not exist", v.name)
 				} else {
 					log.Error(err)
 				}

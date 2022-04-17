@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
@@ -59,6 +60,10 @@ func CopyItemToLocal(itemPaths map[item.Item]string) error {
 		}
 	}
 	return nil
+}
+
+func Filename(browser, item, ext string) string {
+	return strings.ToLower(fmt.Sprintf("%s_%s.%s", browser, item, ext))
 }
 
 func ParentDir(p string) string {

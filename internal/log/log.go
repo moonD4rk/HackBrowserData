@@ -13,7 +13,7 @@ func Init(l string) {
 	if l == "debug" {
 		std = newStdLogger(slog.DebugLevel)
 	} else {
-		std = newStdLogger(slog.ErrorLevel)
+		std = newStdLogger(slog.NoticeLevel)
 	}
 }
 

@@ -1,13 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
 	"hack-browser-data/internal/browser"
 	"hack-browser-data/internal/log"
-	"hack-browser-data/internal/outputter"
 	"hack-browser-data/internal/utils/fileutil"
 
 	"github.com/urfave/cli/v2"
@@ -45,7 +43,7 @@ func Execute() {
 			if verbose {
 				log.Init("debug")
 			} else {
-				log.Init("error")
+				log.Init("notice")
 			}
 			var (
 				browsers []browser.Browser
@@ -56,29 +54,16 @@ func Execute() {
 			if err != nil {
 				log.Error(err)
 			}
-			output := outputter.New(outputFormat)
 
 			for _, b := range browsers {
 				data, err := b.GetBrowsingData()
 				if err != nil {
 					log.Error(err)
 				}
-				var f *os.File
-				for _, source := range data.Sources {
-					filename := fmt.Sprintf("%s_%s.%s", b.Name(), source.Name(), outputFormat)
-					f, err = output.CreateFile(outputDir, filename)
-					if err != nil {
-						log.Error(err)
-					}
-					err = output.Write(source, f)
-					if err != nil {
-						log.Error(err)
-					}
-				}
+				data.Output(outputDir, browserName, outputFormat)
 			}
 			if compress {
-				err = fileutil.CompressDir(outputDir)
-				if err != nil {
+				if err = fileutil.CompressDir(outputDir); err != nil {
 					log.Error(err)
 				}
 			}

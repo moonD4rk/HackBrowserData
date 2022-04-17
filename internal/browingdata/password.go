@@ -189,8 +189,8 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 				}
 				*f = append(*f, loginData{
 					LoginUrl:   v.LoginUrl,
-					UserName:   string(decrypter.PKCS5UnPadding(user)),
-					Password:   string(decrypter.PKCS5UnPadding(pwd)),
+					UserName:   string(user),
+					Password:   string(pwd),
 					CreateDate: v.CreateDate,
 				})
 			}

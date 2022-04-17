@@ -27,17 +27,19 @@ func (c *ChromiumCreditCard) Parse(masterKey []byte) error {
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			name, month, year, guid string
-			value, encryptValue     []byte
+			name, month, year, guid, address, nickname string
+			value, encryptValue                        []byte
 		)
-		if err := rows.Scan(&guid, &name, &month, &year, &encryptValue); err != nil {
+		if err := rows.Scan(&guid, &name, &month, &year, &encryptValue, &address, &nickname); err != nil {
 			log.Warn(err)
 		}
-		creditCardInfo := card{
+		ccInfo := card{
 			GUID:            guid,
 			Name:            name,
 			ExpirationMonth: month,
 			ExpirationYear:  year,
+			Address:         address,
+			NickName:        nickname,
 		}
 		if masterKey == nil {
 			value, err = decrypter.DPApi(encryptValue)
@@ -50,8 +52,8 @@ func (c *ChromiumCreditCard) Parse(masterKey []byte) error {
 				return err
 			}
 		}
-		creditCardInfo.CardNumber = string(value)
-		*c = append(*c, creditCardInfo)
+		ccInfo.CardNumber = string(value)
+		*c = append(*c, ccInfo)
 	}
 	return nil
 }
