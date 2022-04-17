@@ -9,7 +9,7 @@ import (
 
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
-	"hack-browser-data/internal/utils"
+	"hack-browser-data/internal/utils/typeutil"
 )
 
 type ChromiumHistory []history
@@ -40,7 +40,7 @@ func (c *ChromiumHistory) Parse(masterKey []byte) error {
 			Url:           url,
 			Title:         title,
 			VisitCount:    visitCount,
-			LastVisitTime: utils.TimeEpochFormat(lastVisitTime),
+			LastVisitTime: typeutil.TimeEpoch(lastVisitTime),
 		}
 		*c = append(*c, data)
 	}
@@ -91,7 +91,7 @@ func (f *FirefoxHistory) Parse(masterKey []byte) error {
 			Title:         title,
 			Url:           url,
 			VisitCount:    visitCount,
-			LastVisitTime: utils.TimeStampFormat(visitDate / 1000000),
+			LastVisitTime: typeutil.TimeStamp(visitDate / 1000000),
 		})
 	}
 	sort.Slice(*f, func(i, j int) bool {

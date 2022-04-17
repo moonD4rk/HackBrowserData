@@ -8,7 +8,7 @@ import (
 
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
-	"hack-browser-data/internal/utils"
+	"hack-browser-data/internal/utils/typeutil"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tidwall/gjson"
@@ -40,8 +40,8 @@ func (c *ChromiumDownload) Parse(masterKey []byte) error {
 			TargetPath: targetPath,
 			Url:        tabUrl,
 			TotalBytes: totalBytes,
-			StartTime:  utils.TimeEpochFormat(startTime),
-			EndTime:    utils.TimeEpochFormat(endTime),
+			StartTime:  typeutil.TimeEpoch(startTime),
+			EndTime:    typeutil.TimeEpoch(endTime),
 			MimeType:   mimeType,
 		}
 		*c = append(*c, data)
@@ -98,8 +98,8 @@ func (f *FirefoxDownload) Parse(masterKey []byte) error {
 				TargetPath: path,
 				Url:        url,
 				TotalBytes: fileSize.Int(),
-				StartTime:  utils.TimeStampFormat(dateAdded / 1000000),
-				EndTime:    utils.TimeStampFormat(endTime.Int() / 1000),
+				StartTime:  typeutil.TimeStamp(dateAdded / 1000000),
+				EndTime:    typeutil.TimeStamp(endTime.Int() / 1000),
 			})
 		}
 	}

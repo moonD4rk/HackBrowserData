@@ -10,8 +10,8 @@ import (
 
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
-	"hack-browser-data/internal/utils"
 	"hack-browser-data/internal/utils/fileutil"
+	"hack-browser-data/internal/utils/typeutil"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -61,7 +61,7 @@ func getBookmarkChildren(value gjson.Result, w *ChromiumBookmark) (children gjso
 		ID:        value.Get(bookmarkID).Int(),
 		Name:      value.Get(bookmarkName).String(),
 		URL:       value.Get(bookmarkUrl).String(),
-		DateAdded: utils.TimeEpochFormat(value.Get(bookmarkAdded).Int()),
+		DateAdded: typeutil.TimeEpoch(value.Get(bookmarkAdded).Int()),
 	}
 	children = value.Get(bookmarkChildren)
 	if nodeType.Exists() {
@@ -114,9 +114,9 @@ func (f *FirefoxBookmark) Parse(masterKey []byte) error {
 		*f = append(*f, bookmark{
 			ID:        id,
 			Name:      title,
-			Type:      utils.BookmarkType(bType),
+			Type:      bookmarkType(bType),
 			URL:       url,
-			DateAdded: utils.TimeStampFormat(dateAdded / 1000000),
+			DateAdded: typeutil.TimeStamp(dateAdded / 1000000),
 		})
 	}
 	sort.Slice(*f, func(i, j int) bool {
@@ -127,4 +127,13 @@ func (f *FirefoxBookmark) Parse(masterKey []byte) error {
 
 func (f *FirefoxBookmark) Name() string {
 	return "bookmark"
+}
+
+func bookmarkType(a int64) string {
+	switch a {
+	case 1:
+		return "url"
+	default:
+		return "folder"
+	}
 }
