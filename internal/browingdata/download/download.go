@@ -1,10 +1,11 @@
-package browingdata
+package download
 
 import (
 	"database/sql"
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
@@ -15,6 +16,19 @@ import (
 )
 
 type ChromiumDownload []download
+
+type download struct {
+	TargetPath string
+	Url        string
+	TotalBytes int64
+	StartTime  time.Time
+	EndTime    time.Time
+	MimeType   string
+}
+
+const (
+	queryChromiumDownload = `SELECT target_path, tab_url, total_bytes, start_time, end_time, mime_type FROM downloads`
+)
 
 func (c *ChromiumDownload) Parse(masterKey []byte) error {
 	historyDB, err := sql.Open("sqlite3", item.TempChromiumDownload)
@@ -57,6 +71,11 @@ func (c *ChromiumDownload) Name() string {
 }
 
 type FirefoxDownload []download
+
+const (
+	queryFirefoxDownload = `SELECT place_id, GROUP_CONCAT(content), url, dateAdded FROM (SELECT * FROM moz_annos INNER JOIN moz_places ON moz_annos.place_id=moz_places.id) t GROUP BY place_id`
+	closeJournalMode     = `PRAGMA journal_mode=off`
+)
 
 func (f *FirefoxDownload) Parse(masterKey []byte) error {
 	var (

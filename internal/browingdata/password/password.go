@@ -1,4 +1,4 @@
-package browingdata
+package password
 
 import (
 	"bytes"
@@ -19,6 +19,19 @@ import (
 )
 
 type ChromiumPassword []loginData
+
+type loginData struct {
+	UserName    string
+	encryptPass []byte
+	encryptUser []byte
+	Password    string
+	LoginUrl    string
+	CreateDate  time.Time
+}
+
+const (
+	queryChromiumLogin = `SELECT origin_url, username_value, password_value, date_created FROM logins`
+)
 
 func (c *ChromiumPassword) Parse(masterKey []byte) error {
 	loginDB, err := sql.Open("sqlite3", item.TempChromiumPassword)
@@ -78,6 +91,10 @@ func (c *ChromiumPassword) Name() string {
 }
 
 type YandexPassword []loginData
+
+const (
+	queryYandexLogin = `SELECT action_url, username_value, password_value, date_created FROM logins`
+)
 
 func (c *YandexPassword) Parse(masterKey []byte) error {
 	loginDB, err := sql.Open("sqlite3", item.TempYandexPassword)
@@ -139,6 +156,11 @@ func (c *YandexPassword) Name() string {
 
 type FirefoxPassword []loginData
 
+const (
+	queryMetaData   = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
+	queryNssPrivate = `SELECT a11, a102 from nssPrivate`
+)
+
 func (f *FirefoxPassword) Parse(masterKey []byte) error {
 	globalSalt, metaBytes, nssA11, nssA102, err := getFirefoxDecryptKey(item.TempFirefoxKey4)
 	if err != nil {
@@ -189,8 +211,8 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 				}
 				*f = append(*f, loginData{
 					LoginUrl:   v.LoginUrl,
-					UserName:   string(decrypter.PKCS5UnPadding(user)),
-					Password:   string(decrypter.PKCS5UnPadding(pwd)),
+					UserName:   string(user),
+					Password:   string(pwd),
 					CreateDate: v.CreateDate,
 				})
 			}

@@ -1,4 +1,4 @@
-package outputter
+package browingdata
 
 import (
 	"encoding/csv"
@@ -9,17 +9,15 @@ import (
 
 	"github.com/gocarina/gocsv"
 	jsoniter "github.com/json-iterator/go"
-
-	"hack-browser-data/internal/browingdata"
 )
 
-type outPutter struct {
+type OutPutter struct {
 	json bool
 	csv  bool
 }
 
-func New(flag string) *outPutter {
-	o := &outPutter{}
+func NewOutPutter(flag string) *OutPutter {
+	o := &OutPutter{}
 	if flag == "json" {
 		o.json = true
 	} else {
@@ -28,7 +26,7 @@ func New(flag string) *outPutter {
 	return o
 }
 
-func (o *outPutter) Write(data browingdata.Source, writer io.Writer) error {
+func (o *OutPutter) Write(data Source, writer io.Writer) error {
 	switch o.json {
 	case true:
 		encoder := jsoniter.NewEncoder(writer)
@@ -45,7 +43,7 @@ func (o *outPutter) Write(data browingdata.Source, writer io.Writer) error {
 	}
 }
 
-func (o *outPutter) CreateFile(dir, filename string) (*os.File, error) {
+func (o *OutPutter) CreateFile(dir, filename string) (*os.File, error) {
 	if filename == "" {
 		return nil, errors.New("empty filename")
 	}
@@ -67,4 +65,12 @@ func (o *outPutter) CreateFile(dir, filename string) (*os.File, error) {
 		return nil, err
 	}
 	return file, nil
+}
+
+func (o *OutPutter) Ext() string {
+	if o.json {
+		return "json"
+	} else {
+		return "csv"
+	}
 }

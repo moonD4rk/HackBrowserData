@@ -179,14 +179,17 @@ func aes128CBCDecrypt(key, iv, encryptPass []byte) ([]byte, error) {
 	dst := make([]byte, encryptLen)
 	mode := cipher.NewCBCDecrypter(block, iv)
 	mode.CryptBlocks(dst, encryptPass)
-	dst = PKCS5UnPadding(dst)
+	dst = pkcs5UnPadding(dst, block.BlockSize())
 	return dst, nil
 }
 
-func PKCS5UnPadding(src []byte) []byte {
-	length := len(src)
-	unpad := int(src[length-1])
-	return src[:(length - unpad)]
+func pkcs5UnPadding(src []byte, blockSize int) []byte {
+	n := len(src)
+	paddingNum := int(src[n-1])
+	if n < paddingNum || paddingNum > blockSize {
+		return src
+	}
+	return src[:n-paddingNum]
 }
 
 // des3Decrypt use for decrypter firefox PBE
@@ -198,7 +201,7 @@ func des3Decrypt(key, iv []byte, src []byte) ([]byte, error) {
 	blockMode := cipher.NewCBCDecrypter(block, iv)
 	sq := make([]byte, len(src))
 	blockMode.CryptBlocks(sq, src)
-	return sq, nil
+	return pkcs5UnPadding(sq, block.BlockSize()), nil
 }
 
 func paddingZero(s []byte, l int) []byte {

@@ -1,9 +1,10 @@
-package browingdata
+package history
 
 import (
 	"database/sql"
 	"os"
 	"sort"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -13,6 +14,17 @@ import (
 )
 
 type ChromiumHistory []history
+
+type history struct {
+	Title         string
+	Url           string
+	VisitCount    int
+	LastVisitTime time.Time
+}
+
+const (
+	queryChromiumHistory = `SELECT url, title, visit_count, last_visit_time FROM urls`
+)
 
 func (c *ChromiumHistory) Parse(masterKey []byte) error {
 	historyDB, err := sql.Open("sqlite3", item.TempChromiumHistory)
@@ -55,6 +67,11 @@ func (c *ChromiumHistory) Name() string {
 }
 
 type FirefoxHistory []history
+
+const (
+	queryFirefoxHistory = `SELECT id, url, last_visit_date, title, visit_count FROM moz_places where title not null`
+	closeJournalMode    = `PRAGMA journal_mode=off`
+)
 
 func (f *FirefoxHistory) Parse(masterKey []byte) error {
 	var (

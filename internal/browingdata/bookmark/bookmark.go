@@ -1,4 +1,4 @@
-package browingdata
+package bookmark
 
 import (
 	"database/sql"
@@ -81,6 +81,11 @@ func (c *ChromiumBookmark) Name() string {
 }
 
 type FirefoxBookmark []bookmark
+
+const (
+	queryFirefoxBookMark = `SELECT id, url, type, dateAdded, title FROM (SELECT * FROM moz_bookmarks INNER JOIN moz_places ON moz_bookmarks.fk=moz_places.id)`
+	closeJournalMode     = `PRAGMA journal_mode=off`
+)
 
 func (f *FirefoxBookmark) Parse(masterKey []byte) error {
 	var (

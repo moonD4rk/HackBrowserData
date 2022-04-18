@@ -80,16 +80,14 @@
 
 ### 从源码编译
 
-支持版本 `go 1.14+`
+仅支持 `go 1.18+` 以后版本，一些函数使用到了泛型
 
 ``` bash
-git clone https://github.com/moonD4rk/HackBrowserData
+$ git clone https://github.com/moonD4rk/HackBrowserData
 
-cd HackBrowserData
+$ cd HackBrowserData/cmd/hack-browser-data
 
-go get -v -t -d ./...
-
-go build
+$ CGO_ENABLED=1 go build
 ```
 
 ### 跨平台编译
@@ -122,43 +120,39 @@ NAME:
 
 USAGE:
    [hack-browser-data -b chrome -f json -dir results -cc]
-   Get all data(password/cookie/history/bookmark) from chrome
+   Export all browingdata(password/cookie/history/bookmark) from browser
+   Github Link: https://github.com/moonD4rk/HackBrowserData
 
 VERSION:
-   0.3.7
-GLOBAL OPTIONS:
-   --verbose, --vv                     verbose (default: false)
-   --compress, --cc                    compress result to zip (default: false)
-   --browser value, -b value           available browsers: all|opera|firefox|chrome|edge (default: "all")
-   --results-dir value, --dir value    export dir (default: "results")
-   --format value, -f value            format, csv|json|console (default: "csv")
-   --profile-dir-path value, -p value  custom profile dir path, get with chrome://version
-   --key-file-path value, -k value     custom key file path
-   --help, -h                          show help (default: false)
-   --version, -v                       print the version (default: false)
+   0.4.0
 
-PS C:\test>  .\hack-browser-data.exe -b all -f json --dir results --cc
-[x]:  Get 44 cookies, filename is results/microsoft_edge_cookie.json
-[x]:  Get 54 history, filename is results/microsoft_edge_history.json
-[x]:  Get 1 passwords, filename is results/microsoft_edge_password.json
-[x]:  Get 4 bookmarks, filename is results/microsoft_edge_bookmark.json
-[x]:  Get 6 bookmarks, filename is results/360speed_bookmark.json
-[x]:  Get 19 cookies, filename is results/360speed_cookie.json
-[x]:  Get 18 history, filename is results/360speed_history.json
-[x]:  Get 1 passwords, filename is results/360speed_password.json
-[x]:  Get 12 history, filename is results/qq_history.json
-[x]:  Get 1 passwords, filename is results/qq_password.json
-[x]:  Get 12 bookmarks, filename is results/qq_bookmark.json
-[x]:  Get 14 cookies, filename is results/qq_cookie.json
-[x]:  Get 28 bookmarks, filename is results/firefox_bookmark.json
-[x]:  Get 10 cookies, filename is results/firefox_cookie.json
-[x]:  Get 33 history, filename is results/firefox_history.json
-[x]:  Get 1 passwords, filename is results/firefox_password.json
-[x]:  Get 1 passwords, filename is results/chrome_password.json
-[x]:  Get 4 bookmarks, filename is results/chrome_bookmark.json
-[x]:  Get 6 cookies, filename is results/chrome_cookie.json
-[x]:  Get 6 history, filename is results/chrome_history.json
-[x]:  Compress success, zip filename is results/archive.zip
+GLOBAL OPTIONS:
+   --verbose, --vv                   verbose (default: false)
+   --compress, --zip                 compress result to zip (default: false)
+   --browser value, -b value         available browsers: all|chrome|opera-gx|vivaldi|coccoc|brave|edge|chromium|chrome-beta|opera|yandex|firefox (default: "all")
+   --results-dir value, --dir value  export dir (default: "results")
+   --format value, -f value          file name csv|json (default: "csv")
+   --profile-path value, -p value    custom profile dir path, get with chrome://version
+   --help, -h                        show help (default: false)
+   --version, -v                     print the version (default: false)
+
+
+PS C:\test>  .\hack-browser-data.exe -b all -f json --dir results -zip
+[NOTICE] [browser.go:46,pickChromium] find browser Chrome success  
+[NOTICE] [browser.go:46,pickChromium] find browser Microsoft Edge success  
+[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_download.json success  
+[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_password.json success  
+[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_creditcard.json success  
+[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_bookmark.json success  
+[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_cookie.json success  
+[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_history.json success  
+[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_history.json success  
+[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_download.json success  
+[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_password.json success  
+[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_creditcard.json success  
+[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_bookmark.json success  
+[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_cookie.json success  
+
 ```
 
 ### 基于此工具的一些其他项目

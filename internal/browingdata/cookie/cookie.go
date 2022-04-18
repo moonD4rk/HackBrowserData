@@ -1,9 +1,10 @@
-package browingdata
+package cookie
 
 import (
 	"database/sql"
 	"os"
 	"sort"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -14,6 +15,24 @@ import (
 )
 
 type ChromiumCookie []cookie
+
+type cookie struct {
+	Host         string
+	Path         string
+	KeyName      string
+	encryptValue []byte
+	Value        string
+	IsSecure     bool
+	IsHTTPOnly   bool
+	HasExpire    bool
+	IsPersistent bool
+	CreateDate   time.Time
+	ExpireDate   time.Time
+}
+
+const (
+	queryChromiumCookie = `SELECT name, encrypted_value, host_key, path, creation_utc, expires_utc, is_secure, is_httponly, has_expires, is_persistent FROM cookies`
+)
 
 func (c *ChromiumCookie) Parse(masterKey []byte) error {
 	cookieDB, err := sql.Open("sqlite3", item.TempChromiumCookie)
@@ -76,6 +95,10 @@ func (c *ChromiumCookie) Name() string {
 }
 
 type FirefoxCookie []cookie
+
+const (
+	queryFirefoxCookie = `SELECT name, value, host, path, creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
+)
 
 func (f *FirefoxCookie) Parse(masterKey []byte) error {
 	cookieDB, err := sql.Open("sqlite3", item.TempFirefoxCookie)

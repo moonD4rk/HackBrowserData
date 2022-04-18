@@ -2,6 +2,7 @@ package chromium
 
 import (
 	"crypto/sha1"
+	"errors"
 	"os"
 
 	"github.com/godbus/dbus/v5"
@@ -49,8 +50,7 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 			if label == c.storage {
 				se, err := i.GetSecret(session.Path())
 				if err != nil {
-					log.Error(err)
-					return nil, err
+					return nil, errors.New("get storage from dbus error:" + err.Error())
 				}
 				chromiumSecret = se.Value
 			}
