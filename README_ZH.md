@@ -1,6 +1,6 @@
 # HackBrowserData
 
-`HackBrowserData` 是一个浏览器数据（密码 | 历史记录 | Cookie | 书签 | 信用卡 | 下载记录）的导出工具，支持全平台主流浏览器。
+`HackBrowserData` 是一个浏览器数据（密码 | 历史记录 | Cookie | 书签 | 信用卡 | 下载记录|local Storage）的导出工具，支持全平台主流浏览器。
 
 
 > 免责声明：此工具仅限于安全研究，用户承担因使用此工具而导致的所有法律和相关责任！作者不承担任何法律责任！
@@ -124,7 +124,7 @@ USAGE:
    Github Link: https://github.com/moonD4rk/HackBrowserData
 
 VERSION:
-   0.4.0
+   0.4.1
 
 GLOBAL OPTIONS:
    --verbose, --vv                   verbose (default: false)
