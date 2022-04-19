@@ -62,7 +62,7 @@ func (i Item) FileName() string {
 	case FirefoxDownload:
 		return fileFirefoxData
 	case FirefoxLocalStorage:
-		return UnsupportedItem
+		return fileFirefoxLocalStorage
 	case FirefoxCreditCard:
 		return UnsupportedItem
 	case FirefoxHistory:
@@ -111,7 +111,7 @@ func (i Item) String() string {
 	case FirefoxHistory:
 		return TempFirefoxHistory
 	case FirefoxLocalStorage:
-		return UnsupportedItem
+		return TempFirefoxLocalStorage
 	case FirefoxCreditCard:
 		return UnsupportedItem
 	case FirefoxExtension:
@@ -139,9 +139,9 @@ var DefaultYandex = []Item{
 	ChromiumBookmark,
 	ChromiumHistory,
 	ChromiumDownload,
-	ChromiumLocalStorage,
 	ChromiumExtension,
 	YandexPassword,
+	ChromiumLocalStorage,
 	YandexCreditCard,
 }
 

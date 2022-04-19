@@ -8,6 +8,7 @@ import (
 	"hack-browser-data/internal/browingdata/creditcard"
 	"hack-browser-data/internal/browingdata/download"
 	"hack-browser-data/internal/browingdata/history"
+	"hack-browser-data/internal/browingdata/localstorage"
 	"hack-browser-data/internal/browingdata/password"
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
@@ -75,6 +76,8 @@ func (d *Data) addSource(Sources []item.Item) {
 			d.sources[source] = &download.ChromiumDownload{}
 		case item.ChromiumCreditCard:
 			d.sources[source] = &creditcard.ChromiumCreditCard{}
+		case item.ChromiumLocalStorage:
+			d.sources[source] = &localstorage.ChromiumLocalStorage{}
 		case item.YandexPassword:
 			d.sources[source] = &password.YandexPassword{}
 		case item.YandexCreditCard:
@@ -89,6 +92,8 @@ func (d *Data) addSource(Sources []item.Item) {
 			d.sources[source] = &history.FirefoxHistory{}
 		case item.FirefoxDownload:
 			d.sources[source] = &download.FirefoxDownload{}
+		case item.FirefoxLocalStorage:
+			d.sources[source] = &localstorage.FirefoxLocalStorage{}
 		}
 	}
 }
