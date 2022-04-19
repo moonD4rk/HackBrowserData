@@ -10,8 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
+
+	cp "github.com/otiai10/copy"
 )
 
 // FileExists checks if the file exists in the provided path
@@ -44,22 +45,8 @@ func ReadFile(filename string) (string, error) {
 	return string(s), err
 }
 
-// CopyItemToLocal copies the file from the provided path to the local path
-func CopyItemToLocal(itemPaths map[item.Item]string) error {
-	for i, p := range itemPaths {
-		// var dstFilename = item.TempName()
-		var filename = i.String()
-		// TODO: Handle read file error
-		d, err := ioutil.ReadFile(p)
-		if err != nil {
-			log.Error(err.Error())
-		}
-		err = ioutil.WriteFile(filename, d, 0777)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+func CopyDir(src, dst string) error {
+	return cp.Copy(src, dst)
 }
 
 func Filename(browser, item, ext string) string {
@@ -68,7 +55,7 @@ func Filename(browser, item, ext string) string {
 }
 
 func ParentDir(p string) string {
-	return filepath.Dir(p)
+	return filepath.Dir(filepath.Clean(p))
 }
 
 func BaseDir(p string) string {

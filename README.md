@@ -4,7 +4,7 @@
 
 [中文说明](https://github.com/moonD4rk/HackBrowserData/blob/master/README_ZH.md) 
 
-`HackBrowserData` is an open-source tool that could help you decrypt data ( password|bookmark|cookie|history|credit card|downloads link ) from the browser. It supports the most popular browsers on the market and runs on Windows, macOS and Linux.
+`HackBrowserData` is an open-source tool that could help you decrypt data ( password|bookmark|cookie|history|credit card|download link|local storage ) from the browser. It supports the most popular browsers on the market and runs on Windows, macOS and Linux.
 
 > Disclaimer: This tool is limited to security research only, and the user assumes all legal and related responsibilities arising from its use! The author assumes no legal responsibility!
 
@@ -103,7 +103,7 @@ Need install target OS's `gcc` library, here's an example of use `Mac` building 
 ```shell
 brew install mingw-w64
 
-CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC="x86_64-w64-mingw32-gcc" go build
+CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc go build
 ```
 
 #### For Linux
@@ -129,7 +129,7 @@ USAGE:
    Github Link: https://github.com/moonD4rk/HackBrowserData
 
 VERSION:
-   0.4.0
+   0.4.1
 
 GLOBAL OPTIONS:
    --verbose, --vv                   verbose (default: false)

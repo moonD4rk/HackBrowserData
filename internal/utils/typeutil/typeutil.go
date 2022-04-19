@@ -23,6 +23,14 @@ func IntToBool[T constraints.Signed](a T) bool {
 	return true
 }
 
+func Reverse[T any](s []T) []T {
+	var h = make([]T, len(s))
+	for i := 0; i < len(s); i++ {
+		h[i] = s[len(s)-i-1]
+	}
+	return h
+}
+
 func TimeStamp(stamp int64) time.Time {
 	s := time.Unix(stamp, 0)
 	if s.Local().Year() > 9999 {

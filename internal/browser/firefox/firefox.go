@@ -1,15 +1,14 @@
 package firefox
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"io/ioutil"
 	"path/filepath"
-	"strings"
 
 	"hack-browser-data/internal/browingdata"
 	"hack-browser-data/internal/item"
-	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils/fileutil"
 	"hack-browser-data/internal/utils/typeutil"
 )
@@ -23,10 +22,14 @@ type firefox struct {
 	itemPaths   map[item.Item]string
 }
 
+var (
+	ErrProfilePathNotFound = errors.New("profile path not found")
+)
+
 // New returns a new firefox instance.
 func New(name, storage, profilePath string, items []item.Item) ([]*firefox, error) {
 	if !fileutil.FolderExists(profilePath) {
-		return nil, fmt.Errorf("%s profile folder is not exist: %s", name, profilePath)
+		return nil, ErrProfilePathNotFound
 	}
 	f := &firefox{
 		name:        name,
@@ -36,10 +39,6 @@ func New(name, storage, profilePath string, items []item.Item) ([]*firefox, erro
 	}
 	multiItemPaths, err := f.getMultiItemPath(f.profilePath, f.items)
 	if err != nil {
-		if strings.Contains(err.Error(), "profile folder is not exist") {
-			log.Error(err)
-			return nil, nil
-		}
 		return nil, err
 	}
 	var firefoxList []*firefox

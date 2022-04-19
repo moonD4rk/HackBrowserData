@@ -1,7 +1,7 @@
 package chromium
 
 import (
-	"fmt"
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -22,6 +22,10 @@ type chromium struct {
 	itemPaths   map[item.Item]string
 }
 
+var (
+	ErrProfilePathNotFound = errors.New("profile path not found")
+)
+
 // New create instance of chromium browser, fill item's path if item is existed.
 func New(name, storage, profilePath string, items []item.Item) (*chromium, error) {
 	c := &chromium{
@@ -30,7 +34,7 @@ func New(name, storage, profilePath string, items []item.Item) (*chromium, error
 	}
 	// TODO: Handle file path is not exist
 	if !fileutil.FolderExists(profilePath) {
-		return nil, fmt.Errorf("%s profile folder is not exist: %s", name, profilePath)
+		return nil, ErrProfilePathNotFound
 	}
 	itemsPaths, err := c.getItemPath(profilePath, items)
 	if err != nil {
@@ -67,16 +71,21 @@ func (c *chromium) BrowsingData() (*browingdata.Data, error) {
 
 func (c *chromium) copyItemToLocal() error {
 	for i, path := range c.itemPaths {
-		// var dstFilename = item.TempName()
-		var filename = i.String()
-		// TODO: Handle read file error
-		d, err := ioutil.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		err = ioutil.WriteFile(filename, d, 0777)
-		if err != nil {
-			return err
+		if fileutil.FolderExists(path) {
+			if err := fileutil.CopyDir(path, i.String()); err != nil {
+				return err
+			}
+		} else {
+			var filename = i.String()
+			// TODO: Handle read file error
+			d, err := ioutil.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			err = ioutil.WriteFile(filename, d, 0777)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -87,7 +96,11 @@ func (c *chromium) getItemPath(profilePath string, items []item.Item) (map[item.
 	parentDir := fileutil.ParentDir(profilePath)
 	baseDir := fileutil.BaseDir(profilePath)
 	err := filepath.Walk(parentDir, chromiumWalkFunc(items, itemPaths, baseDir))
-	return itemPaths, err
+	if err != nil {
+		return itemPaths, err
+	}
+	fillLocalStoragePath(itemPaths, item.ChromiumLocalStorage)
+	return itemPaths, nil
 }
 
 func chromiumWalkFunc(items []item.Item, itemPaths map[item.Item]string, baseDir string) filepath.WalkFunc {
@@ -104,5 +117,14 @@ func chromiumWalkFunc(items []item.Item, itemPaths map[item.Item]string, baseDir
 			}
 		}
 		return err
+	}
+}
+
+func fillLocalStoragePath(itemPaths map[item.Item]string, storage item.Item) {
+	if p, ok := itemPaths[item.ChromiumHistory]; ok {
+		lsp := filepath.Join(filepath.Dir(p), storage.FileName())
+		if fileutil.FolderExists(lsp) {
+			itemPaths[item.ChromiumLocalStorage] = lsp
+		}
 	}
 }

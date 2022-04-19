@@ -8,6 +8,7 @@ import (
 	"hack-browser-data/internal/browingdata/creditcard"
 	"hack-browser-data/internal/browingdata/download"
 	"hack-browser-data/internal/browingdata/history"
+	"hack-browser-data/internal/browingdata/localstorage"
 	"hack-browser-data/internal/browingdata/password"
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
@@ -15,7 +16,7 @@ import (
 )
 
 type Data struct {
-	Sources map[item.Item]Source
+	sources map[item.Item]Source
 }
 
 type Source interface {
@@ -26,7 +27,7 @@ type Source interface {
 
 func New(sources []item.Item) *Data {
 	bd := &Data{
-		Sources: make(map[item.Item]Source),
+		sources: make(map[item.Item]Source),
 	}
 	bd.addSource(sources)
 	return bd
@@ -34,9 +35,9 @@ func New(sources []item.Item) *Data {
 
 func (d *Data) Recovery(masterKey []byte) error {
 
-	for _, source := range d.Sources {
+	for _, source := range d.sources {
 		if err := source.Parse(masterKey); err != nil {
-			log.Error(err)
+			log.Errorf("parse %s error %s", source.Name(), err.Error())
 		}
 	}
 	return nil
@@ -45,16 +46,16 @@ func (d *Data) Recovery(masterKey []byte) error {
 func (d *Data) Output(dir, browserName, flag string) {
 	output := NewOutPutter(flag)
 
-	for _, source := range d.Sources {
+	for _, source := range d.sources {
 
 		filename := fileutil.Filename(browserName, source.Name(), output.Ext())
 
 		f, err := output.CreateFile(dir, filename)
 		if err != nil {
-			log.Error(err)
+			log.Errorf("create file error %s", err)
 		}
 		if err := output.Write(source, f); err != nil {
-			log.Error(err)
+			log.Errorf("%s write to file %s error %s", source.Name(), filename, err.Error())
 		}
 		log.Noticef("output to file %s success", path.Join(dir, filename))
 	}
@@ -64,31 +65,35 @@ func (d *Data) addSource(Sources []item.Item) {
 	for _, source := range Sources {
 		switch source {
 		case item.ChromiumPassword:
-			d.Sources[source] = &password.ChromiumPassword{}
+			d.sources[source] = &password.ChromiumPassword{}
 		case item.ChromiumCookie:
-			d.Sources[source] = &cookie.ChromiumCookie{}
+			d.sources[source] = &cookie.ChromiumCookie{}
 		case item.ChromiumBookmark:
-			d.Sources[source] = &bookmark.ChromiumBookmark{}
+			d.sources[source] = &bookmark.ChromiumBookmark{}
 		case item.ChromiumHistory:
-			d.Sources[source] = &history.ChromiumHistory{}
+			d.sources[source] = &history.ChromiumHistory{}
 		case item.ChromiumDownload:
-			d.Sources[source] = &download.ChromiumDownload{}
+			d.sources[source] = &download.ChromiumDownload{}
 		case item.ChromiumCreditCard:
-			d.Sources[source] = &creditcard.ChromiumCreditCard{}
+			d.sources[source] = &creditcard.ChromiumCreditCard{}
+		case item.ChromiumLocalStorage:
+			d.sources[source] = &localstorage.ChromiumLocalStorage{}
 		case item.YandexPassword:
-			d.Sources[source] = &password.YandexPassword{}
+			d.sources[source] = &password.YandexPassword{}
 		case item.YandexCreditCard:
-			d.Sources[source] = &creditcard.YandexCreditCard{}
+			d.sources[source] = &creditcard.YandexCreditCard{}
 		case item.FirefoxPassword:
-			d.Sources[source] = &password.FirefoxPassword{}
+			d.sources[source] = &password.FirefoxPassword{}
 		case item.FirefoxCookie:
-			d.Sources[source] = &cookie.FirefoxCookie{}
+			d.sources[source] = &cookie.FirefoxCookie{}
 		case item.FirefoxBookmark:
-			d.Sources[source] = &bookmark.FirefoxBookmark{}
+			d.sources[source] = &bookmark.FirefoxBookmark{}
 		case item.FirefoxHistory:
-			d.Sources[source] = &history.FirefoxHistory{}
+			d.sources[source] = &history.FirefoxHistory{}
 		case item.FirefoxDownload:
-			d.Sources[source] = &download.FirefoxDownload{}
+			d.sources[source] = &download.FirefoxDownload{}
+		case item.FirefoxLocalStorage:
+			d.sources[source] = &localstorage.FirefoxLocalStorage{}
 		}
 	}
 }

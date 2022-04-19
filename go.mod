@@ -9,7 +9,9 @@ require (
 	github.com/gookit/slog v0.2.2-0.20220415153407-dd89ed7b0448
 	github.com/json-iterator/go v1.1.12
 	github.com/mattn/go-sqlite3 v1.14.9
+	github.com/otiai10/copy v1.7.0
 	github.com/ppacher/go-dbus-keyring v1.0.1
+	github.com/syndtr/goleveldb v1.0.0
 	github.com/tidwall/gjson v1.9.3
 	github.com/urfave/cli/v2 v2.4.0
 	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
@@ -18,6 +20,7 @@ require (
 
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
+	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
 	github.com/gookit/goutil v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
