@@ -112,7 +112,7 @@ func (c *YandexCreditCard) Parse(masterKey []byte) error {
 				return err
 			}
 		} else {
-			value, err = decrypter.ChromePass(masterKey, encryptValue)
+			value, err = decrypter.ChromePassForYandex(masterKey, encryptValue)
 			if err != nil {
 				return err
 			}

@@ -1,7 +1,6 @@
 package chromium
 
 import (
-	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -9,6 +8,7 @@ import (
 
 	"hack-browser-data/internal/browingdata"
 	"hack-browser-data/internal/item"
+	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils/fileutil"
 	"hack-browser-data/internal/utils/typeutil"
 )
@@ -22,19 +22,11 @@ type chromium struct {
 	itemPaths   map[item.Item]string
 }
 
-var (
-	ErrProfilePathNotFound = errors.New("profile path not found")
-)
-
 // New create instance of chromium browser, fill item's path if item is existed.
 func New(name, storage, profilePath string, items []item.Item) (*chromium, error) {
 	c := &chromium{
 		name:    name,
 		storage: storage,
-	}
-	// TODO: Handle file path is not exist
-	if !fileutil.FolderExists(profilePath) {
-		return nil, ErrProfilePathNotFound
 	}
 	itemsPaths, err := c.getItemPath(profilePath, items)
 	if err != nil {
@@ -72,7 +64,7 @@ func (c *chromium) BrowsingData() (*browingdata.Data, error) {
 func (c *chromium) copyItemToLocal() error {
 	for i, path := range c.itemPaths {
 		if fileutil.FolderExists(path) {
-			if err := fileutil.CopyDir(path, i.String()); err != nil {
+			if err := fileutil.CopyDir(path, i.String(), "lock"); err != nil {
 				return err
 			}
 		} else {
@@ -95,6 +87,8 @@ func (c *chromium) getItemPath(profilePath string, items []item.Item) (map[item.
 	var itemPaths = make(map[item.Item]string)
 	parentDir := fileutil.ParentDir(profilePath)
 	baseDir := fileutil.BaseDir(profilePath)
+	log.Infof("%s profile parentDir: %s", c.name, parentDir)
+	log.Infof("%s profile baseDir: %s", c.name, baseDir)
 	err := filepath.Walk(parentDir, chromiumWalkFunc(items, itemPaths, baseDir))
 	if err != nil {
 		return itemPaths, err

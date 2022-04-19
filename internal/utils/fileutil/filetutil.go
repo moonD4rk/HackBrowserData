@@ -45,8 +45,11 @@ func ReadFile(filename string) (string, error) {
 	return string(s), err
 }
 
-func CopyDir(src, dst string) error {
-	return cp.Copy(src, dst)
+func CopyDir(src, dst, skip string) error {
+	s := cp.Options{Skip: func(src string) (bool, error) {
+		return strings.Contains(strings.ToLower(src), skip), nil
+	}}
+	return cp.Copy(src, dst, s)
 }
 
 func Filename(browser, item, ext string) string {
