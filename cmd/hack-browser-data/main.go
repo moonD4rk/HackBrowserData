@@ -49,7 +49,6 @@ func Execute() {
 				browsers []browser.Browser
 				err      error
 			)
-			log.Debugf("browser: %s", browserName)
 			browsers, err = browser.PickBrowser(browserName, profilePath)
 			if err != nil {
 				log.Error(err)

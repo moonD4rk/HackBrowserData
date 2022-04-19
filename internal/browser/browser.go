@@ -46,12 +46,11 @@ func pickChromium(name, profile string) []Browser {
 				log.Noticef("find browser %s success", b.Name())
 				browsers = append(browsers, b)
 			} else {
-				// TODO: show which browser find failed
-				if strings.Contains(err.Error(), "profile folder is not exist") {
+				if err == chromium.ErrProfilePathNotFound {
 					log.Errorf("find browser %s failed, profile folder is not exist, maybe not installed", v.name)
 					continue
 				} else {
-					log.Errorf("new chromium error:", err)
+					log.Errorf("new chromium error: %s", err.Error())
 				}
 			}
 		}
@@ -62,10 +61,11 @@ func pickChromium(name, profile string) []Browser {
 		}
 		b, err := chromium.New(c.name, c.storage, profile, c.items)
 		if err != nil {
-			if strings.Contains(err.Error(), "profile folder is not exist") {
+			if err == chromium.ErrProfilePathNotFound {
 				log.Fatalf("find browser %s failed, profile folder is not exist, maybe not installed", c.name)
 			} else {
 				log.Fatalf("new chromium error:", err)
+				return nil
 			}
 		}
 		browsers = append(browsers, b)
@@ -89,13 +89,12 @@ func pickFirefox(name, profile string) []Browser {
 					browsers = append(browsers, b)
 				}
 			} else {
-				if strings.Contains(err.Error(), "profile folder is not exist") {
+				if err == firefox.ErrProfilePathNotFound {
 					log.Errorf("find browser firefox %s failed, profile folder is not exist", v.name)
 				} else {
 					log.Error(err)
 				}
 			}
-
 		}
 		return browsers
 	}
@@ -128,9 +127,5 @@ const (
 	coccocName     = "CocCoc"
 	yandexName     = "Yandex"
 
-	firefoxName        = "Firefox"
-	firefoxBetaName    = "Firefox Beta"
-	firefoxDevName     = "Firefox Dev"
-	firefoxNightlyName = "Firefox Nightly"
-	firefoxESRName     = "Firefox ESR"
+	firefoxName = "Firefox"
 )

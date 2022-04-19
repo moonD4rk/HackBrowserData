@@ -1,7 +1,7 @@
 package chromium
 
 import (
-	"fmt"
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -22,6 +22,10 @@ type chromium struct {
 	itemPaths   map[item.Item]string
 }
 
+var (
+	ErrProfilePathNotFound = errors.New("profile path not found")
+)
+
 // New create instance of chromium browser, fill item's path if item is existed.
 func New(name, storage, profilePath string, items []item.Item) (*chromium, error) {
 	c := &chromium{
@@ -30,7 +34,7 @@ func New(name, storage, profilePath string, items []item.Item) (*chromium, error
 	}
 	// TODO: Handle file path is not exist
 	if !fileutil.FolderExists(profilePath) {
-		return nil, fmt.Errorf("%s profile folder is not exist: %s", name, profilePath)
+		return nil, ErrProfilePathNotFound
 	}
 	itemsPaths, err := c.getItemPath(profilePath, items)
 	if err != nil {
