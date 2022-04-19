@@ -75,7 +75,7 @@ func (c *ChromiumCookie) Parse(masterKey []byte) error {
 			if masterKey == nil {
 				value, err = decrypter.DPApi(encryptValue)
 			} else {
-				value, err = decrypter.ChromePass(masterKey, encryptValue)
+				value, err = decrypter.Chromium(masterKey, encryptValue)
 			}
 			if err != nil {
 				log.Error(err)

@@ -1,6 +1,6 @@
 package decrypter
 
-func ChromePass(key, encryptPass []byte) ([]byte, error) {
+func Chromium(key, encryptPass []byte) ([]byte, error) {
 	if len(encryptPass) > 3 {
 		if len(key) == 0 {
 			return nil, errSecurityKeyIsEmpty

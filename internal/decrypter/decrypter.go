@@ -27,9 +27,9 @@ type ASN1PBE interface {
 
 func NewASN1PBE(b []byte) (pbe ASN1PBE, err error) {
 	var (
-		n NssPBE
-		m MetaPBE
-		l LoginPBE
+		n nssPBE
+		m metaPBE
+		l loginPBE
 	)
 	if _, err := asn1.Unmarshal(b, &n); err == nil {
 		return n, nil
@@ -43,7 +43,7 @@ func NewASN1PBE(b []byte) (pbe ASN1PBE, err error) {
 	return nil, errDecodeASN1Failed
 }
 
-// NssPBE Struct
+// nssPBE Struct
 // SEQUENCE (2 elem)
 // 	SEQUENCE (2 elem)
 // 		OBJECT IDENTIFIER
@@ -51,33 +51,33 @@ func NewASN1PBE(b []byte) (pbe ASN1PBE, err error) {
 // 			OCTET STRING (20 byte)
 // 			INTEGER 1
 // 	OCTET STRING (16 byte)
-type NssPBE struct {
-	NssSequenceA
+type nssPBE struct {
+	AlgoAttr struct {
+		asn1.ObjectIdentifier
+		SaltAttr struct {
+			EntrySalt []byte
+			Len       int
+		}
+	}
 	Encrypted []byte
 }
 
-type NssSequenceA struct {
-	DecryptMethod asn1.ObjectIdentifier
-	NssSequenceB
+func (n nssPBE) entrySalt() []byte {
+	return n.AlgoAttr.SaltAttr.EntrySalt
 }
 
-type NssSequenceB struct {
-	EntrySalt []byte
-	Len       int
-}
-
-func (n NssPBE) Decrypt(globalSalt, masterPwd []byte) (key []byte, err error) {
+func (n nssPBE) Decrypt(globalSalt, masterPwd []byte) (key []byte, err error) {
 	glmp := append(globalSalt, masterPwd...)
 	hp := sha1.Sum(glmp)
-	s := append(hp[:], n.EntrySalt...)
+	s := append(hp[:], n.entrySalt()...)
 	chp := sha1.Sum(s)
-	pes := paddingZero(n.EntrySalt, 20)
+	pes := paddingZero(n.entrySalt(), 20)
 	tk := hmac.New(sha1.New, chp[:])
 	tk.Write(pes)
-	pes = append(pes, n.EntrySalt...)
+	pes = append(pes, n.entrySalt()...)
 	k1 := hmac.New(sha1.New, chp[:])
 	k1.Write(pes)
-	tkPlus := append(tk.Sum(nil), n.EntrySalt...)
+	tkPlus := append(tk.Sum(nil), n.entrySalt()...)
 	k2 := hmac.New(sha1.New, chp[:])
 	k2.Write(tkPlus)
 	k := append(k1.Sum(nil), k2.Sum(nil)...)
@@ -102,68 +102,73 @@ func (n NssPBE) Decrypt(globalSalt, masterPwd []byte) (key []byte, err error) {
 //         	OBJECT IDENTIFIER
 //         	OCTET STRING (14 byte)
 //   	OCTET STRING (16 byte)
-type MetaPBE struct {
-	MetaSequenceA
+type metaPBE struct {
+	AlgoAttr  algoAttr
 	Encrypted []byte
 }
 
-type MetaSequenceA struct {
-	PKCS5PBES2 asn1.ObjectIdentifier
-	MetaSequenceB
-}
-type MetaSequenceB struct {
-	MetaSequenceC
-	MetaSequenceD
-}
-
-type MetaSequenceC struct {
-	PKCS5PBKDF2 asn1.ObjectIdentifier
-	MetaSequenceE
+type algoAttr struct {
+	asn1.ObjectIdentifier
+	Data struct {
+		Data struct {
+			asn1.ObjectIdentifier
+			SlatAttr slatAttr
+		}
+		IVData ivAttr
+	}
 }
 
-type MetaSequenceD struct {
-	AES256CBC asn1.ObjectIdentifier
-	IV        []byte
+type ivAttr struct {
+	asn1.ObjectIdentifier
+	IV []byte
 }
 
-type MetaSequenceE struct {
+type slatAttr struct {
 	EntrySalt      []byte
 	IterationCount int
 	KeySize        int
-	MetaSequenceF
+	Algorithm      struct {
+		asn1.ObjectIdentifier
+	}
 }
 
-type MetaSequenceF struct {
-	HMACWithSHA256 asn1.ObjectIdentifier
-}
-
-func (m MetaPBE) Decrypt(globalSalt, masterPwd []byte) (key2 []byte, err error) {
+func (m metaPBE) Decrypt(globalSalt, masterPwd []byte) (key2 []byte, err error) {
 	k := sha1.Sum(globalSalt)
-	key := pbkdf2.Key(k[:], m.EntrySalt, m.IterationCount, m.KeySize, sha256.New)
-	iv := append([]byte{4, 14}, m.IV...)
+	key := pbkdf2.Key(k[:], m.entrySalt(), m.iterationCount(), m.keySize(), sha256.New)
+	iv := append([]byte{4, 14}, m.AlgoAttr.Data.IVData.IV...)
 	return aes128CBCDecrypt(key, iv, m.Encrypted)
 }
 
-// LoginPBE Struct
+func (m metaPBE) entrySalt() []byte {
+	return m.AlgoAttr.Data.Data.SlatAttr.EntrySalt
+}
+
+func (m metaPBE) iterationCount() int {
+	return m.AlgoAttr.Data.Data.SlatAttr.IterationCount
+}
+
+func (m metaPBE) keySize() int {
+	return m.AlgoAttr.Data.Data.SlatAttr.KeySize
+}
+
+// loginPBE Struct
 // SEQUENCE (3 elem)
 // 	OCTET STRING (16 byte)
 // 	SEQUENCE (2 elem)
 // 		OBJECT IDENTIFIER
 // 		OCTET STRING (8 byte)
 // 	OCTET STRING (16 byte)
-type LoginPBE struct {
+type loginPBE struct {
 	CipherText []byte
-	LoginSequence
+	Data       struct {
+		asn1.ObjectIdentifier
+		IV []byte
+	}
 	Encrypted []byte
 }
 
-type LoginSequence struct {
-	asn1.ObjectIdentifier
-	IV []byte
-}
-
-func (l LoginPBE) Decrypt(globalSalt, masterPwd []byte) (key []byte, err error) {
-	return des3Decrypt(globalSalt, l.IV, l.Encrypted)
+func (l loginPBE) Decrypt(globalSalt, masterPwd []byte) (key []byte, err error) {
+	return des3Decrypt(globalSalt, l.Data.IV, l.Encrypted)
 }
 
 func aes128CBCDecrypt(key, iv, encryptPass []byte) ([]byte, error) {
