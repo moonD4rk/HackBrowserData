@@ -9,6 +9,7 @@ require (
 	github.com/gookit/slog v0.2.2-0.20220415153407-dd89ed7b0448
 	github.com/json-iterator/go v1.1.12
 	github.com/mattn/go-sqlite3 v1.14.9
+	github.com/otiai10/copy v1.7.0
 	github.com/ppacher/go-dbus-keyring v1.0.1
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/tidwall/gjson v1.9.3

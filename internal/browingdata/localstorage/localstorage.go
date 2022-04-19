@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/syndtr/goleveldb/leveldb"
@@ -25,11 +24,11 @@ type storage struct {
 }
 
 func (c *ChromiumLocalStorage) Parse(masterKey []byte) error {
-	home, _ := os.UserHomeDir()
-	db, err := leveldb.OpenFile(path.Join(home, "tmp/Local Storage/leveldb"), nil)
+	db, err := leveldb.OpenFile(item.TempChromiumLocalStorage, nil)
 	if err != nil {
 		return err
 	}
+	defer os.RemoveAll(item.TempChromiumLocalStorage)
 	// log.Info("parsing local storage now")
 	defer db.Close()
 
@@ -37,10 +36,17 @@ func (c *ChromiumLocalStorage) Parse(masterKey []byte) error {
 	for iter.Next() {
 		key := iter.Key()
 		value := iter.Value()
+		// don't parse value upper than 5kB
+		if len(value) > 1024*5 {
+			continue
+		}
 		var s = new(storage)
 		s.fillKey(key)
-
 		s.fillValue(value)
+		// don't save meta data
+		if s.IsMeta {
+			continue
+		}
 		*c = append(*c, *s)
 	}
 	iter.Release()
