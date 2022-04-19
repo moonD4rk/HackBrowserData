@@ -7,7 +7,7 @@ import (
 	"unsafe"
 )
 
-func ChromePass(key, encryptPass []byte) ([]byte, error) {
+func Chromium(key, encryptPass []byte) ([]byte, error) {
 	if len(encryptPass) > 15 {
 		// remove Prefix 'v10'
 		return aesGCMDecrypt(encryptPass[15:], key, encryptPass[3:15])
@@ -16,7 +16,7 @@ func ChromePass(key, encryptPass []byte) ([]byte, error) {
 	}
 }
 
-func ChromePassForYandex(key, encryptPass []byte) ([]byte, error) {
+func ChromiumForYandex(key, encryptPass []byte) ([]byte, error) {
 	if len(encryptPass) > 15 {
 		// remove Prefix 'v10'
 		// gcmBlockSize         = 16

@@ -65,7 +65,7 @@ func (c *ChromiumPassword) Parse(masterKey []byte) error {
 			if masterKey == nil {
 				password, err = decrypter.DPApi(pwd)
 			} else {
-				password, err = decrypter.ChromePass(masterKey, pwd)
+				password, err = decrypter.Chromium(masterKey, pwd)
 			}
 			if err != nil {
 				log.Error(err)
@@ -129,7 +129,7 @@ func (c *YandexPassword) Parse(masterKey []byte) error {
 			if masterKey == nil {
 				password, err = decrypter.DPApi(pwd)
 			} else {
-				password, err = decrypter.ChromePassForYandex(masterKey, pwd)
+				password, err = decrypter.Chromium(masterKey, pwd)
 			}
 			if err != nil {
 				log.Errorf("decrypt yandex password error %s", err)
