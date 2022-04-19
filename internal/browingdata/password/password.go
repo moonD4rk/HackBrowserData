@@ -129,10 +129,10 @@ func (c *YandexPassword) Parse(masterKey []byte) error {
 			if masterKey == nil {
 				password, err = decrypter.DPApi(pwd)
 			} else {
-				password, err = decrypter.ChromePass(masterKey, pwd)
+				password, err = decrypter.ChromePassForYandex(masterKey, pwd)
 			}
 			if err != nil {
-				log.Error(err)
+				log.Errorf("decrypt yandex password error %s", err)
 			}
 		}
 		if create > time.Now().Unix() {

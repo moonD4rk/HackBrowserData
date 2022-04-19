@@ -28,9 +28,7 @@ var (
 
 // New returns a new firefox instance.
 func New(name, storage, profilePath string, items []item.Item) ([]*firefox, error) {
-	if !fileutil.FolderExists(profilePath) {
-		return nil, ErrProfilePathNotFound
-	}
+
 	f := &firefox{
 		name:        name,
 		storage:     storage,
