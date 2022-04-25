@@ -1,3 +1,9 @@
+<div align="center">
+<img
+    src="HACKBROWSERDATA-LOGO.svg"
+    alt="hack-browser-data logo"
+/>
+
 # HackBrowserData
 
 ![CI](https://github.com/moonD4rk/HackBrowserData/workflows/CI/badge.svg?branch=master) ![Build Hack-Browser-Data Release](https://github.com/moonD4rk/HackBrowserData/workflows/Build%20Hack-Browser-Data%20Release/badge.svg)

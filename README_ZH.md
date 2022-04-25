@@ -1,3 +1,9 @@
+<div align="center">
+<img
+    src="HACKBROWSERDATA-LOGO.svg"
+    alt="hack-browser-data logo"
+/>
+
 # HackBrowserData
 
 `HackBrowserData` 是一个浏览器数据（密码 | 历史记录 | Cookie | 书签 | 信用卡 | 下载记录|local Storage）的导出工具，支持全平台主流浏览器。
