@@ -1,8 +1,7 @@
 <div align="center">
-<img
-    src="HACKBROWSERDATA-LOGO.svg"
-    alt="hack-browser-data logo"
-/>
+<img src="HACKBROWSERDATA-LOGO.svg" alt="hack-browser-data logo" />
+</div> 
+
 
 # HackBrowserData
 
