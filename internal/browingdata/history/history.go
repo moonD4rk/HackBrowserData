@@ -44,7 +44,6 @@ func (c *ChromiumHistory) Parse(masterKey []byte) error {
 			visitCount    int
 			lastVisitTime int64
 		)
-		// TODO: handle rows error
 		if err := rows.Scan(&url, &title, &visitCount, &lastVisitTime); err != nil {
 			log.Warn(err)
 		}

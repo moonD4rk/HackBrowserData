@@ -69,7 +69,6 @@ func (c *ChromiumCookie) Parse(masterKey []byte) error {
 			CreateDate:   typeutil.TimeEpoch(createDate),
 			ExpireDate:   typeutil.TimeEpoch(expireDate),
 		}
-		// TODO: replace DPAPI
 		if len(encryptValue) > 0 {
 			var err error
 			if masterKey == nil {

@@ -40,7 +40,6 @@ func PickBrowser(name, profile string) ([]Browser, error) {
 func pickChromium(name, profile string) []Browser {
 	var browsers []Browser
 	name = strings.ToLower(name)
-	// TODO: add support for 「all」 flag and set profilePath
 	if name == "all" {
 		for _, v := range chromiumList {
 			if !fileutil.FolderExists(filepath.Clean(v.profilePath)) {

@@ -10,6 +10,7 @@ const (
 	fileChromiumCookie       = "Cookies"
 	fileChromiumBookmark     = "Bookmarks"
 	fileChromiumLocalStorage = "Local Storage/leveldb"
+	fileChromiumExtension    = "Extensions"
 
 	fileYandexPassword = "Ya Passman Data"
 	fileYandexCredit   = "Ya Credit Cards"
@@ -19,6 +20,7 @@ const (
 	fileFirefoxPassword     = "logins.json"
 	fileFirefoxData         = "places.sqlite"
 	fileFirefoxLocalStorage = "webappsstore.sqlite"
+	fileFirefoxExtension    = "extensions.json"
 )
 
 const (
@@ -48,5 +50,5 @@ const (
 	TempFirefoxDownload     = "firefoxDownload"
 	TempFirefoxLocalStorage = "firefoxLocalStorage"
 	TempFirefoxCreditCard   = ""
-	TempFirefoxExtension    = ""
+	TempFirefoxExtension    = "firefoxExtension"
 )

@@ -188,3 +188,6 @@ History
 #Firefox*
 result/
 results/
+
+hack-browser-data
+!/hack-browser-data

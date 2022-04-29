@@ -29,7 +29,7 @@ func Execute() {
 		Name:      "hack-browser-data",
 		Usage:     "Export passwords/cookies/history/bookmarks from browser",
 		UsageText: "[hack-browser-data -b chrome -f json -dir results -cc]\nExport all browingdata(password/cookie/history/bookmark) from browser\nGithub Link: https://github.com/moonD4rk/HackBrowserData",
-		Version:   "0.4.1",
+		Version:   "0.4.2",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{Name: "verbose", Aliases: []string{"vv"}, Destination: &verbose, Value: false, Usage: "verbose"},
 			&cli.BoolFlag{Name: "compress", Aliases: []string{"zip"}, Destination: &compress, Value: false, Usage: "compress result to zip"},
@@ -65,6 +65,7 @@ func Execute() {
 				if err = fileutil.CompressDir(outputDir); err != nil {
 					log.Error(err)
 				}
+				log.Noticef("compress success")
 			}
 			return nil
 		},
