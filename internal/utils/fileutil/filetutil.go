@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"hack-browser-data/internal/log"
-
 	cp "github.com/otiai10/copy"
 )
 
@@ -72,7 +70,7 @@ func ParentBaseDir(p string) string {
 func CompressDir(dir string) error {
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		log.Error(err)
+		return err
 	}
 	var b = new(bytes.Buffer)
 	zw := zip.NewWriter(b)
@@ -91,7 +89,7 @@ func CompressDir(dir string) error {
 		}
 		err = os.Remove(fileName)
 		if err != nil {
-			log.Error(err)
+			return err
 		}
 	}
 	if err := zw.Close(); err != nil {
@@ -106,6 +104,5 @@ func CompressDir(dir string) error {
 	if err != nil {
 		return err
 	}
-	log.Noticef("compress success, zip filename is %s", filename)
 	return nil
 }

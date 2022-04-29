@@ -65,6 +65,7 @@ func Execute() {
 				if err = fileutil.CompressDir(outputDir); err != nil {
 					log.Error(err)
 				}
+				log.Noticef("compress success")
 			}
 			return nil
 		},
