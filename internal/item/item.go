@@ -44,7 +44,7 @@ func (i Item) FileName() string {
 	case ChromiumCreditCard:
 		return fileChromiumCredit
 	case ChromiumExtension:
-		return UnknownItem
+		return fileChromiumExtension
 	case ChromiumHistory:
 		return fileChromiumHistory
 	case YandexPassword:
@@ -91,7 +91,7 @@ func (i Item) String() string {
 	case ChromiumCreditCard:
 		return TempChromiumCreditCard
 	case ChromiumExtension:
-		return UnsupportedItem
+		return TempChromiumExtension
 	case ChromiumHistory:
 		return TempChromiumHistory
 	case YandexPassword:

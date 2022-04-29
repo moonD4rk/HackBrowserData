@@ -1,7 +1,6 @@
 package chromium
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -63,21 +62,21 @@ func (c *chromium) BrowsingData() (*browingdata.Data, error) {
 
 func (c *chromium) copyItemToLocal() error {
 	for i, path := range c.itemPaths {
-		if fileutil.FolderExists(path) {
-			if err := fileutil.CopyDir(path, i.String(), "lock"); err != nil {
-				return err
+		filename := i.String()
+		var err error
+		switch {
+		case fileutil.FolderExists(path):
+			if i == item.ChromiumLocalStorage {
+				err = fileutil.CopyDir(path, filename, "lock")
 			}
-		} else {
-			var filename = i.String()
-			// TODO: Handle read file error
-			d, err := ioutil.ReadFile(path)
-			if err != nil {
-				return err
+			if i == item.ChromiumExtension {
+				err = fileutil.CopyDirContains(path, filename, "manifest.json")
 			}
-			err = ioutil.WriteFile(filename, d, 0777)
-			if err != nil {
-				return err
-			}
+		default:
+			err = fileutil.CopyFile(path, filename)
+		}
+		if err != nil {
+			return err
 		}
 	}
 	return nil

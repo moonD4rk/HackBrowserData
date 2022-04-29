@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"path/filepath"
 
 	"hack-browser-data/internal/browingdata"
@@ -58,15 +57,8 @@ func (f *firefox) getMultiItemPath(profilePath string, items []item.Item) (map[s
 
 func (f *firefox) copyItemToLocal() error {
 	for i, path := range f.itemPaths {
-		// var dstFilename = item.TempName()
-		var filename = i.String()
-		// TODO: Handle read file error
-		d, err := ioutil.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		err = ioutil.WriteFile(filename, d, 0777)
-		if err != nil {
+		filename := i.String()
+		if err := fileutil.CopyFile(path, filename); err != nil {
 			return err
 		}
 	}

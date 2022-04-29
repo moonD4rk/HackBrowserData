@@ -10,6 +10,7 @@ const (
 	fileChromiumCookie       = "Cookies"
 	fileChromiumBookmark     = "Bookmarks"
 	fileChromiumLocalStorage = "Local Storage/leveldb"
+	fileChromiumExtension    = "Extensions"
 
 	fileYandexPassword = "Ya Passman Data"
 	fileYandexCredit   = "Ya Credit Cards"
