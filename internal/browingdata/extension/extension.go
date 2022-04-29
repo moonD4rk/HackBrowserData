@@ -49,3 +49,27 @@ func (c *ChromiumExtension) Parse(masterKey []byte) error {
 func (c *ChromiumExtension) Name() string {
 	return "extension"
 }
+
+type FirefoxExtension []*extension
+
+func (f *FirefoxExtension) Parse(masterKey []byte) error {
+	s, err := fileutil.ReadFile(item.TempFirefoxExtension)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(item.TempFirefoxExtension)
+	j := gjson.Parse(s)
+	for _, v := range j.Get("addons").Array() {
+		*f = append(*f, &extension{
+			Name:        v.Get("defaultLocale.name").String(),
+			Description: v.Get("defaultLocale.description").String(),
+			Version:     v.Get("version").String(),
+			HomepageURL: v.Get("defaultLocale.homepageURL").String(),
+		})
+	}
+	return nil
+}
+
+func (f *FirefoxExtension) Name() string {
+	return "extension"
+}

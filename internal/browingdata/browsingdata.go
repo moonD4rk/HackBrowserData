@@ -97,6 +97,8 @@ func (d *Data) addSource(Sources []item.Item) {
 			d.sources[source] = &download.FirefoxDownload{}
 		case item.FirefoxLocalStorage:
 			d.sources[source] = &localstorage.FirefoxLocalStorage{}
+		case item.FirefoxExtension:
+			d.sources[source] = &extension.FirefoxExtension{}
 		}
 	}
 }

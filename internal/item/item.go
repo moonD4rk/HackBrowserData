@@ -63,11 +63,11 @@ func (i Item) FileName() string {
 		return fileFirefoxData
 	case FirefoxLocalStorage:
 		return fileFirefoxLocalStorage
-	case FirefoxCreditCard:
-		return UnsupportedItem
 	case FirefoxHistory:
 		return fileFirefoxData
 	case FirefoxExtension:
+		return fileFirefoxExtension
+	case FirefoxCreditCard:
 		return UnsupportedItem
 	default:
 		return UnknownItem
@@ -115,7 +115,7 @@ func (i Item) String() string {
 	case FirefoxCreditCard:
 		return UnsupportedItem
 	case FirefoxExtension:
-		return UnsupportedItem
+		return TempFirefoxExtension
 	default:
 		return UnknownItem
 	}
