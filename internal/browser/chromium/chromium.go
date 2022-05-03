@@ -7,7 +7,6 @@ import (
 
 	"hack-browser-data/internal/browingdata"
 	"hack-browser-data/internal/item"
-	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils/fileutil"
 	"hack-browser-data/internal/utils/typeutil"
 )
@@ -70,7 +69,7 @@ func (c *chromium) copyItemToLocal() error {
 				err = fileutil.CopyDir(path, filename, "lock")
 			}
 			if i == item.ChromiumExtension {
-				err = fileutil.CopyDirContains(path, filename, "manifest.json")
+				err = fileutil.CopyDirHasSuffix(path, filename, "manifest.json")
 			}
 		default:
 			err = fileutil.CopyFile(path, filename)
@@ -86,8 +85,6 @@ func (c *chromium) getItemPath(profilePath string, items []item.Item) (map[item.
 	var itemPaths = make(map[item.Item]string)
 	parentDir := fileutil.ParentDir(profilePath)
 	baseDir := fileutil.BaseDir(profilePath)
-	log.Infof("%s profile parentDir: %s", c.name, parentDir)
-	log.Infof("%s profile baseDir: %s", c.name, baseDir)
 	err := filepath.Walk(parentDir, chromiumWalkFunc(items, itemPaths, baseDir))
 	if err != nil {
 		return itemPaths, err

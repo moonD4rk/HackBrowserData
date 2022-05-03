@@ -38,14 +38,14 @@ func FolderExists(foldername string) bool {
 	return info.IsDir()
 }
 
-// FilesInFolder returns the files contains in the provided folder
+// FilesInFolder returns the filepath contains in the provided folder
 func FilesInFolder(dir, filename string) ([]string, error) {
 	if !FolderExists(dir) {
 		return nil, errors.New(dir + " folder does not exist")
 	}
 	var files []string
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
-		if !f.IsDir() && strings.Contains(path, filename) {
+		if !f.IsDir() && strings.HasSuffix(path, filename) {
 			files = append(files, path)
 		}
 		return err
@@ -63,17 +63,17 @@ func ReadFile(filename string) (string, error) {
 // skip the file if you don't want to copy
 func CopyDir(src, dst, skip string) error {
 	s := cp.Options{Skip: func(src string) (bool, error) {
-		return strings.Contains(strings.ToLower(src), skip), nil
+		return strings.HasSuffix(strings.ToLower(src), skip), nil
 	}}
 	return cp.Copy(src, dst, s)
 }
 
-// CopyDirContains copies the directory from the source to the destination
-// contain is the file if you want to copy
-func CopyDirContains(src, dst, contain string) error {
+// CopyDirHasSuffix copies the directory from the source to the destination
+// contain is the file if you want to copy, and rename copied filename with dir/index_filename
+func CopyDirHasSuffix(src, dst, suffix string) error {
 	var filelist []string
 	err := filepath.Walk(src, func(path string, f os.FileInfo, err error) error {
-		if !f.IsDir() && strings.Contains(strings.ToLower(f.Name()), contain) {
+		if !f.IsDir() && strings.HasSuffix(strings.ToLower(f.Name()), suffix) {
 			filelist = append(filelist, path)
 		}
 		return err
