@@ -3,9 +3,10 @@
 package browser
 
 import (
-	"hack-browser-data/internal/item"
 	"io/ioutil"
 	"os"
+
+	"hack-browser-data/internal/item"
 )
 
 var (

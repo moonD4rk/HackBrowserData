@@ -115,6 +115,11 @@ func Filename(browser, item, ext string) string {
 	return strings.ToLower(fmt.Sprintf("%s_%s.%s", replace.Replace(browser), item, ext))
 }
 
+func BrowserName(browser, user string) string {
+	replace := strings.NewReplacer(" ", "_", ".", "_", "-", "_", "Profile", "User")
+	return strings.ToLower(fmt.Sprintf("%s_%s", replace.Replace(browser), replace.Replace(user)))
+}
+
 // ParentDir returns the parent directory of the provided path
 func ParentDir(p string) string {
 	return filepath.Dir(filepath.Clean(p))
