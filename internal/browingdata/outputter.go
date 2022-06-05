@@ -50,7 +50,7 @@ func (o *OutPutter) CreateFile(dir, filename string) (*os.File, error) {
 
 	if dir != "" {
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
-			err := os.MkdirAll(dir, 0777)
+			err := os.MkdirAll(dir, 0o777)
 			if err != nil {
 				return nil, err
 			}
@@ -60,7 +60,7 @@ func (o *OutPutter) CreateFile(dir, filename string) (*os.File, error) {
 	var file *os.File
 	var err error
 	p := filepath.Join(dir, filename)
-	file, err = os.OpenFile(p, os.O_TRUNC|os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	file, err = os.OpenFile(p, os.O_TRUNC|os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666)
 	if err != nil {
 		return nil, err
 	}

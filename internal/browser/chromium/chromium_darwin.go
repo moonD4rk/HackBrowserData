@@ -1,3 +1,5 @@
+//go:build darwin
+
 package chromium
 
 import (
@@ -46,7 +48,7 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 	if chromeSecret == nil {
 		return nil, ErrWrongSecurityCommand
 	}
-	var chromeSalt = []byte("saltysalt")
+	chromeSalt := []byte("saltysalt")
 	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157
 	key := pbkdf2.Key(chromeSecret, chromeSalt, 1003, 16, sha1.New)
 	if key == nil {

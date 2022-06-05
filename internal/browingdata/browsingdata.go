@@ -35,7 +35,6 @@ func New(sources []item.Item) *Data {
 }
 
 func (d *Data) Recovery(masterKey []byte) error {
-
 	for _, source := range d.sources {
 		if err := source.Parse(masterKey); err != nil {
 			log.Errorf("parse %s error %s", source.Name(), err.Error())
@@ -48,7 +47,6 @@ func (d *Data) Output(dir, browserName, flag string) {
 	output := NewOutPutter(flag)
 
 	for _, source := range d.sources {
-
 		filename := fileutil.Filename(browserName, source.Name(), output.Ext())
 
 		f, err := output.CreateFile(dir, filename)

@@ -1,3 +1,5 @@
+//go:build linux
+
 package chromium
 
 import (
@@ -60,7 +62,7 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 		// @https://source.chromium.org/chromium/chromium/src/+/main:components/os_crypt/os_crypt_linux.cc;l=100
 		chromiumSecret = []byte("peanuts")
 	}
-	var chromiumSalt = []byte("saltysalt")
+	chromiumSalt := []byte("saltysalt")
 	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_linux.cc
 	key := pbkdf2.Key(chromiumSecret, chromiumSalt, 1, 16, sha1.New)
 	c.masterKey = key

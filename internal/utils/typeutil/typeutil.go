@@ -24,7 +24,7 @@ func IntToBool[T constraints.Signed](a T) bool {
 }
 
 func Reverse[T any](s []T) []T {
-	var h = make([]T, len(s))
+	h := make([]T, len(s))
 	for i := 0; i < len(s); i++ {
 		h[i] = s[len(s)-i-1]
 	}

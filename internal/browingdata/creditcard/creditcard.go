@@ -71,6 +71,7 @@ func (c *ChromiumCreditCard) Parse(masterKey []byte) error {
 	}
 	return nil
 }
+
 func (c *ChromiumCreditCard) Name() string {
 	return "creditcard"
 }
@@ -122,6 +123,7 @@ func (c *YandexCreditCard) Parse(masterKey []byte) error {
 	}
 	return nil
 }
+
 func (c *YandexCreditCard) Name() string {
 	return "creditcard"
 }

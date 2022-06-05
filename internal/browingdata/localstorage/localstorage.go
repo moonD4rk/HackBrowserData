@@ -40,7 +40,7 @@ func (c *ChromiumLocalStorage) Parse(masterKey []byte) error {
 		if len(value) > 1024*5 {
 			continue
 		}
-		var s = new(storage)
+		s := new(storage)
 		s.fillKey(key)
 		s.fillValue(value)
 		// don't save meta data
@@ -114,13 +114,11 @@ func (f *FirefoxLocalStorage) Parse(masterKey []byte) error {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var (
-			originKey, key, value string
-		)
+		var originKey, key, value string
 		if err = rows.Scan(&originKey, &key, &value); err != nil {
 			log.Warn(err)
 		}
-		var s = new(storage)
+		s := new(storage)
 		s.fillFirefox(originKey, key, value)
 		*f = append(*f, *s)
 	}

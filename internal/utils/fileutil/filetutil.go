@@ -81,7 +81,7 @@ func CopyDirHasSuffix(src, dst, suffix string) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(dst, 0755); err != nil {
+	if err := os.MkdirAll(dst, 0o755); err != nil {
 		return err
 	}
 	for index, file := range filelist {
@@ -102,7 +102,7 @@ func CopyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(dst, d, 0777)
+	err = ioutil.WriteFile(dst, d, 0o777)
 	if err != nil {
 		return err
 	}
@@ -113,6 +113,11 @@ func CopyFile(src, dst string) error {
 func Filename(browser, item, ext string) string {
 	replace := strings.NewReplacer(" ", "_", ".", "_", "-", "_")
 	return strings.ToLower(fmt.Sprintf("%s_%s.%s", replace.Replace(browser), item, ext))
+}
+
+func BrowserName(browser, user string) string {
+	replace := strings.NewReplacer(" ", "_", ".", "_", "-", "_", "Profile", "User")
+	return strings.ToLower(fmt.Sprintf("%s_%s", replace.Replace(browser), replace.Replace(user)))
 }
 
 // ParentDir returns the parent directory of the provided path
@@ -136,7 +141,7 @@ func CompressDir(dir string) error {
 	if err != nil {
 		return err
 	}
-	var b = new(bytes.Buffer)
+	b := new(bytes.Buffer)
 	zw := zip.NewWriter(b)
 	for _, f := range files {
 		fw, _ := zw.Create(f.Name())
