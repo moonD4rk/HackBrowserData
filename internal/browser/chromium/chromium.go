@@ -2,7 +2,6 @@ package chromium
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -90,23 +89,11 @@ func (c *chromium) copyItemToLocal() error {
 	return nil
 }
 
-func (c *chromium) getItemPath(profilePath string, items []item.Item) (map[item.Item]string, error) {
-	itemPaths := make(map[item.Item]string)
-	parentDir := fileutil.ParentDir(profilePath)
-	baseDir := fileutil.BaseDir(profilePath)
-	err := filepath.Walk(parentDir, chromiumWalkFunc(items, itemPaths, baseDir))
-	if err != nil {
-		return itemPaths, err
-	}
-	fillLocalStoragePath(itemPaths, item.ChromiumLocalStorage)
-	return itemPaths, nil
-}
-
 func (c *chromium) getMultiItemPath(profilePath string, items []item.Item) (map[string]map[item.Item]string, error) {
 	// multiItemPaths is a map of user to item path, map[profile 1][item's name & path key pair]
 	multiItemPaths := make(map[string]map[item.Item]string)
 	parentDir := fileutil.ParentDir(profilePath)
-	err := filepath.Walk(parentDir, chromiumWalkFunc2(items, multiItemPaths))
+	err := filepath.Walk(parentDir, chromiumWalkFunc(items, multiItemPaths))
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +120,7 @@ func (c *chromium) getMultiItemPath(profilePath string, items []item.Item) (map[
 	return t, nil
 }
 
-func chromiumWalkFunc2(items []item.Item, multiItemPaths map[string]map[item.Item]string) filepath.WalkFunc {
+func chromiumWalkFunc(items []item.Item, multiItemPaths map[string]map[item.Item]string) filepath.WalkFunc {
 	return func(path string, info fs.FileInfo, err error) error {
 		for _, v := range items {
 			if info.Name() == v.FileName() {
@@ -145,23 +132,6 @@ func chromiumWalkFunc2(items []item.Item, multiItemPaths map[string]map[item.Ite
 					multiItemPaths[parentBaseDir][v] = path
 				} else {
 					multiItemPaths[parentBaseDir] = map[item.Item]string{v: path}
-				}
-			}
-		}
-		return err
-	}
-}
-
-func chromiumWalkFunc(items []item.Item, itemPaths map[item.Item]string, baseDir string) filepath.WalkFunc {
-	return func(path string, info os.FileInfo, err error) error {
-		for _, it := range items {
-			switch {
-			case it.FileName() == info.Name():
-				if it == item.ChromiumKey {
-					itemPaths[it] = path
-				}
-				if strings.Contains(path, baseDir) {
-					itemPaths[it] = path
 				}
 			}
 		}
