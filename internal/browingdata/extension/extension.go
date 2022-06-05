@@ -50,6 +50,10 @@ func (c *ChromiumExtension) Name() string {
 	return "extension"
 }
 
+func (c *ChromiumExtension) Length() int {
+	return len(*c)
+}
+
 type FirefoxExtension []*extension
 
 func (f *FirefoxExtension) Parse(masterKey []byte) error {
@@ -72,4 +76,8 @@ func (f *FirefoxExtension) Parse(masterKey []byte) error {
 
 func (f *FirefoxExtension) Name() string {
 	return "extension"
+}
+
+func (f *FirefoxExtension) Length() int {
+	return len(*f)
 }

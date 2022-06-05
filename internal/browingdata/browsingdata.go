@@ -24,6 +24,8 @@ type Source interface {
 	Parse(masterKey []byte) error
 
 	Name() string
+
+	Length() int
 }
 
 func New(sources []item.Item) *Data {
@@ -47,6 +49,10 @@ func (d *Data) Output(dir, browserName, flag string) {
 	output := NewOutPutter(flag)
 
 	for _, source := range d.sources {
+		if source.Length() == 0 {
+			// if the length of the export data is 0, then it is not necessary to output
+			continue
+		}
 		filename := fileutil.Filename(browserName, source.Name(), output.Ext())
 
 		f, err := output.CreateFile(dir, filename)

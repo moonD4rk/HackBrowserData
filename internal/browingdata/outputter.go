@@ -9,6 +9,8 @@ import (
 
 	"github.com/gocarina/gocsv"
 	jsoniter "github.com/json-iterator/go"
+	"golang.org/x/text/encoding/unicode"
+	"golang.org/x/text/transform"
 )
 
 type OutPutter struct {
@@ -35,7 +37,7 @@ func (o *OutPutter) Write(data Source, writer io.Writer) error {
 		return encoder.Encode(data)
 	default:
 		gocsv.SetCSVWriter(func(w io.Writer) *gocsv.SafeCSVWriter {
-			writer := csv.NewWriter(w)
+			writer := csv.NewWriter(transform.NewWriter(w, unicode.UTF8BOM.NewEncoder()))
 			writer.Comma = ','
 			return gocsv.NewSafeCSVWriter(writer)
 		})

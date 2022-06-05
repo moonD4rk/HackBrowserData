@@ -90,6 +90,10 @@ func (c *ChromiumPassword) Name() string {
 	return "password"
 }
 
+func (c *ChromiumPassword) Length() int {
+	return len(*c)
+}
+
 type YandexPassword []loginData
 
 const (
@@ -152,6 +156,10 @@ func (c *YandexPassword) Parse(masterKey []byte) error {
 
 func (c *YandexPassword) Name() string {
 	return "password"
+}
+
+func (c *YandexPassword) Length() int {
+	return len(*c)
 }
 
 type FirefoxPassword []loginData
@@ -224,10 +232,6 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 	return nil
 }
 
-func (f *FirefoxPassword) Name() string {
-	return "password"
-}
-
 func getFirefoxDecryptKey(key4file string) (item1, item2, a11, a102 []byte, err error) {
 	var keyDB *sql.DB
 	keyDB, err = sql.Open("sqlite3", key4file)
@@ -277,4 +281,12 @@ func getFirefoxLoginData(loginJson string) (l []loginData, err error) {
 		}
 	}
 	return l, nil
+}
+
+func (f *FirefoxPassword) Name() string {
+	return "password"
+}
+
+func (f *FirefoxPassword) Length() int {
+	return len(*f)
 }
