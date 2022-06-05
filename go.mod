@@ -16,6 +16,7 @@ require (
 	github.com/urfave/cli/v2 v2.4.0
 	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
 	golang.org/x/exp v0.0.0-20220414153411-bcd21879b8fd
+	golang.org/x/text v0.3.6
 )
 
 require (
