@@ -1,7 +1,7 @@
 package decrypter
 
 func Chromium(key, encryptPass []byte) ([]byte, error) {
-	var chromeIV = []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
+	chromeIV := []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
 	if len(encryptPass) > 3 {
 		if len(key) == 0 {
 			return nil, errSecurityKeyIsEmpty

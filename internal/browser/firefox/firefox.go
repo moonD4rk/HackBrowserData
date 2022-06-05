@@ -21,13 +21,10 @@ type firefox struct {
 	itemPaths   map[item.Item]string
 }
 
-var (
-	ErrProfilePathNotFound = errors.New("profile path not found")
-)
+var ErrProfilePathNotFound = errors.New("profile path not found")
 
 // New returns a new firefox instance.
 func New(name, storage, profilePath string, items []item.Item) ([]*firefox, error) {
-
 	f := &firefox{
 		name:        name,
 		storage:     storage,
@@ -50,7 +47,7 @@ func New(name, storage, profilePath string, items []item.Item) ([]*firefox, erro
 }
 
 func (f *firefox) getMultiItemPath(profilePath string, items []item.Item) (map[string]map[item.Item]string, error) {
-	var multiItemPaths = make(map[string]map[item.Item]string)
+	multiItemPaths := make(map[string]map[item.Item]string)
 	err := filepath.Walk(profilePath, firefoxWalkFunc(items, multiItemPaths))
 	return multiItemPaths, err
 }

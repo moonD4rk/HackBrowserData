@@ -111,10 +111,8 @@ func ListBrowser() []string {
 	return l
 }
 
-var (
-	// home dir path for all platforms
-	homeDir, _ = os.UserHomeDir()
-)
+// home dir path for all platforms
+var homeDir, _ = os.UserHomeDir()
 
 const (
 	chromeName     = "Chrome"

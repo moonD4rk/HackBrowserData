@@ -1,3 +1,5 @@
+//go:build windows
+
 package chromium
 
 import (
@@ -13,9 +15,7 @@ import (
 	"hack-browser-data/internal/utils/fileutil"
 )
 
-var (
-	errDecodeMasterKeyFailed = errors.New("decode master key failed")
-)
+var errDecodeMasterKeyFailed = errors.New("decode master key failed")
 
 func (c *chromium) GetMasterKey() ([]byte, error) {
 	keyFile, err := fileutil.ReadFile(item.TempChromiumKey)

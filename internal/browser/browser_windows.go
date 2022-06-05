@@ -3,9 +3,6 @@
 package browser
 
 import (
-	"io/ioutil"
-	"os"
-
 	"hack-browser-data/internal/item"
 )
 
@@ -18,7 +15,7 @@ var (
 	}{
 		"chrome": {
 			name:        chromeName,
-			profilePath: getProfiles(chromeUserDataPath)[0],
+			profilePath: chromeUserDataPath,
 			items:       item.DefaultChromium,
 		},
 		"edge": {
@@ -28,12 +25,12 @@ var (
 		},
 		"chromium": {
 			name:        chromiumName,
-			profilePath: getProfiles(chromiumUserDataPath)[0],
+			profilePath: chromiumUserDataPath,
 			items:       item.DefaultChromium,
 		},
 		"chrome-beta": {
 			name:        chromeBetaName,
-			profilePath: getProfiles(chromeBetaUserDataPath)[0],
+			profilePath: chromeBetaUserDataPath,
 			items:       item.DefaultChromium,
 		},
 		"opera": {
@@ -91,31 +88,10 @@ var (
 	}
 )
 
-func getProfiles(userDataPath string) []string {
-	var res []string
-	files, err := ioutil.ReadDir(userDataPath)
-
-	if err != nil {
-
-		res = append(res, userDataPath+"Default")
-	}
-
-	for _, f := range files {
-		if f.IsDir() && f.Name() != "System Profile" {
-			var thisPath = userDataPath + f.Name()
-			_, err := os.Stat(thisPath + "/Login Data")
-			if err == nil {
-				res = append(res, userDataPath+f.Name())
-			}
-		}
-	}
-	return res
-}
-
 var (
-	chromeUserDataPath     = homeDir + "/AppData/Local/Google/Chrome/User Data/"
-	chromeBetaUserDataPath = homeDir + "/AppData/Local/Google/Chrome Beta/User Data/"
-	chromiumUserDataPath   = homeDir + "/AppData/Local/Chromium/User Data/"
+	chromeUserDataPath     = homeDir + "/AppData/Local/Google/Chrome/User Data/Default/"
+	chromeBetaUserDataPath = homeDir + "/AppData/Local/Google/Chrome Beta/User Data/Default/"
+	chromiumUserDataPath   = homeDir + "/AppData/Local/Chromium/User Data/Default/"
 	edgeProfilePath        = homeDir + "/AppData/Local/Microsoft/Edge/User Data/Default/"
 	braveProfilePath       = homeDir + "/AppData/Local/BraveSoftware/Brave-Browser/User Data/Default/"
 	speed360ProfilePath    = homeDir + "/AppData/Local/360chrome/Chrome/User Data/Default/"

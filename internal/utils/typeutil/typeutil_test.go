@@ -4,13 +4,11 @@ import (
 	"testing"
 )
 
-var (
-	reverseTestCases = [][]any{
-		[]any{1, 2, 3, 4, 5},
-		[]any{"1", "2", "3", "4", "5"},
-		[]any{"1", 2, "3", "4", 5},
-	}
-)
+var reverseTestCases = [][]any{
+	{1, 2, 3, 4, 5},
+	{"1", "2", "3", "4", "5"},
+	{"1", 2, "3", "4", 5},
+}
 
 func TestReverse(t *testing.T) {
 	for _, ts := range reverseTestCases {

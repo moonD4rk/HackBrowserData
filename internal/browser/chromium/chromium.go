@@ -39,6 +39,7 @@ func New(name, storage, profilePath string, items []item.Item) ([]*chromium, err
 			name:      fileutil.BrowserName(name, user),
 			items:     typeutil.Keys(itemPaths),
 			itemPaths: itemPaths,
+			storage:   storage,
 		})
 	}
 	return chromiumList, nil
@@ -90,7 +91,7 @@ func (c *chromium) copyItemToLocal() error {
 }
 
 func (c *chromium) getItemPath(profilePath string, items []item.Item) (map[item.Item]string, error) {
-	var itemPaths = make(map[item.Item]string)
+	itemPaths := make(map[item.Item]string)
 	parentDir := fileutil.ParentDir(profilePath)
 	baseDir := fileutil.BaseDir(profilePath)
 	err := filepath.Walk(parentDir, chromiumWalkFunc(items, itemPaths, baseDir))
@@ -102,7 +103,8 @@ func (c *chromium) getItemPath(profilePath string, items []item.Item) (map[item.
 }
 
 func (c *chromium) getMultiItemPath(profilePath string, items []item.Item) (map[string]map[item.Item]string, error) {
-	var multiItemPaths = make(map[string]map[item.Item]string)
+	// multiItemPaths is a map of user to item path, map[profile 1][item's name & path key pair]
+	multiItemPaths := make(map[string]map[item.Item]string)
 	parentDir := fileutil.ParentDir(profilePath)
 	err := filepath.Walk(parentDir, chromiumWalkFunc2(items, multiItemPaths))
 	if err != nil {
@@ -126,6 +128,7 @@ func (c *chromium) getMultiItemPath(profilePath string, items []item.Item) (map[
 		}
 		t[userDir] = v
 		t[userDir][item.ChromiumKey] = keyPath
+		fillLocalStoragePath(t[userDir], item.ChromiumLocalStorage)
 	}
 	return t, nil
 }

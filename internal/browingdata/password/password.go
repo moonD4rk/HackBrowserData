@@ -229,9 +229,7 @@ func (f *FirefoxPassword) Name() string {
 }
 
 func getFirefoxDecryptKey(key4file string) (item1, item2, a11, a102 []byte, err error) {
-	var (
-		keyDB *sql.DB
-	)
+	var keyDB *sql.DB
 	keyDB, err = sql.Open("sqlite3", key4file)
 	if err != nil {
 		return nil, nil, nil, nil, err
