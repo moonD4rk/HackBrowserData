@@ -65,6 +65,10 @@ func (c *ChromiumHistory) Name() string {
 	return "history"
 }
 
+func (c *ChromiumHistory) Length() int {
+	return len(*c)
+}
+
 type FirefoxHistory []history
 
 const (
@@ -118,4 +122,8 @@ func (f *FirefoxHistory) Parse(masterKey []byte) error {
 
 func (f *FirefoxHistory) Name() string {
 	return "history"
+}
+
+func (f *FirefoxHistory) Length() int {
+	return len(*f)
 }

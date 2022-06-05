@@ -58,6 +58,10 @@ func (c *ChromiumLocalStorage) Name() string {
 	return "localStorage"
 }
 
+func (c *ChromiumLocalStorage) Length() int {
+	return len(*c)
+}
+
 func (s *storage) fillKey(b []byte) {
 	keys := bytes.Split(b, []byte("\x00"))
 	if len(keys) == 1 && bytes.HasPrefix(keys[0], []byte("META:")) {
@@ -141,4 +145,8 @@ func (s *storage) fillFirefox(originKey, key, value string) {
 
 func (f *FirefoxLocalStorage) Name() string {
 	return "localStorage"
+}
+
+func (f *FirefoxLocalStorage) Length() int {
+	return len(*f)
 }

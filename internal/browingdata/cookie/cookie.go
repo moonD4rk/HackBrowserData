@@ -93,6 +93,10 @@ func (c *ChromiumCookie) Name() string {
 	return "cookie"
 }
 
+func (c *ChromiumCookie) Length() int {
+	return len(*c)
+}
+
 type FirefoxCookie []cookie
 
 const (
@@ -136,4 +140,8 @@ func (f *FirefoxCookie) Parse(masterKey []byte) error {
 
 func (f *FirefoxCookie) Name() string {
 	return "cookie"
+}
+
+func (f *FirefoxCookie) Length() int {
+	return len(*f)
 }

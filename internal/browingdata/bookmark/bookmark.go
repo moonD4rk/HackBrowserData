@@ -76,8 +76,21 @@ func getBookmarkChildren(value gjson.Result, w *ChromiumBookmark) (children gjso
 	return children
 }
 
+func bookmarkType(a int64) string {
+	switch a {
+	case 1:
+		return "url"
+	default:
+		return "folder"
+	}
+}
+
 func (c *ChromiumBookmark) Name() string {
 	return "bookmark"
+}
+
+func (c *ChromiumBookmark) Length() int {
+	return len(*c)
 }
 
 type FirefoxBookmark []bookmark
@@ -134,11 +147,6 @@ func (f *FirefoxBookmark) Name() string {
 	return "bookmark"
 }
 
-func bookmarkType(a int64) string {
-	switch a {
-	case 1:
-		return "url"
-	default:
-		return "folder"
-	}
+func (f *FirefoxBookmark) Length() int {
+	return len(*f)
 }

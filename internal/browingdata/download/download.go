@@ -70,6 +70,10 @@ func (c *ChromiumDownload) Name() string {
 	return "download"
 }
 
+func (c *ChromiumDownload) Length() int {
+	return len(*c)
+}
+
 type FirefoxDownload []download
 
 const (
@@ -130,4 +134,8 @@ func (f *FirefoxDownload) Parse(masterKey []byte) error {
 
 func (f *FirefoxDownload) Name() string {
 	return "download"
+}
+
+func (f *FirefoxDownload) Length() int {
+	return len(*f)
 }
