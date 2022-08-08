@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"os"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 
 	"hack-browser-data/internal/decrypter"
 	"hack-browser-data/internal/item"
@@ -28,7 +28,7 @@ const (
 )
 
 func (c *ChromiumCreditCard) Parse(masterKey []byte) error {
-	creditDB, err := sql.Open("sqlite3", item.TempChromiumCreditCard)
+	creditDB, err := sql.Open("sqlite", item.TempChromiumCreditCard)
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func (c *ChromiumCreditCard) Length() int {
 type YandexCreditCard []card
 
 func (c *YandexCreditCard) Parse(masterKey []byte) error {
-	creditDB, err := sql.Open("sqlite3", item.TempYandexCreditCard)
+	creditDB, err := sql.Open("sqlite", item.TempYandexCreditCard)
 	if err != nil {
 		return err
 	}

@@ -9,8 +9,8 @@ import (
 	"sort"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/tidwall/gjson"
+	_ "modernc.org/sqlite"
 
 	"hack-browser-data/internal/decrypter"
 	"hack-browser-data/internal/item"
@@ -34,7 +34,7 @@ const (
 )
 
 func (c *ChromiumPassword) Parse(masterKey []byte) error {
-	loginDB, err := sql.Open("sqlite3", item.TempChromiumPassword)
+	loginDB, err := sql.Open("sqlite", item.TempChromiumPassword)
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ const (
 )
 
 func (c *YandexPassword) Parse(masterKey []byte) error {
-	loginDB, err := sql.Open("sqlite3", item.TempYandexPassword)
+	loginDB, err := sql.Open("sqlite", item.TempYandexPassword)
 	if err != nil {
 		return err
 	}
@@ -234,7 +234,7 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 
 func getFirefoxDecryptKey(key4file string) (item1, item2, a11, a102 []byte, err error) {
 	var keyDB *sql.DB
-	keyDB, err = sql.Open("sqlite3", key4file)
+	keyDB, err = sql.Open("sqlite", key4file)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}

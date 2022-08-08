@@ -6,7 +6,7 @@ import (
 	"sort"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 
 	"hack-browser-data/internal/decrypter"
 	"hack-browser-data/internal/item"
@@ -35,7 +35,7 @@ const (
 )
 
 func (c *ChromiumCookie) Parse(masterKey []byte) error {
-	cookieDB, err := sql.Open("sqlite3", item.TempChromiumCookie)
+	cookieDB, err := sql.Open("sqlite", item.TempChromiumCookie)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ const (
 )
 
 func (f *FirefoxCookie) Parse(masterKey []byte) error {
-	cookieDB, err := sql.Open("sqlite3", item.TempFirefoxCookie)
+	cookieDB, err := sql.Open("sqlite", item.TempFirefoxCookie)
 	if err != nil {
 		return err
 	}

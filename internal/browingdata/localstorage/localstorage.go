@@ -98,7 +98,7 @@ const (
 )
 
 func (f *FirefoxLocalStorage) Parse(masterKey []byte) error {
-	db, err := sql.Open("sqlite3", item.TempFirefoxLocalStorage)
+	db, err := sql.Open("sqlite", item.TempFirefoxLocalStorage)
 	if err != nil {
 		return err
 	}

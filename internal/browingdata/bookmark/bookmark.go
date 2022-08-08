@@ -13,7 +13,7 @@ import (
 	"hack-browser-data/internal/utils/fileutil"
 	"hack-browser-data/internal/utils/typeutil"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 type ChromiumBookmark []bookmark
@@ -96,7 +96,7 @@ func (c *ChromiumBookmark) Length() int {
 type FirefoxBookmark []bookmark
 
 const (
-	queryFirefoxBookMark = `SELECT id, url, type, dateAdded, title FROM (SELECT * FROM moz_bookmarks INNER JOIN moz_places ON moz_bookmarks.fk=moz_places.id)`
+	queryFirefoxBookMark = `SELECT id, url, type, dateAdded, IFNULL(title, '') AS title FROM (SELECT * FROM moz_bookmarks INNER JOIN moz_places ON moz_bookmarks.fk=moz_places.id)`
 	closeJournalMode     = `PRAGMA journal_mode=off`
 )
 
@@ -106,7 +106,7 @@ func (f *FirefoxBookmark) Parse(masterKey []byte) error {
 		keyDB        *sql.DB
 		bookmarkRows *sql.Rows
 	)
-	keyDB, err = sql.Open("sqlite3", item.TempFirefoxBookmark)
+	keyDB, err = sql.Open("sqlite", item.TempFirefoxBookmark)
 	if err != nil {
 		return err
 	}

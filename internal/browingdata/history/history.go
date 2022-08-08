@@ -6,7 +6,7 @@ import (
 	"sort"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
@@ -27,7 +27,7 @@ const (
 )
 
 func (c *ChromiumHistory) Parse(masterKey []byte) error {
-	historyDB, err := sql.Open("sqlite3", item.TempChromiumHistory)
+	historyDB, err := sql.Open("sqlite", item.TempChromiumHistory)
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func (c *ChromiumHistory) Length() int {
 type FirefoxHistory []history
 
 const (
-	queryFirefoxHistory = `SELECT id, url, last_visit_date, title, visit_count FROM moz_places where title not null`
+	queryFirefoxHistory = `SELECT id, url, IFNULL(last_visit_date, 0) as last_visit_date, title, visit_count FROM moz_places where title not null`
 	closeJournalMode    = `PRAGMA journal_mode=off`
 )
 
@@ -82,7 +82,7 @@ func (f *FirefoxHistory) Parse(masterKey []byte) error {
 		keyDB       *sql.DB
 		historyRows *sql.Rows
 	)
-	keyDB, err = sql.Open("sqlite3", item.TempFirefoxHistory)
+	keyDB, err = sql.Open("sqlite", item.TempFirefoxHistory)
 	if err != nil {
 		return err
 	}

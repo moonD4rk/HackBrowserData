@@ -11,8 +11,8 @@ import (
 	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils/typeutil"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/tidwall/gjson"
+	_ "modernc.org/sqlite"
 )
 
 type ChromiumDownload []download
@@ -31,7 +31,7 @@ const (
 )
 
 func (c *ChromiumDownload) Parse(masterKey []byte) error {
-	historyDB, err := sql.Open("sqlite3", item.TempChromiumDownload)
+	historyDB, err := sql.Open("sqlite", item.TempChromiumDownload)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (f *FirefoxDownload) Parse(masterKey []byte) error {
 		keyDB        *sql.DB
 		downloadRows *sql.Rows
 	)
-	keyDB, err = sql.Open("sqlite3", item.TempFirefoxDownload)
+	keyDB, err = sql.Open("sqlite", item.TempFirefoxDownload)
 	if err != nil {
 		return err
 	}
