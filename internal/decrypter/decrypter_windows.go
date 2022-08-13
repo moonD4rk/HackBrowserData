@@ -8,25 +8,29 @@ import (
 )
 
 func Chromium(key, encryptPass []byte) ([]byte, error) {
-	if len(encryptPass) > 15 {
-		// remove Prefix 'v10'
-		return aesGCMDecrypt(encryptPass[15:], key, encryptPass[3:15])
-	} else {
+	if len(encryptPass) < 3 {
 		return nil, errPasswordIsEmpty
 	}
+	if len(key) == 0 {
+		return nil, errSecurityKeyIsEmpty
+	}
+
+	return aesGCMDecrypt(encryptPass[15:], key, encryptPass[3:15])
 }
 
 func ChromiumForYandex(key, encryptPass []byte) ([]byte, error) {
-	if len(encryptPass) > 15 {
-		// remove Prefix 'v10'
-		// gcmBlockSize         = 16
-		// gcmTagSize           = 16
-		// gcmMinimumTagSize    = 12 // NIST SP 800-38D recommends tags with 12 or more bytes.
-		// gcmStandardNonceSize = 12
-		return aesGCMDecrypt(encryptPass[12:], key, encryptPass[0:12])
-	} else {
+	if len(encryptPass) < 3 {
 		return nil, errPasswordIsEmpty
 	}
+	if len(key) == 0 {
+		return nil, errSecurityKeyIsEmpty
+	}
+	// remove Prefix 'v10'
+	// gcmBlockSize         = 16
+	// gcmTagSize           = 16
+	// gcmMinimumTagSize    = 12 // NIST SP 800-38D recommends tags with 12 or more bytes.
+	// gcmStandardNonceSize = 12
+	return aesGCMDecrypt(encryptPass[12:], key, encryptPass[0:12])
 }
 
 // chromium > 80 https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_win.cc
@@ -67,9 +71,12 @@ func (b *dataBlob) ToByteArray() []byte {
 	return d
 }
 
-// DPApi
+// DPAPI (Data Protection Application Programming Interface)
+// is a simple cryptographic application programming interface
+// available as a built-in component in Windows 2000 and
+// later versions of Microsoft Windows operating systems
 // chrome < 80 https://chromium.googlesource.com/chromium/src/+/76f496a7235c3432983421402951d73905c8be96/components/os_crypt/os_crypt_win.cc#82
-func DPApi(data []byte) ([]byte, error) {
+func DPAPI(data []byte) ([]byte, error) {
 	dllCrypt := syscall.NewLazyDLL("Crypt32.dll")
 	dllKernel := syscall.NewLazyDLL("Kernel32.dll")
 	procDecryptData := dllCrypt.NewProc("CryptUnprotectData")
