@@ -63,6 +63,7 @@ func (d *Data) Output(dir, browserName, flag string) {
 			log.Errorf("%s write to file %s error %s", source.Name(), filename, err.Error())
 		}
 		log.Noticef("output to file %s success", path.Join(dir, filename))
+		f.Close()
 	}
 }
 
