@@ -15,7 +15,6 @@ linters:
     - 'errorlint'
     - 'exportloopref'
     - 'gofmt'
-    - 'gofumpt'
     - 'goheader'
     - 'goimports'
     - 'gomodguard'
@@ -49,9 +48,14 @@ issues:
   exclude:
     - should have a package comment
     - should have comment
+    # G101: Potential hardcoded credentials
+    - G101
     # G103: Use of unsafe calls should be audited
     - G103
-    # G404: Use of weak random number generator (math/rand instead of crypto/rand)
+    # G404, G401, G502, G505 weak cryptographic list
+    - G401
     - G404
+    - G502
+    - G505
   max-issues-per-linter: 0
   max-same-issues: 0
