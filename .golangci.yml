@@ -1,0 +1,57 @@
+run:
+  timeout: '5m'
+  skip-dirs:
+    - 'assets'
+  allow-parallel-runners: true
+  modules-download-mode: 'readonly'
+
+linters:
+  enable:
+    - 'asciicheck'
+    - 'deadcode'
+    - 'depguard'
+    - 'dogsled'
+    - 'errcheck'
+    - 'errorlint'
+    - 'exportloopref'
+    - 'gofmt'
+    - 'gofumpt'
+    - 'goheader'
+    - 'goimports'
+    - 'gomodguard'
+    - 'goprintffuncname'
+    - 'gosec'
+    - 'govet'
+    - 'ineffassign'
+    - 'makezero'
+    - 'misspell'
+    - 'paralleltest'
+    - 'prealloc'
+    - 'predeclared'
+    - 'revive'
+    - 'typecheck'
+    - 'unconvert'
+    - 'varcheck'
+    - 'whitespace'
+  disable:
+# unsupported lint with golang 1.18+ ref: https://github.com/golangci/golangci-lint/issues/2649
+    - 'bodyclose'
+    - 'gosimple'
+    - 'noctx'
+    - 'sqlclosecheck'
+    - 'staticcheck'
+    - 'structcheck'
+    - 'stylecheck'
+    - 'unused'
+
+issues:
+  exclude-use-default: false
+  exclude:
+    - should have a package comment
+    - should have comment
+    # G103: Use of unsafe calls should be audited
+    - G103
+    # G404: Use of weak random number generator (math/rand instead of crypto/rand)
+    - G404
+  max-issues-per-linter: 0
+  max-same-issues: 0
