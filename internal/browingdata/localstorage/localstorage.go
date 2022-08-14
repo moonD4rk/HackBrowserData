@@ -7,11 +7,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/syndtr/goleveldb/leveldb"
-
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils/typeutil"
+
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 type ChromiumLocalStorage []storage

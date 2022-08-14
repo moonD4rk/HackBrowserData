@@ -6,12 +6,13 @@ import (
 	"sort"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
-
 	"hack-browser-data/internal/decrypter"
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils/typeutil"
+
+	// import sqlite3 driver
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type ChromiumCookie []cookie
@@ -72,7 +73,7 @@ func (c *ChromiumCookie) Parse(masterKey []byte) error {
 		if len(encryptValue) > 0 {
 			var err error
 			if masterKey == nil {
-				value, err = decrypter.DPApi(encryptValue)
+				value, err = decrypter.DPAPI(encryptValue)
 			} else {
 				value, err = decrypter.Chromium(masterKey, encryptValue)
 			}
@@ -118,10 +119,10 @@ func (f *FirefoxCookie) Parse(masterKey []byte) error {
 	for rows.Next() {
 		var (
 			name, value, host, path string
-			isSecure, isHttpOnly    int
+			isSecure, isHTTPOnly    int
 			creationTime, expiry    int64
 		)
-		if err = rows.Scan(&name, &value, &host, &path, &creationTime, &expiry, &isSecure, &isHttpOnly); err != nil {
+		if err = rows.Scan(&name, &value, &host, &path, &creationTime, &expiry, &isSecure, &isHTTPOnly); err != nil {
 			log.Warn(err)
 		}
 		*f = append(*f, cookie{
@@ -129,7 +130,7 @@ func (f *FirefoxCookie) Parse(masterKey []byte) error {
 			Host:       host,
 			Path:       path,
 			IsSecure:   typeutil.IntToBool(isSecure),
-			IsHTTPOnly: typeutil.IntToBool(isHttpOnly),
+			IsHTTPOnly: typeutil.IntToBool(isHTTPOnly),
 			CreateDate: typeutil.TimeStamp(creationTime / 1000000),
 			ExpireDate: typeutil.TimeStamp(expiry),
 			Value:      value,

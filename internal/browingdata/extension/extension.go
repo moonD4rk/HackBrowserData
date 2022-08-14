@@ -3,11 +3,11 @@ package extension
 import (
 	"os"
 
-	"github.com/tidwall/gjson"
-
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils/fileutil"
+
+	"github.com/tidwall/gjson"
 )
 
 type ChromiumExtension []*extension

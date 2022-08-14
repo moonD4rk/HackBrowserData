@@ -6,14 +6,14 @@ import (
 	"sort"
 	"time"
 
-	"github.com/tidwall/gjson"
-
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils/fileutil"
 	"hack-browser-data/internal/utils/typeutil"
 
+	// import sqlite3 driver
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/tidwall/gjson"
 )
 
 type ChromiumBookmark []bookmark
@@ -51,7 +51,7 @@ func getBookmarkChildren(value gjson.Result, w *ChromiumBookmark) (children gjso
 	const (
 		bookmarkID       = "id"
 		bookmarkAdded    = "date_added"
-		bookmarkUrl      = "url"
+		bookmarkURL      = "url"
 		bookmarkName     = "name"
 		bookmarkType     = "type"
 		bookmarkChildren = "children"
@@ -60,7 +60,7 @@ func getBookmarkChildren(value gjson.Result, w *ChromiumBookmark) (children gjso
 	bm := bookmark{
 		ID:        value.Get(bookmarkID).Int(),
 		Name:      value.Get(bookmarkName).String(),
-		URL:       value.Get(bookmarkUrl).String(),
+		URL:       value.Get(bookmarkURL).String(),
 		DateAdded: typeutil.TimeEpoch(value.Get(bookmarkAdded).Int()),
 	}
 	children = value.Get(bookmarkChildren)

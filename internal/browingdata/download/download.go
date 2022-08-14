@@ -11,6 +11,7 @@ import (
 	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils/typeutil"
 
+	// import sqlite3 driver
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tidwall/gjson"
 )
@@ -19,7 +20,7 @@ type ChromiumDownload []download
 
 type download struct {
 	TargetPath string
-	Url        string
+	URL        string
 	TotalBytes int64
 	StartTime  time.Time
 	EndTime    time.Time
@@ -44,15 +45,15 @@ func (c *ChromiumDownload) Parse(masterKey []byte) error {
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			targetPath, tabUrl, mimeType   string
+			targetPath, tabURL, mimeType   string
 			totalBytes, startTime, endTime int64
 		)
-		if err := rows.Scan(&targetPath, &tabUrl, &totalBytes, &startTime, &endTime, &mimeType); err != nil {
+		if err := rows.Scan(&targetPath, &tabURL, &totalBytes, &startTime, &endTime, &mimeType); err != nil {
 			log.Warn(err)
 		}
 		data := download{
 			TargetPath: targetPath,
-			Url:        tabUrl,
+			URL:        tabURL,
 			TotalBytes: totalBytes,
 			StartTime:  typeutil.TimeEpoch(startTime),
 			EndTime:    typeutil.TimeEpoch(endTime),
@@ -119,7 +120,7 @@ func (f *FirefoxDownload) Parse(masterKey []byte) error {
 			fileSize := gjson.Get(json, "fileSize")
 			*f = append(*f, download{
 				TargetPath: path,
-				Url:        url,
+				URL:        url,
 				TotalBytes: fileSize.Int(),
 				StartTime:  typeutil.TimeStamp(dateAdded / 1000000),
 				EndTime:    typeutil.TimeStamp(endTime.Int() / 1000),

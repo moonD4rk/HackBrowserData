@@ -4,11 +4,12 @@ import (
 	"database/sql"
 	"os"
 
-	_ "github.com/mattn/go-sqlite3"
-
 	"hack-browser-data/internal/decrypter"
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
+
+	// import sqlite3 driver
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type ChromiumCreditCard []card
@@ -56,7 +57,7 @@ func (c *ChromiumCreditCard) Parse(masterKey []byte) error {
 			NickName:        nickname,
 		}
 		if masterKey == nil {
-			value, err = decrypter.DPApi(encryptValue)
+			value, err = decrypter.DPAPI(encryptValue)
 			if err != nil {
 				return err
 			}
@@ -112,7 +113,7 @@ func (c *YandexCreditCard) Parse(masterKey []byte) error {
 			NickName:        nickname,
 		}
 		if masterKey == nil {
-			value, err = decrypter.DPApi(encryptValue)
+			value, err = decrypter.DPAPI(encryptValue)
 			if err != nil {
 				return err
 			}

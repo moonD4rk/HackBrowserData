@@ -14,11 +14,9 @@ import (
 )
 
 var (
-	errSecurityKeyIsEmpty = errors.New("input [security find-generic-password -wa 'Chrome'] in terminal")
-	errPasswordIsEmpty    = errors.New("password is empty")
-	errDecryptFailed      = errors.New("decrypt encrypted value failed")
-	errDecodeASN1Failed   = errors.New("decode ASN1 data failed")
-	errEncryptedLength    = errors.New("length of encrypted password less than block size")
+	errPasswordIsEmpty  = errors.New("password is empty")
+	errDecodeASN1Failed = errors.New("decode ASN1 data failed")
+	errEncryptedLength  = errors.New("length of encrypted password less than block size")
 )
 
 type ASN1PBE interface {
@@ -44,13 +42,13 @@ func NewASN1PBE(b []byte) (pbe ASN1PBE, err error) {
 }
 
 // nssPBE Struct
-// SEQUENCE (2 elem)
-// 	SEQUENCE (2 elem)
-// 		OBJECT IDENTIFIER
-// 		SEQUENCE (2 elem)
-// 			OCTET STRING (20 byte)
-// 			INTEGER 1
-// 	OCTET STRING (16 byte)
+//
+//	SEQUENCE (2 elem)
+//		OBJECT IDENTIFIER
+//		SEQUENCE (2 elem)
+//			OCTET STRING (20 byte)
+//			INTEGER 1
+//	OCTET STRING (16 byte)
 type nssPBE struct {
 	AlgoAttr struct {
 		asn1.ObjectIdentifier
@@ -60,10 +58,6 @@ type nssPBE struct {
 		}
 	}
 	Encrypted []byte
-}
-
-func (n nssPBE) entrySalt() []byte {
-	return n.AlgoAttr.SaltAttr.EntrySalt
 }
 
 func (n nssPBE) Decrypt(globalSalt, masterPwd []byte) (key []byte, err error) {
@@ -82,26 +76,34 @@ func (n nssPBE) Decrypt(globalSalt, masterPwd []byte) (key []byte, err error) {
 	k2.Write(tkPlus)
 	k := append(k1.Sum(nil), k2.Sum(nil)...)
 	iv := k[len(k)-8:]
-	return des3Decrypt(k[:24], iv, n.Encrypted)
+	return des3Decrypt(k[:24], iv, n.encrypted())
+}
+
+func (n nssPBE) entrySalt() []byte {
+	return n.AlgoAttr.SaltAttr.EntrySalt
+}
+
+func (n nssPBE) encrypted() []byte {
+	return n.Encrypted
 }
 
 // MetaPBE Struct
-// SEQUENCE (2 elem)
-// 	SEQUENCE (2 elem)
-//     	OBJECT IDENTIFIER
-//     	SEQUENCE (2 elem)
-//       	SEQUENCE (2 elem)
-//         	OBJECT IDENTIFIER
-//         	SEQUENCE (4 elem)
-//           	OCTET STRING (32 byte)
-//           		INTEGER 1
-//           		INTEGER 32
-//           		SEQUENCE (1 elem)
-//             	OBJECT IDENTIFIER
-//       	SEQUENCE (2 elem)
-//         	OBJECT IDENTIFIER
-//         	OCTET STRING (14 byte)
-//   	OCTET STRING (16 byte)
+//
+//	SEQUENCE (2 elem)
+//		OBJECT IDENTIFIER
+//	    SEQUENCE (2 elem)
+//	    SEQUENCE (2 elem)
+//	      	OBJECT IDENTIFIER
+//	       	SEQUENCE (4 elem)
+//	       	OCTET STRING (32 byte)
+//	      		INTEGER 1
+//	       		INTEGER 32
+//	       		SEQUENCE (1 elem)
+//	          	OBJECT IDENTIFIER
+//	    SEQUENCE (2 elem)
+//	      	OBJECT IDENTIFIER
+//	      	OCTET STRING (14 byte)
+//	OCTET STRING (16 byte)
 type metaPBE struct {
 	AlgoAttr  algoAttr
 	Encrypted []byte
@@ -135,8 +137,8 @@ type slatAttr struct {
 func (m metaPBE) Decrypt(globalSalt, masterPwd []byte) (key2 []byte, err error) {
 	k := sha1.Sum(globalSalt)
 	key := pbkdf2.Key(k[:], m.entrySalt(), m.iterationCount(), m.keySize(), sha256.New)
-	iv := append([]byte{4, 14}, m.AlgoAttr.Data.IVData.IV...)
-	return aes128CBCDecrypt(key, iv, m.Encrypted)
+	iv := append([]byte{4, 14}, m.iv()...)
+	return aes128CBCDecrypt(key, iv, m.encrypted())
 }
 
 func (m metaPBE) entrySalt() []byte {
@@ -151,13 +153,21 @@ func (m metaPBE) keySize() int {
 	return m.AlgoAttr.Data.Data.SlatAttr.KeySize
 }
 
+func (m metaPBE) iv() []byte {
+	return m.AlgoAttr.Data.IVData.IV
+}
+
+func (m metaPBE) encrypted() []byte {
+	return m.Encrypted
+}
+
 // loginPBE Struct
-// SEQUENCE (3 elem)
-// 	OCTET STRING (16 byte)
-// 	SEQUENCE (2 elem)
-// 		OBJECT IDENTIFIER
-// 		OCTET STRING (8 byte)
-// 	OCTET STRING (16 byte)
+//
+//	OCTET STRING (16 byte)
+//	SEQUENCE (2 elem)
+//			OBJECT IDENTIFIER
+//			OCTET STRING (8 byte)
+//	OCTET STRING (16 byte)
 type loginPBE struct {
 	CipherText []byte
 	Data       struct {
@@ -168,7 +178,15 @@ type loginPBE struct {
 }
 
 func (l loginPBE) Decrypt(globalSalt, masterPwd []byte) (key []byte, err error) {
-	return des3Decrypt(globalSalt, l.Data.IV, l.Encrypted)
+	return des3Decrypt(globalSalt, l.iv(), l.encrypted())
+}
+
+func (l loginPBE) iv() []byte {
+	return l.Data.IV
+}
+
+func (l loginPBE) encrypted() []byte {
+	return l.Encrypted
 }
 
 func aes128CBCDecrypt(key, iv, encryptPass []byte) ([]byte, error) {
@@ -197,7 +215,7 @@ func pkcs5UnPadding(src []byte, blockSize int) []byte {
 	return src[:n-paddingNum]
 }
 
-// des3Decrypt use for decrypter firefox PBE
+// des3Decrypt use for decrypt firefox PBE
 func des3Decrypt(key, iv []byte, src []byte) ([]byte, error) {
 	block, err := des.NewTripleDESCipher(key)
 	if err != nil {
@@ -213,10 +231,9 @@ func paddingZero(s []byte, l int) []byte {
 	h := l - len(s)
 	if h <= 0 {
 		return s
-	} else {
-		for i := len(s); i < l; i++ {
-			s = append(s, 0)
-		}
-		return s
 	}
+	for i := len(s); i < l; i++ {
+		s = append(s, 0)
+	}
+	return s
 }

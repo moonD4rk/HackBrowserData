@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -55,7 +54,7 @@ func FilesInFolder(dir, filename string) ([]string, error) {
 
 // ReadFile reads the file from the provided path
 func ReadFile(filename string) (string, error) {
-	s, err := ioutil.ReadFile(filename)
+	s, err := os.ReadFile(filename)
 	return string(s), err
 }
 
@@ -71,20 +70,20 @@ func CopyDir(src, dst, skip string) error {
 // CopyDirHasSuffix copies the directory from the source to the destination
 // contain is the file if you want to copy, and rename copied filename with dir/index_filename
 func CopyDirHasSuffix(src, dst, suffix string) error {
-	var filelist []string
+	var files []string
 	err := filepath.Walk(src, func(path string, f os.FileInfo, err error) error {
 		if !f.IsDir() && strings.HasSuffix(strings.ToLower(f.Name()), suffix) {
-			filelist = append(filelist, path)
+			files = append(files, path)
 		}
 		return err
 	})
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(dst, 0o755); err != nil {
+	if err := os.MkdirAll(dst, 0o700); err != nil {
 		return err
 	}
-	for index, file := range filelist {
+	for index, file := range files {
 		// p = dir/index_file
 		p := fmt.Sprintf("%s/%d_%s", dst, index, BaseDir(file))
 		err = CopyFile(file, p)
@@ -97,20 +96,19 @@ func CopyDirHasSuffix(src, dst, suffix string) error {
 
 // CopyFile copies the file from the source to the destination
 func CopyFile(src, dst string) error {
-	// TODO: Handle read file error
-	d, err := ioutil.ReadFile(src)
+	s, err := os.ReadFile(src)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(dst, d, 0o777)
+	err = os.WriteFile(dst, s, 0o600)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-// Filename returns the filename from the provided path
-func Filename(browser, item, ext string) string {
+// ItemName returns the filename from the provided path
+func ItemName(browser, item, ext string) string {
 	replace := strings.NewReplacer(" ", "_", ".", "_", "-", "_")
 	return strings.ToLower(fmt.Sprintf("%s_%s.%s", replace.Replace(browser), item, ext))
 }
@@ -137,26 +135,27 @@ func ParentBaseDir(p string) string {
 
 // CompressDir compresses the directory into a zip file
 func CompressDir(dir string) error {
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return err
 	}
 	b := new(bytes.Buffer)
 	zw := zip.NewWriter(b)
 	for _, f := range files {
-		fw, _ := zw.Create(f.Name())
-		fileName := path.Join(dir, f.Name())
-		fileContent, err := ioutil.ReadFile(fileName)
+		fw, err := zw.Create(f.Name())
 		if err != nil {
-			zw.Close()
 			return err
 		}
-		_, err = fw.Write(fileContent)
+		name := path.Join(dir, f.Name())
+		content, err := os.ReadFile(name)
 		if err != nil {
-			zw.Close()
 			return err
 		}
-		err = os.Remove(fileName)
+		_, err = fw.Write(content)
+		if err != nil {
+			return err
+		}
+		err = os.Remove(name)
 		if err != nil {
 			return err
 		}
@@ -165,7 +164,7 @@ func CompressDir(dir string) error {
 		return err
 	}
 	filename := filepath.Join(dir, fmt.Sprintf("%s.zip", dir))
-	outFile, err := os.Create(filename)
+	outFile, err := os.Create(filepath.Clean(filename))
 	if err != nil {
 		return err
 	}
@@ -173,5 +172,5 @@ func CompressDir(dir string) error {
 	if err != nil {
 		return err
 	}
-	return nil
+	return outFile.Close()
 }

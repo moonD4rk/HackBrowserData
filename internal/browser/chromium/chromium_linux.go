@@ -32,7 +32,9 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 		return nil, err
 	}
 	defer func() {
-		session.Close()
+		if err := session.Close(); err != nil {
+			log.Errorf("close session failed: %v", err)
+		}
 	}()
 	collections, err := svc.GetAllCollections()
 	if err != nil {

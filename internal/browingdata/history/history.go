@@ -6,18 +6,19 @@ import (
 	"sort"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
-
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils/typeutil"
+
+	// import sqlite3 driver
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type ChromiumHistory []history
 
 type history struct {
 	Title         string
-	Url           string
+	URL           string
 	VisitCount    int
 	LastVisitTime time.Time
 }
@@ -48,7 +49,7 @@ func (c *ChromiumHistory) Parse(masterKey []byte) error {
 			log.Warn(err)
 		}
 		data := history{
-			Url:           url,
+			URL:           url,
 			Title:         title,
 			VisitCount:    visitCount,
 			LastVisitTime: typeutil.TimeEpoch(lastVisitTime),
@@ -109,7 +110,7 @@ func (f *FirefoxHistory) Parse(masterKey []byte) error {
 		}
 		*f = append(*f, history{
 			Title:         title,
-			Url:           url,
+			URL:           url,
 			VisitCount:    visitCount,
 			LastVisitTime: typeutil.TimeStamp(visitDate / 1000000),
 		})

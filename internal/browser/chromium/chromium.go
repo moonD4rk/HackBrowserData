@@ -32,7 +32,7 @@ func New(name, storage, profilePath string, items []item.Item) ([]*chromium, err
 	if err != nil {
 		return nil, err
 	}
-	var chromiumList []*chromium
+	chromiumList := make([]*chromium, 0, len(multiItemPaths))
 	for user, itemPaths := range multiItemPaths {
 		chromiumList = append(chromiumList, &chromium{
 			name:      fileutil.BrowserName(name, user),

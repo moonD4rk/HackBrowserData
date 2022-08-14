@@ -24,14 +24,14 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 	}
 	defer os.Remove(keyFile)
 	encryptedKey := gjson.Get(keyFile, "os_crypt.encrypted_key")
-	if encryptedKey.Exists() {
-		pureKey, err := base64.StdEncoding.DecodeString(encryptedKey.String())
-		if err != nil {
-			return nil, errDecodeMasterKeyFailed
-		}
-		c.masterKey, err = decrypter.DPApi(pureKey[5:])
-		log.Infof("%s initialized master key success", c.name)
-		return c.masterKey, err
+	if !encryptedKey.Exists() {
+		return nil, nil
 	}
-	return nil, nil
+	pureKey, err := base64.StdEncoding.DecodeString(encryptedKey.String())
+	if err != nil {
+		return nil, errDecodeMasterKeyFailed
+	}
+	c.masterKey, err = decrypter.DPAPI(pureKey[5:])
+	log.Infof("%s initialized master key success", c.name)
+	return c.masterKey, err
 }

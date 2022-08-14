@@ -1,0 +1,69 @@
+run:
+  timeout: '5m'
+  skip-dirs:
+    - 'assets'
+  allow-parallel-runners: true
+  modules-download-mode: 'readonly'
+
+linters:
+  enable:
+    - 'asciicheck'
+    - 'deadcode'
+    - 'depguard'
+    - 'dogsled'
+    - 'errorlint'
+    - 'exportloopref'
+    - 'gofmt'
+    - 'goheader'
+    - 'goimports'
+    - 'gomodguard'
+    - 'goprintffuncname'
+    - 'gosec'
+    - 'govet'
+    - 'ineffassign'
+    - 'makezero'
+    - 'misspell'
+    - 'paralleltest'
+    - 'prealloc'
+    - 'predeclared'
+    - 'revive'
+    - 'typecheck'
+    - 'unconvert'
+    - 'varcheck'
+    - 'whitespace'
+  disable:
+# unsupported lint with golang 1.18+ ref: https://github.com/golangci/golangci-lint/issues/2649
+    - 'bodyclose'
+    - 'gosimple'
+    - 'noctx'
+    - 'sqlclosecheck'
+    - 'staticcheck'
+    - 'structcheck'
+    - 'stylecheck'
+    - 'unused'
+    - 'errcheck'
+
+issues:
+  exclude-use-default: false
+  exclude:
+    - should have a package comment
+    - should have comment
+    # G101: Potential hardcoded credentials
+    - G101
+    # G103: Use of unsafe calls should be audited
+    - G103
+    # G304: Potential file inclusion via variable
+    - G304
+    # G404, G401, G502, G505: weak cryptographic list
+    - G401
+    - G404
+    - G502
+    - G505
+  exclude-rules:
+    - path: internal/browser/browser\.go
+      linters:
+        - 'deadcode'
+        - 'varcheck'
+        - 'unused'
+  max-issues-per-linter: 0
+  max-same-issues: 0

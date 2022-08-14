@@ -1,17 +1,14 @@
 package decrypter
 
 func Chromium(key, encryptPass []byte) ([]byte, error) {
-	chromeIV := []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
-	if len(encryptPass) > 3 {
-		if len(key) == 0 {
-			return nil, errSecurityKeyIsEmpty
-		}
-		return aes128CBCDecrypt(key, chromeIV, encryptPass[3:])
-	} else {
-		return nil, errDecryptFailed
+	if len(encryptPass) < 3 {
+		return nil, errPasswordIsEmpty
 	}
+
+	chromeIV := []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
+	return aes128CBCDecrypt(key, chromeIV, encryptPass[3:])
 }
 
-func DPApi(data []byte) ([]byte, error) {
+func DPAPI(data []byte) ([]byte, error) {
 	return nil, nil
 }
