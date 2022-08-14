@@ -128,9 +128,6 @@ USAGE:
    Export all browingdata(password/cookie/history/bookmark) from browser
    Github Link: https://github.com/moonD4rk/HackBrowserData
 
-VERSION:
-   0.4.3
-
 GLOBAL OPTIONS:
    --verbose, --vv                   verbose (default: false)
    --compress, --zip                 compress result to zip (default: false)

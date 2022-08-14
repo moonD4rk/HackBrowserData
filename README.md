@@ -5,7 +5,7 @@
 
 # HackBrowserData
 
-![CI](https://github.com/moonD4rk/HackBrowserData/workflows/CI/badge.svg?branch=master) ![Build Hack-Browser-Data Release](https://github.com/moonD4rk/HackBrowserData/workflows/Build%20Hack-Browser-Data%20Release/badge.svg)
+[![Lint](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml) [![build](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml) [![Release](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml)
 
 [中文说明](https://github.com/moonD4rk/HackBrowserData/blob/master/README_ZH.md) 
 
@@ -132,9 +132,6 @@ USAGE:
    [hack-browser-data -b chrome -f json -dir results -cc]
    Export all browingdata(password/cookie/history/bookmark) from browser
    Github Link: https://github.com/moonD4rk/HackBrowserData
-
-VERSION:
-   0.4.3
 
 GLOBAL OPTIONS:
    --verbose, --vv                   verbose (default: false)
