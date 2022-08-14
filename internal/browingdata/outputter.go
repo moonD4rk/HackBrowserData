@@ -52,7 +52,7 @@ func (o *OutPutter) CreateFile(dir, filename string) (*os.File, error) {
 
 	if dir != "" {
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
-			err := os.MkdirAll(dir, 0o777)
+			err := os.MkdirAll(dir, 0o750)
 			if err != nil {
 				return nil, err
 			}
@@ -62,7 +62,7 @@ func (o *OutPutter) CreateFile(dir, filename string) (*os.File, error) {
 	var file *os.File
 	var err error
 	p := filepath.Join(dir, filename)
-	file, err = os.OpenFile(p, os.O_TRUNC|os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666)
+	file, err = os.OpenFile(filepath.Clean(p), os.O_TRUNC|os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,6 @@ func (o *OutPutter) CreateFile(dir, filename string) (*os.File, error) {
 func (o *OutPutter) Ext() string {
 	if o.json {
 		return "json"
-	} else {
-		return "csv"
 	}
+	return "csv"
 }

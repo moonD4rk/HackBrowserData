@@ -28,10 +28,9 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 	)
 	// don't need chromium key file for macOS
 	defer os.Remove(item.TempChromiumKey)
-	// defer os.Remove(item.TempChromiumKey)
 	// Get the master key from the keychain
 	// $ security find-generic-password -wa 'Chrome'
-	cmd = exec.Command("security", "find-generic-password", "-wa", c.storage)
+	cmd = exec.Command("security", "find-generic-password", "-wa", strings.TrimSpace(c.storage)) //nolint:gosec
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()

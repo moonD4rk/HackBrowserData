@@ -4,18 +4,18 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/base64"
-	"io/ioutil"
 	"os"
 	"sort"
 	"time"
-
-	_ "github.com/mattn/go-sqlite3"
-	"github.com/tidwall/gjson"
 
 	"hack-browser-data/internal/decrypter"
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/log"
 	"hack-browser-data/internal/utils/typeutil"
+
+	// import sqlite3 driver
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/tidwall/gjson"
 )
 
 type ChromiumPassword []loginData
@@ -25,7 +25,7 @@ type loginData struct {
 	encryptPass []byte
 	encryptUser []byte
 	Password    string
-	LoginUrl    string
+	LoginURL    string
 	CreateDate  time.Time
 }
 
@@ -58,12 +58,12 @@ func (c *ChromiumPassword) Parse(masterKey []byte) error {
 		login := loginData{
 			UserName:    username,
 			encryptPass: pwd,
-			LoginUrl:    url,
+			LoginURL:    url,
 		}
 		if len(pwd) > 0 {
 			var err error
 			if masterKey == nil {
-				password, err = decrypter.DPApi(pwd)
+				password, err = decrypter.DPAPI(pwd)
 			} else {
 				password, err = decrypter.Chromium(masterKey, pwd)
 			}
@@ -125,13 +125,13 @@ func (c *YandexPassword) Parse(masterKey []byte) error {
 		login := loginData{
 			UserName:    username,
 			encryptPass: pwd,
-			LoginUrl:    url,
+			LoginURL:    url,
 		}
 
 		if len(pwd) > 0 {
 			var err error
 			if masterKey == nil {
-				password, err = decrypter.DPApi(pwd)
+				password, err = decrypter.DPAPI(pwd)
 			} else {
 				password, err = decrypter.Chromium(masterKey, pwd)
 			}
@@ -196,7 +196,7 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 			if err != nil {
 				return err
 			}
-			allLogin, err := getFirefoxLoginData(item.TempFirefoxPassword)
+			allLogin, err := getFirefoxLoginData()
 			if err != nil {
 				return err
 			}
@@ -218,7 +218,7 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 					return err
 				}
 				*f = append(*f, loginData{
-					LoginUrl:   v.LoginUrl,
+					LoginURL:   v.LoginURL,
 					UserName:   string(user),
 					Password:   string(pwd),
 					CreateDate: v.CreateDate,
@@ -251,12 +251,12 @@ func getFirefoxDecryptKey(key4file string) (item1, item2, a11, a102 []byte, err 
 	return item1, item2, a11, a102, nil
 }
 
-func getFirefoxLoginData(loginJson string) (l []loginData, err error) {
-	s, err := ioutil.ReadFile(loginJson)
+func getFirefoxLoginData() (l []loginData, err error) {
+	s, err := os.ReadFile(item.TempFirefoxPassword)
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(loginJson)
+	defer os.Remove(item.TempFirefoxPassword)
 	h := gjson.GetBytes(s, "logins")
 	if h.Exists() {
 		for _, v := range h.Array() {
@@ -265,7 +265,7 @@ func getFirefoxLoginData(loginJson string) (l []loginData, err error) {
 				user []byte
 				pass []byte
 			)
-			m.LoginUrl = v.Get("formSubmitURL").String()
+			m.LoginURL = v.Get("formSubmitURL").String()
 			user, err = base64.StdEncoding.DecodeString(v.Get("encryptedUsername").String())
 			if err != nil {
 				return nil, err

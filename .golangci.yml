@@ -11,7 +11,6 @@ linters:
     - 'deadcode'
     - 'depguard'
     - 'dogsled'
-    - 'errcheck'
     - 'errorlint'
     - 'exportloopref'
     - 'gofmt'
@@ -42,6 +41,7 @@ linters:
     - 'structcheck'
     - 'stylecheck'
     - 'unused'
+    - 'errcheck'
 
 issues:
   exclude-use-default: false
@@ -52,7 +52,9 @@ issues:
     - G101
     # G103: Use of unsafe calls should be audited
     - G103
-    # G404, G401, G502, G505 weak cryptographic list
+    # G304: Potential file inclusion via variable
+    - G304
+    # G404, G401, G502, G505: weak cryptographic list
     - G401
     - G404
     - G502

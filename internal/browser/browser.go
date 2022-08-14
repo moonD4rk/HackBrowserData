@@ -119,14 +119,11 @@ const (
 	chromeBetaName = "Chrome Beta"
 	chromiumName   = "Chromium"
 	edgeName       = "Microsoft Edge"
-	speed360Name   = "360speed"
-	qqBrowserName  = "QQ"
 	braveName      = "Brave"
 	operaName      = "Opera"
 	operaGXName    = "OperaGX"
 	vivaldiName    = "Vivaldi"
 	coccocName     = "CocCoc"
 	yandexName     = "Yandex"
-
-	firefoxName = "Firefox"
+	firefoxName    = "Firefox"
 )

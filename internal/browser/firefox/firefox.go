@@ -35,7 +35,8 @@ func New(name, storage, profilePath string, items []item.Item) ([]*firefox, erro
 	if err != nil {
 		return nil, err
 	}
-	var firefoxList []*firefox
+
+	firefoxList := make([]*firefox, 0, len(multiItemPaths))
 	for name, itemPaths := range multiItemPaths {
 		firefoxList = append(firefoxList, &firefox{
 			name:      fmt.Sprintf("firefox-%s", name),

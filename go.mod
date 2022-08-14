@@ -1,6 +1,6 @@
 module hack-browser-data
 
-go 1.18
+go 1.19
 
 require (
 	github.com/gocarina/gocsv v0.0.0-20211203214250-4735fba0c1d9

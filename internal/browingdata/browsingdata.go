@@ -53,17 +53,22 @@ func (d *Data) Output(dir, browserName, flag string) {
 			// if the length of the export data is 0, then it is not necessary to output
 			continue
 		}
-		filename := fileutil.Filename(browserName, source.Name(), output.Ext())
+		filename := fileutil.ItemName(browserName, source.Name(), output.Ext())
 
 		f, err := output.CreateFile(dir, filename)
 		if err != nil {
-			log.Errorf("create file error %s", err)
+			log.Errorf("create file %s error %s", filename, err.Error())
+			continue
 		}
 		if err := output.Write(source, f); err != nil {
-			log.Errorf("%s write to file %s error %s", source.Name(), filename, err.Error())
+			log.Errorf("write to file %s error %s", filename, err.Error())
+			continue
+		}
+		if err := f.Close(); err != nil {
+			log.Errorf("close file %s error %s", filename, err.Error())
+			continue
 		}
 		log.Noticef("output to file %s success", path.Join(dir, filename))
-		f.Close()
 	}
 }
 

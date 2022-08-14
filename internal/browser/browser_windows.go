@@ -6,6 +6,11 @@ import (
 	"hack-browser-data/internal/item"
 )
 
+const (
+	speed360Name  = "360speed"
+	qqBrowserName = "QQ"
+)
+
 var (
 	chromiumList = map[string]struct {
 		name        string

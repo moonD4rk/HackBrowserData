@@ -6,6 +6,7 @@ import (
 )
 
 func TestNewOutPutter(t *testing.T) {
+	t.Parallel()
 	out := NewOutPutter("json")
 	if out == nil {
 		t.Error("New() returned nil")
