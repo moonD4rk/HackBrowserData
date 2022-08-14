@@ -1,5 +1,9 @@
 package decrypter
 
+import (
+	"errors"
+)
+
 var (
 	errSecurityKeyIsEmpty = errors.New("input [security find-generic-password -wa 'Chrome'] in terminal")
 )
