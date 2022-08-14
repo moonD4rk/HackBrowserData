@@ -114,7 +114,6 @@ func ListBrowser() []string {
 // home dir path for all platforms
 var homeDir, _ = os.UserHomeDir()
 
-//nolint:unused
 const (
 	chromeName     = "Chrome"
 	chromeBetaName = "Chrome Beta"

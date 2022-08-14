@@ -185,6 +185,7 @@ func (l loginPBE) Decrypt(globalSalt, masterPwd []byte) (key []byte, err error) 
 func (l loginPBE) iv() []byte {
 	return l.Data.IV
 }
+
 func (l loginPBE) encrypted() []byte {
 	return l.Encrypted
 }

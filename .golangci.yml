@@ -59,5 +59,11 @@ issues:
     - G404
     - G502
     - G505
+  exclude-rules:
+    - path: internal/browser/browser\.go
+      linters:
+        - 'deadcode'
+        - 'varcheck'
+        - 'unused'
   max-issues-per-linter: 0
   max-same-issues: 0
