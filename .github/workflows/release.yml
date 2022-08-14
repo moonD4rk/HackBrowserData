@@ -1,8 +1,9 @@
-name: Release HackBrowserData
+name: Release
 on:
   push:
-    branches:
-      - master
+    tags:
+      - "*"
+  workflow_dispatch:
 
 jobs:
   build:
@@ -15,7 +16,7 @@ jobs:
       - name: Use Golang
         uses: actions/setup-go@v1
         with:
-          go-version: "1.18"
+          go-version: "1.19"
 
       -
         name: Build with xgo
