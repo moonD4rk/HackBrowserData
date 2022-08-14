@@ -1,12 +1,16 @@
-name: CI
-on: [push]
+name: build
+on:
+  push:
+    branches:
+      - master
+  pull_request:
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goVer: [1.18]
+        goVer: [1.19]
 
     steps:
     - name: Set up Go ${{ matrix.goVer }}
@@ -22,8 +26,9 @@ jobs:
       run: |
         go get -v -t -d ./...
         go get gopkg.in/check.v1
+        
+    - name: Format
+      run: diff -u <(echo -n) <(gofmt -d .)    
+      
     - name: Build
       run: go build -v ./...
-
-    - name: Format
-      run: diff -u <(echo -n) <(gofmt -d .)
