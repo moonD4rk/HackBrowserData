@@ -1,5 +1,9 @@
 package decrypter
 
+var (
+	errSecurityKeyIsEmpty = errors.New("input [security find-generic-password -wa 'Chrome'] in terminal")
+)
+
 func Chromium(key, encryptPass []byte) ([]byte, error) {
 	if len(encryptPass) <= 3 {
 		return nil, errPasswordIsEmpty
