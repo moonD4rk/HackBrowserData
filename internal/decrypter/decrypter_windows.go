@@ -11,9 +11,6 @@ func Chromium(key, encryptPass []byte) ([]byte, error) {
 	if len(encryptPass) < 3 {
 		return nil, errPasswordIsEmpty
 	}
-	if len(key) == 0 {
-		return nil, errSecurityKeyIsEmpty
-	}
 
 	return aesGCMDecrypt(encryptPass[15:], key, encryptPass[3:15])
 }
@@ -21,9 +18,6 @@ func Chromium(key, encryptPass []byte) ([]byte, error) {
 func ChromiumForYandex(key, encryptPass []byte) ([]byte, error) {
 	if len(encryptPass) < 3 {
 		return nil, errPasswordIsEmpty
-	}
-	if len(key) == 0 {
-		return nil, errSecurityKeyIsEmpty
 	}
 	// remove Prefix 'v10'
 	// gcmBlockSize         = 16
