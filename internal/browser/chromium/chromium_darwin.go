@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	ErrWrongSecurityCommand   = errors.New("macOS wrong security command")
-	ErrCouldNotFindInKeychain = errors.New("macOS could not find in keychain")
+	errWrongSecurityCommand   = errors.New("wrong security command")
+	errCouldNotFindInKeychain = errors.New("could not be find in keychain")
 )
 
 func (c *chromium) GetMasterKey() ([]byte, error) {
@@ -39,19 +39,19 @@ func (c *chromium) GetMasterKey() ([]byte, error) {
 	}
 	if stderr.Len() > 0 {
 		if strings.Contains(stderr.String(), "could not be found") {
-			return nil, ErrCouldNotFindInKeychain
+			return nil, errCouldNotFindInKeychain
 		}
 		return nil, errors.New(stderr.String())
 	}
 	chromeSecret := bytes.TrimSpace(stdout.Bytes())
 	if chromeSecret == nil {
-		return nil, ErrWrongSecurityCommand
+		return nil, errWrongSecurityCommand
 	}
 	chromeSalt := []byte("saltysalt")
 	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157
 	key := pbkdf2.Key(chromeSecret, chromeSalt, 1003, 16, sha1.New)
 	if key == nil {
-		return nil, ErrWrongSecurityCommand
+		return nil, errWrongSecurityCommand
 	}
 	c.masterKey = key
 	log.Infof("%s initialized master key success", c.name)

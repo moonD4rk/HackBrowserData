@@ -96,7 +96,7 @@ var (
 	braveProfilePath       = homeDir + "/AppData/Local/BraveSoftware/Brave-Browser/User Data/Default/"
 	speed360ProfilePath    = homeDir + "/AppData/Local/360chrome/Chrome/User Data/Default/"
 	qqBrowserProfilePath   = homeDir + "/AppData/Local/Tencent/QQBrowser/User Data/Default/"
-	operaProfilePath       = homeDir + "/AppData/Roaming/Opera Software/Opera Stable/Default/"
+	operaProfilePath       = homeDir + "/AppData/Roaming/Opera Software/Opera Stable/"
 	operaGXProfilePath     = homeDir + "/AppData/Roaming/Opera Software/Opera GX Stable/"
 	vivaldiProfilePath     = homeDir + "/AppData/Local/Vivaldi/User Data/Default/"
 	coccocProfilePath      = homeDir + "/AppData/Local/CocCoc/Browser/User Data/Default/"
