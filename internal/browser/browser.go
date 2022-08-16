@@ -3,6 +3,7 @@ package browser
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"hack-browser-data/internal/browingdata"
@@ -108,6 +109,7 @@ func ListBrowser() []string {
 	var l []string
 	l = append(l, typeutil.Keys(chromiumList)...)
 	l = append(l, typeutil.Keys(firefoxList)...)
+	sort.Strings(l)
 	return l
 }
 
