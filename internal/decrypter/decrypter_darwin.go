@@ -1,3 +1,5 @@
+//go:build darwin
+
 package decrypter
 
 func Chromium(key, encryptPass []byte) ([]byte, error) {

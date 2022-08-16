@@ -1,3 +1,5 @@
+//go:build linux
+
 package decrypter
 
 func Chromium(key, encryptPass []byte) ([]byte, error) {

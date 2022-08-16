@@ -124,14 +124,17 @@ func chromiumWalkFunc(items []item.Item, multiItemPaths map[string]map[item.Item
 	return func(path string, info fs.FileInfo, err error) error {
 		for _, v := range items {
 			if info.Name() == v.FileName() {
-				parentBaseDir := fileutil.ParentBaseDir(path)
-				if parentBaseDir == "System Profile" {
+				if strings.Contains(path, "System Profile") {
 					continue
 				}
-				if _, exist := multiItemPaths[parentBaseDir]; exist {
-					multiItemPaths[parentBaseDir][v] = path
+				profileFolder := fileutil.ParentBaseDir(path)
+				if strings.Contains(filepath.ToSlash(path), "/Network/Cookies") {
+					profileFolder = fileutil.BaseDir(strings.ReplaceAll(filepath.ToSlash(path), "/Network/Cookies", ""))
+				}
+				if _, exist := multiItemPaths[profileFolder]; exist {
+					multiItemPaths[profileFolder][v] = path
 				} else {
-					multiItemPaths[parentBaseDir] = map[item.Item]string{v: path}
+					multiItemPaths[profileFolder] = map[item.Item]string{v: path}
 				}
 			}
 		}
