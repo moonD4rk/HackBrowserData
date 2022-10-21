@@ -72,6 +72,7 @@ func Execute() {
 	}
 	err := app.Run(os.Args)
 	if err != nil {
+		log.Init("debug")
 		log.Error(err)
 	}
 }
