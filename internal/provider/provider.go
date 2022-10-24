@@ -98,7 +98,7 @@ func pickFirefox(name, profile string) []browser.Browser {
 	return nil
 }
 
-func ListBrowser() []string {
+func ListBrowsers() []string {
 	var l []string
 	l = append(l, typeutil.Keys(chromiumList)...)
 	l = append(l, typeutil.Keys(firefoxList)...)
