@@ -1,4 +1,4 @@
-package browser
+package provider
 
 import (
 	"os"
@@ -6,23 +6,16 @@ import (
 	"sort"
 	"strings"
 
-	"hack-browser-data/internal/browingdata"
-	"hack-browser-data/internal/browser/chromium"
-	"hack-browser-data/internal/browser/firefox"
+	"hack-browser-data/internal/browser"
 	"hack-browser-data/internal/log"
+	"hack-browser-data/internal/provider/chromium"
+	"hack-browser-data/internal/provider/firefox"
 	"hack-browser-data/internal/utils/fileutil"
 	"hack-browser-data/internal/utils/typeutil"
 )
 
-type Browser interface {
-	// Name is browser's name
-	Name() string
-	// BrowsingData returns all browsing data in the browser.
-	BrowsingData() (*browingdata.Data, error)
-}
-
-func PickBrowser(name, profile string) ([]Browser, error) {
-	var browsers []Browser
+func PickBrowsers(name, profile string) ([]browser.Browser, error) {
+	var browsers []browser.Browser
 	clist := pickChromium(name, profile)
 	for _, b := range clist {
 		if b != nil {
@@ -38,8 +31,8 @@ func PickBrowser(name, profile string) ([]Browser, error) {
 	return browsers, nil
 }
 
-func pickChromium(name, profile string) []Browser {
-	var browsers []Browser
+func pickChromium(name, profile string) []browser.Browser {
+	var browsers []browser.Browser
 	name = strings.ToLower(name)
 	if name == "all" {
 		for _, v := range chromiumList {
@@ -77,8 +70,8 @@ func pickChromium(name, profile string) []Browser {
 	return browsers
 }
 
-func pickFirefox(name, profile string) []Browser {
-	var browsers []Browser
+func pickFirefox(name, profile string) []browser.Browser {
+	var browsers []browser.Browser
 	name = strings.ToLower(name)
 	if name == "all" || name == "firefox" {
 		for _, v := range firefoxList {
