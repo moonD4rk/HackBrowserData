@@ -28,8 +28,6 @@ linters:
     - 'revive'
     - 'typecheck'
     - 'unconvert'
-# The linter 'varcheck' 'deadcode' 'structcheck' is deprecated (since v1.49.0), use 'unused' instead.
-    - 'unused'
     - 'whitespace'
   disable:
 # unsupported lint with golang 1.18+ ref: https://github.com/golangci/golangci-lint/issues/2649
@@ -38,8 +36,12 @@ linters:
     - 'noctx'
     - 'sqlclosecheck'
     - 'staticcheck'
+    - 'structcheck'
     - 'stylecheck'
+    - 'unused'
     - 'errcheck'
+    - 'deadcode'
+    - 'varcheck'
 
 issues:
   exclude-use-default: false
@@ -58,7 +60,7 @@ issues:
     - G502
     - G505
   exclude-rules:
-    - path: internal/browser/browser\.go
+    - path: internal/provider/provider\.go
       linters:
         - 'unused'
   max-issues-per-linter: 0

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"hack-browser-data/internal/browingdata"
+	"hack-browser-data/internal/browser"
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/utils/fileutil"
 	"hack-browser-data/internal/utils/typeutil"
@@ -21,7 +22,7 @@ type chromium struct {
 }
 
 // New create instance of chromium browser, fill item's path if item is existed.
-func New(name, storage, profilePath string, items []item.Item) ([]*chromium, error) {
+func New(name, storage, profilePath string, items []item.Item) ([]browser.Browser, error) {
 	c := &chromium{
 		name:        name,
 		storage:     storage,
@@ -32,7 +33,7 @@ func New(name, storage, profilePath string, items []item.Item) ([]*chromium, err
 	if err != nil {
 		return nil, err
 	}
-	chromiumList := make([]*chromium, 0, len(multiItemPaths))
+	chromiumList := make([]browser.Browser, 0, len(multiItemPaths))
 	for user, itemPaths := range multiItemPaths {
 		chromiumList = append(chromiumList, &chromium{
 			name:      fileutil.BrowserName(name, user),

@@ -1,6 +1,6 @@
 //go:build windows
 
-package browser
+package provider
 
 import (
 	"hack-browser-data/internal/item"
