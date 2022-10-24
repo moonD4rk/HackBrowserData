@@ -190,4 +190,4 @@ result/
 results/
 
 hack-browser-data
-!/hack-browser-data
+!/cmd/hack-browser-data
