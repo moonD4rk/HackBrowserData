@@ -1,6 +1,7 @@
 package main
 
 import (
+	glog "log"
 	"os"
 	"strings"
 
@@ -69,7 +70,6 @@ func Execute() {
 	}
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Init("debug")
-		log.Error(err)
+		glog.Fatal(err)
 	}
 }
