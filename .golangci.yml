@@ -8,7 +8,6 @@ run:
 linters:
   enable:
     - 'asciicheck'
-    - 'deadcode'
     - 'depguard'
     - 'dogsled'
     - 'errorlint'
@@ -29,7 +28,6 @@ linters:
     - 'revive'
     - 'typecheck'
     - 'unconvert'
-    - 'varcheck'
     - 'whitespace'
   disable:
 # unsupported lint with golang 1.18+ ref: https://github.com/golangci/golangci-lint/issues/2649
@@ -42,6 +40,8 @@ linters:
     - 'stylecheck'
     - 'unused'
     - 'errcheck'
+    - 'deadcode'
+    - 'varcheck'
 
 issues:
   exclude-use-default: false
@@ -60,10 +60,8 @@ issues:
     - G502
     - G505
   exclude-rules:
-    - path: internal/browser/browser\.go
+    - path: internal/provider/provider\.go
       linters:
-        - 'deadcode'
-        - 'varcheck'
         - 'unused'
   max-issues-per-linter: 0
   max-same-issues: 0

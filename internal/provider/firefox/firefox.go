@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"hack-browser-data/internal/browingdata"
+	"hack-browser-data/internal/browser"
 	"hack-browser-data/internal/item"
 	"hack-browser-data/internal/utils/fileutil"
 	"hack-browser-data/internal/utils/typeutil"
@@ -24,7 +25,7 @@ type firefox struct {
 var ErrProfilePathNotFound = errors.New("profile path not found")
 
 // New returns a new firefox instance.
-func New(name, storage, profilePath string, items []item.Item) ([]*firefox, error) {
+func New(name, storage, profilePath string, items []item.Item) ([]browser.Browser, error) {
 	f := &firefox{
 		name:        name,
 		storage:     storage,
@@ -36,7 +37,7 @@ func New(name, storage, profilePath string, items []item.Item) ([]*firefox, erro
 		return nil, err
 	}
 
-	firefoxList := make([]*firefox, 0, len(multiItemPaths))
+	firefoxList := make([]browser.Browser, 0, len(multiItemPaths))
 	for name, itemPaths := range multiItemPaths {
 		firefoxList = append(firefoxList, &firefox{
 			name:      fmt.Sprintf("firefox-%s", name),
