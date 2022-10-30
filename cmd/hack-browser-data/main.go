@@ -1,7 +1,6 @@
 package main
 
 import (
-	glog "log"
 	"os"
 	"strings"
 
@@ -70,6 +69,6 @@ func Execute() {
 	}
 	err := app.Run(os.Args)
 	if err != nil {
-		glog.Fatal(err)
+		panic(err)
 	}
 }
