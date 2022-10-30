@@ -2,13 +2,13 @@ package browingdata
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
 	"path/filepath"
 
 	"github.com/gocarina/gocsv"
-	jsoniter "github.com/json-iterator/go"
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
 )
@@ -31,7 +31,7 @@ func NewOutPutter(flag string) *OutPutter {
 func (o *OutPutter) Write(data Source, writer io.Writer) error {
 	switch o.json {
 	case true:
-		encoder := jsoniter.NewEncoder(writer)
+		encoder := json.NewEncoder(writer)
 		encoder.SetIndent("  ", "  ")
 		encoder.SetEscapeHTML(false)
 		return encoder.Encode(data)
