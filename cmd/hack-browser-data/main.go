@@ -69,6 +69,6 @@ func Execute() {
 	}
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Error(err)
+		panic(err)
 	}
 }
