@@ -73,6 +73,16 @@ var (
 			profilePath: qqBrowserProfilePath,
 			items:       item.DefaultChromium,
 		},
+		"dcbrowser": {
+			name:        dcbrowserName,
+			profilePath: dcbrowserUserDataPath,
+			items:       item.DefaultChromium,
+		},
+		"sougou": {
+			name:        sougouName,
+			profilePath: dcbrowserUserDataPath,
+			items:       item.DefaultChromium,
+		},
 	}
 	firefoxList = map[string]struct {
 		name        string
@@ -101,6 +111,8 @@ var (
 	vivaldiProfilePath     = homeDir + "/AppData/Local/Vivaldi/User Data/Default/"
 	coccocProfilePath      = homeDir + "/AppData/Local/CocCoc/Browser/User Data/Default/"
 	yandexProfilePath      = homeDir + "/AppData/Local/Yandex/YandexBrowser/User Data/Default/"
+	dcbrowserUserDataPath  = homeDir + "/AppData/Local/DCBrowser/User Data/Default/"
+	sougouUserDataPath     = homeDir + "/AppData/Roaming/SogouExplorer/Webkit/Default/"
 
 	firefoxProfilePath = homeDir + "/AppData/Roaming/Mozilla/Firefox/Profiles/"
 )
