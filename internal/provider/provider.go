@@ -123,4 +123,6 @@ const (
 	firefoxName    = "Firefox"
 	speed360Name   = "360speed"
 	qqBrowserName  = "QQ"
+	dcbrowserName  = "dcbrowser"
+	sougouName     = "Sougou"
 )
