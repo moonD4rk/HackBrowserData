@@ -73,7 +73,7 @@ func (c *ChromiumHistory) Length() int {
 type FirefoxHistory []history
 
 const (
-	queryFirefoxHistory = `SELECT id, url, last_visit_date, title, visit_count FROM moz_places where title not null`
+	queryFirefoxHistory = `SELECT id, url, COALESCE(last_visit_date, 0), COALESCE(title, ''), visit_count FROM moz_places`
 	closeJournalMode    = `PRAGMA journal_mode=off`
 )
 
