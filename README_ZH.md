@@ -121,7 +121,7 @@ CC=x86_64-linux-musl-gcc CXX=x86_64-linux-musl-g++ GOARCH=amd64 GOOS=linux CGO_E
 ```
 PS C:\test> .\hack-browser-data.exe -h
 NAME:
-   hack-browser-data - Export passwords/cookies/history/bookmarks from browser
+   hack-browser-data - Export password|bookmark|cookie|history|credit card|download|localStorage|extension from browser
 
 USAGE:
    [hack-browser-data -b chrome -f json -dir results -cc]
