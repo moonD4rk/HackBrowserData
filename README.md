@@ -126,7 +126,7 @@ You can double-click to run, or use command line.
 ```
 PS C:\test> .\hack-browser-data.exe -h
 NAME:
-   hack-browser-data - Export passwords/cookies/history/bookmarks from browser
+   hack-browser-data - Export password|bookmark|cookie|history|credit card|download|localStorage|extension from browser
 
 USAGE:
    [hack-browser-data -b chrome -f json -dir results -cc]
