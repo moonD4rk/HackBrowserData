@@ -5,7 +5,6 @@ go 1.19
 require (
 	github.com/gocarina/gocsv v0.0.0-20230226133904-70c27cb2918a
 	github.com/godbus/dbus/v5 v5.1.0
-	github.com/gookit/color v1.5.2
 	github.com/gookit/slog v0.4.0
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/otiai10/copy v1.9.0
@@ -21,6 +20,7 @@ require (
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
+	github.com/gookit/color v1.5.2 // indirect
 	github.com/gookit/goutil v0.6.1 // indirect
 	github.com/gookit/gsr v0.0.8 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
