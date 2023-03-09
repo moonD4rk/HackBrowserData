@@ -61,7 +61,7 @@ func ReadFile(filename string) (string, error) {
 // CopyDir copies the directory from the source to the destination
 // skip the file if you don't want to copy
 func CopyDir(src, dst, skip string) error {
-	s := cp.Options{Skip: func(src string) (bool, error) {
+	s := cp.Options{Skip: func(info os.FileInfo, src, dst string) (bool, error) {
 		return strings.HasSuffix(strings.ToLower(src), skip), nil
 	}}
 	return cp.Copy(src, dst, s)
