@@ -3,7 +3,6 @@ package log
 import (
 	"os"
 
-	"github.com/gookit/color"
 	"github.com/gookit/slog"
 )
 
@@ -24,9 +23,9 @@ func newStdLogger(level slog.Level) *slog.SugaredLogger {
 	return slog.NewSugaredLogger(os.Stdout, level).Configure(func(sl *slog.SugaredLogger) {
 		sl.SetName("stdLogger")
 		sl.ReportCaller = true
-		sl.CallerSkip = 3
+		sl.CallerSkip = 7
 		// auto enable console color
-		sl.Formatter.(*slog.TextFormatter).EnableColor = color.SupportColor()
+		sl.Formatter.(*slog.TextFormatter).EnableColor = false
 		sl.Formatter.(*slog.TextFormatter).SetTemplate(template)
 	})
 }
