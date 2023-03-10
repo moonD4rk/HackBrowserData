@@ -30,7 +30,7 @@ linters:
     - 'unconvert'
     - 'whitespace'
   disable:
-# unsupported lint with golang 1.18+ ref: https://github.com/golangci/golangci-lint/issues/2649
+    # unsupported lint with golang 1.18+ ref: https://github.com/golangci/golangci-lint/issues/2649
     - 'bodyclose'
     - 'gosimple'
     - 'noctx'
@@ -60,7 +60,7 @@ issues:
     - G502
     - G505
   exclude-rules:
-    - path: internal/provider/provider\.go
+    - path: browser/browser\.go
       linters:
         - 'unused'
   max-issues-per-linter: 0
