@@ -2,13 +2,12 @@ package main
 
 import (
 	"os"
-	"strings"
-
-	"hack-browser-data/internal/log"
-	"hack-browser-data/internal/provider"
-	"hack-browser-data/internal/utils/fileutil"
 
 	"github.com/urfave/cli/v2"
+
+	"github.com/moond4rk/HackBrowserData/browser"
+	"github.com/moond4rk/HackBrowserData/log"
+	"github.com/moond4rk/HackBrowserData/utils/fileutil"
 )
 
 var (
@@ -33,7 +32,7 @@ func Execute() {
 		Flags: []cli.Flag{
 			&cli.BoolFlag{Name: "verbose", Aliases: []string{"vv"}, Destination: &verbose, Value: false, Usage: "verbose"},
 			&cli.BoolFlag{Name: "compress", Aliases: []string{"zip"}, Destination: &compress, Value: false, Usage: "compress result to zip"},
-			&cli.StringFlag{Name: "browser", Aliases: []string{"b"}, Destination: &browserName, Value: "all", Usage: "available browsers: all|" + strings.Join(provider.ListBrowsers(), "|")},
+			&cli.StringFlag{Name: "browser", Aliases: []string{"b"}, Destination: &browserName, Value: "all", Usage: "available browsers: all|" + browser.Names()},
 			&cli.StringFlag{Name: "results-dir", Aliases: []string{"dir"}, Destination: &outputDir, Value: "results", Usage: "export dir"},
 			&cli.StringFlag{Name: "format", Aliases: []string{"f"}, Destination: &outputFormat, Value: "csv", Usage: "file name csv|json"},
 			&cli.StringFlag{Name: "profile-path", Aliases: []string{"p"}, Destination: &profilePath, Value: "", Usage: "custom profile dir path, get with chrome://version"},
@@ -46,7 +45,7 @@ func Execute() {
 				log.Init("notice")
 			}
 
-			browsers, err := provider.PickBrowsers(browserName, profilePath)
+			browsers, err := browser.PickBrowsers(browserName, profilePath)
 			if err != nil {
 				log.Error(err)
 			}
