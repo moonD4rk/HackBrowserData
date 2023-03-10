@@ -8,19 +8,20 @@ import (
 
 var std = &slog.SugaredLogger{}
 
-func Init(l string) {
-	if l == "debug" {
-		std = newStdLogger(slog.DebugLevel)
-	} else {
-		std = newStdLogger(slog.NoticeLevel)
-	}
+func init() {
+	std = newStdLogger(slog.NoticeLevel)
+}
+
+// SetVerbose set log level to debug
+func SetVerbose() {
+	std = newStdLogger(slog.DebugLevel)
 }
 
 const template = "[{{level}}] [{{caller}}] {{message}} {{data}} {{extra}}\n"
 
-// NewStdLogger instance
+// newStdLogger is a new std logger
 func newStdLogger(level slog.Level) *slog.SugaredLogger {
-	return slog.NewSugaredLogger(os.Stdout, level).Configure(func(sl *slog.SugaredLogger) {
+	return slog.NewSugaredLogger(os.Stdout, level).Config(func(sl *slog.SugaredLogger) {
 		sl.SetName("stdLogger")
 		sl.ReportCaller = true
 		sl.CallerSkip = 7

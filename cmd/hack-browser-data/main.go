@@ -40,11 +40,8 @@ func Execute() {
 		HideHelpCommand: true,
 		Action: func(c *cli.Context) error {
 			if verbose {
-				log.Init("debug")
-			} else {
-				log.Init("notice")
+				log.SetVerbose()
 			}
-
 			browsers, err := browser.PickBrowsers(browserName, profilePath)
 			if err != nil {
 				log.Error(err)
