@@ -17,6 +17,7 @@ var (
 	verbose      bool
 	compress     bool
 	profilePath  string
+	isFullExport bool
 )
 
 func main() {
@@ -36,6 +37,7 @@ func Execute() {
 			&cli.StringFlag{Name: "results-dir", Aliases: []string{"dir"}, Destination: &outputDir, Value: "results", Usage: "export dir"},
 			&cli.StringFlag{Name: "format", Aliases: []string{"f"}, Destination: &outputFormat, Value: "csv", Usage: "file name csv|json"},
 			&cli.StringFlag{Name: "profile-path", Aliases: []string{"p"}, Destination: &profilePath, Value: "", Usage: "custom profile dir path, get with chrome://version"},
+			&cli.BoolFlag{Name: "full-export", Aliases: []string{"full"}, Destination: &isFullExport, Value: true, Usage: "is export full browsing data"},
 		},
 		HideHelpCommand: true,
 		Action: func(c *cli.Context) error {
@@ -48,12 +50,13 @@ func Execute() {
 			}
 
 			for _, b := range browsers {
-				data, err := b.BrowsingData()
+				data, err := b.BrowsingData(isFullExport)
 				if err != nil {
 					log.Error(err)
 				}
 				data.Output(outputDir, b.Name(), outputFormat)
 			}
+
 			if compress {
 				if err = fileutil.CompressDir(outputDir); err != nil {
 					log.Error(err)
