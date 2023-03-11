@@ -13,8 +13,8 @@ import (
 	cp "github.com/otiai10/copy"
 )
 
-// FileExists checks if the file exists in the provided path
-func FileExists(filename string) bool {
+// IsFileExists checks if the file exists in the provided path
+func IsFileExists(filename string) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
 		return false
@@ -25,9 +25,9 @@ func FileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-// FolderExists checks if the folder exists
-func FolderExists(foldername string) bool {
-	info, err := os.Stat(foldername)
+// IsDirExists checks if the folder exists
+func IsDirExists(folder string) bool {
+	info, err := os.Stat(folder)
 	if os.IsNotExist(err) {
 		return false
 	}
@@ -39,8 +39,8 @@ func FolderExists(foldername string) bool {
 
 // FilesInFolder returns the filepath contains in the provided folder
 func FilesInFolder(dir, filename string) ([]string, error) {
-	if !FolderExists(dir) {
-		return nil, errors.New(dir + " folder does not exist")
+	if !IsDirExists(dir) {
+		return nil, errors.New(dir + "folder does not exist")
 	}
 	var files []string
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
@@ -114,7 +114,7 @@ func ItemName(browser, item, ext string) string {
 }
 
 func BrowserName(browser, user string) string {
-	replace := strings.NewReplacer(" ", "_", ".", "_", "-", "_", "Profile", "User")
+	replace := strings.NewReplacer(" ", "_", ".", "_", "-", "_", "Profile", "user")
 	return strings.ToLower(fmt.Sprintf("%s_%s", replace.Replace(browser), replace.Replace(user)))
 }
 
