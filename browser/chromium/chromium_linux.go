@@ -4,7 +4,7 @@ package chromium
 
 import (
 	"crypto/sha1"
-	"errors"
+	"fmt"
 	"os"
 
 	"github.com/godbus/dbus/v5"
@@ -17,12 +17,13 @@ import (
 
 func (c *Chromium) GetMasterKey() ([]byte, error) {
 	// what is d-bus @https://dbus.freedesktop.org/
-	var chromiumSecret []byte
+	// don't need chromium key file for Linux
+	defer os.Remove(item.TempChromiumKey)
+
 	conn, err := dbus.SessionBus()
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(item.TempChromiumKey)
 	svc, err := keyring.GetSecretService(conn)
 	if err != nil {
 		return nil, err
@@ -40,6 +41,7 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	var secret []byte
 	for _, col := range collections {
 		items, err := col.GetAllItems()
 		if err != nil {
@@ -54,19 +56,20 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 			if label == c.storage {
 				se, err := i.GetSecret(session.Path())
 				if err != nil {
-					return nil, errors.New("get storage from dbus error:" + err.Error())
+					return nil, fmt.Errorf("get storage from dbus error: %v" + err.Error())
 				}
-				chromiumSecret = se.Value
+				secret = se.Value
 			}
 		}
 	}
-	if chromiumSecret == nil {
-		// @https://source.chromium.org/chromium/chromium/src/+/main:components/os_crypt/os_crypt_linux.cc;l=100
-		chromiumSecret = []byte("peanuts")
+
+	if len(secret) == 0 {
+		// set default secret @https://source.chromium.org/chromium/chromium/src/+/main:components/os_crypt/os_crypt_linux.cc;l=100
+		secret = []byte("peanuts")
 	}
-	chromiumSalt := []byte("saltysalt")
+	salt := []byte("saltysalt")
 	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_linux.cc
-	key := pbkdf2.Key(chromiumSecret, chromiumSalt, 1, 16, sha1.New)
+	key := pbkdf2.Key(secret, salt, 1, 16, sha1.New)
 	c.masterKey = key
 	log.Infof("%s initialized master key success", c.name)
 	return key, nil

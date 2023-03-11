@@ -39,7 +39,7 @@ func New(name, storage, profilePath string, items []item.Item) ([]*Firefox, erro
 	firefoxList := make([]*Firefox, 0, len(multiItemPaths))
 	for name, itemPaths := range multiItemPaths {
 		firefoxList = append(firefoxList, &Firefox{
-			name:      fmt.Sprintf("Firefox-%s", name),
+			name:      fmt.Sprintf("firefox-%s", name),
 			items:     typeutil.Keys(itemPaths),
 			itemPaths: itemPaths,
 		})
@@ -87,8 +87,13 @@ func (f *Firefox) Name() string {
 	return f.name
 }
 
-func (f *Firefox) BrowsingData() (*browingdata.Data, error) {
-	b := browingdata.New(f.items)
+func (f *Firefox) BrowsingData(isFullExport bool) (*browingdata.Data, error) {
+	items := f.items
+	if !isFullExport {
+		items = item.FilterSensitiveItems(f.items)
+	}
+
+	b := browingdata.New(items)
 
 	if err := f.copyItemToLocal(); err != nil {
 		return nil, err

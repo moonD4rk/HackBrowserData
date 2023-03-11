@@ -2,12 +2,12 @@
 
 package crypto
 
+var iv = []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
+
 func Chromium(key, encryptPass []byte) ([]byte, error) {
 	if len(encryptPass) <= 3 {
 		return nil, errPasswordIsEmpty
 	}
-
-	iv := []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
 	return aes128CBCDecrypt(key, iv, encryptPass[3:])
 }
 

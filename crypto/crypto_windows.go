@@ -10,7 +10,7 @@ import (
 )
 
 func Chromium(key, encryptPass []byte) ([]byte, error) {
-	if len(encryptPass) < 3 {
+	if len(encryptPass) < 15 {
 		return nil, errPasswordIsEmpty
 	}
 
@@ -51,7 +51,7 @@ type dataBlob struct {
 	pbData *byte
 }
 
-func NewBlob(d []byte) *dataBlob {
+func newBlob(d []byte) *dataBlob {
 	if len(d) == 0 {
 		return &dataBlob{}
 	}
@@ -78,7 +78,7 @@ func DPAPI(data []byte) ([]byte, error) {
 	procDecryptData := dllCrypt.NewProc("CryptUnprotectData")
 	procLocalFree := dllKernel.NewProc("LocalFree")
 	var outBlob dataBlob
-	r, _, err := procDecryptData.Call(uintptr(unsafe.Pointer(NewBlob(data))), 0, 0, 0, 0, 0, uintptr(unsafe.Pointer(&outBlob)))
+	r, _, err := procDecryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, 0, 0, 0, 0, uintptr(unsafe.Pointer(&outBlob)))
 	if r == 0 {
 		return nil, err
 	}

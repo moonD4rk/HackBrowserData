@@ -121,6 +121,31 @@ func (i Item) String() string {
 	}
 }
 
+// IsSensitive returns whether the item is sensitive data
+// password, cookie, credit card, master key is unlimited
+func (i Item) IsSensitive() bool {
+	switch i {
+	case ChromiumKey, ChromiumCookie, ChromiumPassword, ChromiumCreditCard,
+		FirefoxKey4, FirefoxPassword, FirefoxCookie, FirefoxCreditCard,
+		YandexPassword, YandexCreditCard:
+		return true
+	default:
+		return false
+	}
+}
+
+// FilterSensitiveItems returns the sensitive items
+func FilterSensitiveItems(items []Item) []Item {
+	var filtered []Item
+	for _, item := range items {
+		if item.IsSensitive() {
+			filtered = append(filtered, item)
+		}
+	}
+	return filtered
+}
+
+// DefaultFirefox returns the default items for the firefox browser
 var DefaultFirefox = []Item{
 	FirefoxKey4,
 	FirefoxPassword,
@@ -133,6 +158,7 @@ var DefaultFirefox = []Item{
 	FirefoxExtension,
 }
 
+// DefaultYandex returns the default items for the yandex browser
 var DefaultYandex = []Item{
 	ChromiumKey,
 	ChromiumCookie,
@@ -145,6 +171,7 @@ var DefaultYandex = []Item{
 	YandexCreditCard,
 }
 
+// DefaultChromium returns the default items for the chromium browser
 var DefaultChromium = []Item{
 	ChromiumKey,
 	ChromiumPassword,
