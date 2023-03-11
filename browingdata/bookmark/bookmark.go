@@ -40,7 +40,7 @@ func (c *ChromiumBookmark) Parse(masterKey []byte) error {
 			return true
 		})
 	}
-	// TODO: refactor with go generics
+
 	sort.Slice(*c, func(i, j int) bool {
 		return (*c)[i].DateAdded.After((*c)[j].DateAdded)
 	})

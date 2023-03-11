@@ -28,11 +28,11 @@ type Source interface {
 	Length() int
 }
 
-func New(sources []item.Item) *Data {
+func New(items []item.Item) *Data {
 	bd := &Data{
 		sources: make(map[item.Item]Source),
 	}
-	bd.addSource(sources)
+	bd.addSources(items)
 	return bd
 }
 
@@ -46,7 +46,7 @@ func (d *Data) Recovery(masterKey []byte) error {
 }
 
 func (d *Data) Output(dir, browserName, flag string) {
-	output := NewOutPutter(flag)
+	output := newOutPutter(flag)
 
 	for _, source := range d.sources {
 		if source.Length() == 0 {
@@ -72,8 +72,8 @@ func (d *Data) Output(dir, browserName, flag string) {
 	}
 }
 
-func (d *Data) addSource(Sources []item.Item) {
-	for _, source := range Sources {
+func (d *Data) addSources(items []item.Item) {
+	for _, source := range items {
 		switch source {
 		case item.ChromiumPassword:
 			d.sources[source] = &password.ChromiumPassword{}

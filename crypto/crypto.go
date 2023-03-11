@@ -63,15 +63,15 @@ type nssPBE struct {
 func (n nssPBE) Decrypt(globalSalt, masterPwd []byte) (key []byte, err error) {
 	glmp := append(globalSalt, masterPwd...)
 	hp := sha1.Sum(glmp)
-	s := append(hp[:], n.entrySalt()...)
+	s := append(hp[:], n.salt()...)
 	chp := sha1.Sum(s)
-	pes := paddingZero(n.entrySalt(), 20)
+	pes := paddingZero(n.salt(), 20)
 	tk := hmac.New(sha1.New, chp[:])
 	tk.Write(pes)
-	pes = append(pes, n.entrySalt()...)
+	pes = append(pes, n.salt()...)
 	k1 := hmac.New(sha1.New, chp[:])
 	k1.Write(pes)
-	tkPlus := append(tk.Sum(nil), n.entrySalt()...)
+	tkPlus := append(tk.Sum(nil), n.salt()...)
 	k2 := hmac.New(sha1.New, chp[:])
 	k2.Write(tkPlus)
 	k := append(k1.Sum(nil), k2.Sum(nil)...)
@@ -79,7 +79,7 @@ func (n nssPBE) Decrypt(globalSalt, masterPwd []byte) (key []byte, err error) {
 	return des3Decrypt(k[:24], iv, n.encrypted())
 }
 
-func (n nssPBE) entrySalt() []byte {
+func (n nssPBE) salt() []byte {
 	return n.AlgoAttr.SaltAttr.EntrySalt
 }
 
@@ -136,12 +136,12 @@ type slatAttr struct {
 
 func (m metaPBE) Decrypt(globalSalt, masterPwd []byte) (key2 []byte, err error) {
 	k := sha1.Sum(globalSalt)
-	key := pbkdf2.Key(k[:], m.entrySalt(), m.iterationCount(), m.keySize(), sha256.New)
+	key := pbkdf2.Key(k[:], m.salt(), m.iterationCount(), m.keySize(), sha256.New)
 	iv := append([]byte{4, 14}, m.iv()...)
 	return aes128CBCDecrypt(key, iv, m.encrypted())
 }
 
-func (m metaPBE) entrySalt() []byte {
+func (m metaPBE) salt() []byte {
 	return m.AlgoAttr.Data.Data.SlatAttr.EntrySalt
 }
 

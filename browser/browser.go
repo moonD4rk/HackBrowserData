@@ -17,9 +17,10 @@ type Browser interface {
 	// Name is browser's name
 	Name() string
 	// BrowsingData returns all browsing data in the browser.
-	BrowsingData() (*browingdata.Data, error)
+	BrowsingData(isFullExport bool) (*browingdata.Data, error)
 }
 
+// PickBrowsers returns a list of browsers that match the name and profile.
 func PickBrowsers(name, profile string) ([]Browser, error) {
 	var browsers []Browser
 	clist := pickChromium(name, profile)
@@ -42,18 +43,18 @@ func pickChromium(name, profile string) []Browser {
 	name = strings.ToLower(name)
 	if name == "all" {
 		for _, v := range chromiumList {
-			if !fileutil.FolderExists(filepath.Clean(v.profilePath)) {
+			if !fileutil.IsDirExists(filepath.Clean(v.profilePath)) {
 				log.Noticef("find browser %s failed, profile folder does not exist", v.name)
 				continue
 			}
-			if multiChromium, err := chromium.New(v.name, v.storage, v.profilePath, v.items); err == nil {
-				log.Noticef("find browser %s success", v.name)
-				for _, b := range multiChromium {
-					log.Noticef("find browser %s success", b.Name())
-					browsers = append(browsers, b)
-				}
-			} else {
-				log.Errorf("new chromium error: %s", err.Error())
+			multiChromium, err := chromium.New(v.name, v.storage, v.profilePath, v.items)
+			if err != nil {
+				log.Errorf("new chromium error: %v", err)
+				continue
+			}
+			for _, b := range multiChromium {
+				log.Noticef("find browser %s success", b.Name())
+				browsers = append(browsers, b)
 			}
 		}
 	}
@@ -61,7 +62,7 @@ func pickChromium(name, profile string) []Browser {
 		if profile == "" {
 			profile = c.profilePath
 		}
-		if !fileutil.FolderExists(filepath.Clean(profile)) {
+		if !fileutil.IsDirExists(filepath.Clean(profile)) {
 			log.Fatalf("find browser %s failed, profile folder does not exist", c.name)
 		}
 		chromiumList, err := chromium.New(c.name, c.storage, profile, c.items)
@@ -86,7 +87,7 @@ func pickFirefox(name, profile string) []Browser {
 			} else {
 				profile = fileutil.ParentDir(profile)
 			}
-			if !fileutil.FolderExists(filepath.Clean(profile)) {
+			if !fileutil.IsDirExists(filepath.Clean(profile)) {
 				log.Noticef("find browser firefox %s failed, profile folder does not exist", v.name)
 				continue
 			}

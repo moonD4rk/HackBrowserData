@@ -13,13 +13,13 @@ import (
 	"golang.org/x/text/transform"
 )
 
-type OutPutter struct {
+type outPutter struct {
 	json bool
 	csv  bool
 }
 
-func NewOutPutter(flag string) *OutPutter {
-	o := &OutPutter{}
+func newOutPutter(flag string) *outPutter {
+	o := &outPutter{}
 	if flag == "json" {
 		o.json = true
 	} else {
@@ -28,7 +28,7 @@ func NewOutPutter(flag string) *OutPutter {
 	return o
 }
 
-func (o *OutPutter) Write(data Source, writer io.Writer) error {
+func (o *outPutter) Write(data Source, writer io.Writer) error {
 	switch o.json {
 	case true:
 		encoder := json.NewEncoder(writer)
@@ -45,7 +45,7 @@ func (o *OutPutter) Write(data Source, writer io.Writer) error {
 	}
 }
 
-func (o *OutPutter) CreateFile(dir, filename string) (*os.File, error) {
+func (o *outPutter) CreateFile(dir, filename string) (*os.File, error) {
 	if filename == "" {
 		return nil, errors.New("empty filename")
 	}
@@ -69,7 +69,7 @@ func (o *OutPutter) CreateFile(dir, filename string) (*os.File, error) {
 	return file, nil
 }
 
-func (o *OutPutter) Ext() string {
+func (o *outPutter) Ext() string {
 	if o.json {
 		return "json"
 	}

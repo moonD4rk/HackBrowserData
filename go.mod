@@ -11,9 +11,9 @@ require (
 	github.com/ppacher/go-dbus-keyring v1.0.1
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/tidwall/gjson v1.14.4
-	github.com/urfave/cli/v2 v2.23.0
+	github.com/urfave/cli/v2 v2.25.0
 	golang.org/x/crypto v0.7.0
-	golang.org/x/exp v0.0.0-20230307190834-24139beb5833
+	golang.org/x/exp v0.0.0-20230310171629-522b1b587ee0
 	golang.org/x/text v0.8.0
 )
 
