@@ -29,7 +29,6 @@ func (c *ChromiumLocalStorage) Parse(masterKey []byte) error {
 		return err
 	}
 	defer os.RemoveAll(item.TempChromiumLocalStorage)
-	// log.Info("parsing local storage now")
 	defer db.Close()
 
 	iter := db.NewIterator(nil, nil)
@@ -58,7 +57,7 @@ func (c *ChromiumLocalStorage) Name() string {
 	return "localStorage"
 }
 
-func (c *ChromiumLocalStorage) Length() int {
+func (c *ChromiumLocalStorage) Len() int {
 	return len(*c)
 }
 
@@ -102,16 +101,13 @@ func (f *FirefoxLocalStorage) Parse(masterKey []byte) error {
 	if err != nil {
 		return err
 	}
-	if err != nil {
-		return err
-	}
 	defer os.Remove(item.TempFirefoxLocalStorage)
 	defer db.Close()
+
 	_, err = db.Exec(closeJournalMode)
 	if err != nil {
-		return err
+		log.Error(err)
 	}
-	defer db.Close()
 	rows, err := db.Query(queryFirefoxHistory)
 	if err != nil {
 		return err
@@ -147,6 +143,6 @@ func (f *FirefoxLocalStorage) Name() string {
 	return "localStorage"
 }
 
-func (f *FirefoxLocalStorage) Length() int {
+func (f *FirefoxLocalStorage) Len() int {
 	return len(*f)
 }

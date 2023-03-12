@@ -34,13 +34,14 @@ const (
 )
 
 func (c *ChromiumPassword) Parse(masterKey []byte) error {
-	loginDB, err := sql.Open("sqlite3", item.TempChromiumPassword)
+	db, err := sql.Open("sqlite3", item.TempChromiumPassword)
 	if err != nil {
 		return err
 	}
 	defer os.Remove(item.TempChromiumPassword)
-	defer loginDB.Close()
-	rows, err := loginDB.Query(queryChromiumLogin)
+	defer db.Close()
+
+	rows, err := db.Query(queryChromiumLogin)
 	if err != nil {
 		return err
 	}
@@ -61,11 +62,10 @@ func (c *ChromiumPassword) Parse(masterKey []byte) error {
 			LoginURL:    url,
 		}
 		if len(pwd) > 0 {
-			var err error
-			if masterKey == nil {
+			if len(masterKey) == 0 {
 				password, err = crypto.DPAPI(pwd)
 			} else {
-				password, err = crypto.Chromium(masterKey, pwd)
+				password, err = crypto.DecryptPass(masterKey, pwd)
 			}
 			if err != nil {
 				log.Error(err)
@@ -90,7 +90,7 @@ func (c *ChromiumPassword) Name() string {
 	return "password"
 }
 
-func (c *ChromiumPassword) Length() int {
+func (c *ChromiumPassword) Len() int {
 	return len(*c)
 }
 
@@ -101,13 +101,14 @@ const (
 )
 
 func (c *YandexPassword) Parse(masterKey []byte) error {
-	loginDB, err := sql.Open("sqlite3", item.TempYandexPassword)
+	db, err := sql.Open("sqlite3", item.TempYandexPassword)
 	if err != nil {
 		return err
 	}
 	defer os.Remove(item.TempYandexPassword)
-	defer loginDB.Close()
-	rows, err := loginDB.Query(queryYandexLogin)
+	defer db.Close()
+
+	rows, err := db.Query(queryYandexLogin)
 	if err != nil {
 		return err
 	}
@@ -129,11 +130,10 @@ func (c *YandexPassword) Parse(masterKey []byte) error {
 		}
 
 		if len(pwd) > 0 {
-			var err error
-			if masterKey == nil {
+			if len(masterKey) == 0 {
 				password, err = crypto.DPAPI(pwd)
 			} else {
-				password, err = crypto.Chromium(masterKey, pwd)
+				password, err = crypto.DecryptPass(masterKey, pwd)
 			}
 			if err != nil {
 				log.Errorf("decrypt yandex password error %s", err)
@@ -158,7 +158,7 @@ func (c *YandexPassword) Name() string {
 	return "password"
 }
 
-func (c *YandexPassword) Length() int {
+func (c *YandexPassword) Len() int {
 	return len(*c)
 }
 
@@ -183,24 +183,25 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 	if err != nil {
 		return err
 	}
-	keyLin := []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 	if bytes.Contains(k, []byte("password-check")) {
-		m := bytes.Compare(nssA102, keyLin)
-		if m == 0 {
+		keyLin := []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+		if bytes.Compare(nssA102, keyLin) == 0 {
 			nssPBE, err := crypto.NewASN1PBE(nssA11)
 			if err != nil {
 				return err
 			}
 			finallyKey, err := nssPBE.Decrypt(globalSalt, masterKey)
+			if err != nil {
+				return err
+			}
+
 			finallyKey = finallyKey[:24]
+			logins, err := getFirefoxLoginData()
 			if err != nil {
 				return err
 			}
-			allLogin, err := getFirefoxLoginData()
-			if err != nil {
-				return err
-			}
-			for _, v := range allLogin {
+
+			for _, v := range logins {
 				userPBE, err := crypto.NewASN1PBE(v.encryptUser)
 				if err != nil {
 					return err
@@ -233,8 +234,7 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 }
 
 func getFirefoxDecryptKey(key4file string) (item1, item2, a11, a102 []byte, err error) {
-	var keyDB *sql.DB
-	keyDB, err = sql.Open("sqlite3", key4file)
+	keyDB, err := sql.Open("sqlite3", key4file)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -251,15 +251,16 @@ func getFirefoxDecryptKey(key4file string) (item1, item2, a11, a102 []byte, err 
 	return item1, item2, a11, a102, nil
 }
 
-func getFirefoxLoginData() (l []loginData, err error) {
+func getFirefoxLoginData() ([]loginData, error) {
 	s, err := os.ReadFile(item.TempFirefoxPassword)
 	if err != nil {
 		return nil, err
 	}
 	defer os.Remove(item.TempFirefoxPassword)
-	h := gjson.GetBytes(s, "logins")
-	if h.Exists() {
-		for _, v := range h.Array() {
+	loginsJSON := gjson.GetBytes(s, "logins")
+	var logins []loginData
+	if loginsJSON.Exists() {
+		for _, v := range loginsJSON.Array() {
 			var (
 				m    loginData
 				user []byte
@@ -277,16 +278,16 @@ func getFirefoxLoginData() (l []loginData, err error) {
 			m.encryptUser = user
 			m.encryptPass = pass
 			m.CreateDate = typeutil.TimeStamp(v.Get("timeCreated").Int() / 1000)
-			l = append(l, m)
+			logins = append(logins, m)
 		}
 	}
-	return l, nil
+	return logins, nil
 }
 
 func (f *FirefoxPassword) Name() string {
 	return "password"
 }
 
-func (f *FirefoxPassword) Length() int {
+func (f *FirefoxPassword) Len() int {
 	return len(*f)
 }

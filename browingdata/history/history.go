@@ -28,13 +28,14 @@ const (
 )
 
 func (c *ChromiumHistory) Parse(masterKey []byte) error {
-	historyDB, err := sql.Open("sqlite3", item.TempChromiumHistory)
+	db, err := sql.Open("sqlite3", item.TempChromiumHistory)
 	if err != nil {
 		return err
 	}
 	defer os.Remove(item.TempChromiumHistory)
-	defer historyDB.Close()
-	rows, err := historyDB.Query(queryChromiumHistory)
+	defer db.Close()
+
+	rows, err := db.Query(queryChromiumHistory)
 	if err != nil {
 		return err
 	}
@@ -66,7 +67,7 @@ func (c *ChromiumHistory) Name() string {
 	return "history"
 }
 
-func (c *ChromiumHistory) Length() int {
+func (c *ChromiumHistory) Len() int {
 	return len(*c)
 }
 
@@ -78,34 +79,30 @@ const (
 )
 
 func (f *FirefoxHistory) Parse(masterKey []byte) error {
-	var (
-		err         error
-		keyDB       *sql.DB
-		historyRows *sql.Rows
-	)
-	keyDB, err = sql.Open("sqlite3", item.TempFirefoxHistory)
+	db, err := sql.Open("sqlite3", item.TempFirefoxHistory)
 	if err != nil {
 		return err
 	}
 	defer os.Remove(item.TempFirefoxHistory)
-	defer keyDB.Close()
-	_, err = keyDB.Exec(closeJournalMode)
+	defer db.Close()
+
+	_, err = db.Exec(closeJournalMode)
 	if err != nil {
 		return err
 	}
-	defer keyDB.Close()
-	historyRows, err = keyDB.Query(queryFirefoxHistory)
+	defer db.Close()
+	rows, err := db.Query(queryFirefoxHistory)
 	if err != nil {
 		return err
 	}
-	defer historyRows.Close()
-	for historyRows.Next() {
+	defer rows.Close()
+	for rows.Next() {
 		var (
 			id, visitDate int64
 			url, title    string
 			visitCount    int
 		)
-		if err = historyRows.Scan(&id, &url, &visitDate, &title, &visitCount); err != nil {
+		if err = rows.Scan(&id, &url, &visitDate, &title, &visitCount); err != nil {
 			log.Warn(err)
 		}
 		*f = append(*f, history{
@@ -125,6 +122,6 @@ func (f *FirefoxHistory) Name() string {
 	return "history"
 }
 
-func (f *FirefoxHistory) Length() int {
+func (f *FirefoxHistory) Len() int {
 	return len(*f)
 }
