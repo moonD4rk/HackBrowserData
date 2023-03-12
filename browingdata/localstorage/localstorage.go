@@ -11,6 +11,7 @@ import (
 
 	"github.com/moond4rk/HackBrowserData/item"
 	"github.com/moond4rk/HackBrowserData/log"
+	"github.com/moond4rk/HackBrowserData/utils/byteutil"
 	"github.com/moond4rk/HackBrowserData/utils/typeutil"
 )
 
@@ -22,6 +23,8 @@ type storage struct {
 	Key    string
 	Value  string
 }
+
+const maxLocalStorageLength = 1024 * 2
 
 func (c *ChromiumLocalStorage) Parse(masterKey []byte) error {
 	db, err := leveldb.OpenFile(item.TempChromiumLocalStorage, nil)
@@ -35,16 +38,16 @@ func (c *ChromiumLocalStorage) Parse(masterKey []byte) error {
 	for iter.Next() {
 		key := iter.Key()
 		value := iter.Value()
-		// don't parse value upper than 5kB
-		if len(value) > 1024*5 {
-			continue
-		}
 		s := new(storage)
 		s.fillKey(key)
-		s.fillValue(value)
-		// don't save meta data
+		// don't all value upper than 1kB
+		if len(value) < maxLocalStorageLength {
+			s.fillValue(value)
+		} else {
+			s.Value = fmt.Sprintf("value is too long, length is %d", len(value))
+		}
 		if s.IsMeta {
-			continue
+			s.Value = fmt.Sprintf("meta data, value bytes is %v", value)
 		}
 		*c = append(*c, *s)
 	}
@@ -84,9 +87,8 @@ func (s *storage) fillHeader(url, key []byte) {
 // fillValue fills value of the storage
 // TODO: support unicode charter
 func (s *storage) fillValue(b []byte) {
-	t := fmt.Sprintf("%c", b)
-	m := strings.NewReplacer(" ", "", "\x00", "", "\x01", "").Replace(t)
-	s.Value = m
+	value := bytes.Map(byteutil.OnSplitUTF8Func, b)
+	s.Value = string(value)
 }
 
 type FirefoxLocalStorage []storage
