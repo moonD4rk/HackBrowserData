@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/syndtr/goleveldb/leveldb"
+	"golang.org/x/text/encoding/unicode"
+	"golang.org/x/text/transform"
 
 	"github.com/moond4rk/HackBrowserData/item"
 	"github.com/moond4rk/HackBrowserData/log"
@@ -44,7 +46,7 @@ func (c *ChromiumLocalStorage) Parse(masterKey []byte) error {
 		if len(value) < maxLocalStorageLength {
 			s.fillValue(value)
 		} else {
-			s.Value = fmt.Sprintf("value is too long, length is %d", len(value))
+			s.Value = fmt.Sprintf("value is too long, length is %d, supportted max length is %d", len(value), maxLocalStorageLength)
 		}
 		if s.IsMeta {
 			s.Value = fmt.Sprintf("meta data, value bytes is %v", value)
@@ -82,6 +84,11 @@ func (s *storage) fillMetaHeader(b []byte) {
 func (s *storage) fillHeader(url, key []byte) {
 	s.URL = string(bytes.Trim(url, "_"))
 	s.Key = string(bytes.Trim(key, "\x01"))
+}
+
+func convertUTF16toUTF8(source []byte, endian unicode.Endianness) ([]byte, error) {
+	r, _, err := transform.Bytes(unicode.UTF16(endian, unicode.IgnoreBOM).NewDecoder(), source)
+	return r, err
 }
 
 // fillValue fills value of the storage
