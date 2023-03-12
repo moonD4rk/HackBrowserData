@@ -20,6 +20,7 @@ var testCases = []struct {
 }
 
 func TestLocalStorageKeyToUTF8(t *testing.T) {
+	t.Parallel()
 	for _, tc := range testCases {
 		actual, err := convertUTF16toUTF8(tc.in, unicode.BigEndian)
 		if err != nil {
