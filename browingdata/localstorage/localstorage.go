@@ -26,7 +26,7 @@ type storage struct {
 	Value  string
 }
 
-const maxLocalStorageLength = 1024 * 2
+const maxLocalStorageValueLength = 1024 * 2
 
 func (c *ChromiumLocalStorage) Parse(masterKey []byte) error {
 	db, err := leveldb.OpenFile(item.TempChromiumLocalStorage, nil)
@@ -42,11 +42,11 @@ func (c *ChromiumLocalStorage) Parse(masterKey []byte) error {
 		value := iter.Value()
 		s := new(storage)
 		s.fillKey(key)
-		// don't all value upper than 1kB
-		if len(value) < maxLocalStorageLength {
+		// don't all value upper than 2KB
+		if len(value) < maxLocalStorageValueLength {
 			s.fillValue(value)
 		} else {
-			s.Value = fmt.Sprintf("value is too long, length is %d, supportted max length is %d", len(value), maxLocalStorageLength)
+			s.Value = fmt.Sprintf("value is too long, length is %d, supportted max length is %d", len(value), maxLocalStorageValueLength)
 		}
 		if s.IsMeta {
 			s.Value = fmt.Sprintf("meta data, value bytes is %v", value)
