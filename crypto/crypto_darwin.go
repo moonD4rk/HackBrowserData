@@ -4,7 +4,7 @@ package crypto
 
 var iv = []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
 
-func Chromium(key, encryptPass []byte) ([]byte, error) {
+func DecryptPass(key, encryptPass []byte) ([]byte, error) {
 	if len(encryptPass) <= 3 {
 		return nil, errPasswordIsEmpty
 	}

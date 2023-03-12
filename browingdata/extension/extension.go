@@ -30,12 +30,12 @@ func (c *ChromiumExtension) Parse(masterKey []byte) error {
 	}
 	defer os.RemoveAll(item.TempChromiumExtension)
 	for _, f := range files {
-		file, err := fileutil.ReadFile(f)
+		content, err := fileutil.ReadFile(f)
 		if err != nil {
-			log.Error("Failed to read file: %s", err)
+			log.Error("Failed to read content: %s", err)
 			continue
 		}
-		b := gjson.Parse(file)
+		b := gjson.Parse(content)
 		*c = append(*c, &extension{
 			Name:        b.Get("name").String(),
 			Description: b.Get("description").String(),
@@ -50,7 +50,7 @@ func (c *ChromiumExtension) Name() string {
 	return "extension"
 }
 
-func (c *ChromiumExtension) Length() int {
+func (c *ChromiumExtension) Len() int {
 	return len(*c)
 }
 
@@ -78,6 +78,6 @@ func (f *FirefoxExtension) Name() string {
 	return "extension"
 }
 
-func (f *FirefoxExtension) Length() int {
+func (f *FirefoxExtension) Len() int {
 	return len(*f)
 }
