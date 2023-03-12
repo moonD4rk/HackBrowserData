@@ -29,13 +29,14 @@ const (
 )
 
 func (c *ChromiumCreditCard) Parse(masterKey []byte) error {
-	creditDB, err := sql.Open("sqlite3", item.TempChromiumCreditCard)
+	db, err := sql.Open("sqlite3", item.TempChromiumCreditCard)
 	if err != nil {
 		return err
 	}
 	defer os.Remove(item.TempChromiumCreditCard)
-	defer creditDB.Close()
-	rows, err := creditDB.Query(queryChromiumCredit)
+	defer db.Close()
+
+	rows, err := db.Query(queryChromiumCredit)
 	if err != nil {
 		return err
 	}
@@ -56,17 +57,17 @@ func (c *ChromiumCreditCard) Parse(masterKey []byte) error {
 			Address:         address,
 			NickName:        nickname,
 		}
-		if masterKey == nil {
-			value, err = crypto.DPAPI(encryptValue)
-			if err != nil {
-				return err
+		if len(encryptValue) > 0 {
+			if len(masterKey) == 0 {
+				value, err = crypto.DPAPI(encryptValue)
+			} else {
+				value, err = crypto.DecryptPass(masterKey, encryptValue)
 			}
-		} else {
-			value, err = crypto.Chromium(masterKey, encryptValue)
 			if err != nil {
-				return err
+				log.Error(err)
 			}
 		}
+
 		ccInfo.CardNumber = string(value)
 		*c = append(*c, ccInfo)
 	}
@@ -77,21 +78,20 @@ func (c *ChromiumCreditCard) Name() string {
 	return "creditcard"
 }
 
-func (c *ChromiumCreditCard) Length() int {
+func (c *ChromiumCreditCard) Len() int {
 	return len(*c)
 }
 
 type YandexCreditCard []card
 
 func (c *YandexCreditCard) Parse(masterKey []byte) error {
-	creditDB, err := sql.Open("sqlite3", item.TempYandexCreditCard)
+	db, err := sql.Open("sqlite3", item.TempYandexCreditCard)
 	if err != nil {
 		return err
 	}
 	defer os.Remove(item.TempYandexCreditCard)
-	defer creditDB.Close()
-	defer creditDB.Close()
-	rows, err := creditDB.Query(queryChromiumCredit)
+	defer db.Close()
+	rows, err := db.Query(queryChromiumCredit)
 	if err != nil {
 		return err
 	}
@@ -112,15 +112,14 @@ func (c *YandexCreditCard) Parse(masterKey []byte) error {
 			Address:         address,
 			NickName:        nickname,
 		}
-		if masterKey == nil {
-			value, err = crypto.DPAPI(encryptValue)
-			if err != nil {
-				return err
+		if len(encryptValue) > 0 {
+			if len(masterKey) == 0 {
+				value, err = crypto.DPAPI(encryptValue)
+			} else {
+				value, err = crypto.DecryptPass(masterKey, encryptValue)
 			}
-		} else {
-			value, err = crypto.Chromium(masterKey, encryptValue)
 			if err != nil {
-				return err
+				log.Error(err)
 			}
 		}
 		ccInfo.CardNumber = string(value)
@@ -133,6 +132,6 @@ func (c *YandexCreditCard) Name() string {
 	return "creditcard"
 }
 
-func (c *YandexCreditCard) Length() int {
+func (c *YandexCreditCard) Len() int {
 	return len(*c)
 }

@@ -25,7 +25,7 @@ type Source interface {
 
 	Name() string
 
-	Length() int
+	Len() int
 }
 
 func New(items []item.Item) *Data {
@@ -49,7 +49,7 @@ func (d *Data) Output(dir, browserName, flag string) {
 	output := newOutPutter(flag)
 
 	for _, source := range d.sources {
-		if source.Length() == 0 {
+		if source.Len() == 0 {
 			// if the length of the export data is 0, then it is not necessary to output
 			continue
 		}

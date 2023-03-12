@@ -9,7 +9,7 @@ import (
 	"unsafe"
 )
 
-func Chromium(key, encryptPass []byte) ([]byte, error) {
+func DecryptPass(key, encryptPass []byte) ([]byte, error) {
 	if len(encryptPass) < 15 {
 		return nil, errPasswordIsEmpty
 	}
@@ -17,7 +17,7 @@ func Chromium(key, encryptPass []byte) ([]byte, error) {
 	return aesGCMDecrypt(encryptPass[15:], key, encryptPass[3:15])
 }
 
-func ChromiumForYandex(key, encryptPass []byte) ([]byte, error) {
+func DecryptPassForYandex(key, encryptPass []byte) ([]byte, error) {
 	if len(encryptPass) < 3 {
 		return nil, errPasswordIsEmpty
 	}
