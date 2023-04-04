@@ -189,6 +189,9 @@ PS C:\Users\User\Desktop> .\hack-browser-data.exe -b chrome -p "C:\Users\User\Ap
 
 ![](/CONTRIBUTORS.svg)
 
+## Stargazers over time
+[![Star History Chart](https://api.star-history.com/svg?repos=moond4rk/hackbrowserdata&type=Date)](https://github.com/moond4rk/HackBrowserData)
+
 
 ## 404StarLink 2.0 - Galaxy
 `HackBrowserData` is a part of 404Team [StarLink-Galaxy](https://github.com/knownsec/404StarLink2.0-Galaxy), if you have any questions about `HackBrowserData` or want to find a partner to communicate with，please refer to the [Starlink group](https://github.com/knownsec/404StarLink2.0-Galaxy#community).

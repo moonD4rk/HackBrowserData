@@ -170,6 +170,9 @@ PS C:\test> .\hack-browser-data.exe -b all -f json --dir results -zip
 
 ![贡献者](/CONTRIBUTORS.svg)
 
+## Stargazers over time
+[![Star History Chart](https://api.star-history.com/svg?repos=moond4rk/hackbrowserdata&type=Date)](https://github.com/moond4rk/HackBrowserData)
+
 ## 404StarLink 2.0 - Galaxy
 `HackBrowserData` 是 404Team [星链计划2.0](https://github.com/knownsec/404StarLink2.0-Galaxy) 中的一环，如果对 HackBrowserData 有任何疑问又或是想要找小伙伴交流，可以参考[星链计划的加群方式](https://github.com/knownsec/404StarLink2.0-Galaxy#community)。
 
