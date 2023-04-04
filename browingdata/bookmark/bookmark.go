@@ -26,7 +26,7 @@ type bookmark struct {
 	DateAdded time.Time
 }
 
-func (c *ChromiumBookmark) Parse(masterKey []byte) error {
+func (c *ChromiumBookmark) Parse(_ []byte) error {
 	bookmarks, err := fileutil.ReadFile(item.TempChromiumBookmark)
 	if err != nil {
 		return err
@@ -93,7 +93,7 @@ const (
 	closeJournalMode     = `PRAGMA journal_mode=off`
 )
 
-func (f *FirefoxBookmark) Parse(masterKey []byte) error {
+func (f *FirefoxBookmark) Parse(_ []byte) error {
 	db, err := sql.Open("sqlite3", item.TempFirefoxBookmark)
 	if err != nil {
 		return err
