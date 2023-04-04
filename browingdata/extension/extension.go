@@ -23,7 +23,7 @@ const (
 	manifest = "manifest.json"
 )
 
-func (c *ChromiumExtension) Parse(masterKey []byte) error {
+func (c *ChromiumExtension) Parse(_ []byte) error {
 	files, err := fileutil.FilesInFolder(item.TempChromiumExtension, manifest)
 	if err != nil {
 		return err
@@ -56,7 +56,7 @@ func (c *ChromiumExtension) Len() int {
 
 type FirefoxExtension []*extension
 
-func (f *FirefoxExtension) Parse(masterKey []byte) error {
+func (f *FirefoxExtension) Parse(_ []byte) error {
 	s, err := fileutil.ReadFile(item.TempFirefoxExtension)
 	if err != nil {
 		return err

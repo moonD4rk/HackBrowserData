@@ -103,7 +103,7 @@ const (
 	queryFirefoxCookie = `SELECT name, value, host, path, creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
 )
 
-func (f *FirefoxCookie) Parse(masterKey []byte) error {
+func (f *FirefoxCookie) Parse(_ []byte) error {
 	db, err := sql.Open("sqlite3", item.TempFirefoxCookie)
 	if err != nil {
 		return err

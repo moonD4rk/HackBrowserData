@@ -134,7 +134,7 @@ type slatAttr struct {
 	}
 }
 
-func (m metaPBE) Decrypt(globalSalt, masterPwd []byte) (key2 []byte, err error) {
+func (m metaPBE) Decrypt(globalSalt, _ []byte) (key2 []byte, err error) {
 	k := sha1.Sum(globalSalt)
 	key := pbkdf2.Key(k[:], m.salt(), m.iterationCount(), m.keySize(), sha256.New)
 	iv := append([]byte{4, 14}, m.iv()...)
@@ -177,7 +177,7 @@ type loginPBE struct {
 	Encrypted []byte
 }
 
-func (l loginPBE) Decrypt(globalSalt, masterPwd []byte) (key []byte, err error) {
+func (l loginPBE) Decrypt(globalSalt, _ []byte) (key []byte, err error) {
 	return des3Decrypt(globalSalt, l.iv(), l.encrypted())
 }
 

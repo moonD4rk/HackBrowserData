@@ -27,7 +27,7 @@ const (
 	queryChromiumHistory = `SELECT url, title, visit_count, last_visit_time FROM urls`
 )
 
-func (c *ChromiumHistory) Parse(masterKey []byte) error {
+func (c *ChromiumHistory) Parse(_ []byte) error {
 	db, err := sql.Open("sqlite3", item.TempChromiumHistory)
 	if err != nil {
 		return err
@@ -78,7 +78,7 @@ const (
 	closeJournalMode    = `PRAGMA journal_mode=off`
 )
 
-func (f *FirefoxHistory) Parse(masterKey []byte) error {
+func (f *FirefoxHistory) Parse(_ []byte) error {
 	db, err := sql.Open("sqlite3", item.TempFirefoxHistory)
 	if err != nil {
 		return err
