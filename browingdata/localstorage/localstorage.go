@@ -28,7 +28,7 @@ type storage struct {
 
 const maxLocalStorageValueLength = 1024 * 2
 
-func (c *ChromiumLocalStorage) Parse(masterKey []byte) error {
+func (c *ChromiumLocalStorage) Parse(_ []byte) error {
 	db, err := leveldb.OpenFile(item.TempChromiumLocalStorage, nil)
 	if err != nil {
 		return err
@@ -105,7 +105,7 @@ const (
 	closeJournalMode    = `PRAGMA journal_mode=off`
 )
 
-func (f *FirefoxLocalStorage) Parse(masterKey []byte) error {
+func (f *FirefoxLocalStorage) Parse(_ []byte) error {
 	db, err := sql.Open("sqlite3", item.TempFirefoxLocalStorage)
 	if err != nil {
 		return err

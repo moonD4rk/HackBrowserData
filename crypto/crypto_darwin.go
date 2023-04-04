@@ -11,6 +11,6 @@ func DecryptPass(key, encryptPass []byte) ([]byte, error) {
 	return aes128CBCDecrypt(key, iv, encryptPass[3:])
 }
 
-func DPAPI(data []byte) ([]byte, error) {
+func DPAPI(_ []byte) ([]byte, error) {
 	return nil, nil
 }
