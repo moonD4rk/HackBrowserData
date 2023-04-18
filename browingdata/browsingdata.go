@@ -11,6 +11,7 @@ import (
 	"github.com/moond4rk/HackBrowserData/browingdata/history"
 	"github.com/moond4rk/HackBrowserData/browingdata/localstorage"
 	"github.com/moond4rk/HackBrowserData/browingdata/password"
+	"github.com/moond4rk/HackBrowserData/browingdata/sessionstorage"
 	"github.com/moond4rk/HackBrowserData/item"
 	"github.com/moond4rk/HackBrowserData/log"
 	"github.com/moond4rk/HackBrowserData/utils/fileutil"
@@ -89,6 +90,8 @@ func (d *Data) addSources(items []item.Item) {
 			d.sources[source] = &creditcard.ChromiumCreditCard{}
 		case item.ChromiumLocalStorage:
 			d.sources[source] = &localstorage.ChromiumLocalStorage{}
+		case item.ChromiumSessionStorage:
+			d.sources[source] = &sessionstorage.ChromiumSessionStorage{}
 		case item.ChromiumExtension:
 			d.sources[source] = &extension.ChromiumExtension{}
 		case item.YandexPassword:

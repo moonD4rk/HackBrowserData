@@ -69,6 +69,7 @@ func (c *Chromium) BrowsingData(isFullExport bool) (*browingdata.Data, error) {
 	if err := data.Recovery(c.masterKey); err != nil {
 		return nil, err
 	}
+
 	return data, nil
 }
 
@@ -79,6 +80,9 @@ func (c *Chromium) copyItemToLocal() error {
 		switch {
 		case fileutil.IsDirExists(path):
 			if i == item.ChromiumLocalStorage {
+				err = fileutil.CopyDir(path, filename, "lock")
+			}
+			if i == item.ChromiumSessionStorage {
 				err = fileutil.CopyDir(path, filename, "lock")
 			}
 			if i == item.ChromiumExtension {

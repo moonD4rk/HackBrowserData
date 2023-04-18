@@ -11,6 +11,7 @@ const (
 	ChromiumDownload
 	ChromiumCreditCard
 	ChromiumLocalStorage
+	ChromiumSessionStorage
 	ChromiumExtension
 
 	YandexPassword
@@ -24,6 +25,7 @@ const (
 	FirefoxDownload
 	FirefoxCreditCard
 	FirefoxLocalStorage
+	FirefoxSessionStorage
 	FirefoxExtension
 )
 
@@ -41,6 +43,8 @@ func (i Item) FileName() string {
 		return fileChromiumDownload
 	case ChromiumLocalStorage:
 		return fileChromiumLocalStorage
+	case ChromiumSessionStorage:
+		return fileChromiumSessionStorage
 	case ChromiumCreditCard:
 		return fileChromiumCredit
 	case ChromiumExtension:
@@ -88,6 +92,8 @@ func (i Item) String() string {
 		return TempChromiumDownload
 	case ChromiumLocalStorage:
 		return TempChromiumLocalStorage
+	case ChromiumSessionStorage:
+		return TempChromiumSessionStorage
 	case ChromiumCreditCard:
 		return TempChromiumCreditCard
 	case ChromiumExtension:
@@ -112,6 +118,8 @@ func (i Item) String() string {
 		return TempFirefoxHistory
 	case FirefoxLocalStorage:
 		return TempFirefoxLocalStorage
+	case FirefoxSessionStorage:
+		return TempFirefoxSessionStorage
 	case FirefoxCreditCard:
 		return UnsupportedItem
 	case FirefoxExtension:
@@ -155,6 +163,7 @@ var DefaultFirefox = []Item{
 	FirefoxDownload,
 	FirefoxCreditCard,
 	FirefoxLocalStorage,
+	FirefoxSessionStorage,
 	FirefoxExtension,
 }
 
@@ -168,6 +177,7 @@ var DefaultYandex = []Item{
 	ChromiumExtension,
 	YandexPassword,
 	ChromiumLocalStorage,
+	ChromiumSessionStorage,
 	YandexCreditCard,
 }
 
@@ -181,5 +191,6 @@ var DefaultChromium = []Item{
 	ChromiumDownload,
 	ChromiumCreditCard,
 	ChromiumLocalStorage,
+	ChromiumSessionStorage,
 	ChromiumExtension,
 }
