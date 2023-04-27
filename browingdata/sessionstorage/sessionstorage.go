@@ -67,13 +67,23 @@ func (c *ChromiumSessionStorage) Len() int {
 }
 
 func (s *session) fillKey(b []byte) {
-	keys := bytes.Split(b, []byte("\x00"))
+	keys := bytes.Split(b, []byte("-"))
 	if len(keys) == 1 && bytes.HasPrefix(keys[0], []byte("META:")) {
 		s.IsMeta = true
 		s.fillMetaHeader(keys[0])
 	}
 	if len(keys) == 2 && bytes.HasPrefix(keys[0], []byte("_")) {
 		s.fillHeader(keys[0], keys[1])
+	}
+	if len(keys) == 3 {
+		if string(keys[0]) == "map"{
+			s.Key = string(keys[2])
+		} else if string(keys[0]) == "namespace"{
+			s.URL = string(keys[2])
+			s.Key = string(keys[1])
+		}
+		
+		
 	}
 }
 
