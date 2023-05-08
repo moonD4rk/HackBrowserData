@@ -76,14 +76,12 @@ func (s *session) fillKey(b []byte) {
 		s.fillHeader(keys[0], keys[1])
 	}
 	if len(keys) == 3 {
-		if string(keys[0]) == "map"{
+		if string(keys[0]) == "map" {
 			s.Key = string(keys[2])
-		} else if string(keys[0]) == "namespace"{
+		} else if string(keys[0]) == "namespace" {
 			s.URL = string(keys[2])
 			s.Key = string(keys[1])
 		}
-		
-		
 	}
 }
 
@@ -111,23 +109,23 @@ func (s *session) fillValue(b []byte) {
 type FirefoxSessionStorage []session
 
 const (
-	queryFirefoxHistory = `SELECT originKey, key, value FROM webappsstore2`
+	querySessionStorage = `SELECT originKey, key, value FROM webappsstore2`
 	closeJournalMode    = `PRAGMA journal_mode=off`
 )
 
 func (f *FirefoxSessionStorage) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite3", item.TempFirefoxLocalStorage)
+	db, err := sql.Open("sqlite3", item.TempFirefoxSessionStorage)
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempFirefoxLocalStorage)
+	defer os.Remove(item.TempFirefoxSessionStorage)
 	defer db.Close()
 
 	_, err = db.Exec(closeJournalMode)
 	if err != nil {
 		log.Error(err)
 	}
-	rows, err := db.Query(queryFirefoxHistory)
+	rows, err := db.Query(querySessionStorage)
 	if err != nil {
 		return err
 	}
@@ -159,7 +157,7 @@ func (s *session) fillFirefox(originKey, key, value string) {
 }
 
 func (f *FirefoxSessionStorage) Name() string {
-	return "localStorage"
+	return "sessionStorage"
 }
 
 func (f *FirefoxSessionStorage) Len() int {
