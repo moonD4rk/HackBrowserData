@@ -101,8 +101,8 @@ func (s *storage) fillValue(b []byte) {
 type FirefoxLocalStorage []storage
 
 const (
-	queryFirefoxHistory = `SELECT originKey, key, value FROM webappsstore2`
-	closeJournalMode    = `PRAGMA journal_mode=off`
+	queryLocalStorage = `SELECT originKey, key, value FROM webappsstore2`
+	closeJournalMode  = `PRAGMA journal_mode=off`
 )
 
 func (f *FirefoxLocalStorage) Parse(_ []byte) error {
@@ -117,7 +117,7 @@ func (f *FirefoxLocalStorage) Parse(_ []byte) error {
 	if err != nil {
 		log.Error(err)
 	}
-	rows, err := db.Query(queryFirefoxHistory)
+	rows, err := db.Query(queryLocalStorage)
 	if err != nil {
 		return err
 	}
