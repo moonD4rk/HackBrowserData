@@ -3,7 +3,7 @@
 package browser
 
 import (
-	"github.com/moond4rk/HackBrowserData/item"
+	"github.com/moond4rk/hackbrowserdata/item"
 )
 
 var (

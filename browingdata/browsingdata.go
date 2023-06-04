@@ -3,18 +3,18 @@ package browingdata
 import (
 	"path"
 
-	"github.com/moond4rk/HackBrowserData/browingdata/bookmark"
-	"github.com/moond4rk/HackBrowserData/browingdata/cookie"
-	"github.com/moond4rk/HackBrowserData/browingdata/creditcard"
-	"github.com/moond4rk/HackBrowserData/browingdata/download"
-	"github.com/moond4rk/HackBrowserData/browingdata/extension"
-	"github.com/moond4rk/HackBrowserData/browingdata/history"
-	"github.com/moond4rk/HackBrowserData/browingdata/localstorage"
-	"github.com/moond4rk/HackBrowserData/browingdata/password"
-	"github.com/moond4rk/HackBrowserData/browingdata/sessionstorage"
-	"github.com/moond4rk/HackBrowserData/item"
-	"github.com/moond4rk/HackBrowserData/log"
-	"github.com/moond4rk/HackBrowserData/utils/fileutil"
+	"github.com/moond4rk/hackbrowserdata/browingdata/bookmark"
+	"github.com/moond4rk/hackbrowserdata/browingdata/cookie"
+	"github.com/moond4rk/hackbrowserdata/browingdata/creditcard"
+	"github.com/moond4rk/hackbrowserdata/browingdata/download"
+	"github.com/moond4rk/hackbrowserdata/browingdata/extension"
+	"github.com/moond4rk/hackbrowserdata/browingdata/history"
+	"github.com/moond4rk/hackbrowserdata/browingdata/localstorage"
+	"github.com/moond4rk/hackbrowserdata/browingdata/password"
+	"github.com/moond4rk/hackbrowserdata/browingdata/sessionstorage"
+	"github.com/moond4rk/hackbrowserdata/item"
+	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
 type Data struct {

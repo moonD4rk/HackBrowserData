@@ -5,9 +5,9 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/moond4rk/HackBrowserData/browser"
-	"github.com/moond4rk/HackBrowserData/log"
-	"github.com/moond4rk/HackBrowserData/utils/fileutil"
+	"github.com/moond4rk/hackbrowserdata/browser"
+	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
 var (

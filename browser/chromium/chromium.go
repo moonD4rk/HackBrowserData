@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/moond4rk/HackBrowserData/browingdata"
-	"github.com/moond4rk/HackBrowserData/item"
-	"github.com/moond4rk/HackBrowserData/utils/fileutil"
-	"github.com/moond4rk/HackBrowserData/utils/typeutil"
+	"github.com/moond4rk/hackbrowserdata/browingdata"
+	"github.com/moond4rk/hackbrowserdata/item"
+	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
+	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
 type Chromium struct {

@@ -11,9 +11,9 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tidwall/gjson"
 
-	"github.com/moond4rk/HackBrowserData/item"
-	"github.com/moond4rk/HackBrowserData/log"
-	"github.com/moond4rk/HackBrowserData/utils/typeutil"
+	"github.com/moond4rk/hackbrowserdata/item"
+	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
 type ChromiumDownload []download
