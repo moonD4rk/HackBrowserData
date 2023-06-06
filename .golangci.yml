@@ -65,3 +65,13 @@ issues:
         - 'unused'
   max-issues-per-linter: 0
   max-same-issues: 0
+
+linters-settings:
+  depguard:
+    rules:
+      main:
+        files:
+          - $all
+        deny:
+          - pkg: "github.com/pkg/errors"
+            desc: Should be replaced by standard lib errors package
