@@ -53,12 +53,13 @@ Based on Apple's security policy, some browsers **require a current user passwor
 | OperaGX            |    ✅     |   ✅    |    ✅     |    ✅    |
 | Vivaldi            |    ✅     |   ✅    |    ✅     |    ✅    |
 | CocCoc             |    ✅     |   ✅    |    ✅     |    ✅    |
+| Yandex             |    ✅     |   ✅    |    ✅     |    ✅    |
+| Arc                |    ✅     |   ✅    |    ✅     |    ✅    |
 | Firefox            |    ✅     |   ✅    |    ✅     |    ✅    |
 | Firefox Beta       |    ✅     |   ✅    |    ✅     |    ✅    |
 | Firefox Dev        |    ✅     |   ✅    |    ✅     |    ✅    |
 | Firefox ESR        |    ✅     |   ✅    |    ✅     |    ✅    |
 | Firefox Nightly    |    ✅     |   ✅    |    ✅     |    ✅    |
-| Yandex             |    ✅     |   ✅    |    ✅     |    ✅    |
 | Safari             |    ❌     |   ❌    |    ❌     |    ❌    |
 
 ### Linux
