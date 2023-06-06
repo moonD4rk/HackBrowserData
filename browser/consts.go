@@ -23,4 +23,5 @@ const (
 	qqBrowserName  = "QQ"
 	dcBrowserName  = "DC"
 	sogouName      = "Sogou"
+	arcName        = "Arc"
 )

@@ -7,9 +7,9 @@ import (
 	// import sqlite3 driver
 	_ "github.com/mattn/go-sqlite3"
 
-	"github.com/moond4rk/HackBrowserData/crypto"
-	"github.com/moond4rk/HackBrowserData/item"
-	"github.com/moond4rk/HackBrowserData/log"
+	"github.com/moond4rk/hackbrowserdata/crypto"
+	"github.com/moond4rk/hackbrowserdata/item"
+	"github.com/moond4rk/hackbrowserdata/log"
 )
 
 type ChromiumCreditCard []card

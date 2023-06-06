@@ -39,24 +39,25 @@
 
 由于 MacOS 的安全性设置，基于 `Chromium` 内核浏览器解密时**需要当前用户密码**
 
-| 浏览器                | 密码  | Cookie | 书签  | 历史记录 |
-|:-------------------|:---:|:------:|:---:|:----:|
-| Google Chrome      |  ✅  |   ✅    |  ✅  |  ✅   |
-| Google Chrome Beta |  ✅  |   ✅    |  ✅  |  ✅   |
-| Chromium           |  ✅  |   ✅    |  ✅  |  ✅   |
-| Microsoft Edge     |  ✅  |   ✅    |  ✅  |  ✅   |
-| Brave              |  ✅  |   ✅    |  ✅  |  ✅   |
-| Opera              |  ✅  |   ✅    |  ✅  |  ✅   |
-| OperaGX            |  ✅  |   ✅    |  ✅  |  ✅   |
-| Vivaldi            |  ✅  |   ✅    |  ✅  |  ✅   |
-| Yandex             |  ✅  |   ✅    |  ✅  |  ✅   |
-| CocCoc             |  ✅  |   ✅    |  ✅  |  ✅   |
-| Firefox            |  ✅  |   ✅    |  ✅  |  ✅   |
-| Firefox Beta       |  ✅  |   ✅    |  ✅  |  ✅   |
-| Firefox Dev        |  ✅  |   ✅    |  ✅  |  ✅   |
-| Firefox ESR        |  ✅  |   ✅    |  ✅  |  ✅   |
-| Firefox Nightly    |  ✅  |   ✅    |  ✅  |  ✅   |
-| Safari             |  ❌  |   ❌    |  ❌  |  ❌   |
+| 浏览器                | 密码 | Cookie | 书签 | 历史记录 |
+|:-------------------|:--:|:------:|:--:|:----:|
+| Google Chrome      | ✅  |   ✅    | ✅  |  ✅   |
+| Google Chrome Beta | ✅  |   ✅    | ✅  |  ✅   |
+| Chromium           | ✅  |   ✅    | ✅  |  ✅   |
+| Microsoft Edge     | ✅  |   ✅    | ✅  |  ✅   |
+| Brave              | ✅  |   ✅    | ✅  |  ✅   |
+| Opera              | ✅  |   ✅    | ✅  |  ✅   |
+| OperaGX            | ✅  |   ✅    | ✅  |  ✅   |
+| Vivaldi            | ✅  |   ✅    | ✅  |  ✅   |
+| CocCoc             | ✅  |   ✅    | ✅  |  ✅   |
+| Yandex             | ✅  |   ✅    | ✅  |  ✅   |
+| Arc                | ✅  |   ✅    | ✅  |  ✅   |
+| Firefox            | ✅  |   ✅    | ✅  |  ✅   |
+| Firefox Beta       | ✅  |   ✅    | ✅  |  ✅   |
+| Firefox Dev        | ✅  |   ✅    | ✅  |  ✅   |
+| Firefox ESR        | ✅  |   ✅    | ✅  |  ✅   |
+| Firefox Nightly    | ✅  |   ✅    | ✅  |  ✅   |
+| Safari             | ❌  |   ❌    | ❌  |  ❌   |
 
 ### Linux
 

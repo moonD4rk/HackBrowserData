@@ -3,7 +3,7 @@
 package browser
 
 import (
-	"github.com/moond4rk/HackBrowserData/item"
+	"github.com/moond4rk/hackbrowserdata/item"
 )
 
 var (
@@ -73,6 +73,12 @@ var (
 			profilePath: yandexProfilePath,
 			items:       item.DefaultYandex,
 		},
+		"arc": {
+			name:        arcName,
+			profilePath: arcProfilePath,
+			storage:     arcStorageName,
+			items:       item.DefaultChromium,
+		},
 	}
 	firefoxList = map[string]struct {
 		name        string
@@ -99,6 +105,7 @@ var (
 	vivaldiProfilePath    = homeDir + "/Library/Application Support/Vivaldi/Default/"
 	coccocProfilePath     = homeDir + "/Library/Application Support/Coccoc/Default/"
 	yandexProfilePath     = homeDir + "/Library/Application Support/Yandex/YandexBrowser/Default/"
+	arcProfilePath        = homeDir + "/Library/Application Support/Arc/User Data/Default"
 
 	firefoxProfilePath = homeDir + "/Library/Application Support/Firefox/Profiles/"
 )
@@ -113,4 +120,5 @@ const (
 	vivaldiStorageName    = "Vivaldi"
 	coccocStorageName     = "CocCoc"
 	yandexStorageName     = "Yandex"
+	arcStorageName        = "Arc"
 )
