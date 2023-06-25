@@ -96,15 +96,26 @@ func CopyDirHasSuffix(src, dst, suffix string) error {
 
 // CopyFile copies the file from the source to the destination
 func CopyFile(src, dst string) error {
-	s, err := os.ReadFile(src)
-	if err != nil {
-		return err
-	}
-	err = os.WriteFile(dst, s, 0o600)
-	if err != nil {
-		return err
-	}
-	return nil
+    fsrc, err := os.Open(src)
+    if err != nil {
+        return err
+    }
+    defer fsrc.Close()
+
+    fdst, err := os.Create(dst)
+    if err != nil {
+        return err
+    }
+    defer fdst.Close()
+
+    if _, err := io.Copy(fdst, fsrc); err != nil {
+        return err
+    }
+
+    if err := fdst.Sync(); err != nil {
+        return err
+    }
+    return nil
 }
 
 // ItemName returns the filename from the provided path
