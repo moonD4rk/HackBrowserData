@@ -139,38 +139,42 @@ func CompressDir(dir string) error {
 	if err != nil {
 		return err
 	}
-	b := new(bytes.Buffer)
-	zw := zip.NewWriter(b)
+
+	outFileName := fmt.Sprintf("%s.zip", dir)
+	outFilePath := filepath.Join(dir, outFileName)
+
+	outFile, err := os.Create(outFilePath)
+	if err != nil {
+		return err
+	}
+	defer outFile.Close()
+
+	zw := zip.NewWriter(outFile)
+	defer zw.Close()
+
 	for _, f := range files {
 		fw, err := zw.Create(f.Name())
 		if err != nil {
 			return err
 		}
-		name := path.Join(dir, f.Name())
-		content, err := os.ReadFile(name)
+
+		contentPath := filepath.Join(dir, f.Name())
+		contentFile, err := os.Open(contentPath)
 		if err != nil {
 			return err
 		}
-		_, err = fw.Write(content)
+		defer contentFile.Close()
+
+		_, err = io.Copy(fw, contentFile)
 		if err != nil {
 			return err
 		}
-		err = os.Remove(name)
+
+		err = os.Remove(contentPath)
 		if err != nil {
 			return err
 		}
 	}
-	if err := zw.Close(); err != nil {
-		return err
-	}
-	filename := filepath.Join(dir, fmt.Sprintf("%s.zip", dir))
-	outFile, err := os.Create(filepath.Clean(filename))
-	if err != nil {
-		return err
-	}
-	_, err = b.WriteTo(outFile)
-	if err != nil {
-		return err
-	}
-	return outFile.Close()
+
+	return nil
 }
