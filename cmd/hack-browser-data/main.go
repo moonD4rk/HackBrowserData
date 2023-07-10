@@ -53,6 +53,7 @@ func Execute() {
 				data, err := b.BrowsingData(isFullExport)
 				if err != nil {
 					log.Error(err)
+					continue
 				}
 				data.Output(outputDir, b.Name(), outputFormat)
 			}
