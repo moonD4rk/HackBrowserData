@@ -9,7 +9,7 @@
 
 [中文说明](https://github.com/moonD4rk/HackBrowserData/blob/master/README_ZH.md)
 
-`HackBrowserData` is a command-line tool for decrypting and exporting browser data  ( passwords, history, cookies, bookmarks, credit cards, download records, localStorage and extension ) from the browser. It supports the most popular browsers on the market and runs on Windows, macOS and Linux.
+`HackBrowserData` is a command-line tool for decrypting and exporting browser data (passwords, history, cookies, bookmarks, credit cards, download history, localStorage and extensions) from the browser. It supports the most popular browsers on the market and runs on Windows, macOS and Linux.
 
 > Disclaimer: This tool is only intended for security research. Users are responsible for all legal and related liabilities resulting from the use of this tool. The original author does not assume any legal responsibility.
 
@@ -127,11 +127,11 @@ You can double-click to run, or use command line.
 ```
 PS C:\test> .\hack-browser-data.exe -h
 NAME:
-   hack-browser-data - Export password|bookmark|cookie|history|credit card|download|localStorage|extension from browser
+   hack-browser-data - Export passwords|bookmarks|cookies|history|credit cards|download history|localStorage|extensions from browser
 
 USAGE:
-   [hack-browser-data -b chrome -f json -dir results -cc]
-   Export all browingdata(password/cookie/history/bookmark) from browser
+   [hack-browser-data -b chrome -f json --dir results --zip]
+   Export all browsing data (passwords/cookies/history/bookmarks) from browser
    Github Link: https://github.com/moonD4rk/HackBrowserData
 
 VERSION:
@@ -140,16 +140,16 @@ VERSION:
 GLOBAL OPTIONS:
    --verbose, --vv                   verbose (default: false)
    --compress, --zip                 compress result to zip (default: false)
-   --browser value, -b value         available browsers: all|brave|chrome|chrome-beta|chromium|coccoc|edge|firefox|opera|opera-gx|vivaldi|yandex (default: "all")
+   --browser value, -b value         available browsers: all|360|brave|chrome|chrome-beta|chromium|coccoc|dc|edge|firefox|opera|opera-gx|qq|sogou|vivaldi|yandex (default: "all")
    --results-dir value, --dir value  export dir (default: "results")
-   --format value, -f value          file name csv|json (default: "csv")
+   --format value, -f value          output format: csv|json (default: "csv")
    --profile-path value, -p value    custom profile dir path, get with chrome://version
    --full-export, --full             is export full browsing data (default: true)
    --help, -h                        show help
    --version, -v                     print the version
 
 
-PS C:\test> .\hack-browser-data.exe -b all -f json --dir results -zip
+PS C:\test> .\hack-browser-data.exe -b all -f json --dir results --zip
 [NOTICE] [browser.go:46,pickChromium] find browser Chrome success  
 [NOTICE] [browser.go:46,pickChromium] find browser Microsoft Edge success  
 [NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_download.json success  

@@ -1,4 +1,4 @@
-package browingdata
+package browsingdata
 
 import (
 	"os"

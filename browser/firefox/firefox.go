@@ -6,7 +6,7 @@ import (
 	"io/fs"
 	"path/filepath"
 
-	"github.com/moond4rk/hackbrowserdata/browingdata"
+	"github.com/moond4rk/hackbrowserdata/browsingdata"
 	"github.com/moond4rk/hackbrowserdata/item"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
@@ -76,13 +76,13 @@ func (f *Firefox) Name() string {
 	return f.name
 }
 
-func (f *Firefox) BrowsingData(isFullExport bool) (*browingdata.Data, error) {
+func (f *Firefox) BrowsingData(isFullExport bool) (*browsingdata.Data, error) {
 	items := f.items
 	if !isFullExport {
 		items = item.FilterSensitiveItems(f.items)
 	}
 
-	b := browingdata.New(items)
+	b := browsingdata.New(items)
 
 	if err := f.copyItemToLocal(); err != nil {
 		return nil, err
