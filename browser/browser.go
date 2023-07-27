@@ -5,9 +5,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/moond4rk/hackbrowserdata/browingdata"
 	"github.com/moond4rk/hackbrowserdata/browser/chromium"
 	"github.com/moond4rk/hackbrowserdata/browser/firefox"
+	"github.com/moond4rk/hackbrowserdata/browsingdata"
 	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
@@ -17,7 +17,7 @@ type Browser interface {
 	// Name is browser's name
 	Name() string
 	// BrowsingData returns all browsing data in the browser.
-	BrowsingData(isFullExport bool) (*browingdata.Data, error)
+	BrowsingData(isFullExport bool) (*browsingdata.Data, error)
 }
 
 // PickBrowsers returns a list of browsers that match the name and profile.

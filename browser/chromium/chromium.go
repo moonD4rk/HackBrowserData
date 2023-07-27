@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/moond4rk/hackbrowserdata/browingdata"
+	"github.com/moond4rk/hackbrowserdata/browsingdata"
 	"github.com/moond4rk/hackbrowserdata/item"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
@@ -48,13 +48,13 @@ func (c *Chromium) Name() string {
 	return c.name
 }
 
-func (c *Chromium) BrowsingData(isFullExport bool) (*browingdata.Data, error) {
+func (c *Chromium) BrowsingData(isFullExport bool) (*browsingdata.Data, error) {
 	items := c.items
 	if !isFullExport {
 		items = item.FilterSensitiveItems(c.items)
 	}
 
-	data := browingdata.New(items)
+	data := browsingdata.New(items)
 
 	if err := c.copyItemToLocal(); err != nil {
 		return nil, err
