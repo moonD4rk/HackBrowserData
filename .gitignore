@@ -191,6 +191,6 @@ results/
 
 hack-browser-data
 !/cmd/hack-browser-data
-!/browingdata/history
-!/browingdata/history/history.go
-!/browingdata/history/history_test.go
+!/browsingdata/history
+!/browsingdata/history/history.go
+!/browsingdata/history/history_test.go
