@@ -31,7 +31,7 @@ func (c *ChromiumBookmark) Parse(_ []byte) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempChromiumBookmark)
+	_ = os.Remove(item.TempChromiumBookmark)
 	r := gjson.Parse(bookmarks)
 	if r.Exists() {
 		roots := r.Get("roots")
@@ -94,11 +94,11 @@ const (
 )
 
 func (f *FirefoxBookmark) Parse(_ []byte) error {
+	defer os.Remove(item.TempFirefoxBookmark)
 	db, err := sql.Open("sqlite3", item.TempFirefoxBookmark)
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempFirefoxBookmark)
 	defer db.Close()
 	_, err = db.Exec(closeJournalMode)
 	if err != nil {

@@ -22,7 +22,7 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(item.TempChromiumKey)
+	_ = os.Remove(item.TempChromiumKey)
 
 	encryptedKey := gjson.Get(b, "os_crypt.encrypted_key")
 	if !encryptedKey.Exists() {

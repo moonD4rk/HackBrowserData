@@ -36,11 +36,11 @@ const (
 )
 
 func (c *ChromiumCookie) Parse(masterKey []byte) error {
+	defer os.Remove(item.TempChromiumCookie)
 	db, err := sql.Open("sqlite3", item.TempChromiumCookie)
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempChromiumCookie)
 	defer db.Close()
 	rows, err := db.Query(queryChromiumCookie)
 	if err != nil {
@@ -104,11 +104,11 @@ const (
 )
 
 func (f *FirefoxCookie) Parse(_ []byte) error {
+	defer os.Remove(item.TempFirefoxCookie)
 	db, err := sql.Open("sqlite3", item.TempFirefoxCookie)
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempFirefoxCookie)
 	defer db.Close()
 
 	rows, err := db.Query(queryFirefoxCookie)

@@ -29,11 +29,11 @@ const (
 )
 
 func (c *ChromiumCreditCard) Parse(masterKey []byte) error {
+	defer os.Remove(item.TempChromiumCreditCard)
 	db, err := sql.Open("sqlite3", item.TempChromiumCreditCard)
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempChromiumCreditCard)
 	defer db.Close()
 
 	rows, err := db.Query(queryChromiumCredit)
@@ -85,11 +85,11 @@ func (c *ChromiumCreditCard) Len() int {
 type YandexCreditCard []card
 
 func (c *YandexCreditCard) Parse(masterKey []byte) error {
+	defer os.Remove(item.TempYandexCreditCard)
 	db, err := sql.Open("sqlite3", item.TempYandexCreditCard)
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempYandexCreditCard)
 	defer db.Close()
 	rows, err := db.Query(queryChromiumCredit)
 	if err != nil {
