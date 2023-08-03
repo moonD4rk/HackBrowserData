@@ -2,6 +2,7 @@ package chromium
 
 import (
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -86,7 +87,7 @@ func (c *Chromium) copyItemToLocal() error {
 				err = fileutil.CopyDir(path, filename, "lock")
 			}
 			if i == item.ChromiumExtension {
-				err = fileutil.CopyDirHasSuffix(path, filename, "manifest.json")
+				err = os.WriteFile(filename, []byte(fileutil.ParentDir(path)), 0o600)
 			}
 		default:
 			err = fileutil.CopyFile(path, filename)
