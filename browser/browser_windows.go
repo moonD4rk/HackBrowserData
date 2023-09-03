@@ -7,112 +7,186 @@ import (
 )
 
 var (
-	chromiumList = map[string]struct {
+	firefoxList = make(map[string]struct {
+		name        string
+		storage     string
+		profilePath string
+		items       []item.Item
+	})
+	chromiumList = make(map[string]struct {
+		name        string
+		profilePath string
+		storage     string
+		items       []item.Item
+	})
+)
+
+func MakeUserFile(UserHomeDir string, username string) {
+	chromeUserDataPath := UserHomeDir + "/AppData/Local/Google/Chrome/User Data/Default/"
+	chromeBetaUserDataPath := UserHomeDir + "/AppData/Local/Google/Chrome Beta/User Data/Default/"
+	chromiumUserDataPath := UserHomeDir + "/AppData/Local/Chromium/User Data/Default/"
+	edgeProfilePath := UserHomeDir + "/AppData/Local/Microsoft/Edge/User Data/Default/"
+	braveProfilePath := UserHomeDir + "/AppData/Local/BraveSoftware/Brave-Browser/User Data/Default/"
+	speed360ProfilePath := UserHomeDir + "/AppData/Local/360chrome/Chrome/User Data/Default/"
+	qqBrowserProfilePath := UserHomeDir + "/AppData/Local/Tencent/QQBrowser/User Data/Default/"
+	operaProfilePath := UserHomeDir + "/AppData/Roaming/Opera Software/Opera Stable/"
+	operaGXProfilePath := UserHomeDir + "/AppData/Roaming/Opera Software/Opera GX Stable/"
+	vivaldiProfilePath := UserHomeDir + "/AppData/Local/Vivaldi/User Data/Default/"
+	coccocProfilePath := UserHomeDir + "/AppData/Local/CocCoc/Browser/User Data/Default/"
+	yandexProfilePath := UserHomeDir + "/AppData/Local/Yandex/YandexBrowser/User Data/Default/"
+	dcBrowserProfilePath := UserHomeDir + "/AppData/Local/DCBrowser/User Data/Default/"
+	sogouProfilePath := UserHomeDir + "/AppData/Roaming/SogouExplorer/Webkit/Default/"
+
+	firefoxProfilePath := UserHomeDir + "/AppData/Roaming/Mozilla/Firefox/Profiles/"
+
+	chromiumList[username+"chrome"] = struct {
 		name        string
 		profilePath string
 		storage     string
 		items       []item.Item
 	}{
-		"chrome": {
-			name:        chromeName,
-			profilePath: chromeUserDataPath,
-			items:       item.DefaultChromium,
-		},
-		"edge": {
-			name:        edgeName,
-			profilePath: edgeProfilePath,
-			items:       item.DefaultChromium,
-		},
-		"chromium": {
-			name:        chromiumName,
-			profilePath: chromiumUserDataPath,
-			items:       item.DefaultChromium,
-		},
-		"chrome-beta": {
-			name:        chromeBetaName,
-			profilePath: chromeBetaUserDataPath,
-			items:       item.DefaultChromium,
-		},
-		"opera": {
-			name:        operaName,
-			profilePath: operaProfilePath,
-			items:       item.DefaultChromium,
-		},
-		"opera-gx": {
-			name:        operaGXName,
-			profilePath: operaGXProfilePath,
-			items:       item.DefaultChromium,
-		},
-		"vivaldi": {
-			name:        vivaldiName,
-			profilePath: vivaldiProfilePath,
-			items:       item.DefaultChromium,
-		},
-		"coccoc": {
-			name:        coccocName,
-			profilePath: coccocProfilePath,
-			items:       item.DefaultChromium,
-		},
-		"brave": {
-			name:        braveName,
-			profilePath: braveProfilePath,
-			items:       item.DefaultChromium,
-		},
-		"yandex": {
-			name:        yandexName,
-			profilePath: yandexProfilePath,
-			items:       item.DefaultYandex,
-		},
-		"360": {
-			name:        speed360Name,
-			profilePath: speed360ProfilePath,
-			items:       item.DefaultChromium,
-		},
-		"qq": {
-			name:        qqBrowserName,
-			profilePath: qqBrowserProfilePath,
-			items:       item.DefaultChromium,
-		},
-		"dc": {
-			name:        dcBrowserName,
-			profilePath: dcBrowserProfilePath,
-			items:       item.DefaultChromium,
-		},
-		"sogou": {
-			name:        sogouName,
-			profilePath: sogouProfilePath,
-			items:       item.DefaultChromium,
-		},
+		name:        chromeName,
+		profilePath: chromeUserDataPath,
+		items:       item.DefaultChromium,
 	}
-	firefoxList = map[string]struct {
+	chromiumList[username+"edge"] = struct {
+		name        string
+		profilePath string
+		storage     string
+		items       []item.Item
+	}{
+		name:        edgeName,
+		profilePath: edgeProfilePath,
+		items:       item.DefaultChromium,
+	}
+	chromiumList[username+"chromium"] = struct {
+		name        string
+		profilePath string
+		storage     string
+		items       []item.Item
+	}{
+		name:        chromiumName,
+		profilePath: chromiumUserDataPath,
+		items:       item.DefaultChromium,
+	}
+	chromiumList[username+"chrome-beta"] = struct {
+		name        string
+		profilePath string
+		storage     string
+		items       []item.Item
+	}{
+		name:        chromeBetaName,
+		profilePath: chromeBetaUserDataPath,
+		items:       item.DefaultChromium,
+	}
+	chromiumList[username+"opera"] = struct {
+		name        string
+		profilePath string
+		storage     string
+		items       []item.Item
+	}{
+		name:        operaName,
+		profilePath: operaProfilePath,
+		items:       item.DefaultChromium,
+	}
+	chromiumList[username+"opera-gx"] = struct {
+		name        string
+		profilePath string
+		storage     string
+		items       []item.Item
+	}{
+		name:        operaGXName,
+		profilePath: operaGXProfilePath,
+		items:       item.DefaultChromium,
+	}
+	chromiumList[username+"vivaldi"] = struct {
+		name        string
+		profilePath string
+		storage     string
+		items       []item.Item
+	}{
+		name:        vivaldiName,
+		profilePath: vivaldiProfilePath,
+		items:       item.DefaultChromium,
+	}
+	chromiumList[username+"coccoc"] = struct {
+		name        string
+		profilePath string
+		storage     string
+		items       []item.Item
+	}{
+		name:        coccocName,
+		profilePath: coccocProfilePath,
+		items:       item.DefaultChromium,
+	}
+	chromiumList[username+"brave"] = struct {
+		name        string
+		profilePath string
+		storage     string
+		items       []item.Item
+	}{
+		name:        braveName,
+		profilePath: braveProfilePath,
+		items:       item.DefaultChromium,
+	}
+	chromiumList[username+"yandex"] = struct {
+		name        string
+		profilePath string
+		storage     string
+		items       []item.Item
+	}{
+		name:        yandexName,
+		profilePath: yandexProfilePath,
+		items:       item.DefaultYandex,
+	}
+	chromiumList[username+"360"] = struct {
+		name        string
+		profilePath string
+		storage     string
+		items       []item.Item
+	}{
+		name:        speed360Name,
+		profilePath: speed360ProfilePath,
+		items:       item.DefaultChromium,
+	}
+	chromiumList[username+"qq"] = struct {
+		name        string
+		profilePath string
+		storage     string
+		items       []item.Item
+	}{
+		name:        qqBrowserName,
+		profilePath: qqBrowserProfilePath,
+		items:       item.DefaultChromium,
+	}
+	chromiumList[username+"dc"] = struct {
+		name        string
+		profilePath string
+		storage     string
+		items       []item.Item
+	}{
+		name:        dcBrowserName,
+		profilePath: dcBrowserProfilePath,
+		items:       item.DefaultChromium,
+	}
+	chromiumList[username+"sogou"] = struct {
+		name        string
+		profilePath string
+		storage     string
+		items       []item.Item
+	}{
+		name:        sogouName,
+		profilePath: sogouProfilePath,
+		items:       item.DefaultChromium,
+	}
+	firefoxList[username+"firefox"] = struct {
 		name        string
 		storage     string
 		profilePath string
 		items       []item.Item
 	}{
-		"firefox": {
-			name:        firefoxName,
-			profilePath: firefoxProfilePath,
-			items:       item.DefaultFirefox,
-		},
+		name:        firefoxName,
+		profilePath: firefoxProfilePath,
+		items:       item.DefaultFirefox,
 	}
-)
-
-var (
-	chromeUserDataPath     = homeDir + "/AppData/Local/Google/Chrome/User Data/Default/"
-	chromeBetaUserDataPath = homeDir + "/AppData/Local/Google/Chrome Beta/User Data/Default/"
-	chromiumUserDataPath   = homeDir + "/AppData/Local/Chromium/User Data/Default/"
-	edgeProfilePath        = homeDir + "/AppData/Local/Microsoft/Edge/User Data/Default/"
-	braveProfilePath       = homeDir + "/AppData/Local/BraveSoftware/Brave-Browser/User Data/Default/"
-	speed360ProfilePath    = homeDir + "/AppData/Local/360chrome/Chrome/User Data/Default/"
-	qqBrowserProfilePath   = homeDir + "/AppData/Local/Tencent/QQBrowser/User Data/Default/"
-	operaProfilePath       = homeDir + "/AppData/Roaming/Opera Software/Opera Stable/"
-	operaGXProfilePath     = homeDir + "/AppData/Roaming/Opera Software/Opera GX Stable/"
-	vivaldiProfilePath     = homeDir + "/AppData/Local/Vivaldi/User Data/Default/"
-	coccocProfilePath      = homeDir + "/AppData/Local/CocCoc/Browser/User Data/Default/"
-	yandexProfilePath      = homeDir + "/AppData/Local/Yandex/YandexBrowser/User Data/Default/"
-	dcBrowserProfilePath   = homeDir + "/AppData/Local/DCBrowser/User Data/Default/"
-	sogouProfilePath       = homeDir + "/AppData/Roaming/SogouExplorer/Webkit/Default/"
-
-	firefoxProfilePath = homeDir + "/AppData/Roaming/Mozilla/Firefox/Profiles/"
-)
+}
