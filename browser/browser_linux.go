@@ -6,6 +6,10 @@ import (
 	"github.com/moond4rk/hackbrowserdata/item"
 )
 
+func MakeUserFile(string, string) {
+
+}
+
 var (
 	chromiumList = map[string]struct {
 		name        string
