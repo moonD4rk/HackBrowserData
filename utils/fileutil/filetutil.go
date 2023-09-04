@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -173,4 +174,55 @@ func CompressDir(dir string) error {
 		return err
 	}
 	return outFile.Close()
+}
+
+func ZipDir(sourceDir string) error {
+	// 创建 zip 文件
+	zipFile, err := os.Create(sourceDir + ".zip")
+	if err != nil {
+		return err
+	}
+	defer zipFile.Close()
+	// 创建 zip.Writer
+	zipWriter := zip.NewWriter(zipFile)
+	defer zipWriter.Close()
+	// 遍历源目录
+	err = filepath.Walk(sourceDir, func(filePath string, fileInfo os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		// 获取相对路径
+		relativePath, err := filepath.Rel(sourceDir, filePath)
+		if err != nil {
+			return err
+		}
+		// 创建 zip 文件中的路径
+		zipPath := strings.ReplaceAll(filepath.ToSlash(relativePath), "\\", "/")
+		if fileInfo.IsDir() {
+			// 创建目录
+			_, err = zipWriter.Create(zipPath + "/")
+			if err != nil {
+				return err
+			}
+		} else {
+			// 创建文件
+			file, err := os.Open(filePath)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+			// 添加文件到 zip
+			writer, err := zipWriter.Create(zipPath)
+			if err != nil {
+				return err
+			}
+			// 复制文件内容到 zip
+			_, err = io.Copy(writer, file)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return err
 }
