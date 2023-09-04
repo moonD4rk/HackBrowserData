@@ -6,6 +6,7 @@ import (
 
 // home dir path for all platforms
 var homeDir, _ = os.UserHomeDir()
+var HomeDir = homeDir
 
 const (
 	chromeName     = "Chrome"
