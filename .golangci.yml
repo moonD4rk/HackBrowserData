@@ -22,7 +22,6 @@ linters:
     - 'ineffassign'
     - 'makezero'
     - 'misspell'
-    - 'paralleltest'
     - 'prealloc'
     - 'predeclared'
     - 'revive'
@@ -42,6 +41,7 @@ linters:
     - 'errcheck'
     - 'deadcode'
     - 'varcheck'
+    - 'paralleltest'
 
 issues:
   exclude-use-default: false
