@@ -1,9 +1,9 @@
 module github.com/moond4rk/hackbrowserdata
 
-go 1.20
+go 1.21
 
 require (
-	github.com/gocarina/gocsv v0.0.0-20230226133904-70c27cb2918a
+	github.com/gocarina/gocsv v0.0.0-20230616125104-99d496ca653d
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gookit/slog v0.4.0
 	github.com/mattn/go-sqlite3 v1.14.16
