@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/w-devin/poketto/file"
 	"os"
 	"path"
 	"path/filepath"
@@ -98,12 +99,18 @@ func CopyDirHasSuffix(src, dst, suffix string) error {
 func CopyFile(src, dst string) error {
 	s, err := os.ReadFile(src)
 	if err != nil {
-		return err
+		goto WindowsCopy
 	}
 	err = os.WriteFile(dst, s, 0o600)
 	if err != nil {
-		return err
+		goto WindowsCopy
 	}
+
+WindowsCopy:
+	if err != nil {
+		return file.CopyFileUsedByOtherProcess(src, dst)
+	}
+
 	return nil
 }
 
