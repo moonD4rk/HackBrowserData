@@ -185,7 +185,7 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 	}
 	if bytes.Contains(k, []byte("password-check")) {
 		keyLin := []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
-		if bytes.Compare(nssA102, keyLin) == 0 {
+		if bytes.Equal(nssA102, keyLin) {
 			nssPBE, err := crypto.NewASN1PBE(nssA11)
 			if err != nil {
 				return err
