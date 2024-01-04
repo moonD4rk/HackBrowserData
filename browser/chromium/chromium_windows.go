@@ -34,6 +34,10 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 		return nil, errDecodeMasterKeyFailed
 	}
 	c.masterKey, err = crypto.DPAPI(key[5:])
+	if err != nil {
+		log.Errorf("%s failed to decrypt master key, maybe this profile was created on a different OS installation", c.name)
+		return nil, err
+	}
 	log.Infof("%s initialized master key success", c.name)
-	return c.masterKey, err
+	return c.masterKey, nil
 }
