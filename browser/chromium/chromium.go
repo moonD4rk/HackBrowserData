@@ -7,6 +7,7 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/browsingdata"
 	"github.com/moond4rk/hackbrowserdata/item"
+	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
@@ -89,7 +90,8 @@ func (c *Chromium) copyItemToLocal() error {
 			err = fileutil.CopyFile(path, filename)
 		}
 		if err != nil {
-			return err
+			log.Errorf("copy %s to %s error: %v", path, filename, err)
+			continue
 		}
 	}
 	return nil
