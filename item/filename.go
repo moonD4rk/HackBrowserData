@@ -11,7 +11,7 @@ const (
 	fileChromiumBookmark       = "Bookmarks"
 	fileChromiumLocalStorage   = "Local Storage/leveldb"
 	fileChromiumSessionStorage = "Session Storage"
-	fileChromiumExtension      = "Extensions"
+	fileChromiumExtension      = "Secure Preferences" // TODO: add more extension files and folders, eg: Preferences
 
 	fileYandexPassword = "Ya Passman Data"
 	fileYandexCredit   = "Ya Credit Cards"

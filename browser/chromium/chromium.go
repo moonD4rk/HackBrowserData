@@ -85,9 +85,6 @@ func (c *Chromium) copyItemToLocal() error {
 			if i == item.ChromiumSessionStorage {
 				err = fileutil.CopyDir(path, filename, "lock")
 			}
-			if i == item.ChromiumExtension {
-				err = fileutil.CopyDirHasSuffix(path, filename, "manifest.json")
-			}
 		default:
 			err = fileutil.CopyFile(path, filename)
 		}
