@@ -40,7 +40,7 @@ func (c *ChromiumExtension) Parse(_ []byte) error {
 }
 
 func parseChromiumExtensions(content string) ([]*extension, error) {
-	var settingKeys = []string{
+	settingKeys := []string{
 		"settings.extensions",
 		"settings.settings",
 		"extensions.settings",
