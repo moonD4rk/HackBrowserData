@@ -32,7 +32,7 @@ func (o *outPutter) Write(data Source, writer io.Writer) error {
 	switch o.json {
 	case true:
 		encoder := json.NewEncoder(writer)
-		encoder.SetIndent("  ", "  ")
+		encoder.SetIndent("", "  ")
 		encoder.SetEscapeHTML(false)
 		return encoder.Encode(data)
 	default:
