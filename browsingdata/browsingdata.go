@@ -41,6 +41,7 @@ func (d *Data) Recovery(masterKey []byte) error {
 	for _, source := range d.sources {
 		if err := source.Parse(masterKey); err != nil {
 			log.Errorf("parse %s error %s", source.Name(), err.Error())
+			continue
 		}
 	}
 	return nil
