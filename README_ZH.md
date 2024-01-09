@@ -130,7 +130,7 @@ USAGE:
    Github Link: https://github.com/moonD4rk/HackBrowserData
 
 VERSION:
-   0.4.7
+   0.4.5
 
 GLOBAL OPTIONS:
    --verbose, --vv                   verbose (default: false)
