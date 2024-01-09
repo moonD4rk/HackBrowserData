@@ -1,9 +1,8 @@
 package extension
 
 import (
-	"errors"
+	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/tidwall/gjson"
@@ -26,22 +25,39 @@ type extension struct {
 }
 
 func (c *ChromiumExtension) Parse(_ []byte) error {
-	profilePath, err := fileutil.ReadFile(item.TempChromiumExtension)
+	extensionFile, err := fileutil.ReadFile(item.TempChromiumExtension)
 	if err != nil {
 		return err
 	}
-	_ = os.Remove(item.TempChromiumExtension)
+	defer os.Remove(item.TempChromiumExtension)
 
-	var extensions *gjson.Result
-	if result, err := readChromiumExts(filepath.Join(profilePath, "Secure Preferences")); err == nil {
-		extensions = result
-	} else if result, err := readChromiumExts(filepath.Join(profilePath, "Preferences")); err == nil {
-		extensions = result
-	} else {
+	result, err := parseChromiumExtensions(extensionFile)
+	if err != nil {
 		return err
 	}
+	*c = result
+	return nil
+}
 
-	extensions.ForEach(func(id, ext gjson.Result) bool {
+func parseChromiumExtensions(content string) ([]*extension, error) {
+	var settingKeys = []string{
+		"settings.extensions",
+		"settings.settings",
+		"extensions.settings",
+	}
+	var settings gjson.Result
+	for _, key := range settingKeys {
+		settings = gjson.Parse(content).Get(key)
+		if settings.Exists() {
+			break
+		}
+	}
+	if !settings.Exists() {
+		return nil, fmt.Errorf("cannot find extensions in settings")
+	}
+	var c []*extension
+
+	settings.ForEach(func(id, ext gjson.Result) bool {
 		location := ext.Get("location")
 		if !location.Exists() {
 			return true
@@ -50,21 +66,18 @@ func (c *ChromiumExtension) Parse(_ []byte) error {
 		case 5, 10: // https://source.chromium.org/chromium/chromium/src/+/main:extensions/common/mojom/manifest.mojom
 			return true
 		}
-
 		// https://source.chromium.org/chromium/chromium/src/+/main:extensions/browser/disable_reason.h
 		enabled := !ext.Get("disable_reasons").Exists()
-
 		b := ext.Get("manifest")
 		if !b.Exists() {
-			*c = append(*c, &extension{
+			c = append(c, &extension{
 				ID:      id.String(),
 				Enabled: enabled,
 				Name:    ext.Get("path").String(),
 			})
 			return true
 		}
-
-		*c = append(*c, &extension{
+		c = append(c, &extension{
 			ID:          id.String(),
 			URL:         getChromiumExtURL(id.String(), b.Get("update_url").String()),
 			Enabled:     enabled,
@@ -76,19 +89,7 @@ func (c *ChromiumExtension) Parse(_ []byte) error {
 		return true
 	})
 
-	return nil
-}
-
-func readChromiumExts(filename string) (*gjson.Result, error) {
-	prefs, err := fileutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-	extensions := gjson.Parse(prefs).Get("extensions.settings")
-	if extensions.Exists() {
-		return &extensions, nil
-	}
-	return nil, errors.New("extensions not found")
+	return c, nil
 }
 
 func getChromiumExtURL(id, updateURL string) string {
