@@ -29,11 +29,11 @@ type storage struct {
 const maxLocalStorageValueLength = 1024 * 2
 
 func (c *ChromiumLocalStorage) Parse(_ []byte) error {
-	db, err := leveldb.OpenFile(item.TempChromiumLocalStorage, nil)
+	db, err := leveldb.OpenFile(item.ChromiumLocalStorage.TempFilename(), nil)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(item.TempChromiumLocalStorage)
+	defer os.RemoveAll(item.ChromiumLocalStorage.TempFilename())
 	defer db.Close()
 
 	iter := db.NewIterator(nil, nil)
@@ -106,11 +106,11 @@ const (
 )
 
 func (f *FirefoxLocalStorage) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite3", item.TempFirefoxLocalStorage)
+	db, err := sql.Open("sqlite3", item.FirefoxLocalStorage.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempFirefoxLocalStorage)
+	defer os.Remove(item.FirefoxLocalStorage.TempFilename())
 	defer db.Close()
 
 	_, err = db.Exec(closeJournalMode)

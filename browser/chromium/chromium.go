@@ -76,7 +76,7 @@ func (c *Chromium) BrowsingData(isFullExport bool) (*browsingdata.Data, error) {
 
 func (c *Chromium) copyItemToLocal() error {
 	for i, path := range c.itemPaths {
-		filename := i.String()
+		filename := i.TempFilename()
 		var err error
 		switch {
 		case fileutil.IsDirExists(path):
@@ -109,7 +109,7 @@ func (c *Chromium) userItemPaths(profilePath string, items []item.Item) (map[str
 	var dir string
 	for userDir, v := range multiItemPaths {
 		for _, p := range v {
-			if strings.HasSuffix(p, item.ChromiumKey.FileName()) {
+			if strings.HasSuffix(p, item.ChromiumKey.Filename()) {
 				keyPath = p
 				dir = userDir
 				break
@@ -132,7 +132,7 @@ func (c *Chromium) userItemPaths(profilePath string, items []item.Item) (map[str
 func chromiumWalkFunc(items []item.Item, multiItemPaths map[string]map[item.Item]string) filepath.WalkFunc {
 	return func(path string, info fs.FileInfo, err error) error {
 		for _, v := range items {
-			if info.Name() == v.FileName() {
+			if info.Name() == v.Filename() {
 				if strings.Contains(path, "System Profile") {
 					continue
 				}
@@ -153,7 +153,7 @@ func chromiumWalkFunc(items []item.Item, multiItemPaths map[string]map[item.Item
 
 func fillLocalStoragePath(itemPaths map[item.Item]string, storage item.Item) {
 	if p, ok := itemPaths[item.ChromiumHistory]; ok {
-		lsp := filepath.Join(filepath.Dir(p), storage.FileName())
+		lsp := filepath.Join(filepath.Dir(p), storage.Filename())
 		if fileutil.IsDirExists(lsp) {
 			itemPaths[item.ChromiumLocalStorage] = lsp
 		}

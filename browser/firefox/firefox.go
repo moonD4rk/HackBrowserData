@@ -43,7 +43,7 @@ func New(profilePath string, items []item.Item) ([]*Firefox, error) {
 
 func (f *Firefox) copyItemToLocal() error {
 	for i, path := range f.itemPaths {
-		filename := i.String()
+		filename := i.TempFilename()
 		if err := fileutil.CopyFile(path, filename); err != nil {
 			return err
 		}
@@ -54,7 +54,7 @@ func (f *Firefox) copyItemToLocal() error {
 func firefoxWalkFunc(items []item.Item, multiItemPaths map[string]map[item.Item]string) fs.WalkDirFunc {
 	return func(path string, info fs.DirEntry, err error) error {
 		for _, v := range items {
-			if info.Name() == v.FileName() {
+			if info.Name() == v.Filename() {
 				parentBaseDir := fileutil.ParentBaseDir(path)
 				if _, exist := multiItemPaths[parentBaseDir]; exist {
 					multiItemPaths[parentBaseDir][v] = path

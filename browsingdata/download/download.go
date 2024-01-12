@@ -32,11 +32,11 @@ const (
 )
 
 func (c *ChromiumDownload) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite3", item.TempChromiumDownload)
+	db, err := sql.Open("sqlite3", item.ChromiumDownload.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempChromiumDownload)
+	defer os.Remove(item.ChromiumDownload.TempFilename())
 	defer db.Close()
 	rows, err := db.Query(queryChromiumDownload)
 	if err != nil {
@@ -83,11 +83,11 @@ const (
 )
 
 func (f *FirefoxDownload) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite3", item.TempFirefoxDownload)
+	db, err := sql.Open("sqlite3", item.FirefoxDownload.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempFirefoxDownload)
+	defer os.Remove(item.FirefoxDownload.TempFilename())
 	defer db.Close()
 
 	_, err = db.Exec(closeJournalMode)
