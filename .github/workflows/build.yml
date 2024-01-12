@@ -29,17 +29,6 @@ jobs:
         run: git config --global core.autocrlf false
 
       - name: Format Check
-        if: matrix.os == 'windows-latest'
-        run: |
-          $files = gofmt -l .
-          if ($files) {
-            Write-Output "Unformatted files:"
-            Write-Output $files
-            exit 1
-          }
-        shell: pwsh
-
-      - name: Format Check
         if: matrix.os != 'windows-latest'
         run: |
           diff -u <(echo -n) <(gofmt -d .)
