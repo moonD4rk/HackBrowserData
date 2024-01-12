@@ -4,16 +4,15 @@ on:
     branches:
       - master
   pull_request:
-  
 jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
       - name: Set Golang
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v1.213
         with:
-          go-version: "1.21"
+          go-version: "1.21.x"
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Lint
