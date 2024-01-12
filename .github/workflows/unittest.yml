@@ -1,5 +1,5 @@
 on:
-  [push, pull_request]
+  [pull_request]
 
 name: run tests
 jobs:
@@ -37,7 +37,7 @@ jobs:
       - name: Convert coverage.out to coverage.lcov
         uses: jandelgado/gcov2lcov-action@v1
       - name: Coveralls
-        uses: coverallsapp/github-action@v1.1.2
+        uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.github_token }}
           path-to-lcov: coverage.lcov
