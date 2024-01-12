@@ -18,11 +18,11 @@ import (
 var errDecodeMasterKeyFailed = errors.New("decode master key failed")
 
 func (c *Chromium) GetMasterKey() ([]byte, error) {
-	b, err := fileutil.ReadFile(item.TempChromiumKey)
+	b, err := fileutil.ReadFile(item.ChromiumKey.TempFilename())
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(item.TempChromiumKey)
+	defer os.Remove(item.ChromiumKey.TempFilename())
 
 	encryptedKey := gjson.Get(b, "os_crypt.encrypted_key")
 	if !encryptedKey.Exists() {

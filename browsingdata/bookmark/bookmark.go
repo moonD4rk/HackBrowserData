@@ -27,11 +27,11 @@ type bookmark struct {
 }
 
 func (c *ChromiumBookmark) Parse(_ []byte) error {
-	bookmarks, err := fileutil.ReadFile(item.TempChromiumBookmark)
+	bookmarks, err := fileutil.ReadFile(item.ChromiumBookmark.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempChromiumBookmark)
+	defer os.Remove(item.ChromiumBookmark.TempFilename())
 	r := gjson.Parse(bookmarks)
 	if r.Exists() {
 		roots := r.Get("roots")
@@ -94,11 +94,11 @@ const (
 )
 
 func (f *FirefoxBookmark) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite3", item.TempFirefoxBookmark)
+	db, err := sql.Open("sqlite3", item.FirefoxBookmark.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempFirefoxBookmark)
+	defer os.Remove(item.FirefoxBookmark.TempFilename())
 	defer db.Close()
 	_, err = db.Exec(closeJournalMode)
 	if err != nil {

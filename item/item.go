@@ -1,5 +1,11 @@
 package item
 
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+)
+
 type Item int
 
 const (
@@ -29,104 +35,45 @@ const (
 	FirefoxExtension
 )
 
-func (i Item) FileName() string {
-	switch i {
-	case ChromiumKey:
-		return fileChromiumKey
-	case ChromiumPassword:
-		return fileChromiumPassword
-	case ChromiumCookie:
-		return fileChromiumCookie
-	case ChromiumBookmark:
-		return fileChromiumBookmark
-	case ChromiumDownload:
-		return fileChromiumDownload
-	case ChromiumLocalStorage:
-		return fileChromiumLocalStorage
-	case ChromiumSessionStorage:
-		return fileChromiumSessionStorage
-	case ChromiumCreditCard:
-		return fileChromiumCredit
-	case ChromiumExtension:
-		return fileChromiumExtension
-	case ChromiumHistory:
-		return fileChromiumHistory
-	case YandexPassword:
-		return fileYandexPassword
-	case YandexCreditCard:
-		return fileYandexCredit
-	case FirefoxKey4:
-		return fileFirefoxKey4
-	case FirefoxPassword:
-		return fileFirefoxPassword
-	case FirefoxCookie:
-		return fileFirefoxCookie
-	case FirefoxBookmark:
-		return fileFirefoxData
-	case FirefoxDownload:
-		return fileFirefoxData
-	case FirefoxLocalStorage:
-		return fileFirefoxLocalStorage
-	case FirefoxHistory:
-		return fileFirefoxData
-	case FirefoxExtension:
-		return fileFirefoxExtension
-	case FirefoxCreditCard:
-		return UnsupportedItem
-	default:
-		return UnknownItem
-	}
+var itemFileNames = map[Item]string{
+	ChromiumKey:            fileChromiumKey,
+	ChromiumPassword:       fileChromiumPassword,
+	ChromiumCookie:         fileChromiumCookie,
+	ChromiumBookmark:       fileChromiumBookmark,
+	ChromiumDownload:       fileChromiumDownload,
+	ChromiumLocalStorage:   fileChromiumLocalStorage,
+	ChromiumSessionStorage: fileChromiumSessionStorage,
+	ChromiumCreditCard:     fileChromiumCredit,
+	ChromiumExtension:      fileChromiumExtension,
+	ChromiumHistory:        fileChromiumHistory,
+	YandexPassword:         fileYandexPassword,
+	YandexCreditCard:       fileYandexCredit,
+	FirefoxKey4:            fileFirefoxKey4,
+	FirefoxPassword:        fileFirefoxPassword,
+	FirefoxCookie:          fileFirefoxCookie,
+	FirefoxBookmark:        fileFirefoxData,
+	FirefoxDownload:        fileFirefoxData,
+	FirefoxLocalStorage:    fileFirefoxLocalStorage,
+	FirefoxHistory:         fileFirefoxData,
+	FirefoxExtension:       fileFirefoxExtension,
+	FirefoxSessionStorage:  UnsupportedItem,
+	FirefoxCreditCard:      UnsupportedItem,
 }
 
-func (i Item) String() string {
-	switch i {
-	case ChromiumKey:
-		return TempChromiumKey
-	case ChromiumPassword:
-		return TempChromiumPassword
-	case ChromiumCookie:
-		return TempChromiumCookie
-	case ChromiumBookmark:
-		return TempChromiumBookmark
-	case ChromiumDownload:
-		return TempChromiumDownload
-	case ChromiumLocalStorage:
-		return TempChromiumLocalStorage
-	case ChromiumSessionStorage:
-		return TempChromiumSessionStorage
-	case ChromiumCreditCard:
-		return TempChromiumCreditCard
-	case ChromiumExtension:
-		return TempChromiumExtension
-	case ChromiumHistory:
-		return TempChromiumHistory
-	case YandexPassword:
-		return TempYandexPassword
-	case YandexCreditCard:
-		return TempYandexCreditCard
-	case FirefoxKey4:
-		return TempFirefoxKey4
-	case FirefoxPassword:
-		return TempFirefoxPassword
-	case FirefoxCookie:
-		return TempFirefoxCookie
-	case FirefoxBookmark:
-		return TempFirefoxBookmark
-	case FirefoxDownload:
-		return TempFirefoxDownload
-	case FirefoxHistory:
-		return TempFirefoxHistory
-	case FirefoxLocalStorage:
-		return TempFirefoxLocalStorage
-	case FirefoxSessionStorage:
-		return TempFirefoxSessionStorage
-	case FirefoxCreditCard:
-		return UnsupportedItem
-	case FirefoxExtension:
-		return TempFirefoxExtension
-	default:
-		return UnknownItem
+func (i Item) Filename() string {
+	if fileName, ok := itemFileNames[i]; ok {
+		return fileName
 	}
+	return UnknownItem
+}
+
+const tempSuffix = "temp"
+
+// TempFilename returns the temp filename for the item with suffix
+// eg: chromiumKey_0.temp
+func (i Item) TempFilename() string {
+	tempFile := fmt.Sprintf("%s_%d.%s", i.Filename(), i, tempSuffix)
+	return filepath.Join(os.TempDir(), tempFile)
 }
 
 // IsSensitive returns whether the item is sensitive data
@@ -194,3 +141,32 @@ var DefaultChromium = []Item{
 	ChromiumSessionStorage,
 	ChromiumExtension,
 }
+
+// item's default filename
+const (
+	fileChromiumKey            = "Local State"
+	fileChromiumCredit         = "Web Data"
+	fileChromiumPassword       = "Login Data"
+	fileChromiumHistory        = "History"
+	fileChromiumDownload       = "History"
+	fileChromiumCookie         = "Cookies"
+	fileChromiumBookmark       = "Bookmarks"
+	fileChromiumLocalStorage   = "Local Storage/leveldb"
+	fileChromiumSessionStorage = "Session Storage"
+	fileChromiumExtension      = "Secure Preferences" // TODO: add more extension files and folders, eg: Preferences
+
+	fileYandexPassword = "Ya Passman Data"
+	fileYandexCredit   = "Ya Credit Cards"
+
+	fileFirefoxKey4         = "key4.db"
+	fileFirefoxCookie       = "cookies.sqlite"
+	fileFirefoxPassword     = "logins.json"
+	fileFirefoxData         = "places.sqlite"
+	fileFirefoxLocalStorage = "webappsstore.sqlite"
+	fileFirefoxExtension    = "extensions.json"
+)
+
+const (
+	UnknownItem     = "unknown item"
+	UnsupportedItem = "unsupported item"
+)

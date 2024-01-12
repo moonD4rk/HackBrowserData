@@ -34,11 +34,11 @@ const (
 )
 
 func (c *ChromiumPassword) Parse(masterKey []byte) error {
-	db, err := sql.Open("sqlite3", item.TempChromiumPassword)
+	db, err := sql.Open("sqlite3", item.ChromiumPassword.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempChromiumPassword)
+	defer os.Remove(item.ChromiumPassword.TempFilename())
 	defer db.Close()
 
 	rows, err := db.Query(queryChromiumLogin)
@@ -101,11 +101,11 @@ const (
 )
 
 func (c *YandexPassword) Parse(masterKey []byte) error {
-	db, err := sql.Open("sqlite3", item.TempYandexPassword)
+	db, err := sql.Open("sqlite3", item.YandexPassword.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempYandexPassword)
+	defer os.Remove(item.YandexPassword.TempFilename())
 	defer db.Close()
 
 	rows, err := db.Query(queryYandexLogin)
@@ -170,7 +170,7 @@ const (
 )
 
 func (f *FirefoxPassword) Parse(masterKey []byte) error {
-	globalSalt, metaBytes, nssA11, nssA102, err := getFirefoxDecryptKey(item.TempFirefoxKey4)
+	globalSalt, metaBytes, nssA11, nssA102, err := getFirefoxDecryptKey(item.FirefoxKey4.TempFilename())
 	if err != nil {
 		return err
 	}
@@ -252,11 +252,11 @@ func getFirefoxDecryptKey(key4file string) (item1, item2, a11, a102 []byte, err 
 }
 
 func getFirefoxLoginData() ([]loginData, error) {
-	s, err := os.ReadFile(item.TempFirefoxPassword)
+	s, err := os.ReadFile(item.FirefoxPassword.TempFilename())
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(item.TempFirefoxPassword)
+	defer os.Remove(item.FirefoxPassword.TempFilename())
 	loginsJSON := gjson.GetBytes(s, "logins")
 	var logins []loginData
 	if loginsJSON.Exists() {
