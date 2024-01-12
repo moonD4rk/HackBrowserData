@@ -124,6 +124,6 @@ func (i Item) filename() string {
 	case FirefoxCreditCard:
 		return UnsupportedItem
 	default:
-		return UnknownItem
+		return UnsupportedItem
 	}
 }

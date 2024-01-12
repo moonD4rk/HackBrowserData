@@ -64,7 +64,7 @@ func (i Item) Filename() string {
 	if fileName, ok := itemFileNames[i]; ok {
 		return fileName
 	}
-	return UnknownItem
+	return UnsupportedItem
 }
 
 const tempSuffix = "temp"
