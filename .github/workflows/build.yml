@@ -25,6 +25,9 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
 
+      - name: Set Git to handle line endings consistently
+        run: git config --global core.autocrlf false
+
       - name: Format Check
         if: matrix.os == 'windows-latest'
         run: |
