@@ -5,7 +5,7 @@
 
 # HackBrowserData
 
-[![Lint](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml) [![build](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml) [![Release](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml)
+[![Lint](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml) [![build](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml) [![Release](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml) [![run tests](https://github.com/moonD4rk/HackBrowserData/actions/workflows/unittest.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/unittest.yml) [![Coverage Status](https://coveralls.io/repos/github/moonD4rk/HackBrowserData/badge.svg)](https://coveralls.io/github/moonD4rk/HackBrowserData)
 
 [中文说明](https://github.com/moonD4rk/HackBrowserData/blob/master/README_ZH.md)
 
