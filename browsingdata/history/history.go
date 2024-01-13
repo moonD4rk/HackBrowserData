@@ -28,11 +28,11 @@ const (
 )
 
 func (c *ChromiumHistory) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite3", item.TempChromiumHistory)
+	db, err := sql.Open("sqlite3", item.ChromiumHistory.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempChromiumHistory)
+	defer os.Remove(item.ChromiumHistory.TempFilename())
 	defer db.Close()
 
 	rows, err := db.Query(queryChromiumHistory)
@@ -79,11 +79,11 @@ const (
 )
 
 func (f *FirefoxHistory) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite3", item.TempFirefoxHistory)
+	db, err := sql.Open("sqlite3", item.FirefoxHistory.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempFirefoxHistory)
+	defer os.Remove(item.FirefoxHistory.TempFilename())
 	defer db.Close()
 
 	_, err = db.Exec(closeJournalMode)

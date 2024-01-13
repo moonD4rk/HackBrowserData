@@ -29,11 +29,11 @@ type session struct {
 const maxLocalStorageValueLength = 1024 * 2
 
 func (c *ChromiumSessionStorage) Parse(_ []byte) error {
-	db, err := leveldb.OpenFile(item.TempChromiumSessionStorage, nil)
+	db, err := leveldb.OpenFile(item.ChromiumSessionStorage.TempFilename(), nil)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(item.TempChromiumSessionStorage)
+	defer os.RemoveAll(item.ChromiumSessionStorage.TempFilename())
 	defer db.Close()
 
 	iter := db.NewIterator(nil, nil)
@@ -114,11 +114,11 @@ const (
 )
 
 func (f *FirefoxSessionStorage) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite3", item.TempFirefoxSessionStorage)
+	db, err := sql.Open("sqlite3", item.FirefoxSessionStorage.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempFirefoxSessionStorage)
+	defer os.Remove(item.FirefoxSessionStorage.TempFilename())
 	defer db.Close()
 
 	_, err = db.Exec(closeJournalMode)

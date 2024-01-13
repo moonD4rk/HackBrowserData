@@ -194,3 +194,6 @@ hack-browser-data
 !/browsingdata/history
 !/browsingdata/history/history.go
 !/browsingdata/history/history_test.go
+
+# github action
+!/.github/workflows/unittest.yml

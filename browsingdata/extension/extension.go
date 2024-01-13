@@ -25,11 +25,11 @@ type extension struct {
 }
 
 func (c *ChromiumExtension) Parse(_ []byte) error {
-	extensionFile, err := fileutil.ReadFile(item.TempChromiumExtension)
+	extensionFile, err := fileutil.ReadFile(item.ChromiumExtension.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.TempChromiumExtension)
+	defer os.Remove(item.ChromiumExtension.TempFilename())
 
 	result, err := parseChromiumExtensions(extensionFile)
 	if err != nil {
@@ -114,11 +114,11 @@ type FirefoxExtension []*extension
 var lang = language.Und
 
 func (f *FirefoxExtension) Parse(_ []byte) error {
-	s, err := fileutil.ReadFile(item.TempFirefoxExtension)
+	s, err := fileutil.ReadFile(item.FirefoxExtension.TempFilename())
 	if err != nil {
 		return err
 	}
-	_ = os.Remove(item.TempFirefoxExtension)
+	_ = os.Remove(item.FirefoxExtension.TempFilename())
 	j := gjson.Parse(s)
 	for _, v := range j.Get("addons").Array() {
 		// https://searchfox.org/mozilla-central/source/toolkit/mozapps/extensions/internal/XPIDatabase.jsm#157

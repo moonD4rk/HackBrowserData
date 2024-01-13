@@ -18,7 +18,7 @@ import (
 func (c *Chromium) GetMasterKey() ([]byte, error) {
 	// what is d-bus @https://dbus.freedesktop.org/
 	// don't need chromium key file for Linux
-	defer os.Remove(item.TempChromiumKey)
+	defer os.Remove(item.ChromiumKey.TempFilename())
 
 	conn, err := dbus.SessionBus()
 	if err != nil {
