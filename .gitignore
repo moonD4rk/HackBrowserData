@@ -199,3 +199,6 @@ hack-browser-data
 !/.github/workflows/unittest.yml
 !/.github/ISSUE_TEMPLATE/*.md
 !/.github/*.md
+
+# Community
+!CONTRIBUTING.md
