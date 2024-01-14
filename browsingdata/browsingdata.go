@@ -1,7 +1,7 @@
 package browsingdata
 
 import (
-	"path"
+	"log/slog"
 
 	"github.com/moond4rk/hackbrowserdata/browsingdata/bookmark"
 	"github.com/moond4rk/hackbrowserdata/browsingdata/cookie"
@@ -13,7 +13,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/browsingdata/password"
 	"github.com/moond4rk/hackbrowserdata/browsingdata/sessionstorage"
 	"github.com/moond4rk/hackbrowserdata/item"
-	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
@@ -40,7 +39,7 @@ func New(items []item.Item) *Data {
 func (d *Data) Recovery(masterKey []byte) error {
 	for _, source := range d.sources {
 		if err := source.Parse(masterKey); err != nil {
-			log.Errorf("parse %s error %s", source.Name(), err.Error())
+			slog.Error("parse error", "source_data", source.Name(), "err", err.Error())
 			continue
 		}
 	}
@@ -59,18 +58,18 @@ func (d *Data) Output(dir, browserName, flag string) {
 
 		f, err := output.CreateFile(dir, filename)
 		if err != nil {
-			log.Errorf("create file %s error %s", filename, err.Error())
+			slog.Error("create file error", "filename", filename, "err", err.Error())
 			continue
 		}
 		if err := output.Write(source, f); err != nil {
-			log.Errorf("write to file %s error %s", filename, err.Error())
+			slog.Error("write to file error", "filename", filename, "err", err.Error())
 			continue
 		}
 		if err := f.Close(); err != nil {
-			log.Errorf("close file %s error %s", filename, err.Error())
+			slog.Error("close file error", "filename", filename, "err", err.Error())
 			continue
 		}
-		log.Noticef("output to file %s success", path.Join(dir, filename))
+		slog.Warn("export success", "filename", filename)
 	}
 }
 

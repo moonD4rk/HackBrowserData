@@ -2,6 +2,7 @@ package creditcard
 
 import (
 	"database/sql"
+	"log/slog"
 	"os"
 
 	// import sqlite3 driver
@@ -9,7 +10,6 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
 	"github.com/moond4rk/hackbrowserdata/item"
-	"github.com/moond4rk/hackbrowserdata/log"
 )
 
 type ChromiumCreditCard []card
@@ -47,7 +47,7 @@ func (c *ChromiumCreditCard) Parse(masterKey []byte) error {
 			value, encryptValue                        []byte
 		)
 		if err := rows.Scan(&guid, &name, &month, &year, &encryptValue, &address, &nickname); err != nil {
-			log.Warn(err)
+			slog.Error("scan chromium credit card error", "err", err)
 		}
 		ccInfo := card{
 			GUID:            guid,
@@ -64,7 +64,7 @@ func (c *ChromiumCreditCard) Parse(masterKey []byte) error {
 				value, err = crypto.DecryptPass(masterKey, encryptValue)
 			}
 			if err != nil {
-				log.Error(err)
+				slog.Error("decrypt chromium credit card error", "err", err)
 			}
 		}
 
@@ -102,7 +102,7 @@ func (c *YandexCreditCard) Parse(masterKey []byte) error {
 			value, encryptValue                        []byte
 		)
 		if err := rows.Scan(&guid, &name, &month, &year, &encryptValue, &address, &nickname); err != nil {
-			log.Warn(err)
+			slog.Error("scan chromium credit card error", "err", err)
 		}
 		ccInfo := card{
 			GUID:            guid,
@@ -119,7 +119,7 @@ func (c *YandexCreditCard) Parse(masterKey []byte) error {
 				value, err = crypto.DecryptPass(masterKey, encryptValue)
 			}
 			if err != nil {
-				log.Error(err)
+				slog.Error("decrypt chromium credit card error", "err", err)
 			}
 		}
 		ccInfo.CardNumber = string(value)

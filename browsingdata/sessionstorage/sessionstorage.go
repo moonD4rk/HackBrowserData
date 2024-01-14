@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -12,7 +13,6 @@ import (
 	"golang.org/x/text/transform"
 
 	"github.com/moond4rk/hackbrowserdata/item"
-	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/utils/byteutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
@@ -123,7 +123,7 @@ func (f *FirefoxSessionStorage) Parse(_ []byte) error {
 
 	_, err = db.Exec(closeJournalMode)
 	if err != nil {
-		log.Error(err)
+		slog.Error("close journal mode error", "err", err)
 	}
 	rows, err := db.Query(querySessionStorage)
 	if err != nil {
@@ -133,7 +133,7 @@ func (f *FirefoxSessionStorage) Parse(_ []byte) error {
 	for rows.Next() {
 		var originKey, key, value string
 		if err = rows.Scan(&originKey, &key, &value); err != nil {
-			log.Warn(err)
+			slog.Error("scan session storage error", "err", err)
 		}
 		s := new(session)
 		s.fillFirefox(originKey, key, value)
