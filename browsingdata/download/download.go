@@ -2,6 +2,7 @@ package download
 
 import (
 	"database/sql"
+	"log/slog"
 	"os"
 	"sort"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/moond4rk/hackbrowserdata/item"
-	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
@@ -49,7 +49,7 @@ func (c *ChromiumDownload) Parse(_ []byte) error {
 			totalBytes, startTime, endTime int64
 		)
 		if err := rows.Scan(&targetPath, &tabURL, &totalBytes, &startTime, &endTime, &mimeType); err != nil {
-			log.Warn(err)
+			slog.Warn("scan chromium download error", "err", err)
 		}
 		data := download{
 			TargetPath: targetPath,
@@ -92,7 +92,7 @@ func (f *FirefoxDownload) Parse(_ []byte) error {
 
 	_, err = db.Exec(closeJournalMode)
 	if err != nil {
-		log.Error(err)
+		slog.Error("close journal mode error", "err", err)
 	}
 	rows, err := db.Query(queryFirefoxDownload)
 	if err != nil {
@@ -105,7 +105,7 @@ func (f *FirefoxDownload) Parse(_ []byte) error {
 			placeID, dateAdded int64
 		)
 		if err = rows.Scan(&placeID, &content, &url, &dateAdded); err != nil {
-			log.Warn(err)
+			slog.Warn("scan firefox download error", "err", err)
 		}
 		contentList := strings.Split(content, ",{")
 		if len(contentList) > 1 {

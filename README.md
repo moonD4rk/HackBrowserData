@@ -5,7 +5,7 @@
 
 # HackBrowserData
 
-[![Lint](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml) [![build](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml) [![Release](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml) [![run tests](https://github.com/moonD4rk/HackBrowserData/actions/workflows/unittest.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/unittest.yml) [![Coverage Status](https://coveralls.io/repos/github/moonD4rk/HackBrowserData/badge.svg)](https://coveralls.io/github/moonD4rk/HackBrowserData)
+[![Lint](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml) [![build](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml) [![Release](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml) [![unit tests](https://github.com/moonD4rk/HackBrowserData/actions/workflows/unittest.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/unittest.yml) [![Coverage Status](https://coveralls.io/repos/github/moonD4rk/HackBrowserData/badge.svg?branch=main)](https://coveralls.io/github/moonD4rk/HackBrowserData?branch=main)
 
 [中文说明](https://github.com/moonD4rk/HackBrowserData/blob/master/README_ZH.md)
 
@@ -90,7 +90,7 @@ Installation of `HackBrowserData` is dead-simple, just download [the release for
 
 ### Building from source
 
-only support `go 1.18+` with go generics
+only support `go 1.21+` with go generics and log/slog standard library.
 
 ```bash
 $ git clone https://github.com/moonD4rk/HackBrowserData

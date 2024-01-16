@@ -2,6 +2,7 @@ package bookmark
 
 import (
 	"database/sql"
+	"log/slog"
 	"os"
 	"sort"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/moond4rk/hackbrowserdata/item"
-	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
@@ -102,7 +102,7 @@ func (f *FirefoxBookmark) Parse(_ []byte) error {
 	defer db.Close()
 	_, err = db.Exec(closeJournalMode)
 	if err != nil {
-		log.Error(err)
+		slog.Error("close journal mode error", "err", err)
 	}
 	rows, err := db.Query(queryFirefoxBookMark)
 	if err != nil {
@@ -115,7 +115,7 @@ func (f *FirefoxBookmark) Parse(_ []byte) error {
 			title, url        string
 		)
 		if err = rows.Scan(&id, &url, &bt, &dateAdded, &title); err != nil {
-			log.Warn(err)
+			slog.Error("scan bookmark error", "err", err)
 		}
 		*f = append(*f, bookmark{
 			ID:        id,

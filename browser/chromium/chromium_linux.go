@@ -5,6 +5,7 @@ package chromium
 import (
 	"crypto/sha1"
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/godbus/dbus/v5"
@@ -12,7 +13,6 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/moond4rk/hackbrowserdata/item"
-	"github.com/moond4rk/hackbrowserdata/log"
 )
 
 func (c *Chromium) GetMasterKey() ([]byte, error) {
@@ -34,7 +34,7 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 	}
 	defer func() {
 		if err := session.Close(); err != nil {
-			log.Errorf("close session failed: %v", err)
+			slog.Error("close dbus session error", "err", err.Error())
 		}
 	}()
 	collections, err := svc.GetAllCollections()
@@ -50,7 +50,7 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 		for _, i := range items {
 			label, err := i.GetLabel()
 			if err != nil {
-				log.Error(err)
+				slog.Warn("get label from dbus", "err", err.Error())
 				continue
 			}
 			if label == c.storage {
@@ -71,6 +71,6 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_linux.cc
 	key := pbkdf2.Key(secret, salt, 1, 16, sha1.New)
 	c.masterKey = key
-	log.Infof("%s initialized master key success", c.name)
+	slog.Info("get master key success", "browser", c.name)
 	return key, nil
 }

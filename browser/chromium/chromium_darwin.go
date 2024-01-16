@@ -7,6 +7,7 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
@@ -14,7 +15,6 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/moond4rk/hackbrowserdata/item"
-	"github.com/moond4rk/hackbrowserdata/log"
 )
 
 var (
@@ -55,6 +55,6 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 		return nil, errWrongSecurityCommand
 	}
 	c.masterKey = key
-	log.Infof("%s initialized master key success", c.name)
+	slog.Info("get master key success", "browser", c.name)
 	return key, nil
 }

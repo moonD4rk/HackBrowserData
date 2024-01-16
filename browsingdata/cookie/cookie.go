@@ -2,6 +2,7 @@ package cookie
 
 import (
 	"database/sql"
+	"log/slog"
 	"os"
 	"sort"
 	"time"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
 	"github.com/moond4rk/hackbrowserdata/item"
-	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
@@ -55,7 +55,7 @@ func (c *ChromiumCookie) Parse(masterKey []byte) error {
 			value, encryptValue                           []byte
 		)
 		if err = rows.Scan(&key, &encryptValue, &host, &path, &createDate, &expireDate, &isSecure, &isHTTPOnly, &hasExpire, &isPersistent); err != nil {
-			log.Warn(err)
+			slog.Error("scan chromium cookie error", "err", err)
 		}
 
 		cookie := cookie{
@@ -77,7 +77,7 @@ func (c *ChromiumCookie) Parse(masterKey []byte) error {
 				value, err = crypto.DecryptPass(masterKey, encryptValue)
 			}
 			if err != nil {
-				log.Error(err)
+				slog.Error("decrypt chromium cookie error", "err", err)
 			}
 		}
 		cookie.Value = string(value)
@@ -123,7 +123,7 @@ func (f *FirefoxCookie) Parse(_ []byte) error {
 			creationTime, expiry    int64
 		)
 		if err = rows.Scan(&name, &value, &host, &path, &creationTime, &expiry, &isSecure, &isHTTPOnly); err != nil {
-			log.Warn(err)
+			slog.Error("scan firefox cookie error", "err", err)
 		}
 		*f = append(*f, cookie{
 			KeyName:    name,

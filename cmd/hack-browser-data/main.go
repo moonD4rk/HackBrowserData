@@ -1,12 +1,13 @@
 package main
 
 import (
+	"log/slog"
 	"os"
 
 	"github.com/urfave/cli/v2"
 
 	"github.com/moond4rk/hackbrowserdata/browser"
-	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/logger"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
@@ -42,17 +43,18 @@ func Execute() {
 		HideHelpCommand: true,
 		Action: func(c *cli.Context) error {
 			if verbose {
-				log.SetVerbose()
+				logger.Default.SetVerbose()
+				logger.Configure(logger.Default)
 			}
 			browsers, err := browser.PickBrowsers(browserName, profilePath)
 			if err != nil {
-				log.Error(err)
+				slog.Error("pick browsers error", "err", err)
 			}
 
 			for _, b := range browsers {
 				data, err := b.BrowsingData(isFullExport)
 				if err != nil {
-					log.Error(err)
+					slog.Error("get browsing data error", "err", err)
 					continue
 				}
 				data.Output(outputDir, b.Name(), outputFormat)
@@ -60,9 +62,9 @@ func Execute() {
 
 			if compress {
 				if err = fileutil.CompressDir(outputDir); err != nil {
-					log.Error(err)
+					slog.Error("compress error: ", "err", err)
 				}
-				log.Noticef("compress success")
+				slog.Info("compress success")
 			}
 			return nil
 		},
