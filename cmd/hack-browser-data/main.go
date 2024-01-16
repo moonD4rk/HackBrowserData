@@ -43,8 +43,8 @@ func Execute() {
 		HideHelpCommand: true,
 		Action: func(c *cli.Context) error {
 			if verbose {
-				logger.DefaultLogger.SetVerbose()
-				logger.Configure(logger.DefaultLogger)
+				logger.Default.SetVerbose()
+				logger.Configure(logger.Default)
 			}
 			browsers, err := browser.PickBrowsers(browserName, profilePath)
 			if err != nil {

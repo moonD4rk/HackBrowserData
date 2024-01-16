@@ -31,7 +31,7 @@ func TestSetVerbose(t *testing.T) {
 	asserts := assert.New(t)
 	buf := new(bytes.Buffer)
 
-	logger := DefaultLogger.clone()
+	logger := Default.clone()
 	logger.SetVerbose()
 	logger.SetOutput(buf)
 	Configure(logger)
@@ -45,7 +45,7 @@ func TestSetVerbose(t *testing.T) {
 func TestLogger_SetJSONHandler(t *testing.T) {
 	asserts := assert.New(t)
 
-	logger := DefaultLogger.clone()
+	logger := Default.clone()
 	logger.SetJSONHandler()
 	asserts.True(logger.IsJSONHandler, "IsJSONHandler should be true")
 }

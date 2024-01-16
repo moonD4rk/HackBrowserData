@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 )
 
-// DefaultLogger is the default options for the default handler.
-var DefaultLogger = &Logger{
+// Default is the default *Logger for the default handler.
+var Default = &Logger{
 	AddSource:     true,
 	IsVerbose:     false,
 	IsJSONHandler: true,
@@ -18,7 +18,7 @@ var DefaultLogger = &Logger{
 }
 
 func init() {
-	Configure(DefaultLogger)
+	Configure(Default)
 }
 
 // Configure configures the logger by the given options.

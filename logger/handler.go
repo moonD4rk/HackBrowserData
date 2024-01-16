@@ -15,7 +15,7 @@ type LogHandler struct {
 
 func NewHandler(logger *Logger) LogHandler {
 	if logger == nil {
-		logger = DefaultLogger
+		logger = Default
 	}
 
 	level := logger.Level
