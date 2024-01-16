@@ -12,7 +12,6 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
 	"github.com/moond4rk/hackbrowserdata/item"
-	"github.com/moond4rk/hackbrowserdata/logger"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
@@ -36,7 +35,7 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 	}
 	c.masterKey, err = crypto.DPAPI(key[5:])
 	if err != nil {
-		logger.Errorf("%s failed to decrypt master key, maybe this profile was created on a different OS installation", c.name)
+		slog.Error("decrypt master key failed", "err", err)
 		return nil, err
 	}
 	slog.Info("get master key success", "browser", c.name)

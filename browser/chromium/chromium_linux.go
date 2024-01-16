@@ -13,7 +13,6 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/moond4rk/hackbrowserdata/item"
-	"github.com/moond4rk/hackbrowserdata/logger"
 )
 
 func (c *Chromium) GetMasterKey() ([]byte, error) {
@@ -35,7 +34,7 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 	}
 	defer func() {
 		if err := session.Close(); err != nil {
-			logger.Errorf("close session failed: %v", err)
+			slog.Error("close dbus session error", "err", err.Error())
 		}
 	}()
 	collections, err := svc.GetAllCollections()
@@ -51,7 +50,7 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 		for _, i := range items {
 			label, err := i.GetLabel()
 			if err != nil {
-				logger.Error(err)
+				slog.Warn("get label from dbus", "err", err.Error())
 				continue
 			}
 			if label == c.storage {
