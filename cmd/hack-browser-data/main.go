@@ -42,7 +42,10 @@ func Execute() {
 		},
 		HideHelpCommand: true,
 		Action: func(c *cli.Context) error {
-			slog.SetDefault(logger.STDLogger)
+			if verbose {
+				logger.DefaultLogger.SetVerbose()
+				logger.Configure(logger.DefaultLogger)
+			}
 			browsers, err := browser.PickBrowsers(browserName, profilePath)
 			if err != nil {
 				slog.Error("pick browsers error", "err", err)

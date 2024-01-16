@@ -5,6 +5,7 @@ package chromium
 import (
 	"encoding/base64"
 	"errors"
+	"log/slog"
 	"os"
 
 	"github.com/tidwall/gjson"
