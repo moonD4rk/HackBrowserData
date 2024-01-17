@@ -1,5 +1,5 @@
 <div align="center">
-<img src="LOGO.png" alt="hack-browser-data logo" />
+<img src="LOGO.png" alt="hack-browser-data logo" width="440px" />
 </div>
 
 
