@@ -46,7 +46,7 @@ func (c *ChromiumLocalStorage) Parse(_ []byte) error {
 		if len(value) < maxLocalStorageValueLength {
 			s.fillValue(value)
 		} else {
-			s.Value = fmt.Sprintf("value is too long, length is %d, supportted max length is %d", len(value), maxLocalStorageValueLength)
+			s.Value = fmt.Sprintf("value is too long, length is %d, supported max length is %d", len(value), maxLocalStorageValueLength)
 		}
 		if s.IsMeta {
 			s.Value = fmt.Sprintf("meta data, value bytes is %v", value)

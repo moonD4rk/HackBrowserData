@@ -30,7 +30,7 @@ func DecryptPassForYandex(key, encryptPass []byte) ([]byte, error) {
 }
 
 // chromium > 80 https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_win.cc
-func aesGCMDecrypt(crypted, key, nounce []byte) ([]byte, error) {
+func aesGCMDecrypt(encrypted, key, nounce []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
@@ -39,7 +39,7 @@ func aesGCMDecrypt(crypted, key, nounce []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	origData, err := blockMode.Open(nil, nounce, crypted, nil)
+	origData, err := blockMode.Open(nil, nounce, encrypted, nil)
 	if err != nil {
 		return nil, err
 	}
