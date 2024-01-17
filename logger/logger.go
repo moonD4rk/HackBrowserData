@@ -11,7 +11,7 @@ import (
 var Default = &Logger{
 	AddSource:     true,
 	IsVerbose:     false,
-	IsJSONHandler: true,
+	IsJSONHandler: false,
 	Level:         slog.LevelWarn,
 	ReplaceAttr:   defaultReplaceAttrFunc,
 	Output:        os.Stderr,

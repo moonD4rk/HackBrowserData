@@ -202,3 +202,6 @@ hack-browser-data
 
 # Community
 !CONTRIBUTING.md
+
+# CICD Config
+!typos.toml

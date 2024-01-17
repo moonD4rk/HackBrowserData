@@ -5,7 +5,7 @@ on:
       - main
   workflow_dispatch:
 
-name: run tests
+name: unit tests
 jobs:
   test:
     strategy:
