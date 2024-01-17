@@ -16,6 +16,12 @@ jobs:
           go-version: "1.21.x"
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Check spelling with custom config file
+        uses: crate-ci/typos@master
+        with:
+          config: ./typos.toml
+
       - name: Lint
         uses: golangci/golangci-lint-action@v3
         with:
