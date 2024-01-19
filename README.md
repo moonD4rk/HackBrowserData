@@ -184,6 +184,12 @@ PS C:\Users\User\Desktop> .\hack-browser-data.exe -b chrome -p "C:\Users\User\Ap
 
 [Reflective-HackBrowserData](https://github.com/idiotc4t/Reflective-HackBrowserData)
 
+## Contributing
+
+We welcome and appreciate any contributions made by the community (GitHub issues/pull requests, email feedback, etc.).
+
+Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
+
 
 ## Contributors
 
