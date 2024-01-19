@@ -9,9 +9,8 @@ import (
 	"sort"
 	"time"
 
-	// import sqlite3 driver
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/tidwall/gjson"
+	_ "modernc.org/sqlite" // import sqlite3 driver
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
 	"github.com/moond4rk/hackbrowserdata/item"
