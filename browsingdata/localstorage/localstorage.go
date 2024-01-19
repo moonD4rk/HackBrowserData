@@ -106,7 +106,7 @@ const (
 )
 
 func (f *FirefoxLocalStorage) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite3", item.FirefoxLocalStorage.TempFilename())
+	db, err := sql.Open("sqlite", item.FirefoxLocalStorage.TempFilename())
 	if err != nil {
 		return err
 	}
