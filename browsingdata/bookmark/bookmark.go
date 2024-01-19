@@ -7,9 +7,8 @@ import (
 	"sort"
 	"time"
 
-	// import sqlite3 driver
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/tidwall/gjson"
+	_ "modernc.org/sqlite" // import sqlite3 driver
 
 	"github.com/moond4rk/hackbrowserdata/item"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
@@ -94,7 +93,7 @@ const (
 )
 
 func (f *FirefoxBookmark) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite3", item.FirefoxBookmark.TempFilename())
+	db, err := sql.Open("sqlite", item.FirefoxBookmark.TempFilename())
 	if err != nil {
 		return err
 	}

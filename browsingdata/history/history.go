@@ -8,7 +8,7 @@ import (
 	"time"
 
 	// import sqlite3 driver
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 
 	"github.com/moond4rk/hackbrowserdata/item"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
@@ -28,7 +28,7 @@ const (
 )
 
 func (c *ChromiumHistory) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite3", item.ChromiumHistory.TempFilename())
+	db, err := sql.Open("sqlite", item.ChromiumHistory.TempFilename())
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ const (
 )
 
 func (f *FirefoxHistory) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite3", item.FirefoxHistory.TempFilename())
+	db, err := sql.Open("sqlite", item.FirefoxHistory.TempFilename())
 	if err != nil {
 		return err
 	}

@@ -8,9 +8,8 @@ import (
 	"strings"
 	"time"
 
-	// import sqlite3 driver
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/tidwall/gjson"
+	_ "modernc.org/sqlite" // import sqlite3 driver
 
 	"github.com/moond4rk/hackbrowserdata/item"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
@@ -32,7 +31,7 @@ const (
 )
 
 func (c *ChromiumDownload) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite3", item.ChromiumDownload.TempFilename())
+	db, err := sql.Open("sqlite", item.ChromiumDownload.TempFilename())
 	if err != nil {
 		return err
 	}
@@ -83,7 +82,7 @@ const (
 )
 
 func (f *FirefoxDownload) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite3", item.FirefoxDownload.TempFilename())
+	db, err := sql.Open("sqlite", item.FirefoxDownload.TempFilename())
 	if err != nil {
 		return err
 	}
