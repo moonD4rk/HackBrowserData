@@ -29,7 +29,7 @@ const (
 )
 
 func (c *ChromiumCreditCard) Parse(masterKey []byte) error {
-	db, err := sql.Open("sqlite3", item.ChromiumCreditCard.TempFilename())
+	db, err := sql.Open("sqlite", item.ChromiumCreditCard.TempFilename())
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func (c *ChromiumCreditCard) Len() int {
 type YandexCreditCard []card
 
 func (c *YandexCreditCard) Parse(masterKey []byte) error {
-	db, err := sql.Open("sqlite3", item.YandexCreditCard.TempFilename())
+	db, err := sql.Open("sqlite", item.YandexCreditCard.TempFilename())
 	if err != nil {
 		return err
 	}

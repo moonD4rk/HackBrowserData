@@ -93,7 +93,7 @@ const (
 )
 
 func (f *FirefoxBookmark) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite3", item.FirefoxBookmark.TempFilename())
+	db, err := sql.Open("sqlite", item.FirefoxBookmark.TempFilename())
 	if err != nil {
 		return err
 	}

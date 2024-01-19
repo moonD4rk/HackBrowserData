@@ -33,7 +33,7 @@ const (
 )
 
 func (c *ChromiumPassword) Parse(masterKey []byte) error {
-	db, err := sql.Open("sqlite3", item.ChromiumPassword.TempFilename())
+	db, err := sql.Open("sqlite", item.ChromiumPassword.TempFilename())
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ const (
 )
 
 func (c *YandexPassword) Parse(masterKey []byte) error {
-	db, err := sql.Open("sqlite3", item.YandexPassword.TempFilename())
+	db, err := sql.Open("sqlite", item.YandexPassword.TempFilename())
 	if err != nil {
 		return err
 	}
@@ -233,7 +233,7 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 }
 
 func getFirefoxDecryptKey(key4file string) (item1, item2, a11, a102 []byte, err error) {
-	keyDB, err := sql.Open("sqlite3", key4file)
+	keyDB, err := sql.Open("sqlite", key4file)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
