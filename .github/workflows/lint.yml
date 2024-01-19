@@ -20,7 +20,7 @@ jobs:
       - name: Check spelling with custom config file
         uses: crate-ci/typos@master
         with:
-          config: ./typos.toml
+          config: ./.typos.toml
 
       - name: Lint
         uses: golangci/golangci-lint-action@v3
