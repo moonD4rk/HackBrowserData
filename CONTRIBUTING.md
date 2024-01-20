@@ -24,7 +24,7 @@ Please adhere to the existing coding style for consistency.
 
 ## Questions
 
-If you have any questions or need further guidance, please feel free to ask in the issue or PR, or [reach out to the maintainers](mailto:i@moond4rk.com).
+If you have any questions or need further guidance, please feel free to ask in the issue or PR, or [reach out to the maintainers](mailto:i@moond4rk.com). We will reply to you as soon as possible.
 
 Thank you for your contribution!
 
