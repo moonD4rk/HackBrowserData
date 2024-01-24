@@ -3,6 +3,7 @@ module github.com/moond4rk/hackbrowserdata
 go 1.21
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/gocarina/gocsv v0.0.0-20231116093920-b87c2d0e983a
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/otiai10/copy v1.14.0
