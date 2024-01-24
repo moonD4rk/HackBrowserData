@@ -36,16 +36,3 @@ func TestQueryNssPrivate(t *testing.T) {
 	assert.Equal(t, []byte("nssA11"), nssA11)
 	assert.Equal(t, []byte("nssA102"), nssA102)
 }
-
-func TestFirefox_ProcessMasterKey(t *testing.T) {
-	// globalSalt := []byte{...}
-	// metaBytes := []byte{...}
-	// nssA11 := []byte{...}
-	// nssA102 := []byte{...}
-	//
-	// expectedFinallyKey := []byte{...}
-	//
-	// finallyKey, err := processMasterKey(globalSalt, metaBytes, nssA11, nssA102)
-	// assert.NoError(t, err)
-	// assert.Equal(t, expectedFinallyKey, finallyKey)
-}
