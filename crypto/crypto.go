@@ -20,7 +20,7 @@ var (
 )
 
 type ASN1PBE interface {
-	Decrypt(globalSalt, masterPwd []byte) (key []byte, err error)
+	Decrypt(globalSalt []byte) (key []byte, err error)
 }
 
 func NewASN1PBE(b []byte) (pbe ASN1PBE, err error) {
@@ -60,9 +60,8 @@ type nssPBE struct {
 	Encrypted []byte
 }
 
-func (n nssPBE) Decrypt(globalSalt, masterPwd []byte) (key []byte, err error) {
-	glmp := append(globalSalt, masterPwd...)
-	hp := sha1.Sum(glmp)
+func (n nssPBE) Decrypt(globalSalt []byte) (key []byte, err error) {
+	hp := sha1.Sum(globalSalt)
 	s := append(hp[:], n.salt()...)
 	chp := sha1.Sum(s)
 	pes := paddingZero(n.salt(), 20)
@@ -134,7 +133,7 @@ type slatAttr struct {
 	}
 }
 
-func (m metaPBE) Decrypt(globalSalt, _ []byte) (key2 []byte, err error) {
+func (m metaPBE) Decrypt(globalSalt []byte) (key2 []byte, err error) {
 	k := sha1.Sum(globalSalt)
 	key := pbkdf2.Key(k[:], m.salt(), m.iterationCount(), m.keySize(), sha256.New)
 	iv := append([]byte{4, 14}, m.iv()...)
@@ -177,7 +176,7 @@ type loginPBE struct {
 	Encrypted []byte
 }
 
-func (l loginPBE) Decrypt(globalSalt, _ []byte) (key []byte, err error) {
+func (l loginPBE) Decrypt(globalSalt []byte) (key []byte, err error) {
 	return des3Decrypt(globalSalt, l.iv(), l.encrypted())
 }
 
