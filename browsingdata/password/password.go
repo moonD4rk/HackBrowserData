@@ -61,9 +61,9 @@ func (c *ChromiumPassword) Parse(masterKey []byte) error {
 		}
 		if len(pwd) > 0 {
 			if len(masterKey) == 0 {
-				password, err = crypto.DPAPI(pwd)
+				password, err = crypto.DecryptWithDPAPI(pwd)
 			} else {
-				password, err = crypto.DecryptPass(masterKey, pwd)
+				password, err = crypto.DecryptWithChromium(masterKey, pwd)
 			}
 			if err != nil {
 				slog.Error("decrypt chromium password error", "err", err)
@@ -129,9 +129,9 @@ func (c *YandexPassword) Parse(masterKey []byte) error {
 
 		if len(pwd) > 0 {
 			if len(masterKey) == 0 {
-				password, err = crypto.DPAPI(pwd)
+				password, err = crypto.DecryptWithDPAPI(pwd)
 			} else {
-				password, err = crypto.DecryptPass(masterKey, pwd)
+				password, err = crypto.DecryptWithChromium(masterKey, pwd)
 			}
 			if err != nil {
 				slog.Error("decrypt yandex password error", "err", err)

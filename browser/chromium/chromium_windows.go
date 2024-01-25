@@ -33,7 +33,7 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 	if err != nil {
 		return nil, errDecodeMasterKeyFailed
 	}
-	c.masterKey, err = crypto.DPAPI(key[5:])
+	c.masterKey, err = crypto.DecryptWithDPAPI(key[5:])
 	if err != nil {
 		slog.Error("decrypt master key failed", "err", err)
 		return nil, err

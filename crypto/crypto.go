@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/des"
@@ -9,14 +10,15 @@ import (
 	"crypto/sha256"
 	"encoding/asn1"
 	"errors"
+	"fmt"
 
 	"golang.org/x/crypto/pbkdf2"
 )
 
 var (
-	errPasswordIsEmpty  = errors.New("password is empty")
-	errDecodeASN1Failed = errors.New("decode ASN1 data failed")
-	errEncryptedLength  = errors.New("length of encrypted password less than block size")
+	ErrCiphertextLengthIsInvalid = errors.New("ciphertext length is invalid")
+	ErrDecodeASN1Failed          = errors.New("decode ASN1 data failed")
+	errEncryptedLength           = errors.New("length of encrypted password less than block size")
 )
 
 type ASN1PBE interface {
@@ -38,7 +40,7 @@ func NewASN1PBE(b []byte) (pbe ASN1PBE, err error) {
 	if _, err := asn1.Unmarshal(b, &l); err == nil {
 		return l, nil
 	}
-	return nil, errDecodeASN1Failed
+	return nil, ErrDecodeASN1Failed
 }
 
 // nssPBE Struct
@@ -75,7 +77,7 @@ func (n nssPBE) Decrypt(globalSalt []byte) (key []byte, err error) {
 	k2.Write(tkPlus)
 	k := append(k1.Sum(nil), k2.Sum(nil)...)
 	iv := k[len(k)-8:]
-	return des3Decrypt(k[:24], iv, n.encrypted())
+	return DES3Decrypt(k[:24], iv, n.encrypted())
 }
 
 func (n nssPBE) salt() []byte {
@@ -137,7 +139,7 @@ func (m metaPBE) Decrypt(globalSalt []byte) (key2 []byte, err error) {
 	k := sha1.Sum(globalSalt)
 	key := pbkdf2.Key(k[:], m.salt(), m.iterationCount(), m.keySize(), sha256.New)
 	iv := append([]byte{4, 14}, m.iv()...)
-	return aes128CBCDecrypt(key, iv, m.encrypted())
+	return AES128CBCDecrypt(key, iv, m.encrypted())
 }
 
 func (m metaPBE) salt() []byte {
@@ -177,7 +179,7 @@ type loginPBE struct {
 }
 
 func (l loginPBE) Decrypt(globalSalt []byte) (key []byte, err error) {
-	return des3Decrypt(globalSalt, l.iv(), l.encrypted())
+	return DES3Decrypt(globalSalt, l.iv(), l.encrypted())
 }
 
 func (l loginPBE) iv() []byte {
@@ -188,51 +190,134 @@ func (l loginPBE) encrypted() []byte {
 	return l.Encrypted
 }
 
-func aes128CBCDecrypt(key, iv, encryptPass []byte) ([]byte, error) {
+func AES128CBCDecrypt(key, iv, encryptedData []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
-	encryptLen := len(encryptPass)
-	if encryptLen < block.BlockSize() {
-		return nil, errEncryptedLength
+	// Check encrypted data length
+	if len(encryptedData) < aes.BlockSize {
+		return nil, errors.New("AES128CBCDecrypt: encrypted data too short")
+	}
+	if len(encryptedData)%aes.BlockSize != 0 {
+		return nil, errors.New("AES128CBCDecrypt: encrypted data is not a multiple of the block size")
 	}
 
-	dst := make([]byte, encryptLen)
+	decryptedData := make([]byte, len(encryptedData))
 	mode := cipher.NewCBCDecrypter(block, iv)
-	mode.CryptBlocks(dst, encryptPass)
-	dst = pkcs5UnPadding(dst, block.BlockSize())
-	return dst, nil
-}
+	mode.CryptBlocks(decryptedData, encryptedData)
 
-func pkcs5UnPadding(src []byte, blockSize int) []byte {
-	n := len(src)
-	paddingNum := int(src[n-1])
-	if n < paddingNum || paddingNum > blockSize {
-		return src
+	// Unpad the decrypted data and handle potential padding errors
+	decryptedData, err = pkcs5UnPadding(decryptedData)
+	if err != nil {
+		return nil, fmt.Errorf("AES128CBCDecrypt: %w", err)
 	}
-	return src[:n-paddingNum]
+
+	return decryptedData, nil
 }
 
-// des3Decrypt use for decrypt firefox PBE
-func des3Decrypt(key, iv []byte, src []byte) ([]byte, error) {
+func AES128CBCEncrypt(key, iv, data []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	data = pkcs5Padding(data, block.BlockSize())
+	encryptedData := make([]byte, len(data))
+	mode := cipher.NewCBCEncrypter(block, iv)
+	mode.CryptBlocks(encryptedData, data)
+
+	return encryptedData, nil
+}
+
+func DES3Decrypt(key, iv []byte, src []byte) ([]byte, error) {
 	block, err := des.NewTripleDESCipher(key)
 	if err != nil {
 		return nil, err
 	}
+	if len(src) < des.BlockSize {
+		return nil, errors.New("DES3Decrypt: ciphertext too short")
+	}
+	if len(src)%block.BlockSize() != 0 {
+		return nil, errors.New("DES3Decrypt: ciphertext is not a multiple of the block size")
+	}
+
 	blockMode := cipher.NewCBCDecrypter(block, iv)
 	sq := make([]byte, len(src))
 	blockMode.CryptBlocks(sq, src)
-	return pkcs5UnPadding(sq, block.BlockSize()), nil
+
+	return pkcs5UnPadding(sq)
 }
 
-func paddingZero(s []byte, l int) []byte {
-	h := l - len(s)
-	if h <= 0 {
+func DES3Encrypt(key, iv []byte, src []byte) ([]byte, error) {
+	block, err := des.NewTripleDESCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	src = pkcs5Padding(src, block.BlockSize())
+	dst := make([]byte, len(src))
+	blockMode := cipher.NewCBCEncrypter(block, iv)
+	blockMode.CryptBlocks(dst, src)
+
+	return dst, nil
+}
+
+// AESGCMEncrypt encrypts plaintext using AES encryption in GCM mode.
+func AESGCMEncrypt(key, nonce, plaintext []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	blockMode, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	// The first parameter is the prefix for the output, we can leave it nil.
+	// The Seal method encrypts and authenticates the data, appending the result to the dst.
+	encryptedData := blockMode.Seal(nil, nonce, plaintext, nil)
+	return encryptedData, nil
+}
+
+// AESGCMDecrypt chromium > 80 https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_win.cc
+func AESGCMDecrypt(key, nounce, encrypted []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	blockMode, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	origData, err := blockMode.Open(nil, nounce, encrypted, nil)
+	if err != nil {
+		return nil, err
+	}
+	return origData, nil
+}
+
+func paddingZero(s []byte, length int) []byte {
+	padding := length - len(s)
+	if padding <= 0 {
 		return s
 	}
-	for i := len(s); i < l; i++ {
-		s = append(s, 0)
+	return append(s, make([]byte, padding)...)
+}
+
+func pkcs5UnPadding(src []byte) ([]byte, error) {
+	length := len(src)
+	if length == 0 {
+		return nil, errors.New("pkcs5UnPadding: src should not be empty")
 	}
-	return s
+	padding := int(src[length-1])
+	if padding < 1 || padding > aes.BlockSize {
+		return nil, errors.New("pkcs5UnPadding: invalid padding size")
+	}
+	return src[:length-padding], nil
+}
+
+func pkcs5Padding(src []byte, blockSize int) []byte {
+	padding := blockSize - (len(src) % blockSize)
+	padText := bytes.Repeat([]byte{byte(padding)}, padding)
+	return append(src, padText...)
 }
