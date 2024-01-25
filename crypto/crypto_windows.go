@@ -55,7 +55,7 @@ func newBlob(d []byte) *dataBlob {
 	}
 }
 
-func (b *dataBlob) ToByteArray() []byte {
+func (b *dataBlob) bytes() []byte {
 	d := make([]byte, b.cbData)
 	copy(d, (*[1 << 30]byte)(unsafe.Pointer(b.pbData))[:])
 	return d
@@ -82,5 +82,5 @@ func DecryptWithDPAPI(ciphertext []byte) ([]byte, error) {
 	}
 
 	defer localFreeProc.Call(uintptr(unsafe.Pointer(outBlob.pbData)))
-	return outBlob.ToByteArray(), nil
+	return outBlob.bytes(), nil
 }

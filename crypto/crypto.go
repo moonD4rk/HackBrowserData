@@ -27,18 +27,18 @@ type ASN1PBE interface {
 
 func NewASN1PBE(b []byte) (pbe ASN1PBE, err error) {
 	var (
-		n nssPBE
-		m metaPBE
-		l loginPBE
+		nss   nssPBE
+		meta  metaPBE
+		login loginPBE
 	)
-	if _, err := asn1.Unmarshal(b, &n); err == nil {
-		return n, nil
+	if _, err := asn1.Unmarshal(b, &nss); err == nil {
+		return nss, nil
 	}
-	if _, err := asn1.Unmarshal(b, &m); err == nil {
-		return m, nil
+	if _, err := asn1.Unmarshal(b, &meta); err == nil {
+		return meta, nil
 	}
-	if _, err := asn1.Unmarshal(b, &l); err == nil {
-		return l, nil
+	if _, err := asn1.Unmarshal(b, &login); err == nil {
+		return login, nil
 	}
 	return nil, ErrDecodeASN1Failed
 }
@@ -62,30 +62,34 @@ type nssPBE struct {
 	Encrypted []byte
 }
 
-func (n nssPBE) Decrypt(globalSalt []byte) (key []byte, err error) {
-	hp := sha1.Sum(globalSalt)
-	s := append(hp[:], n.salt()...)
-	chp := sha1.Sum(s)
-	pes := paddingZero(n.salt(), 20)
-	tk := hmac.New(sha1.New, chp[:])
-	tk.Write(pes)
-	pes = append(pes, n.salt()...)
-	k1 := hmac.New(sha1.New, chp[:])
-	k1.Write(pes)
-	tkPlus := append(tk.Sum(nil), n.salt()...)
-	k2 := hmac.New(sha1.New, chp[:])
-	k2.Write(tkPlus)
-	k := append(k1.Sum(nil), k2.Sum(nil)...)
-	iv := k[len(k)-8:]
-	return DES3Decrypt(k[:24], iv, n.encrypted())
+// Decrypt decrypts the encrypted password with the global salt.
+func (n nssPBE) Decrypt(globalSalt []byte) ([]byte, error) {
+	key, iv := n.deriveKeyAndIV(globalSalt)
+	return DES3Decrypt(key, iv, n.Encrypted)
 }
 
-func (n nssPBE) salt() []byte {
-	return n.AlgoAttr.SaltAttr.EntrySalt
-}
+// deriveKeyAndIV derives the key and initialization vector (IV)
+// from the global salt and entry salt.
+func (n nssPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
+	salt := n.AlgoAttr.SaltAttr.EntrySalt
+	hashPrefix := sha1.Sum(globalSalt)
+	compositeHash := sha1.Sum(append(hashPrefix[:], salt...))
+	paddedEntrySalt := paddingZero(salt, 20)
 
-func (n nssPBE) encrypted() []byte {
-	return n.Encrypted
+	hmacProcessor := hmac.New(sha1.New, compositeHash[:])
+	hmacProcessor.Write(paddedEntrySalt)
+
+	paddedEntrySalt = append(paddedEntrySalt, salt...)
+	keyComponent1 := hmac.New(sha1.New, compositeHash[:])
+	keyComponent1.Write(paddedEntrySalt)
+
+	hmacWithSalt := append(hmacProcessor.Sum(nil), salt...)
+	keyComponent2 := hmac.New(sha1.New, compositeHash[:])
+	keyComponent2.Write(hmacWithSalt)
+
+	key := append(keyComponent1.Sum(nil), keyComponent2.Sum(nil)...)
+	iv := key[len(key)-8:]
+	return key[:24], iv
 }
 
 // MetaPBE Struct
@@ -135,31 +139,22 @@ type slatAttr struct {
 	}
 }
 
-func (m metaPBE) Decrypt(globalSalt []byte) (key2 []byte, err error) {
-	k := sha1.Sum(globalSalt)
-	key := pbkdf2.Key(k[:], m.salt(), m.iterationCount(), m.keySize(), sha256.New)
-	iv := append([]byte{4, 14}, m.iv()...)
-	return AES128CBCDecrypt(key, iv, m.encrypted())
+func (m metaPBE) Decrypt(globalSalt []byte) ([]byte, error) {
+	key, iv := m.deriveKeyAndIV(globalSalt)
+
+	return AES128CBCDecrypt(key, iv, m.Encrypted)
 }
 
-func (m metaPBE) salt() []byte {
-	return m.AlgoAttr.Data.Data.SlatAttr.EntrySalt
-}
+func (m metaPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
+	password := sha1.Sum(globalSalt)
 
-func (m metaPBE) iterationCount() int {
-	return m.AlgoAttr.Data.Data.SlatAttr.IterationCount
-}
+	salt := m.AlgoAttr.Data.Data.SlatAttr.EntrySalt
+	iter := m.AlgoAttr.Data.Data.SlatAttr.IterationCount
+	keyLen := m.AlgoAttr.Data.Data.SlatAttr.KeySize
 
-func (m metaPBE) keySize() int {
-	return m.AlgoAttr.Data.Data.SlatAttr.KeySize
-}
-
-func (m metaPBE) iv() []byte {
-	return m.AlgoAttr.Data.IVData.IV
-}
-
-func (m metaPBE) encrypted() []byte {
-	return m.Encrypted
+	key := pbkdf2.Key(password[:], salt, iter, keyLen, sha256.New)
+	iv := append([]byte{4, 14}, m.AlgoAttr.Data.IVData.IV...)
+	return key, iv
 }
 
 // loginPBE Struct
@@ -179,15 +174,12 @@ type loginPBE struct {
 }
 
 func (l loginPBE) Decrypt(globalSalt []byte) (key []byte, err error) {
-	return DES3Decrypt(globalSalt, l.iv(), l.encrypted())
+	key, iv := l.deriveKeyAndIV(globalSalt)
+	return DES3Decrypt(key, iv, l.Encrypted)
 }
 
-func (l loginPBE) iv() []byte {
-	return l.Data.IV
-}
-
-func (l loginPBE) encrypted() []byte {
-	return l.Encrypted
+func (l loginPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
+	return globalSalt, l.Data.IV
 }
 
 func AES128CBCDecrypt(key, iv, encryptedData []byte) ([]byte, error) {
