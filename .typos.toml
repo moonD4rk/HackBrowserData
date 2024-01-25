@@ -3,5 +3,7 @@
 Readed = "Readed"
 Sie = "Sie"
 OT = "OT"
+Encrypter = "Encrypter"
+Decrypter = "Decrypter"
 [files]
 extend-exclude = ["go.mod", "go.sum"]
