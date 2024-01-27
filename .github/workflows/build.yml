@@ -18,16 +18,13 @@ jobs:
 
     steps:
       - name: Set up Go ${{ matrix.goVer }}
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.goVer }}
         id: go
 
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
-
-      - name: Set Git to handle line endings consistently
-        run: git config --global core.autocrlf false
+        uses: actions/checkout@v4
 
       - name: Format Check
         if: matrix.os != 'windows-latest'
@@ -35,9 +32,7 @@ jobs:
           diff -u <(echo -n) <(gofmt -d .)
 
       - name: Get dependencies
-        run: |
-          go get -v -t -d ./...
-          go get gopkg.in/check.v1
+        run: go get -v ./...
 
       - name: Build
         run: go build -v ./...
