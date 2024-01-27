@@ -59,9 +59,9 @@ func (c *ChromiumCreditCard) Parse(masterKey []byte) error {
 		}
 		if len(encryptValue) > 0 {
 			if len(masterKey) == 0 {
-				value, err = crypto.DPAPI(encryptValue)
+				value, err = crypto.DecryptWithDPAPI(encryptValue)
 			} else {
-				value, err = crypto.DecryptPass(masterKey, encryptValue)
+				value, err = crypto.DecryptWithChromium(masterKey, encryptValue)
 			}
 			if err != nil {
 				slog.Error("decrypt chromium credit card error", "err", err)
@@ -114,9 +114,9 @@ func (c *YandexCreditCard) Parse(masterKey []byte) error {
 		}
 		if len(encryptValue) > 0 {
 			if len(masterKey) == 0 {
-				value, err = crypto.DPAPI(encryptValue)
+				value, err = crypto.DecryptWithDPAPI(encryptValue)
 			} else {
-				value, err = crypto.DecryptPass(masterKey, encryptValue)
+				value, err = crypto.DecryptWithChromium(masterKey, encryptValue)
 			}
 			if err != nil {
 				slog.Error("decrypt chromium credit card error", "err", err)

@@ -2,15 +2,14 @@
 
 package crypto
 
-var iv = []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
-
-func DecryptPass(key, encryptPass []byte) ([]byte, error) {
-	if len(encryptPass) <= 3 {
-		return nil, errPasswordIsEmpty
+func DecryptWithChromium(key, password []byte) ([]byte, error) {
+	if len(password) <= 3 {
+		return nil, ErrCiphertextLengthIsInvalid
 	}
-	return aes128CBCDecrypt(key, iv, encryptPass[3:])
+	var iv = []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
+	return AES128CBCDecrypt(key, iv, password[3:])
 }
 
-func DPAPI(_ []byte) ([]byte, error) {
+func DecryptWithDPAPI(_ []byte) ([]byte, error) {
 	return nil, nil
 }

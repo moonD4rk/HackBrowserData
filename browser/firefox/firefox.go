@@ -86,7 +86,7 @@ func (f *Firefox) GetMasterKey() ([]byte, error) {
 	defer os.Remove(tempFilename)
 	defer keyDB.Close()
 
-	globalSalt, metaBytes, err := queryMetaData(keyDB)
+	metaItem1, metaItem2, err := queryMetaData(keyDB)
 	if err != nil {
 		return nil, fmt.Errorf("query metadata error: %w", err)
 	}
@@ -96,16 +96,16 @@ func (f *Firefox) GetMasterKey() ([]byte, error) {
 		return nil, fmt.Errorf("query NSS private error: %w", err)
 	}
 
-	return processMasterKey(globalSalt, metaBytes, nssA11, nssA102)
+	return processMasterKey(metaItem1, metaItem2, nssA11, nssA102)
 }
 
 func queryMetaData(db *sql.DB) ([]byte, []byte, error) {
 	const query = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
-	var globalSalt, metaBytes []byte
-	if err := db.QueryRow(query).Scan(&globalSalt, &metaBytes); err != nil {
+	var metaItem1, metaItem2 []byte
+	if err := db.QueryRow(query).Scan(&metaItem1, &metaItem2); err != nil {
 		return nil, nil, err
 	}
-	return globalSalt, metaBytes, nil
+	return metaItem1, metaItem2, nil
 }
 
 func queryNssPrivate(db *sql.DB) ([]byte, []byte, error) {
@@ -119,37 +119,40 @@ func queryNssPrivate(db *sql.DB) ([]byte, []byte, error) {
 
 // processMasterKey process master key of Firefox.
 // Process the metaBytes and nssA11 with the corresponding cryptographic operations.
-func processMasterKey(globalSalt, metaBytes, nssA11, nssA102 []byte) ([]byte, error) {
-	metaPBE, err := crypto.NewASN1PBE(metaBytes)
+func processMasterKey(metaItem1, metaItem2, nssA11, nssA102 []byte) ([]byte, error) {
+	metaPBE, err := crypto.NewASN1PBE(metaItem2)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating ASN1PBE from metaItem2: %w", err)
 	}
 
-	k, err := metaPBE.Decrypt(globalSalt)
+	flag, err := metaPBE.Decrypt(metaItem1)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error decrypting master key: %w", err)
+	}
+	const passwordCheck = "password-check"
+
+	if !bytes.Contains(flag, []byte(passwordCheck)) {
+		return nil, errors.New("flag verification failed: password-check not found")
 	}
 
-	if !bytes.Contains(k, []byte("password-check")) {
-		return nil, errors.New("password-check not found")
-	}
-	keyLin := []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	var keyLin = []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 	if !bytes.Equal(nssA102, keyLin) {
-		return nil, errors.New("nssA102 not equal keyLin")
+		return nil, errors.New("master key verification failed: nssA102 not equal to expected value")
 	}
-	nssPBE, err := crypto.NewASN1PBE(nssA11)
+
+	nssA11PBE, err := crypto.NewASN1PBE(nssA11)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating ASN1PBE from nssA11: %w", err)
 	}
-	finallyKey, err := nssPBE.Decrypt(globalSalt)
+
+	finallyKey, err := nssA11PBE.Decrypt(metaItem1)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error decrypting final key: %w", err)
 	}
 	if len(finallyKey) < 24 {
-		return nil, errors.New("finallyKey length less than 24")
+		return nil, errors.New("length of final key is less than 24 bytes")
 	}
-	finallyKey = finallyKey[:24]
-	return finallyKey, nil
+	return finallyKey[:24], nil
 }
 
 func (f *Firefox) Name() string {

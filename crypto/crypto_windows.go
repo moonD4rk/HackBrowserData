@@ -3,47 +3,41 @@
 package crypto
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
+	"fmt"
 	"syscall"
 	"unsafe"
 )
 
-func DecryptPass(key, encryptPass []byte) ([]byte, error) {
-	if len(encryptPass) < 15 {
-		return nil, errPasswordIsEmpty
+const (
+	// Assuming the nonce size is 12 bytes and the minimum encrypted data size is 3 bytes
+	minEncryptedDataSize = 15
+	nonceSize            = 12
+)
+
+func DecryptWithChromium(key, ciphertext []byte) ([]byte, error) {
+	if len(ciphertext) < minEncryptedDataSize {
+		return nil, ErrCiphertextLengthIsInvalid
 	}
 
-	return aesGCMDecrypt(encryptPass[15:], key, encryptPass[3:15])
+	nonce := ciphertext[3 : 3+nonceSize]
+	encryptedPassword := ciphertext[3+nonceSize:]
+
+	return AESGCMDecrypt(key, nonce, encryptedPassword)
 }
 
-func DecryptPassForYandex(key, encryptPass []byte) ([]byte, error) {
-	if len(encryptPass) < 3 {
-		return nil, errPasswordIsEmpty
+// DecryptWithYandex decrypts the password with AES-GCM
+func DecryptWithYandex(key, ciphertext []byte) ([]byte, error) {
+	if len(ciphertext) < minEncryptedDataSize {
+		return nil, ErrCiphertextLengthIsInvalid
 	}
 	// remove Prefix 'v10'
 	// gcmBlockSize         = 16
 	// gcmTagSize           = 16
 	// gcmMinimumTagSize    = 12 // NIST SP 800-38D recommends tags with 12 or more bytes.
 	// gcmStandardNonceSize = 12
-	return aesGCMDecrypt(encryptPass[12:], key, encryptPass[0:12])
-}
-
-// chromium > 80 https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_win.cc
-func aesGCMDecrypt(encrypted, key, nounce []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	blockMode, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, err
-	}
-	origData, err := blockMode.Open(nil, nounce, encrypted, nil)
-	if err != nil {
-		return nil, err
-	}
-	return origData, nil
+	nonce := ciphertext[3 : 3+nonceSize]
+	encryptedPassword := ciphertext[3+nonceSize:]
+	return AESGCMDecrypt(key, nonce, encryptedPassword)
 }
 
 type dataBlob struct {
@@ -61,27 +55,32 @@ func newBlob(d []byte) *dataBlob {
 	}
 }
 
-func (b *dataBlob) ToByteArray() []byte {
+func (b *dataBlob) bytes() []byte {
 	d := make([]byte, b.cbData)
 	copy(d, (*[1 << 30]byte)(unsafe.Pointer(b.pbData))[:])
 	return d
 }
 
-// DPAPI (Data Protection Application Programming Interface)
+// DecryptWithDPAPI (Data Protection Application Programming Interface)
 // is a simple cryptographic application programming interface
 // available as a built-in component in Windows 2000 and
 // later versions of Microsoft Windows operating systems
-// chrome < 80 https://chromium.googlesource.com/chromium/src/+/76f496a7235c3432983421402951d73905c8be96/components/os_crypt/os_crypt_win.cc#82
-func DPAPI(data []byte) ([]byte, error) {
-	dllCrypt := syscall.NewLazyDLL("Crypt32.dll")
-	dllKernel := syscall.NewLazyDLL("Kernel32.dll")
-	procDecryptData := dllCrypt.NewProc("CryptUnprotectData")
-	procLocalFree := dllKernel.NewProc("LocalFree")
+func DecryptWithDPAPI(ciphertext []byte) ([]byte, error) {
+	crypt32 := syscall.NewLazyDLL("Crypt32.dll")
+	kernel32 := syscall.NewLazyDLL("Kernel32.dll")
+	unprotectDataProc := crypt32.NewProc("CryptUnprotectData")
+	localFreeProc := kernel32.NewProc("LocalFree")
+
 	var outBlob dataBlob
-	r, _, err := procDecryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, 0, 0, 0, 0, uintptr(unsafe.Pointer(&outBlob)))
+	r, _, err := unprotectDataProc.Call(
+		uintptr(unsafe.Pointer(newBlob(ciphertext))),
+		0, 0, 0, 0, 0,
+		uintptr(unsafe.Pointer(&outBlob)),
+	)
 	if r == 0 {
-		return nil, err
+		return nil, fmt.Errorf("CryptUnprotectData failed with error %w", err)
 	}
-	defer procLocalFree.Call(uintptr(unsafe.Pointer(outBlob.pbData)))
-	return outBlob.ToByteArray(), nil
+
+	defer localFreeProc.Call(uintptr(unsafe.Pointer(outBlob.pbData)))
+	return outBlob.bytes(), nil
 }
