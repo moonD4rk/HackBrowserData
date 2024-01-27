@@ -162,12 +162,7 @@ func (c *YandexPassword) Len() int {
 
 type FirefoxPassword []loginData
 
-const (
-	queryMetaData   = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
-	queryNssPrivate = `SELECT a11, a102 from nssPrivate`
-)
-
-func (f *FirefoxPassword) Parse(masterKey []byte) error {
+func (f *FirefoxPassword) Parse(globalSalt []byte) error {
 	logins, err := getFirefoxLoginData()
 	if err != nil {
 		return err
@@ -182,11 +177,11 @@ func (f *FirefoxPassword) Parse(masterKey []byte) error {
 		if err != nil {
 			return err
 		}
-		user, err := userPBE.Decrypt(masterKey)
+		user, err := userPBE.Decrypt(globalSalt)
 		if err != nil {
 			return err
 		}
-		pwd, err := pwdPBE.Decrypt(masterKey)
+		pwd, err := pwdPBE.Decrypt(globalSalt)
 		if err != nil {
 			return err
 		}

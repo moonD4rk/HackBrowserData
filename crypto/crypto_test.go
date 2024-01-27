@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
@@ -9,9 +10,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const baseKey = "moond4rk"
+
 var (
-	aesKey           = []byte("moond4rkmoond4rk") // 16 bytes
-	aesIV            = []byte("01234567abcdef01") // 16 bytes
+	aesKey           = bytes.Repeat([]byte(baseKey), 2) // 16 bytes
+	aesIV            = []byte("01234567abcdef01")       // 16 bytes
 	plainText        = []byte("Hello, World!")
 	aes128Ciphertext = "19381468ecf824c0bfc7a89eed9777d2"
 
