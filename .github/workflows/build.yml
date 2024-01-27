@@ -32,7 +32,7 @@ jobs:
           diff -u <(echo -n) <(gofmt -d .)
 
       - name: Get dependencies
-        run: go get .
+        run: go get -v ./...
 
       - name: Build
         run: go build -v ./...
