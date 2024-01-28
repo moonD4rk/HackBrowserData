@@ -11,6 +11,7 @@ linters:
     - 'depguard'
     - 'dogsled'
     - 'errorlint'
+    - 'exhaustive'
     - 'exportloopref'
     - 'gofmt'
     - 'goheader'
@@ -28,6 +29,15 @@ linters:
     - 'typecheck'
     - 'unconvert'
     - 'whitespace'
+    - 'forbidigo'
+    - 'errcheck'
+    - 'funlen'
+    - 'gci'
+    - 'gocritic'
+    - 'godox'
+    - 'sloglint'
+    - 'usestdlibvars'
+
   disable:
     # unsupported lint with golang 1.18+ ref: https://github.com/golangci/golangci-lint/issues/2649
     - 'bodyclose'
@@ -38,7 +48,6 @@ linters:
     - 'structcheck'
     - 'stylecheck'
     - 'unused'
-    - 'errcheck'
     - 'deadcode'
     - 'varcheck'
     - 'paralleltest'
@@ -48,17 +57,41 @@ issues:
   exclude:
     - should have a package comment
     - should have comment
-    # G101: Potential hardcoded credentials
-    - G101
-    # G103: Use of unsafe calls should be audited
-    - G103
-    # G304: Potential file inclusion via variable
-    - G304
-    # G404, G401, G502, G505: weak cryptographic list
-    - G401
-    - G404
-    - G502
-    - G505
+    - G101 # Look for hard coded credentials
+    - G102 # Bind to all interfaces
+    - G103 # Audit the use of unsafe block
+    - G104 # Audit errors not checked
+    - G106 # Audit the use of ssh.InsecureIgnoreHostKey
+    - G107 # Url provided to HTTP request as taint input
+    - G108 # Profiling endpoint automatically exposed on /debug/pprof
+    - G109 # Potential Integer overflow made by strconv.Atoi result conversion to int16/32
+    - G110 # Potential DoS vulnerability via decompression bomb
+    - G111 # Potential directory traversal
+    - G112 # Potential slowloris attack
+    - G113 # Usage of Rat.SetString in math/big with an overflow (CVE-2022-23772)
+    - G114 # Use of net/http serve function that has no support for setting timeouts
+    - G201 # SQL query construction using format string
+    - G202 # SQL query construction using string concatenation
+    - G203 # Use of unescaped data in HTML templates
+    - G204 # Audit use of command execution
+    - G301 # Poor file permissions used when creating a directory
+    - G302 # Poor file permissions used with chmod
+    - G303 # Creating tempfile using a predictable path
+    - G304 # File path provided as taint input
+    - G305 # File traversal when extracting zip/tar archive
+    - G306 # Poor file permissions used when writing to a new file
+    - G307 # Poor file permissions used when creating a file with os.Create
+    - G401 # Detect the usage of DES, RC4, MD5 or SHA1
+    - G402 # Look for bad TLS connection settings
+    - G403 # Ensure minimum RSA key length of 2048 bits
+    - G404 # Insecure random number source (rand)
+    - G501 # Import blocklist: crypto/md5
+    - G502 # Import blocklist: crypto/des
+    - G503 # Import blocklist: crypto/rc4
+    - G504 # Import blocklist: net/http/cgi
+    - G505 # Import blocklist: crypto/sha1
+    - G601 # Implicit memory aliasing of items from a range statement
+    - G602 # Slice access out of bounds
   exclude-rules:
     - path: browser/browser\.go
       linters:
@@ -67,6 +100,7 @@ issues:
   max-same-issues: 0
 
 linters-settings:
+  # Forbid the use of the following packages.
   depguard:
     rules:
       main:
@@ -75,3 +109,252 @@ linters-settings:
         deny:
           - pkg: "github.com/pkg/errors"
             desc: Should be replaced by standard lib errors package
+  # Forbid the following identifiers (list of regexp).
+  forbidigo:
+    forbid:
+      - ^print.*$
+      - p: ^fmt\.Print.*$
+        msg: Do not commit print statements.
+    exclude-godoc-examples: true
+  # Checks assignments with too many blank identifiers (e.g. x, , , _, := f()).
+  dogsled:
+    max-blank-identifiers: 3
+  errcheck:
+    # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
+    check-type-assertions: true
+    # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`.
+    check-blank: false
+    # List of functions to exclude from checking, where each entry is a single function to exclude.
+    exclude-functions:
+      - 'os.Remove'
+      - 'os.RemoveAll'
+      - '(*database/sql.DB).Close'
+      - '(*database/sql.Rows).Close'
+      - '(*github.com/syndtr/goleveldb/leveldb.DB).Close'
+  exhaustive:
+    # Program elements to check for exhaustiveness.
+    # Default: [ switch ]
+    check:
+      - switch
+      - map
+    # Check switch statements in generated files also.
+    # Default: false
+    check-generated: true
+    # Presence of "default" case in switch statements satisfies exhaustiveness,
+    # even if all enum members are not listed.
+    # Default: false
+    default-signifies-exhaustive: true
+    # Consider enums only in package scopes, not in inner scopes.
+    # Default: false
+    package-scope-only: true
+    # Only run exhaustive check on switches with "//exhaustive:enforce" comment.
+    # Default: false
+    explicit-exhaustive-switch: true
+    # Only run exhaustive check on map literals with "//exhaustive:enforce" comment.
+    # Default: false
+    explicit-exhaustive-map: true
+    # Switch statement requires default case even if exhaustive.
+  funlen:
+    # Checks the number of lines in a function.
+    # If lower than 0, disable the check.
+    # Default: 60
+    lines: 120
+    # Checks the number of statements in a function.
+    # If lower than 0, disable the check.
+    # Default: 40
+    statements: 50
+    # Ignore comments when counting lines.
+    # Default false
+    ignore-comments: true
+  gci:
+    # DEPRECATED: use `sections` and `prefix(github.com/org/project)` instead.
+    local-prefixes: github.com/moond4rk/hackbrowserdata
+    # Section configuration to compare against.
+    # Section names are case-insensitive and may contain parameters in ().
+    # The default order of sections is `standard > default > custom > blank > dot > alias`,
+    # If `custom-order` is `true`, it follows the order of `sections` option.
+    # Default: ["standard", "default"]
+    sections:
+      - standard # Standard section: captures all standard packages.
+      - default # Default section: contains all imports that could not be matched to another section type.
+      - prefix(github.com/moond4rk/hackbrowserdata) # Custom section: groups all imports with the specified Prefix.
+      - blank # Blank section: contains all blank imports. This section is not present unless explicitly enabled.
+      - dot # Dot section: contains all dot imports. This section is not present unless explicitly enabled.
+      - alias # Alias section: contains all alias imports. This section is not present unless explicitly enabled.
+    # Skip generated files.
+    # Default: true
+    skip-generated: false
+    # Enable custom order of sections.
+    # If `true`, make the section order the same as the order of `sections`.
+    # Default: false
+    custom-order: true
+  gocritic:
+    # Which checks should be enabled; can't be combined with 'disabled-checks'.
+    # See https://go-critic.github.io/overview#checks-overview.
+    # To check which checks are enabled run `GL_DEBUG=gocritic golangci-lint run`.
+    # By default, list of stable checks is used.
+    enabled-checks:
+      - nestingReduce
+      - unnamedResult
+      - ruleguard
+      - captLocal
+      - elseif
+      - ifElseChain
+      - rangeExprCopy
+      - tooManyResultsChecker
+      - truncateCmp
+      - underef
+    # Which checks should be disabled; can't be combined with 'enabled-checks'.
+    # Default: []
+    # Enable multiple checks by tags, run `GL_DEBUG=gocritic golangci-lint run` to see all tags and checks.
+    # See https://github.com/go-critic/go-critic#usage -> section "Tags".
+    # Default: []
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+      - experimental
+      - opinionated
+    disabled-tags:
+      - diagnostic
+      - style
+      - performance
+      - experimental
+      - opinionated
+    # Settings passed to gocritic.
+    # The settings key is the name of a supported gocritic checker.
+    # The list of supported checkers can be find in https://go-critic.github.io/overview.
+    settings:
+      # Must be valid enabled check name.
+      captLocal:
+        # Whether to restrict checker to params only.
+        # Default: true
+        paramsOnly: false
+      elseif:
+        # Whether to skip balanced if-else pairs.
+        # Default: true
+        skipBalanced: false
+      ifElseChain:
+        # Min number of if-else blocks that makes the warning trigger.
+        # Default: 2
+        minThreshold: 4
+      nestingReduce:
+        # Min number of statements inside a branch to trigger a warning.
+        # Default: 5
+        bodyWidth: 4
+      rangeExprCopy:
+        # Size in bytes that makes the warning trigger.
+        # Default: 512
+        sizeThreshold: 516
+        # Whether to check test functions
+        # Default: true
+        skipTestFuncs: false
+      tooManyResultsChecker:
+        # Maximum number of results.
+        # Default: 5
+        maxResults: 10
+      truncateCmp:
+        # Whether to skip int/uint/uintptr types.
+        # Default: true
+        skipArchDependent: false
+      underef:
+        # Whether to skip (*x).method() calls where x is a pointer receiver.
+        # Default: true
+        skipRecvDeref: false
+      unnamedResult:
+        # Whether to check exported functions.
+        # Default: false
+        checkExported: true
+  godox:
+    # Report any comments starting with keywords, this is useful for TODO or FIXME comments that
+    # might be left in the code accidentally and should be resolved before merging.
+    # Default: ["TODO", "BUG", "FIXME"]
+    keywords:
+      - NOTE
+      - OPTIMIZE # marks code that should be optimized before merging
+      - HACK # marks hack-around that should be removed before merging
+  goimports:
+    # A comma-separated list of prefixes, which, if set, checks import paths
+    # with the given prefixes are grouped after 3rd-party packages.
+    # Default: ""
+    local-prefixes: github.com/moond4rk/hackbrowserdata
+  govet:
+    # Report about shadowed variables.
+    # Default: false
+    check-shadowing: false
+    # Settings per analyzer.
+    settings:
+      unusedresult:
+        # Comma-separated list of functions whose results must be used
+        # (in addition to default:
+        #   context.WithCancel, context.WithDeadline, context.WithTimeout, context.WithValue, errors.New, fmt.Errorf,
+        #   fmt.Sprint, fmt.Sprintf, sort.Reverse
+        # ).
+        # Default: []
+    enable-all: true
+    disable:
+      - 'fieldalignment'
+      - 'shadow'
+  sloglint:
+    # Enforce not mixing key-value pairs and attributes.
+    # Default: true
+    no-mixed-args: false
+    # Enforce using key-value pairs only (overrides no-mixed-args, incompatible with attr-only).
+    # Default: false
+    kv-only: true
+    # Enforce using attributes only (overrides no-mixed-args, incompatible with kv-only).
+    # Default: false
+#    attr-only: true
+    # Enforce using methods that accept a context.
+    # Default: false
+    context-only: false
+    # Enforce using static values for log messages.
+    # Default: false
+    static-msg: true
+    # Enforce using constants instead of raw keys.
+    # Default: false
+    no-raw-keys: false
+    # Enforce a single key naming convention.
+    # Values: snake, kebab, camel, pascal
+    # Default: ""
+    key-naming-case: snake
+    # Enforce putting arguments on separate lines.
+    # Default: false
+    args-on-sep-lines: false
+  usestdlibvars:
+    # Suggest the use of http.MethodXX.
+    # Default: true
+    http-method: false
+    # Suggest the use of http.StatusXX.
+    # Default: true
+    http-status-code: false
+    # Suggest the use of time.Weekday.String().
+    # Default: true
+    time-weekday: true
+    # Suggest the use of time.Month.String().
+    # Default: false
+    time-month: true
+    # Suggest the use of time.Layout.
+    # Default: false
+    time-layout: true
+    # Suggest the use of crypto.Hash.String().
+    # Default: false
+    crypto-hash: true
+    # Suggest the use of rpc.DefaultXXPath.
+    # Default: false
+    default-rpc-path: true
+    # DEPRECATED Suggest the use of os.DevNull.
+    # Default: false
+    os-dev-null: true
+    # Suggest the use of sql.LevelXX.String().
+    # Default: false
+    sql-isolation-level: true
+    # Suggest the use of tls.SignatureScheme.String().
+    # Default: false
+    tls-signature-scheme: true
+    # Suggest the use of constant.Kind.String().
+    # Default: false
+    constant-kind: true
+    # DEPRECATED Suggest the use of syslog.Priority.
+    # Default: false
+    syslog-priority: true
