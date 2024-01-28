@@ -132,19 +132,20 @@ func (c *Chromium) userItemPaths(profilePath string, items []item.Item) (map[str
 func chromiumWalkFunc(items []item.Item, multiItemPaths map[string]map[item.Item]string) filepath.WalkFunc {
 	return func(path string, info fs.FileInfo, err error) error {
 		for _, v := range items {
-			if info.Name() == v.Filename() {
-				if strings.Contains(path, "System Profile") {
-					continue
-				}
-				profileFolder := fileutil.ParentBaseDir(path)
-				if strings.Contains(filepath.ToSlash(path), "/Network/Cookies") {
-					profileFolder = fileutil.BaseDir(strings.ReplaceAll(filepath.ToSlash(path), "/Network/Cookies", ""))
-				}
-				if _, exist := multiItemPaths[profileFolder]; exist {
-					multiItemPaths[profileFolder][v] = path
-				} else {
-					multiItemPaths[profileFolder] = map[item.Item]string{v: path}
-				}
+			if info.Name() != v.Filename() {
+				continue
+			}
+			if strings.Contains(path, "System Profile") {
+				continue
+			}
+			profileFolder := fileutil.ParentBaseDir(path)
+			if strings.Contains(filepath.ToSlash(path), "/Network/Cookies") {
+				profileFolder = fileutil.BaseDir(strings.ReplaceAll(filepath.ToSlash(path), "/Network/Cookies", ""))
+			}
+			if _, exist := multiItemPaths[profileFolder]; exist {
+				multiItemPaths[profileFolder][v] = path
+			} else {
+				multiItemPaths[profileFolder] = map[item.Item]string{v: path}
 			}
 		}
 		return err
