@@ -42,7 +42,7 @@ jobs:
           diff -u <(echo -n) <(gofmt -d .)
 
       - name: Get dependencies
-        run: go get -v ./...
+        run: go mod download
 
       - name: Build
         run: go build -v ./...
