@@ -24,6 +24,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.goVer }}
+          cache: false
         id: go
 
       - name: cache go modules
