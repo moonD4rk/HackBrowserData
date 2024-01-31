@@ -8,8 +8,8 @@ import (
 	// import sqlite3 driver
 	_ "modernc.org/sqlite"
 
+	"github.com/moond4rk/hackbrowserdata/browserdata/types"
 	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/item"
 )
 
 type ChromiumCreditCard []card
@@ -29,11 +29,11 @@ const (
 )
 
 func (c *ChromiumCreditCard) Parse(masterKey []byte) error {
-	db, err := sql.Open("sqlite", item.ChromiumCreditCard.TempFilename())
+	db, err := sql.Open("sqlite", types.ChromiumCreditCard.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.ChromiumCreditCard.TempFilename())
+	defer os.Remove(types.ChromiumCreditCard.TempFilename())
 	defer db.Close()
 
 	rows, err := db.Query(queryChromiumCredit)
@@ -85,11 +85,11 @@ func (c *ChromiumCreditCard) Len() int {
 type YandexCreditCard []card
 
 func (c *YandexCreditCard) Parse(masterKey []byte) error {
-	db, err := sql.Open("sqlite", item.YandexCreditCard.TempFilename())
+	db, err := sql.Open("sqlite", types.YandexCreditCard.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.YandexCreditCard.TempFilename())
+	defer os.Remove(types.YandexCreditCard.TempFilename())
 	defer db.Close()
 	rows, err := db.Query(queryChromiumCredit)
 	if err != nil {

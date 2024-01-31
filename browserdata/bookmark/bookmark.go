@@ -10,7 +10,7 @@ import (
 	"github.com/tidwall/gjson"
 	_ "modernc.org/sqlite" // import sqlite3 driver
 
-	"github.com/moond4rk/hackbrowserdata/item"
+	"github.com/moond4rk/hackbrowserdata/browserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
@@ -26,11 +26,11 @@ type bookmark struct {
 }
 
 func (c *ChromiumBookmark) Parse(_ []byte) error {
-	bookmarks, err := fileutil.ReadFile(item.ChromiumBookmark.TempFilename())
+	bookmarks, err := fileutil.ReadFile(types.ChromiumBookmark.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.ChromiumBookmark.TempFilename())
+	defer os.Remove(types.ChromiumBookmark.TempFilename())
 	r := gjson.Parse(bookmarks)
 	if r.Exists() {
 		roots := r.Get("roots")
@@ -93,11 +93,11 @@ const (
 )
 
 func (f *FirefoxBookmark) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite", item.FirefoxBookmark.TempFilename())
+	db, err := sql.Open("sqlite", types.FirefoxBookmark.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.FirefoxBookmark.TempFilename())
+	defer os.Remove(types.FirefoxBookmark.TempFilename())
 	defer db.Close()
 	_, err = db.Exec(closeJournalMode)
 	if err != nil {

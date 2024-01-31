@@ -11,7 +11,7 @@ import (
 	"github.com/tidwall/gjson"
 	_ "modernc.org/sqlite" // import sqlite3 driver
 
-	"github.com/moond4rk/hackbrowserdata/item"
+	"github.com/moond4rk/hackbrowserdata/browserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
@@ -31,11 +31,11 @@ const (
 )
 
 func (c *ChromiumDownload) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite", item.ChromiumDownload.TempFilename())
+	db, err := sql.Open("sqlite", types.ChromiumDownload.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.ChromiumDownload.TempFilename())
+	defer os.Remove(types.ChromiumDownload.TempFilename())
 	defer db.Close()
 	rows, err := db.Query(queryChromiumDownload)
 	if err != nil {
@@ -82,11 +82,11 @@ const (
 )
 
 func (f *FirefoxDownload) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite", item.FirefoxDownload.TempFilename())
+	db, err := sql.Open("sqlite", types.FirefoxDownload.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.FirefoxDownload.TempFilename())
+	defer os.Remove(types.FirefoxDownload.TempFilename())
 	defer db.Close()
 
 	_, err = db.Exec(closeJournalMode)

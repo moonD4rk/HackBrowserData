@@ -11,9 +11,9 @@ import (
 
 	_ "modernc.org/sqlite" // sqlite3 driver TODO: replace with chooseable driver
 
-	"github.com/moond4rk/hackbrowserdata/browsingdata"
+	"github.com/moond4rk/hackbrowserdata/browserdata"
+	"github.com/moond4rk/hackbrowserdata/browserdata/types"
 	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/item"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
@@ -23,15 +23,15 @@ type Firefox struct {
 	storage     string
 	profilePath string
 	masterKey   []byte
-	items       []item.Item
-	itemPaths   map[item.Item]string
+	items       []types.BrowserDataType
+	itemPaths   map[types.BrowserDataType]string
 }
 
 var ErrProfilePathNotFound = errors.New("profile path not found")
 
 // New returns new Firefox instances.
-func New(profilePath string, items []item.Item) ([]*Firefox, error) {
-	multiItemPaths := make(map[string]map[item.Item]string)
+func New(profilePath string, items []types.BrowserDataType) ([]*Firefox, error) {
+	multiItemPaths := make(map[string]map[types.BrowserDataType]string)
 	// ignore walk dir error since it can be produced by a single entry
 	_ = filepath.WalkDir(profilePath, firefoxWalkFunc(items, multiItemPaths))
 
@@ -57,7 +57,7 @@ func (f *Firefox) copyItemToLocal() error {
 	return nil
 }
 
-func firefoxWalkFunc(items []item.Item, multiItemPaths map[string]map[item.Item]string) fs.WalkDirFunc {
+func firefoxWalkFunc(items []types.BrowserDataType, multiItemPaths map[string]map[types.BrowserDataType]string) fs.WalkDirFunc {
 	return func(path string, info fs.DirEntry, err error) error {
 		for _, v := range items {
 			if info.Name() == v.Filename() {
@@ -65,7 +65,7 @@ func firefoxWalkFunc(items []item.Item, multiItemPaths map[string]map[item.Item]
 				if _, exist := multiItemPaths[parentBaseDir]; exist {
 					multiItemPaths[parentBaseDir][v] = path
 				} else {
-					multiItemPaths[parentBaseDir] = map[item.Item]string{v: path}
+					multiItemPaths[parentBaseDir] = map[types.BrowserDataType]string{v: path}
 				}
 			}
 		}
@@ -76,7 +76,7 @@ func firefoxWalkFunc(items []item.Item, multiItemPaths map[string]map[item.Item]
 
 // GetMasterKey returns master key of Firefox. from key4.db
 func (f *Firefox) GetMasterKey() ([]byte, error) {
-	tempFilename := item.FirefoxKey4.TempFilename()
+	tempFilename := types.FirefoxKey4.TempFilename()
 
 	// Open and defer close of the database.
 	keyDB, err := sql.Open("sqlite", tempFilename)
@@ -135,7 +135,7 @@ func processMasterKey(metaItem1, metaItem2, nssA11, nssA102 []byte) ([]byte, err
 		return nil, errors.New("flag verification failed: password-check not found")
 	}
 
-	var keyLin = []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	keyLin := []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 	if !bytes.Equal(nssA102, keyLin) {
 		return nil, errors.New("master key verification failed: nssA102 not equal to expected value")
 	}
@@ -159,13 +159,13 @@ func (f *Firefox) Name() string {
 	return f.name
 }
 
-func (f *Firefox) BrowsingData(isFullExport bool) (*browsingdata.Data, error) {
+func (f *Firefox) BrowsingData(isFullExport bool) (*browserdata.Data, error) {
 	items := f.items
 	if !isFullExport {
-		items = item.FilterSensitiveItems(f.items)
+		items = types.FilterSensitiveItems(f.items)
 	}
 
-	b := browsingdata.New(items)
+	b := browserdata.New(items)
 
 	if err := f.copyItemToLocal(); err != nil {
 		return nil, err

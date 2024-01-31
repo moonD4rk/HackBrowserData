@@ -9,9 +9,7 @@ import (
 	"fmt"
 )
 
-var (
-	ErrCiphertextLengthIsInvalid = errors.New("ciphertext length is invalid")
-)
+var ErrCiphertextLengthIsInvalid = errors.New("ciphertext length is invalid")
 
 func AES128CBCDecrypt(key, iv, ciphertext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)

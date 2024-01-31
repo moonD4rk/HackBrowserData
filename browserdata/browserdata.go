@@ -1,23 +1,23 @@
-package browsingdata
+package browserdata
 
 import (
 	"log/slog"
 
-	"github.com/moond4rk/hackbrowserdata/browsingdata/bookmark"
-	"github.com/moond4rk/hackbrowserdata/browsingdata/cookie"
-	"github.com/moond4rk/hackbrowserdata/browsingdata/creditcard"
-	"github.com/moond4rk/hackbrowserdata/browsingdata/download"
-	"github.com/moond4rk/hackbrowserdata/browsingdata/extension"
-	"github.com/moond4rk/hackbrowserdata/browsingdata/history"
-	"github.com/moond4rk/hackbrowserdata/browsingdata/localstorage"
-	"github.com/moond4rk/hackbrowserdata/browsingdata/password"
-	"github.com/moond4rk/hackbrowserdata/browsingdata/sessionstorage"
-	"github.com/moond4rk/hackbrowserdata/item"
+	"github.com/moond4rk/hackbrowserdata/browserdata/bookmark"
+	"github.com/moond4rk/hackbrowserdata/browserdata/cookie"
+	"github.com/moond4rk/hackbrowserdata/browserdata/creditcard"
+	"github.com/moond4rk/hackbrowserdata/browserdata/download"
+	"github.com/moond4rk/hackbrowserdata/browserdata/extension"
+	"github.com/moond4rk/hackbrowserdata/browserdata/history"
+	"github.com/moond4rk/hackbrowserdata/browserdata/localstorage"
+	"github.com/moond4rk/hackbrowserdata/browserdata/password"
+	"github.com/moond4rk/hackbrowserdata/browserdata/sessionstorage"
+	"github.com/moond4rk/hackbrowserdata/browserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
 type Data struct {
-	sources map[item.Item]Source
+	sources map[types.BrowserDataType]Source
 }
 
 type Source interface {
@@ -28,9 +28,9 @@ type Source interface {
 	Len() int
 }
 
-func New(items []item.Item) *Data {
+func New(items []types.BrowserDataType) *Data {
 	bd := &Data{
-		sources: make(map[item.Item]Source),
+		sources: make(map[types.BrowserDataType]Source),
 	}
 	bd.addSources(items)
 	return bd
@@ -73,44 +73,44 @@ func (d *Data) Output(dir, browserName, flag string) {
 	}
 }
 
-func (d *Data) addSources(items []item.Item) {
+func (d *Data) addSources(items []types.BrowserDataType) {
 	for _, source := range items {
 		switch source {
-		case item.ChromiumPassword:
+		case types.ChromiumPassword:
 			d.sources[source] = &password.ChromiumPassword{}
-		case item.ChromiumCookie:
+		case types.ChromiumCookie:
 			d.sources[source] = &cookie.ChromiumCookie{}
-		case item.ChromiumBookmark:
+		case types.ChromiumBookmark:
 			d.sources[source] = &bookmark.ChromiumBookmark{}
-		case item.ChromiumHistory:
+		case types.ChromiumHistory:
 			d.sources[source] = &history.ChromiumHistory{}
-		case item.ChromiumDownload:
+		case types.ChromiumDownload:
 			d.sources[source] = &download.ChromiumDownload{}
-		case item.ChromiumCreditCard:
+		case types.ChromiumCreditCard:
 			d.sources[source] = &creditcard.ChromiumCreditCard{}
-		case item.ChromiumLocalStorage:
+		case types.ChromiumLocalStorage:
 			d.sources[source] = &localstorage.ChromiumLocalStorage{}
-		case item.ChromiumSessionStorage:
+		case types.ChromiumSessionStorage:
 			d.sources[source] = &sessionstorage.ChromiumSessionStorage{}
-		case item.ChromiumExtension:
+		case types.ChromiumExtension:
 			d.sources[source] = &extension.ChromiumExtension{}
-		case item.YandexPassword:
+		case types.YandexPassword:
 			d.sources[source] = &password.YandexPassword{}
-		case item.YandexCreditCard:
+		case types.YandexCreditCard:
 			d.sources[source] = &creditcard.YandexCreditCard{}
-		case item.FirefoxPassword:
+		case types.FirefoxPassword:
 			d.sources[source] = &password.FirefoxPassword{}
-		case item.FirefoxCookie:
+		case types.FirefoxCookie:
 			d.sources[source] = &cookie.FirefoxCookie{}
-		case item.FirefoxBookmark:
+		case types.FirefoxBookmark:
 			d.sources[source] = &bookmark.FirefoxBookmark{}
-		case item.FirefoxHistory:
+		case types.FirefoxHistory:
 			d.sources[source] = &history.FirefoxHistory{}
-		case item.FirefoxDownload:
+		case types.FirefoxDownload:
 			d.sources[source] = &download.FirefoxDownload{}
-		case item.FirefoxLocalStorage:
+		case types.FirefoxLocalStorage:
 			d.sources[source] = &localstorage.FirefoxLocalStorage{}
-		case item.FirefoxExtension:
+		case types.FirefoxExtension:
 			d.sources[source] = &extension.FirefoxExtension{}
 		}
 	}

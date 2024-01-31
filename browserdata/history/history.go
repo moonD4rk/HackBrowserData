@@ -10,7 +10,7 @@ import (
 	// import sqlite3 driver
 	_ "modernc.org/sqlite"
 
-	"github.com/moond4rk/hackbrowserdata/item"
+	"github.com/moond4rk/hackbrowserdata/browserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
@@ -28,11 +28,11 @@ const (
 )
 
 func (c *ChromiumHistory) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite", item.ChromiumHistory.TempFilename())
+	db, err := sql.Open("sqlite", types.ChromiumHistory.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.ChromiumHistory.TempFilename())
+	defer os.Remove(types.ChromiumHistory.TempFilename())
 	defer db.Close()
 
 	rows, err := db.Query(queryChromiumHistory)
@@ -79,11 +79,11 @@ const (
 )
 
 func (f *FirefoxHistory) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite", item.FirefoxHistory.TempFilename())
+	db, err := sql.Open("sqlite", types.FirefoxHistory.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.FirefoxHistory.TempFilename())
+	defer os.Remove(types.FirefoxHistory.TempFilename())
 	defer db.Close()
 
 	_, err = db.Exec(closeJournalMode)

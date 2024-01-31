@@ -10,8 +10,8 @@ import (
 	// import sqlite3 driver
 	_ "modernc.org/sqlite"
 
+	"github.com/moond4rk/hackbrowserdata/browserdata/types"
 	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/item"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
@@ -36,11 +36,11 @@ const (
 )
 
 func (c *ChromiumCookie) Parse(masterKey []byte) error {
-	db, err := sql.Open("sqlite", item.ChromiumCookie.TempFilename())
+	db, err := sql.Open("sqlite", types.ChromiumCookie.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.ChromiumCookie.TempFilename())
+	defer os.Remove(types.ChromiumCookie.TempFilename())
 	defer db.Close()
 	rows, err := db.Query(queryChromiumCookie)
 	if err != nil {
@@ -104,11 +104,11 @@ const (
 )
 
 func (f *FirefoxCookie) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite", item.FirefoxCookie.TempFilename())
+	db, err := sql.Open("sqlite", types.FirefoxCookie.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.FirefoxCookie.TempFilename())
+	defer os.Remove(types.FirefoxCookie.TempFilename())
 	defer db.Close()
 
 	rows, err := db.Query(queryFirefoxCookie)

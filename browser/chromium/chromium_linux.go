@@ -12,13 +12,13 @@ import (
 	keyring "github.com/ppacher/go-dbus-keyring"
 	"golang.org/x/crypto/pbkdf2"
 
-	"github.com/moond4rk/hackbrowserdata/item"
+	"github.com/moond4rk/hackbrowserdata/browserdata/types"
 )
 
 func (c *Chromium) GetMasterKey() ([]byte, error) {
 	// what is d-bus @https://dbus.freedesktop.org/
 	// don't need chromium key file for Linux
-	defer os.Remove(item.ChromiumKey.TempFilename())
+	defer os.Remove(types.ChromiumKey.TempFilename())
 
 	conn, err := dbus.SessionBus()
 	if err != nil {

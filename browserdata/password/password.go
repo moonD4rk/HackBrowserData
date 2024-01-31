@@ -11,8 +11,8 @@ import (
 	"github.com/tidwall/gjson"
 	_ "modernc.org/sqlite" // import sqlite3 driver
 
+	"github.com/moond4rk/hackbrowserdata/browserdata/types"
 	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/item"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
@@ -32,11 +32,11 @@ const (
 )
 
 func (c *ChromiumPassword) Parse(masterKey []byte) error {
-	db, err := sql.Open("sqlite", item.ChromiumPassword.TempFilename())
+	db, err := sql.Open("sqlite", types.ChromiumPassword.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.ChromiumPassword.TempFilename())
+	defer os.Remove(types.ChromiumPassword.TempFilename())
 	defer db.Close()
 
 	rows, err := db.Query(queryChromiumLogin)
@@ -99,11 +99,11 @@ const (
 )
 
 func (c *YandexPassword) Parse(masterKey []byte) error {
-	db, err := sql.Open("sqlite", item.YandexPassword.TempFilename())
+	db, err := sql.Open("sqlite", types.YandexPassword.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.YandexPassword.TempFilename())
+	defer os.Remove(types.YandexPassword.TempFilename())
 	defer db.Close()
 
 	rows, err := db.Query(queryYandexLogin)
@@ -200,11 +200,11 @@ func (f *FirefoxPassword) Parse(globalSalt []byte) error {
 }
 
 func getFirefoxLoginData() ([]loginData, error) {
-	s, err := os.ReadFile(item.FirefoxPassword.TempFilename())
+	s, err := os.ReadFile(types.FirefoxPassword.TempFilename())
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(item.FirefoxPassword.TempFilename())
+	defer os.Remove(types.FirefoxPassword.TempFilename())
 	loginsJSON := gjson.GetBytes(s, "logins")
 	var logins []loginData
 	if loginsJSON.Exists() {

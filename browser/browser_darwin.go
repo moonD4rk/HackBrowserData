@@ -3,7 +3,7 @@
 package browser
 
 import (
-	"github.com/moond4rk/hackbrowserdata/item"
+	"github.com/moond4rk/hackbrowserdata/browserdata/types"
 )
 
 var (
@@ -11,85 +11,85 @@ var (
 		name        string
 		storage     string
 		profilePath string
-		items       []item.Item
+		items       []types.BrowserDataType
 	}{
 		"chrome": {
 			name:        chromeName,
 			storage:     chromeStorageName,
 			profilePath: chromeProfilePath,
-			items:       item.DefaultChromium,
+			items:       types.DefaultChromiumTypes,
 		},
 		"edge": {
 			name:        edgeName,
 			storage:     edgeStorageName,
 			profilePath: edgeProfilePath,
-			items:       item.DefaultChromium,
+			items:       types.DefaultChromiumTypes,
 		},
 		"chromium": {
 			name:        chromiumName,
 			storage:     chromiumStorageName,
 			profilePath: chromiumProfilePath,
-			items:       item.DefaultChromium,
+			items:       types.DefaultChromiumTypes,
 		},
 		"chrome-beta": {
 			name:        chromeBetaName,
 			storage:     chromeBetaStorageName,
 			profilePath: chromeBetaProfilePath,
-			items:       item.DefaultChromium,
+			items:       types.DefaultChromiumTypes,
 		},
 		"opera": {
 			name:        operaName,
 			profilePath: operaProfilePath,
 			storage:     operaStorageName,
-			items:       item.DefaultChromium,
+			items:       types.DefaultChromiumTypes,
 		},
 		"opera-gx": {
 			name:        operaGXName,
 			profilePath: operaGXProfilePath,
 			storage:     operaStorageName,
-			items:       item.DefaultChromium,
+			items:       types.DefaultChromiumTypes,
 		},
 		"vivaldi": {
 			name:        vivaldiName,
 			storage:     vivaldiStorageName,
 			profilePath: vivaldiProfilePath,
-			items:       item.DefaultChromium,
+			items:       types.DefaultChromiumTypes,
 		},
 		"coccoc": {
 			name:        coccocName,
 			storage:     coccocStorageName,
 			profilePath: coccocProfilePath,
-			items:       item.DefaultChromium,
+			items:       types.DefaultChromiumTypes,
 		},
 		"brave": {
 			name:        braveName,
 			profilePath: braveProfilePath,
 			storage:     braveStorageName,
-			items:       item.DefaultChromium,
+			items:       types.DefaultChromiumTypes,
 		},
 		"yandex": {
 			name:        yandexName,
 			storage:     yandexStorageName,
 			profilePath: yandexProfilePath,
-			items:       item.DefaultYandex,
+			items:       types.DefaultYandexTypes,
 		},
 		"arc": {
 			name:        arcName,
 			profilePath: arcProfilePath,
 			storage:     arcStorageName,
-			items:       item.DefaultChromium,
+			items:       types.DefaultChromiumTypes,
 		},
 	}
 	firefoxList = map[string]struct {
 		name        string
 		storage     string
 		profilePath string
-		items       []item.Item
+		items       []types.BrowserDataType
 	}{
 		"firefox": {
 			name:        firefoxName,
 			profilePath: firefoxProfilePath,
-			items:       item.DefaultFirefox,
+			items:       types.DefaultFirefoxTypes,
 		},
 	}
 )

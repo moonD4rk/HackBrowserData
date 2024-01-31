@@ -14,7 +14,7 @@ import (
 
 	"golang.org/x/crypto/pbkdf2"
 
-	"github.com/moond4rk/hackbrowserdata/item"
+	"github.com/moond4rk/hackbrowserdata/browserdata/types"
 )
 
 var (
@@ -24,7 +24,7 @@ var (
 
 func (c *Chromium) GetMasterKey() ([]byte, error) {
 	// don't need chromium key file for macOS
-	defer os.Remove(item.ChromiumKey.TempFilename())
+	defer os.Remove(types.ChromiumKey.TempFilename())
 	// Get the master key from the keychain
 	// $ security find-generic-password -wa 'Chrome'
 	var (

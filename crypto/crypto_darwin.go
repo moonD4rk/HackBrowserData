@@ -6,7 +6,7 @@ func DecryptWithChromium(key, password []byte) ([]byte, error) {
 	if len(password) <= 3 {
 		return nil, ErrCiphertextLengthIsInvalid
 	}
-	var iv = []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
+	iv := []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
 	return AES128CBCDecrypt(key, iv, password[3:])
 }
 
