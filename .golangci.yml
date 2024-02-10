@@ -358,3 +358,7 @@ linters-settings:
     # DEPRECATED Suggest the use of syslog.Priority.
     # Default: false
     syslog-priority: true
+  revive:
+    rules:
+      - name: unused-parameter
+        disabled: true
