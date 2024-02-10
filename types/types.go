@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 )
 
-type BrowserDataType int
+type DataType int
 
 const (
-	ChromiumKey BrowserDataType = iota
+	ChromiumKey DataType = iota
 	ChromiumPassword
 	ChromiumCookie
 	ChromiumBookmark
@@ -35,7 +35,7 @@ const (
 	FirefoxExtension
 )
 
-var itemFileNames = map[BrowserDataType]string{
+var itemFileNames = map[DataType]string{
 	ChromiumKey:            fileChromiumKey,
 	ChromiumPassword:       fileChromiumPassword,
 	ChromiumCookie:         fileChromiumCookie,
@@ -62,7 +62,7 @@ var itemFileNames = map[BrowserDataType]string{
 
 // Filename returns the filename for the item, defined by browser
 // chromium local storage is a folder, so it returns the file name of the folder
-func (i BrowserDataType) Filename() string {
+func (i DataType) Filename() string {
 	if fileName, ok := itemFileNames[i]; ok {
 		return fileName
 	}
@@ -71,7 +71,7 @@ func (i BrowserDataType) Filename() string {
 
 // TempFilename returns the temp filename for the item with suffix
 // eg: chromiumKey_0.temp
-func (i BrowserDataType) TempFilename() string {
+func (i DataType) TempFilename() string {
 	const tempSuffix = "temp"
 	tempFile := fmt.Sprintf("%s_%d.%s", i.Filename(), i, tempSuffix)
 	return filepath.Join(os.TempDir(), tempFile)
@@ -79,7 +79,7 @@ func (i BrowserDataType) TempFilename() string {
 
 // IsSensitive returns whether the item is sensitive data
 // password, cookie, credit card, master key is unlimited
-func (i BrowserDataType) IsSensitive() bool {
+func (i DataType) IsSensitive() bool {
 	switch i {
 	case ChromiumKey, ChromiumCookie, ChromiumPassword, ChromiumCreditCard,
 		FirefoxKey4, FirefoxPassword, FirefoxCookie, FirefoxCreditCard,
@@ -91,8 +91,8 @@ func (i BrowserDataType) IsSensitive() bool {
 }
 
 // FilterSensitiveItems returns the sensitive items
-func FilterSensitiveItems(items []BrowserDataType) []BrowserDataType {
-	var filtered []BrowserDataType
+func FilterSensitiveItems(items []DataType) []DataType {
+	var filtered []DataType
 	for _, item := range items {
 		if item.IsSensitive() {
 			filtered = append(filtered, item)
@@ -102,7 +102,7 @@ func FilterSensitiveItems(items []BrowserDataType) []BrowserDataType {
 }
 
 // DefaultFirefoxTypes returns the default items for the firefox browser
-var DefaultFirefoxTypes = []BrowserDataType{
+var DefaultFirefoxTypes = []DataType{
 	FirefoxKey4,
 	FirefoxPassword,
 	FirefoxCookie,
@@ -116,7 +116,7 @@ var DefaultFirefoxTypes = []BrowserDataType{
 }
 
 // DefaultYandexTypes returns the default items for the yandex browser
-var DefaultYandexTypes = []BrowserDataType{
+var DefaultYandexTypes = []DataType{
 	ChromiumKey,
 	ChromiumCookie,
 	ChromiumBookmark,
@@ -130,7 +130,7 @@ var DefaultYandexTypes = []BrowserDataType{
 }
 
 // DefaultChromiumTypes returns the default items for the chromium browser
-var DefaultChromiumTypes = []BrowserDataType{
+var DefaultChromiumTypes = []DataType{
 	ChromiumKey,
 	ChromiumPassword,
 	ChromiumCookie,
@@ -165,8 +165,6 @@ const (
 	fileFirefoxData         = "places.sqlite"
 	fileFirefoxLocalStorage = "webappsstore.sqlite"
 	fileFirefoxExtension    = "extensions.json"
-)
 
-const (
 	UnsupportedItem = "unsupported item"
 )

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/moond4rk/hackbrowserdata/browserdata"
-	"github.com/moond4rk/hackbrowserdata/browserdata/types"
+	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
@@ -17,12 +17,12 @@ type Chromium struct {
 	storage     string
 	profilePath string
 	masterKey   []byte
-	items       []types.BrowserDataType
-	itemPaths   map[types.BrowserDataType]string
+	items       []types.DataType
+	itemPaths   map[types.DataType]string
 }
 
 // New create instance of Chromium browser, fill item's path if item is existed.
-func New(name, storage, profilePath string, items []types.BrowserDataType) ([]*Chromium, error) {
+func New(name, storage, profilePath string, items []types.DataType) ([]*Chromium, error) {
 	c := &Chromium{
 		name:        name,
 		storage:     storage,
@@ -98,8 +98,8 @@ func (c *Chromium) copyItemToLocal() error {
 }
 
 // userItemPaths return a map of user to item path, map[profile 1][item's name & path key pair]
-func (c *Chromium) userItemPaths(profilePath string, items []types.BrowserDataType) (map[string]map[types.BrowserDataType]string, error) {
-	multiItemPaths := make(map[string]map[types.BrowserDataType]string)
+func (c *Chromium) userItemPaths(profilePath string, items []types.DataType) (map[string]map[types.DataType]string, error) {
+	multiItemPaths := make(map[string]map[types.DataType]string)
 	parentDir := fileutil.ParentDir(profilePath)
 	err := filepath.Walk(parentDir, chromiumWalkFunc(items, multiItemPaths))
 	if err != nil {
@@ -116,7 +116,7 @@ func (c *Chromium) userItemPaths(profilePath string, items []types.BrowserDataTy
 			}
 		}
 	}
-	t := make(map[string]map[types.BrowserDataType]string)
+	t := make(map[string]map[types.DataType]string)
 	for userDir, v := range multiItemPaths {
 		if userDir == dir {
 			continue
@@ -129,7 +129,7 @@ func (c *Chromium) userItemPaths(profilePath string, items []types.BrowserDataTy
 }
 
 // chromiumWalkFunc return a filepath.WalkFunc to find item's path
-func chromiumWalkFunc(items []types.BrowserDataType, multiItemPaths map[string]map[types.BrowserDataType]string) filepath.WalkFunc {
+func chromiumWalkFunc(items []types.DataType, multiItemPaths map[string]map[types.DataType]string) filepath.WalkFunc {
 	return func(path string, info fs.FileInfo, err error) error {
 		for _, v := range items {
 			if info.Name() != v.Filename() {
@@ -145,14 +145,14 @@ func chromiumWalkFunc(items []types.BrowserDataType, multiItemPaths map[string]m
 			if _, exist := multiItemPaths[profileFolder]; exist {
 				multiItemPaths[profileFolder][v] = path
 			} else {
-				multiItemPaths[profileFolder] = map[types.BrowserDataType]string{v: path}
+				multiItemPaths[profileFolder] = map[types.DataType]string{v: path}
 			}
 		}
 		return err
 	}
 }
 
-func fillLocalStoragePath(itemPaths map[types.BrowserDataType]string, storage types.BrowserDataType) {
+func fillLocalStoragePath(itemPaths map[types.DataType]string, storage types.DataType) {
 	if p, ok := itemPaths[types.ChromiumHistory]; ok {
 		lsp := filepath.Join(filepath.Dir(p), storage.Filename())
 		if fileutil.IsDirExists(lsp) {

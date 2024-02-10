@@ -8,7 +8,7 @@ import (
 	"github.com/tidwall/gjson"
 	"golang.org/x/text/language"
 
-	"github.com/moond4rk/hackbrowserdata/browserdata/types"
+	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 

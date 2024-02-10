@@ -3,7 +3,7 @@
 package browser
 
 import (
-	"github.com/moond4rk/hackbrowserdata/browserdata/types"
+	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 var (
@@ -11,7 +11,7 @@ var (
 		name        string
 		storage     string
 		profilePath string
-		items       []types.BrowserDataType
+		items       []types.DataType
 	}{
 		"chrome": {
 			name:        chromeName,
@@ -84,7 +84,7 @@ var (
 		name        string
 		storage     string
 		profilePath string
-		items       []types.BrowserDataType
+		items       []types.DataType
 	}{
 		"firefox": {
 			name:        firefoxName,

@@ -9,10 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNew(t *testing.T) {
-}
-
-func TestItem_FileName(t *testing.T) {
+func TestDataType_FileName(t *testing.T) {
 	for _, item := range DefaultChromiumTypes {
 		assert.Equal(t, item.Filename(), item.filename())
 	}
@@ -24,11 +21,11 @@ func TestItem_FileName(t *testing.T) {
 	}
 }
 
-func TestItem_TempFilename(t *testing.T) {
+func TestDataType_TempFilename(t *testing.T) {
 	asserts := assert.New(t)
 
 	testCases := []struct {
-		item     BrowserDataType
+		item     DataType
 		expected string
 	}{
 		{ChromiumKey, "Local State"},
@@ -48,10 +45,10 @@ func TestItem_TempFilename(t *testing.T) {
 	}
 }
 
-func TestItem_IsSensitive(t *testing.T) {
+func TestDataType_IsSensitive(t *testing.T) {
 	asserts := assert.New(t)
 	testCases := []struct {
-		item     BrowserDataType
+		item     DataType
 		expected bool
 	}{
 		{ChromiumKey, true},
@@ -66,11 +63,11 @@ func TestItem_IsSensitive(t *testing.T) {
 func TestFilterSensitiveItems(t *testing.T) {
 	asserts := assert.New(t)
 	testCases := []struct {
-		items    []BrowserDataType
+		items    []DataType
 		expected int
 	}{
-		{[]BrowserDataType{ChromiumKey, ChromiumBookmark, ChromiumPassword}, 2},
-		{[]BrowserDataType{ChromiumBookmark, ChromiumHistory}, 0},
+		{[]DataType{ChromiumKey, ChromiumBookmark, ChromiumPassword}, 2},
+		{[]DataType{ChromiumBookmark, ChromiumHistory}, 0},
 	}
 
 	for _, tc := range testCases {
@@ -82,7 +79,7 @@ func TestFilterSensitiveItems(t *testing.T) {
 	}
 }
 
-func (i BrowserDataType) filename() string {
+func (i DataType) filename() string {
 	switch i {
 	case ChromiumKey:
 		return fileChromiumKey

@@ -12,12 +12,12 @@ import (
 	"github.com/moond4rk/hackbrowserdata/browserdata/localstorage"
 	"github.com/moond4rk/hackbrowserdata/browserdata/password"
 	"github.com/moond4rk/hackbrowserdata/browserdata/sessionstorage"
-	"github.com/moond4rk/hackbrowserdata/browserdata/types"
+	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
 type Data struct {
-	sources map[types.BrowserDataType]Source
+	sources map[types.DataType]Source
 }
 
 type Source interface {
@@ -28,9 +28,9 @@ type Source interface {
 	Len() int
 }
 
-func New(items []types.BrowserDataType) *Data {
+func New(items []types.DataType) *Data {
 	bd := &Data{
-		sources: make(map[types.BrowserDataType]Source),
+		sources: make(map[types.DataType]Source),
 	}
 	bd.addSources(items)
 	return bd
@@ -73,7 +73,7 @@ func (d *Data) Output(dir, browserName, flag string) {
 	}
 }
 
-func (d *Data) addSources(items []types.BrowserDataType) {
+func (d *Data) addSources(items []types.DataType) {
 	for _, source := range items {
 		switch source {
 		case types.ChromiumPassword:

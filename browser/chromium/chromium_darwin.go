@@ -14,7 +14,7 @@ import (
 
 	"golang.org/x/crypto/pbkdf2"
 
-	"github.com/moond4rk/hackbrowserdata/browserdata/types"
+	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 var (

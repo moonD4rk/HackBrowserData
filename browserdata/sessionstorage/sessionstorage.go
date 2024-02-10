@@ -12,7 +12,7 @@ import (
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
 
-	"github.com/moond4rk/hackbrowserdata/browserdata/types"
+	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/byteutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )

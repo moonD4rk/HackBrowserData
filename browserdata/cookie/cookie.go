@@ -10,8 +10,8 @@ import (
 	// import sqlite3 driver
 	_ "modernc.org/sqlite"
 
-	"github.com/moond4rk/hackbrowserdata/browserdata/types"
 	"github.com/moond4rk/hackbrowserdata/crypto"
+	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 

@@ -12,8 +12,8 @@ import (
 	_ "modernc.org/sqlite" // sqlite3 driver TODO: replace with chooseable driver
 
 	"github.com/moond4rk/hackbrowserdata/browserdata"
-	"github.com/moond4rk/hackbrowserdata/browserdata/types"
 	"github.com/moond4rk/hackbrowserdata/crypto"
+	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
@@ -23,15 +23,15 @@ type Firefox struct {
 	storage     string
 	profilePath string
 	masterKey   []byte
-	items       []types.BrowserDataType
-	itemPaths   map[types.BrowserDataType]string
+	items       []types.DataType
+	itemPaths   map[types.DataType]string
 }
 
 var ErrProfilePathNotFound = errors.New("profile path not found")
 
 // New returns new Firefox instances.
-func New(profilePath string, items []types.BrowserDataType) ([]*Firefox, error) {
-	multiItemPaths := make(map[string]map[types.BrowserDataType]string)
+func New(profilePath string, items []types.DataType) ([]*Firefox, error) {
+	multiItemPaths := make(map[string]map[types.DataType]string)
 	// ignore walk dir error since it can be produced by a single entry
 	_ = filepath.WalkDir(profilePath, firefoxWalkFunc(items, multiItemPaths))
 
@@ -57,7 +57,7 @@ func (f *Firefox) copyItemToLocal() error {
 	return nil
 }
 
-func firefoxWalkFunc(items []types.BrowserDataType, multiItemPaths map[string]map[types.BrowserDataType]string) fs.WalkDirFunc {
+func firefoxWalkFunc(items []types.DataType, multiItemPaths map[string]map[types.DataType]string) fs.WalkDirFunc {
 	return func(path string, info fs.DirEntry, err error) error {
 		for _, v := range items {
 			if info.Name() == v.Filename() {
@@ -65,7 +65,7 @@ func firefoxWalkFunc(items []types.BrowserDataType, multiItemPaths map[string]ma
 				if _, exist := multiItemPaths[parentBaseDir]; exist {
 					multiItemPaths[parentBaseDir][v] = path
 				} else {
-					multiItemPaths[parentBaseDir] = map[types.BrowserDataType]string{v: path}
+					multiItemPaths[parentBaseDir] = map[types.DataType]string{v: path}
 				}
 			}
 		}
