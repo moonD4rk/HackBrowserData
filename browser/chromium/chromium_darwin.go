@@ -12,9 +12,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"golang.org/x/crypto/pbkdf2"
-
 	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/utils/cryptoutil"
 )
 
 var (
@@ -50,7 +49,7 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 	}
 	salt := []byte("saltysalt")
 	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157
-	key := pbkdf2.Key(secret, salt, 1003, 16, sha1.New)
+	key := cryptoutil.PBKDF2Key(secret, salt, 1003, 16, sha1.New)
 	if key == nil {
 		return nil, errWrongSecurityCommand
 	}
