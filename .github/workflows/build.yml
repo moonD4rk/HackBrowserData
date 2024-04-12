@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        goVer: ["1.21.x"]
+        goVer: ["1.22.x"]
 
     steps:
       - name: Check out code into the Go module directory
