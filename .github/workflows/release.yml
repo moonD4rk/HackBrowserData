@@ -16,7 +16,7 @@ jobs:
           go-version: "1.22.x"
 
       - name: Build with xgo
-        uses: crazy-max/ghaction-xgo@v2
+        uses: crazy-max/ghaction-xgo@v3
         with:
           xgo_version: latest
           go_version: ${{ matrix.go_version }}
