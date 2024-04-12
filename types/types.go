@@ -1,4 +1,4 @@
-package item
+package types
 
 import (
 	"fmt"
@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 )
 
-type Item int
+type DataType int
 
 const (
-	ChromiumKey Item = iota
+	ChromiumKey DataType = iota
 	ChromiumPassword
 	ChromiumCookie
 	ChromiumBookmark
@@ -35,7 +35,7 @@ const (
 	FirefoxExtension
 )
 
-var itemFileNames = map[Item]string{
+var itemFileNames = map[DataType]string{
 	ChromiumKey:            fileChromiumKey,
 	ChromiumPassword:       fileChromiumPassword,
 	ChromiumCookie:         fileChromiumCookie,
@@ -60,25 +60,26 @@ var itemFileNames = map[Item]string{
 	FirefoxCreditCard:      UnsupportedItem,
 }
 
-func (i Item) Filename() string {
+// Filename returns the filename for the item, defined by browser
+// chromium local storage is a folder, so it returns the file name of the folder
+func (i DataType) Filename() string {
 	if fileName, ok := itemFileNames[i]; ok {
 		return fileName
 	}
 	return UnsupportedItem
 }
 
-const tempSuffix = "temp"
-
 // TempFilename returns the temp filename for the item with suffix
 // eg: chromiumKey_0.temp
-func (i Item) TempFilename() string {
+func (i DataType) TempFilename() string {
+	const tempSuffix = "temp"
 	tempFile := fmt.Sprintf("%s_%d.%s", i.Filename(), i, tempSuffix)
 	return filepath.Join(os.TempDir(), tempFile)
 }
 
 // IsSensitive returns whether the item is sensitive data
 // password, cookie, credit card, master key is unlimited
-func (i Item) IsSensitive() bool {
+func (i DataType) IsSensitive() bool {
 	switch i {
 	case ChromiumKey, ChromiumCookie, ChromiumPassword, ChromiumCreditCard,
 		FirefoxKey4, FirefoxPassword, FirefoxCookie, FirefoxCreditCard,
@@ -90,8 +91,8 @@ func (i Item) IsSensitive() bool {
 }
 
 // FilterSensitiveItems returns the sensitive items
-func FilterSensitiveItems(items []Item) []Item {
-	var filtered []Item
+func FilterSensitiveItems(items []DataType) []DataType {
+	var filtered []DataType
 	for _, item := range items {
 		if item.IsSensitive() {
 			filtered = append(filtered, item)
@@ -100,8 +101,8 @@ func FilterSensitiveItems(items []Item) []Item {
 	return filtered
 }
 
-// DefaultFirefox returns the default items for the firefox browser
-var DefaultFirefox = []Item{
+// DefaultFirefoxTypes returns the default items for the firefox browser
+var DefaultFirefoxTypes = []DataType{
 	FirefoxKey4,
 	FirefoxPassword,
 	FirefoxCookie,
@@ -114,8 +115,8 @@ var DefaultFirefox = []Item{
 	FirefoxExtension,
 }
 
-// DefaultYandex returns the default items for the yandex browser
-var DefaultYandex = []Item{
+// DefaultYandexTypes returns the default items for the yandex browser
+var DefaultYandexTypes = []DataType{
 	ChromiumKey,
 	ChromiumCookie,
 	ChromiumBookmark,
@@ -128,8 +129,8 @@ var DefaultYandex = []Item{
 	YandexCreditCard,
 }
 
-// DefaultChromium returns the default items for the chromium browser
-var DefaultChromium = []Item{
+// DefaultChromiumTypes returns the default items for the chromium browser
+var DefaultChromiumTypes = []DataType{
 	ChromiumKey,
 	ChromiumPassword,
 	ChromiumCookie,
@@ -164,9 +165,6 @@ const (
 	fileFirefoxData         = "places.sqlite"
 	fileFirefoxLocalStorage = "webappsstore.sqlite"
 	fileFirefoxExtension    = "extensions.json"
-)
 
-const (
-	UnknownItem     = "unknown item"
 	UnsupportedItem = "unsupported item"
 )

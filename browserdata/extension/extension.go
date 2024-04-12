@@ -8,9 +8,19 @@ import (
 	"github.com/tidwall/gjson"
 	"golang.org/x/text/language"
 
-	"github.com/moond4rk/hackbrowserdata/item"
+	"github.com/moond4rk/hackbrowserdata/extractor"
+	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
+
+func init() {
+	extractor.RegisterExtractor(types.ChromiumExtension, func() extractor.Extractor {
+		return new(ChromiumExtension)
+	})
+	extractor.RegisterExtractor(types.FirefoxExtension, func() extractor.Extractor {
+		return new(FirefoxExtension)
+	})
+}
 
 type ChromiumExtension []*extension
 
@@ -24,12 +34,12 @@ type extension struct {
 	HomepageURL string
 }
 
-func (c *ChromiumExtension) Parse(_ []byte) error {
-	extensionFile, err := fileutil.ReadFile(item.ChromiumExtension.TempFilename())
+func (c *ChromiumExtension) Extract(_ []byte) error {
+	extensionFile, err := fileutil.ReadFile(types.ChromiumExtension.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.ChromiumExtension.TempFilename())
+	defer os.Remove(types.ChromiumExtension.TempFilename())
 
 	result, err := parseChromiumExtensions(extensionFile)
 	if err != nil {
@@ -113,12 +123,12 @@ type FirefoxExtension []*extension
 
 var lang = language.Und
 
-func (f *FirefoxExtension) Parse(_ []byte) error {
-	s, err := fileutil.ReadFile(item.FirefoxExtension.TempFilename())
+func (f *FirefoxExtension) Extract(_ []byte) error {
+	s, err := fileutil.ReadFile(types.FirefoxExtension.TempFilename())
 	if err != nil {
 		return err
 	}
-	_ = os.Remove(item.FirefoxExtension.TempFilename())
+	_ = os.Remove(types.FirefoxExtension.TempFilename())
 	j := gjson.Parse(s)
 	for _, v := range j.Get("addons").Array() {
 		// https://searchfox.org/mozilla-central/source/toolkit/mozapps/extensions/internal/XPIDatabase.jsm#157

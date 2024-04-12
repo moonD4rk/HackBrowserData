@@ -1,4 +1,4 @@
-package browsingdata
+package browserdata
 
 import (
 	"os"
