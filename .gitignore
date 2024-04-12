@@ -205,3 +205,4 @@ hack-browser-data
 
 # CICD Config
 !.typos.toml
+!.github/*.yml
