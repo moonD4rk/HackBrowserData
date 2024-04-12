@@ -10,9 +10,19 @@ import (
 	// import sqlite3 driver
 	_ "modernc.org/sqlite"
 
-	"github.com/moond4rk/hackbrowserdata/item"
+	"github.com/moond4rk/hackbrowserdata/extractor"
+	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
+
+func init() {
+	extractor.RegisterExtractor(types.ChromiumHistory, func() extractor.Extractor {
+		return new(ChromiumHistory)
+	})
+	extractor.RegisterExtractor(types.FirefoxHistory, func() extractor.Extractor {
+		return new(FirefoxHistory)
+	})
+}
 
 type ChromiumHistory []history
 
@@ -27,12 +37,12 @@ const (
 	queryChromiumHistory = `SELECT url, title, visit_count, last_visit_time FROM urls`
 )
 
-func (c *ChromiumHistory) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite", item.ChromiumHistory.TempFilename())
+func (c *ChromiumHistory) Extract(_ []byte) error {
+	db, err := sql.Open("sqlite", types.ChromiumHistory.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.ChromiumHistory.TempFilename())
+	defer os.Remove(types.ChromiumHistory.TempFilename())
 	defer db.Close()
 
 	rows, err := db.Query(queryChromiumHistory)
@@ -78,12 +88,12 @@ const (
 	closeJournalMode    = `PRAGMA journal_mode=off`
 )
 
-func (f *FirefoxHistory) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite", item.FirefoxHistory.TempFilename())
+func (f *FirefoxHistory) Extract(_ []byte) error {
+	db, err := sql.Open("sqlite", types.FirefoxHistory.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.FirefoxHistory.TempFilename())
+	defer os.Remove(types.FirefoxHistory.TempFilename())
 	defer db.Close()
 
 	_, err = db.Exec(closeJournalMode)

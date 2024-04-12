@@ -8,7 +8,7 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/browser/chromium"
 	"github.com/moond4rk/hackbrowserdata/browser/firefox"
-	"github.com/moond4rk/hackbrowserdata/browsingdata"
+	"github.com/moond4rk/hackbrowserdata/browserdata"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
@@ -17,7 +17,7 @@ type Browser interface {
 	// Name is browser's name
 	Name() string
 	// BrowsingData returns all browsing data in the browser.
-	BrowsingData(isFullExport bool) (*browsingdata.Data, error)
+	BrowsingData(isFullExport bool) (*browserdata.BrowserData, error)
 }
 
 // PickBrowsers returns a list of browsers that match the name and profile.
@@ -47,7 +47,7 @@ func pickChromium(name, profile string) []Browser {
 				slog.Warn("find browser failed, profile folder does not exist", "browser", v.name)
 				continue
 			}
-			multiChromium, err := chromium.New(v.name, v.storage, v.profilePath, v.items)
+			multiChromium, err := chromium.New(v.name, v.storage, v.profilePath, v.dataTypes)
 			if err != nil {
 				slog.Error("new chromium error", "err", err)
 				continue
@@ -65,7 +65,7 @@ func pickChromium(name, profile string) []Browser {
 		if !fileutil.IsDirExists(filepath.Clean(profile)) {
 			slog.Error("find browser failed, profile folder does not exist", "browser", c.name)
 		}
-		chromiumList, err := chromium.New(c.name, c.storage, profile, c.items)
+		chromiumList, err := chromium.New(c.name, c.storage, profile, c.dataTypes)
 		if err != nil {
 			slog.Error("new chromium error", "err", err)
 		}
@@ -93,7 +93,7 @@ func pickFirefox(name, profile string) []Browser {
 				continue
 			}
 
-			if multiFirefox, err := firefox.New(profile, v.items); err == nil {
+			if multiFirefox, err := firefox.New(profile, v.dataTypes); err == nil {
 				for _, b := range multiFirefox {
 					slog.Warn("find browser success", "browser", b.Name())
 					browsers = append(browsers, b)

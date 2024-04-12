@@ -1,4 +1,4 @@
-package sessionstorage
+package localstorage
 
 import (
 	"bytes"
@@ -12,14 +12,24 @@ import (
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
 
-	"github.com/moond4rk/hackbrowserdata/item"
+	"github.com/moond4rk/hackbrowserdata/extractor"
+	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/byteutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
-type ChromiumSessionStorage []session
+func init() {
+	extractor.RegisterExtractor(types.ChromiumLocalStorage, func() extractor.Extractor {
+		return new(ChromiumLocalStorage)
+	})
+	extractor.RegisterExtractor(types.FirefoxLocalStorage, func() extractor.Extractor {
+		return new(FirefoxLocalStorage)
+	})
+}
 
-type session struct {
+type ChromiumLocalStorage []storage
+
+type storage struct {
 	IsMeta bool
 	URL    string
 	Key    string
@@ -28,19 +38,19 @@ type session struct {
 
 const maxLocalStorageValueLength = 1024 * 2
 
-func (c *ChromiumSessionStorage) Parse(_ []byte) error {
-	db, err := leveldb.OpenFile(item.ChromiumSessionStorage.TempFilename(), nil)
+func (c *ChromiumLocalStorage) Extract(_ []byte) error {
+	db, err := leveldb.OpenFile(types.ChromiumLocalStorage.TempFilename(), nil)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(item.ChromiumSessionStorage.TempFilename())
+	defer os.RemoveAll(types.ChromiumLocalStorage.TempFilename())
 	defer db.Close()
 
 	iter := db.NewIterator(nil, nil)
 	for iter.Next() {
 		key := iter.Key()
 		value := iter.Value()
-		s := new(session)
+		s := new(storage)
 		s.fillKey(key)
 		// don't all value upper than 2KB
 		if len(value) < maxLocalStorageValueLength {
@@ -58,16 +68,16 @@ func (c *ChromiumSessionStorage) Parse(_ []byte) error {
 	return err
 }
 
-func (c *ChromiumSessionStorage) Name() string {
-	return "sessionStorage"
+func (c *ChromiumLocalStorage) Name() string {
+	return "localStorage"
 }
 
-func (c *ChromiumSessionStorage) Len() int {
+func (c *ChromiumLocalStorage) Len() int {
 	return len(*c)
 }
 
-func (s *session) fillKey(b []byte) {
-	keys := bytes.Split(b, []byte("-"))
+func (s *storage) fillKey(b []byte) {
+	keys := bytes.Split(b, []byte("\x00"))
 	if len(keys) == 1 && bytes.HasPrefix(keys[0], []byte("META:")) {
 		s.IsMeta = true
 		s.fillMetaHeader(keys[0])
@@ -75,21 +85,13 @@ func (s *session) fillKey(b []byte) {
 	if len(keys) == 2 && bytes.HasPrefix(keys[0], []byte("_")) {
 		s.fillHeader(keys[0], keys[1])
 	}
-	if len(keys) == 3 {
-		if string(keys[0]) == "map" {
-			s.Key = string(keys[2])
-		} else if string(keys[0]) == "namespace" {
-			s.URL = string(keys[2])
-			s.Key = string(keys[1])
-		}
-	}
 }
 
-func (s *session) fillMetaHeader(b []byte) {
+func (s *storage) fillMetaHeader(b []byte) {
 	s.URL = string(bytes.Trim(b, "META:"))
 }
 
-func (s *session) fillHeader(url, key []byte) {
+func (s *storage) fillHeader(url, key []byte) {
 	s.URL = string(bytes.Trim(url, "_"))
 	s.Key = string(bytes.Trim(key, "\x01"))
 }
@@ -101,31 +103,31 @@ func convertUTF16toUTF8(source []byte, endian unicode.Endianness) ([]byte, error
 
 // fillValue fills value of the storage
 // TODO: support unicode charter
-func (s *session) fillValue(b []byte) {
+func (s *storage) fillValue(b []byte) {
 	value := bytes.Map(byteutil.OnSplitUTF8Func, b)
 	s.Value = string(value)
 }
 
-type FirefoxSessionStorage []session
+type FirefoxLocalStorage []storage
 
 const (
-	querySessionStorage = `SELECT originKey, key, value FROM webappsstore2`
-	closeJournalMode    = `PRAGMA journal_mode=off`
+	queryLocalStorage = `SELECT originKey, key, value FROM webappsstore2`
+	closeJournalMode  = `PRAGMA journal_mode=off`
 )
 
-func (f *FirefoxSessionStorage) Parse(_ []byte) error {
-	db, err := sql.Open("sqlite", item.FirefoxSessionStorage.TempFilename())
+func (f *FirefoxLocalStorage) Extract(_ []byte) error {
+	db, err := sql.Open("sqlite", types.FirefoxLocalStorage.TempFilename())
 	if err != nil {
 		return err
 	}
-	defer os.Remove(item.FirefoxSessionStorage.TempFilename())
+	defer os.Remove(types.FirefoxLocalStorage.TempFilename())
 	defer db.Close()
 
 	_, err = db.Exec(closeJournalMode)
 	if err != nil {
 		slog.Error("close journal mode error", "err", err)
 	}
-	rows, err := db.Query(querySessionStorage)
+	rows, err := db.Query(queryLocalStorage)
 	if err != nil {
 		return err
 	}
@@ -133,16 +135,16 @@ func (f *FirefoxSessionStorage) Parse(_ []byte) error {
 	for rows.Next() {
 		var originKey, key, value string
 		if err = rows.Scan(&originKey, &key, &value); err != nil {
-			slog.Error("scan session storage error", "err", err)
+			slog.Error("scan firefox local storage error", "err", err)
 		}
-		s := new(session)
+		s := new(storage)
 		s.fillFirefox(originKey, key, value)
 		*f = append(*f, *s)
 	}
 	return nil
 }
 
-func (s *session) fillFirefox(originKey, key, value string) {
+func (s *storage) fillFirefox(originKey, key, value string) {
 	// originKey = moc.buhtig.:https:443
 	p := strings.Split(originKey, ":")
 	h := typeutil.Reverse([]byte(p[0]))
@@ -156,10 +158,10 @@ func (s *session) fillFirefox(originKey, key, value string) {
 	s.Value = value
 }
 
-func (f *FirefoxSessionStorage) Name() string {
-	return "sessionStorage"
+func (f *FirefoxLocalStorage) Name() string {
+	return "localStorage"
 }
 
-func (f *FirefoxSessionStorage) Len() int {
+func (f *FirefoxLocalStorage) Len() int {
 	return len(*f)
 }

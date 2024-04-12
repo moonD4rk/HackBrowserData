@@ -11,18 +11,18 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/item"
+	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
 var errDecodeMasterKeyFailed = errors.New("decode master key failed")
 
 func (c *Chromium) GetMasterKey() ([]byte, error) {
-	b, err := fileutil.ReadFile(item.ChromiumKey.TempFilename())
+	b, err := fileutil.ReadFile(types.ChromiumKey.TempFilename())
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(item.ChromiumKey.TempFilename())
+	defer os.Remove(types.ChromiumKey.TempFilename())
 
 	encryptedKey := gjson.Get(b, "os_crypt.encrypted_key")
 	if !encryptedKey.Exists() {

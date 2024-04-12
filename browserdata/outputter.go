@@ -1,4 +1,4 @@
-package browsingdata
+package browserdata
 
 import (
 	"encoding/csv"
@@ -11,6 +11,8 @@ import (
 	"github.com/gocarina/gocsv"
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
+
+	"github.com/moond4rk/hackbrowserdata/extractor"
 )
 
 type outPutter struct {
@@ -28,7 +30,7 @@ func newOutPutter(flag string) *outPutter {
 	return o
 }
 
-func (o *outPutter) Write(data Source, writer io.Writer) error {
+func (o *outPutter) Write(data extractor.Extractor, writer io.Writer) error {
 	switch o.json {
 	case true:
 		encoder := json.NewEncoder(writer)
