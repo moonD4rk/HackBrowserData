@@ -12,9 +12,22 @@ import (
 	_ "modernc.org/sqlite" // import sqlite3 driver
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
+	"github.com/moond4rk/hackbrowserdata/extractor"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
+
+func init() {
+	extractor.RegisterExtractor(types.ChromiumPassword, func() extractor.Extractor {
+		return new(ChromiumPassword)
+	})
+	extractor.RegisterExtractor(types.YandexPassword, func() extractor.Extractor {
+		return new(YandexPassword)
+	})
+	extractor.RegisterExtractor(types.FirefoxPassword, func() extractor.Extractor {
+		return new(FirefoxPassword)
+	})
+}
 
 type ChromiumPassword []loginData
 
@@ -31,7 +44,7 @@ const (
 	queryChromiumLogin = `SELECT origin_url, username_value, password_value, date_created FROM logins`
 )
 
-func (c *ChromiumPassword) Parse(masterKey []byte) error {
+func (c *ChromiumPassword) Extract(masterKey []byte) error {
 	db, err := sql.Open("sqlite", types.ChromiumPassword.TempFilename())
 	if err != nil {
 		return err
@@ -98,7 +111,7 @@ const (
 	queryYandexLogin = `SELECT action_url, username_value, password_value, date_created FROM logins`
 )
 
-func (c *YandexPassword) Parse(masterKey []byte) error {
+func (c *YandexPassword) Extract(masterKey []byte) error {
 	db, err := sql.Open("sqlite", types.YandexPassword.TempFilename())
 	if err != nil {
 		return err
@@ -162,7 +175,7 @@ func (c *YandexPassword) Len() int {
 
 type FirefoxPassword []loginData
 
-func (f *FirefoxPassword) Parse(globalSalt []byte) error {
+func (f *FirefoxPassword) Extract(globalSalt []byte) error {
 	logins, err := getFirefoxLoginData()
 	if err != nil {
 		return err

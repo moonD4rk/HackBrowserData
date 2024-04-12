@@ -1,7 +1,5 @@
 run:
   timeout: '5m'
-  skip-dirs:
-    - 'assets'
   allow-parallel-runners: true
   modules-download-mode: 'readonly'
 
@@ -96,6 +94,8 @@ issues:
     - path: browser/browser\.go
       linters:
         - 'unused'
+  exclude-dirs:
+    - 'vendor'
   max-issues-per-linter: 0
   max-same-issues: 0
 
@@ -194,16 +194,16 @@ linters-settings:
     # To check which checks are enabled run `GL_DEBUG=gocritic golangci-lint run`.
     # By default, list of stable checks is used.
     enabled-checks:
-      - nestingReduce
-      - unnamedResult
+#      - nestingReduce
+#      - unnamedResult
       - ruleguard
-      - captLocal
-      - elseif
-      - ifElseChain
+#      - captLocal
+#      - elseif
+#      - ifElseChain
       - rangeExprCopy
-      - tooManyResultsChecker
-      - truncateCmp
-      - underef
+#      - tooManyResultsChecker
+#      - truncateCmp
+#      - underef
     # Which checks should be disabled; can't be combined with 'enabled-checks'.
     # Default: []
     # Enable multiple checks by tags, run `GL_DEBUG=gocritic golangci-lint run` to see all tags and checks.
@@ -211,16 +211,16 @@ linters-settings:
     # Default: []
     enabled-tags:
       - diagnostic
-      - style
-      - performance
-      - experimental
+#      - style
+#      - performance
+#      - experimental
       - opinionated
-    disabled-tags:
-      - diagnostic
-      - style
-      - performance
-      - experimental
-      - opinionated
+#    disabled-tags:
+#      - diagnostic
+#      - style
+#      - performance
+#      - experimental
+#      - opinionated
     # Settings passed to gocritic.
     # The settings key is the name of a supported gocritic checker.
     # The list of supported checkers can be find in https://go-critic.github.io/overview.

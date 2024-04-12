@@ -12,10 +12,20 @@ import (
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
 
+	"github.com/moond4rk/hackbrowserdata/extractor"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/byteutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
+
+func init() {
+	extractor.RegisterExtractor(types.ChromiumLocalStorage, func() extractor.Extractor {
+		return new(ChromiumLocalStorage)
+	})
+	extractor.RegisterExtractor(types.FirefoxLocalStorage, func() extractor.Extractor {
+		return new(FirefoxLocalStorage)
+	})
+}
 
 type ChromiumLocalStorage []storage
 
@@ -28,7 +38,7 @@ type storage struct {
 
 const maxLocalStorageValueLength = 1024 * 2
 
-func (c *ChromiumLocalStorage) Parse(_ []byte) error {
+func (c *ChromiumLocalStorage) Extract(_ []byte) error {
 	db, err := leveldb.OpenFile(types.ChromiumLocalStorage.TempFilename(), nil)
 	if err != nil {
 		return err
@@ -105,7 +115,7 @@ const (
 	closeJournalMode  = `PRAGMA journal_mode=off`
 )
 
-func (f *FirefoxLocalStorage) Parse(_ []byte) error {
+func (f *FirefoxLocalStorage) Extract(_ []byte) error {
 	db, err := sql.Open("sqlite", types.FirefoxLocalStorage.TempFilename())
 	if err != nil {
 		return err

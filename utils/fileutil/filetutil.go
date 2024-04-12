@@ -64,10 +64,10 @@ func CopyFile(src, dst string) error {
 	return nil
 }
 
-// ItemName returns the filename from the provided path
-func ItemName(browser, item, ext string) string {
+// Filename returns the filename from the provided path
+func Filename(browser, dataType, ext string) string {
 	replace := strings.NewReplacer(" ", "_", ".", "_", "-", "_")
-	return strings.ToLower(fmt.Sprintf("%s_%s.%s", replace.Replace(browser), item, ext))
+	return strings.ToLower(fmt.Sprintf("%s_%s.%s", replace.Replace(browser), dataType, ext))
 }
 
 func BrowserName(browser, user string) string {

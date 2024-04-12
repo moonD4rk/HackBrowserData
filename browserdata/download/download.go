@@ -11,9 +11,19 @@ import (
 	"github.com/tidwall/gjson"
 	_ "modernc.org/sqlite" // import sqlite3 driver
 
+	"github.com/moond4rk/hackbrowserdata/extractor"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
+
+func init() {
+	extractor.RegisterExtractor(types.ChromiumDownload, func() extractor.Extractor {
+		return new(ChromiumDownload)
+	})
+	extractor.RegisterExtractor(types.FirefoxDownload, func() extractor.Extractor {
+		return new(FirefoxDownload)
+	})
+}
 
 type ChromiumDownload []download
 
@@ -30,7 +40,7 @@ const (
 	queryChromiumDownload = `SELECT target_path, tab_url, total_bytes, start_time, end_time, mime_type FROM downloads`
 )
 
-func (c *ChromiumDownload) Parse(_ []byte) error {
+func (c *ChromiumDownload) Extract(_ []byte) error {
 	db, err := sql.Open("sqlite", types.ChromiumDownload.TempFilename())
 	if err != nil {
 		return err
@@ -81,7 +91,7 @@ const (
 	closeJournalMode     = `PRAGMA journal_mode=off`
 )
 
-func (f *FirefoxDownload) Parse(_ []byte) error {
+func (f *FirefoxDownload) Extract(_ []byte) error {
 	db, err := sql.Open("sqlite", types.FirefoxDownload.TempFilename())
 	if err != nil {
 		return err

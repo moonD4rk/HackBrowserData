@@ -12,10 +12,20 @@ import (
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
 
+	"github.com/moond4rk/hackbrowserdata/extractor"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/byteutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
+
+func init() {
+	extractor.RegisterExtractor(types.ChromiumSessionStorage, func() extractor.Extractor {
+		return new(ChromiumSessionStorage)
+	})
+	extractor.RegisterExtractor(types.FirefoxSessionStorage, func() extractor.Extractor {
+		return new(FirefoxSessionStorage)
+	})
+}
 
 type ChromiumSessionStorage []session
 
@@ -28,7 +38,7 @@ type session struct {
 
 const maxLocalStorageValueLength = 1024 * 2
 
-func (c *ChromiumSessionStorage) Parse(_ []byte) error {
+func (c *ChromiumSessionStorage) Extract(_ []byte) error {
 	db, err := leveldb.OpenFile(types.ChromiumSessionStorage.TempFilename(), nil)
 	if err != nil {
 		return err
@@ -113,7 +123,7 @@ const (
 	closeJournalMode    = `PRAGMA journal_mode=off`
 )
 
-func (f *FirefoxSessionStorage) Parse(_ []byte) error {
+func (f *FirefoxSessionStorage) Extract(_ []byte) error {
 	db, err := sql.Open("sqlite", types.FirefoxSessionStorage.TempFilename())
 	if err != nil {
 		return err

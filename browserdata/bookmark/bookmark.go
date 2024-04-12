@@ -10,10 +10,20 @@ import (
 	"github.com/tidwall/gjson"
 	_ "modernc.org/sqlite" // import sqlite3 driver
 
+	"github.com/moond4rk/hackbrowserdata/extractor"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
+
+func init() {
+	extractor.RegisterExtractor(types.ChromiumBookmark, func() extractor.Extractor {
+		return new(ChromiumBookmark)
+	})
+	extractor.RegisterExtractor(types.FirefoxBookmark, func() extractor.Extractor {
+		return new(FirefoxBookmark)
+	})
+}
 
 type ChromiumBookmark []bookmark
 
@@ -25,7 +35,7 @@ type bookmark struct {
 	DateAdded time.Time
 }
 
-func (c *ChromiumBookmark) Parse(_ []byte) error {
+func (c *ChromiumBookmark) Extract(_ []byte) error {
 	bookmarks, err := fileutil.ReadFile(types.ChromiumBookmark.TempFilename())
 	if err != nil {
 		return err
@@ -92,7 +102,7 @@ const (
 	closeJournalMode     = `PRAGMA journal_mode=off`
 )
 
-func (f *FirefoxBookmark) Parse(_ []byte) error {
+func (f *FirefoxBookmark) Extract(_ []byte) error {
 	db, err := sql.Open("sqlite", types.FirefoxBookmark.TempFilename())
 	if err != nil {
 		return err

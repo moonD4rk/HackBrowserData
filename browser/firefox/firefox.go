@@ -159,7 +159,7 @@ func (f *Firefox) Name() string {
 	return f.name
 }
 
-func (f *Firefox) BrowsingData(isFullExport bool) (*browserdata.Data, error) {
+func (f *Firefox) BrowsingData(isFullExport bool) (*browserdata.BrowserData, error) {
 	items := f.items
 	if !isFullExport {
 		items = types.FilterSensitiveItems(f.items)

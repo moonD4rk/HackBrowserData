@@ -11,85 +11,85 @@ var (
 		name        string
 		storage     string
 		profilePath string
-		items       []types.DataType
+		dataTypes   []types.DataType
 	}{
 		"chrome": {
 			name:        chromeName,
 			storage:     chromeStorageName,
 			profilePath: chromeProfilePath,
-			items:       types.DefaultChromiumTypes,
+			dataTypes:   types.DefaultChromiumTypes,
 		},
 		"edge": {
 			name:        edgeName,
 			storage:     edgeStorageName,
 			profilePath: edgeProfilePath,
-			items:       types.DefaultChromiumTypes,
+			dataTypes:   types.DefaultChromiumTypes,
 		},
 		"chromium": {
 			name:        chromiumName,
 			storage:     chromiumStorageName,
 			profilePath: chromiumProfilePath,
-			items:       types.DefaultChromiumTypes,
+			dataTypes:   types.DefaultChromiumTypes,
 		},
 		"chrome-beta": {
 			name:        chromeBetaName,
 			storage:     chromeBetaStorageName,
 			profilePath: chromeBetaProfilePath,
-			items:       types.DefaultChromiumTypes,
+			dataTypes:   types.DefaultChromiumTypes,
 		},
 		"opera": {
 			name:        operaName,
 			profilePath: operaProfilePath,
 			storage:     operaStorageName,
-			items:       types.DefaultChromiumTypes,
+			dataTypes:   types.DefaultChromiumTypes,
 		},
 		"opera-gx": {
 			name:        operaGXName,
 			profilePath: operaGXProfilePath,
 			storage:     operaStorageName,
-			items:       types.DefaultChromiumTypes,
+			dataTypes:   types.DefaultChromiumTypes,
 		},
 		"vivaldi": {
 			name:        vivaldiName,
 			storage:     vivaldiStorageName,
 			profilePath: vivaldiProfilePath,
-			items:       types.DefaultChromiumTypes,
+			dataTypes:   types.DefaultChromiumTypes,
 		},
 		"coccoc": {
 			name:        coccocName,
 			storage:     coccocStorageName,
 			profilePath: coccocProfilePath,
-			items:       types.DefaultChromiumTypes,
+			dataTypes:   types.DefaultChromiumTypes,
 		},
 		"brave": {
 			name:        braveName,
 			profilePath: braveProfilePath,
 			storage:     braveStorageName,
-			items:       types.DefaultChromiumTypes,
+			dataTypes:   types.DefaultChromiumTypes,
 		},
 		"yandex": {
 			name:        yandexName,
 			storage:     yandexStorageName,
 			profilePath: yandexProfilePath,
-			items:       types.DefaultYandexTypes,
+			dataTypes:   types.DefaultYandexTypes,
 		},
 		"arc": {
 			name:        arcName,
 			profilePath: arcProfilePath,
 			storage:     arcStorageName,
-			items:       types.DefaultChromiumTypes,
+			dataTypes:   types.DefaultChromiumTypes,
 		},
 	}
 	firefoxList = map[string]struct {
 		name        string
 		storage     string
 		profilePath string
-		items       []types.DataType
+		dataTypes   []types.DataType
 	}{
 		"firefox": {
 			name:        firefoxName,
 			profilePath: firefoxProfilePath,
-			items:       types.DefaultFirefoxTypes,
+			dataTypes:   types.DefaultFirefoxTypes,
 		},
 	}
 )

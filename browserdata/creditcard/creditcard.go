@@ -9,8 +9,18 @@ import (
 	_ "modernc.org/sqlite"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
+	"github.com/moond4rk/hackbrowserdata/extractor"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
+
+func init() {
+	extractor.RegisterExtractor(types.ChromiumCreditCard, func() extractor.Extractor {
+		return new(ChromiumCreditCard)
+	})
+	extractor.RegisterExtractor(types.YandexCreditCard, func() extractor.Extractor {
+		return new(YandexCreditCard)
+	})
+}
 
 type ChromiumCreditCard []card
 
@@ -28,7 +38,7 @@ const (
 	queryChromiumCredit = `SELECT guid, name_on_card, expiration_month, expiration_year, card_number_encrypted, billing_address_id, nickname FROM credit_cards`
 )
 
-func (c *ChromiumCreditCard) Parse(masterKey []byte) error {
+func (c *ChromiumCreditCard) Extract(masterKey []byte) error {
 	db, err := sql.Open("sqlite", types.ChromiumCreditCard.TempFilename())
 	if err != nil {
 		return err
@@ -84,7 +94,7 @@ func (c *ChromiumCreditCard) Len() int {
 
 type YandexCreditCard []card
 
-func (c *YandexCreditCard) Parse(masterKey []byte) error {
+func (c *YandexCreditCard) Extract(masterKey []byte) error {
 	db, err := sql.Open("sqlite", types.YandexCreditCard.TempFilename())
 	if err != nil {
 		return err

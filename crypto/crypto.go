@@ -55,7 +55,7 @@ func AES128CBCEncrypt(key, iv, plaintext []byte) ([]byte, error) {
 	return encryptedData, nil
 }
 
-func DES3Decrypt(key, iv []byte, ciphertext []byte) ([]byte, error) {
+func DES3Decrypt(key, iv, ciphertext []byte) ([]byte, error) {
 	block, err := des.NewTripleDESCipher(key)
 	if err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func DES3Decrypt(key, iv []byte, ciphertext []byte) ([]byte, error) {
 	return pkcs5UnPadding(sq)
 }
 
-func DES3Encrypt(key, iv []byte, plaintext []byte) ([]byte, error) {
+func DES3Encrypt(key, iv, plaintext []byte) ([]byte, error) {
 	block, err := des.NewTripleDESCipher(key)
 	if err != nil {
 		return nil, err

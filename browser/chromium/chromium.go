@@ -17,28 +17,28 @@ type Chromium struct {
 	storage     string
 	profilePath string
 	masterKey   []byte
-	items       []types.DataType
-	itemPaths   map[types.DataType]string
+	dataTypes   []types.DataType
+	Paths       map[types.DataType]string
 }
 
 // New create instance of Chromium browser, fill item's path if item is existed.
-func New(name, storage, profilePath string, items []types.DataType) ([]*Chromium, error) {
+func New(name, storage, profilePath string, dataTypes []types.DataType) ([]*Chromium, error) {
 	c := &Chromium{
 		name:        name,
 		storage:     storage,
 		profilePath: profilePath,
-		items:       items,
+		dataTypes:   dataTypes,
 	}
-	multiItemPaths, err := c.userItemPaths(c.profilePath, c.items)
+	multiDataTypePaths, err := c.userDataTypePaths(c.profilePath, c.dataTypes)
 	if err != nil {
 		return nil, err
 	}
-	chromiumList := make([]*Chromium, 0, len(multiItemPaths))
-	for user, itemPaths := range multiItemPaths {
+	chromiumList := make([]*Chromium, 0, len(multiDataTypePaths))
+	for user, itemPaths := range multiDataTypePaths {
 		chromiumList = append(chromiumList, &Chromium{
 			name:      fileutil.BrowserName(name, user),
-			items:     typeutil.Keys(itemPaths),
-			itemPaths: itemPaths,
+			dataTypes: typeutil.Keys(itemPaths),
+			Paths:     itemPaths,
 			storage:   storage,
 		})
 	}
@@ -49,10 +49,10 @@ func (c *Chromium) Name() string {
 	return c.name
 }
 
-func (c *Chromium) BrowsingData(isFullExport bool) (*browserdata.Data, error) {
-	items := c.items
+func (c *Chromium) BrowsingData(isFullExport bool) (*browserdata.BrowserData, error) {
+	items := c.dataTypes
 	if !isFullExport {
-		items = types.FilterSensitiveItems(c.items)
+		items = types.FilterSensitiveItems(c.dataTypes)
 	}
 
 	data := browserdata.New(items)
@@ -75,7 +75,7 @@ func (c *Chromium) BrowsingData(isFullExport bool) (*browserdata.Data, error) {
 }
 
 func (c *Chromium) copyItemToLocal() error {
-	for i, path := range c.itemPaths {
+	for i, path := range c.Paths {
 		filename := i.TempFilename()
 		var err error
 		switch {
@@ -97,8 +97,8 @@ func (c *Chromium) copyItemToLocal() error {
 	return nil
 }
 
-// userItemPaths return a map of user to item path, map[profile 1][item's name & path key pair]
-func (c *Chromium) userItemPaths(profilePath string, items []types.DataType) (map[string]map[types.DataType]string, error) {
+// userDataTypePaths return a map of user to item path, map[profile 1][item's name & path key pair]
+func (c *Chromium) userDataTypePaths(profilePath string, items []types.DataType) (map[string]map[types.DataType]string, error) {
 	multiItemPaths := make(map[string]map[types.DataType]string)
 	parentDir := fileutil.ParentDir(profilePath)
 	err := filepath.Walk(parentDir, chromiumWalkFunc(items, multiItemPaths))

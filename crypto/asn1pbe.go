@@ -62,7 +62,7 @@ func (n nssPBE) Decrypt(globalSalt []byte) ([]byte, error) {
 	return DES3Decrypt(key, iv, n.Encrypted)
 }
 
-func (n nssPBE) Encrypt(globalSalt []byte, plaintext []byte) ([]byte, error) {
+func (n nssPBE) Encrypt(globalSalt, plaintext []byte) ([]byte, error) {
 	key, iv := n.deriveKeyAndIV(globalSalt)
 
 	return DES3Encrypt(key, iv, plaintext)
