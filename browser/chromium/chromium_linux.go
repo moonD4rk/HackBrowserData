@@ -56,7 +56,7 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 			if label == c.storage {
 				se, err := i.GetSecret(session.Path())
 				if err != nil {
-					return nil, fmt.Errorf("get storage from dbus error: %v" + err.Error())
+					return nil, fmt.Errorf("get storage from dbus: %w", err)
 				}
 				secret = se.Value
 			}
