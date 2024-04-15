@@ -11,8 +11,8 @@ import (
 	"github.com/godbus/dbus/v5"
 	keyring "github.com/ppacher/go-dbus-keyring"
 
+	"github.com/moond4rk/hackbrowserdata/crypto"
 	"github.com/moond4rk/hackbrowserdata/types"
-	"github.com/moond4rk/hackbrowserdata/utils/cryptoutil"
 )
 
 func (c *Chromium) GetMasterKey() ([]byte, error) {
@@ -69,7 +69,7 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 	}
 	salt := []byte("saltysalt")
 	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_linux.cc
-	key := cryptoutil.PBKDF2Key(secret, salt, 1, 16, sha1.New)
+	key := crypto.PBKDF2Key(secret, salt, 1, 16, sha1.New)
 	c.masterKey = key
 	slog.Info("get master key success", "browser", c.name)
 	return key, nil
