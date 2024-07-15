@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/moond4rk/hackbrowserdata/browserdata"
@@ -50,12 +51,16 @@ func (c *Chromium) Name() string {
 }
 
 func (c *Chromium) BrowsingData(isFullExport bool) (*browserdata.BrowserData, error) {
-	items := c.dataTypes
+	// delete chromiumKey from dataTypes, doesn't need to export key
+	dataTypes := slices.DeleteFunc(c.dataTypes, func(i types.DataType) bool {
+		return i == types.ChromiumKey
+	})
+
 	if !isFullExport {
-		items = types.FilterSensitiveItems(c.dataTypes)
+		dataTypes = types.FilterSensitiveItems(c.dataTypes)
 	}
 
-	data := browserdata.New(items)
+	data := browserdata.New(dataTypes)
 
 	if err := c.copyItemToLocal(); err != nil {
 		return nil, err
@@ -107,10 +112,10 @@ func (c *Chromium) userDataTypePaths(profilePath string, items []types.DataType)
 	}
 	var keyPath string
 	var dir string
-	for userDir, v := range multiItemPaths {
-		for _, p := range v {
-			if strings.HasSuffix(p, types.ChromiumKey.Filename()) {
-				keyPath = p
+	for userDir, profiles := range multiItemPaths {
+		for _, profile := range profiles {
+			if strings.HasSuffix(profile, types.ChromiumKey.Filename()) {
+				keyPath = profile
 				dir = userDir
 				break
 			}
@@ -136,6 +141,9 @@ func chromiumWalkFunc(items []types.DataType, multiItemPaths map[string]map[type
 				continue
 			}
 			if strings.Contains(path, "System Profile") {
+				continue
+			}
+			if strings.Contains(path, "Snapshot") {
 				continue
 			}
 			profileFolder := fileutil.ParentBaseDir(path)

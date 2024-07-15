@@ -160,12 +160,12 @@ func (f *Firefox) Name() string {
 }
 
 func (f *Firefox) BrowsingData(isFullExport bool) (*browserdata.BrowserData, error) {
-	items := f.items
+	dataTypes := f.items
 	if !isFullExport {
-		items = types.FilterSensitiveItems(f.items)
+		dataTypes = types.FilterSensitiveItems(f.items)
 	}
 
-	b := browserdata.New(items)
+	data := browserdata.New(dataTypes)
 
 	if err := f.copyItemToLocal(); err != nil {
 		return nil, err
@@ -177,8 +177,8 @@ func (f *Firefox) BrowsingData(isFullExport bool) (*browserdata.BrowserData, err
 	}
 
 	f.masterKey = masterKey
-	if err := b.Recovery(f.masterKey); err != nil {
+	if err := data.Recovery(f.masterKey); err != nil {
 		return nil, err
 	}
-	return b, nil
+	return data, nil
 }
