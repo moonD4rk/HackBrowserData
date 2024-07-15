@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -59,6 +60,13 @@ func (f *Firefox) copyItemToLocal() error {
 
 func firefoxWalkFunc(items []types.DataType, multiItemPaths map[string]map[types.DataType]string) fs.WalkDirFunc {
 	return func(path string, info fs.DirEntry, err error) error {
+		if err != nil {
+			if os.IsPermission(err) {
+				slog.Warn("skipping walk firefox path permission error", "path", path, "err", err)
+				return nil
+			}
+			return err
+		}
 		for _, v := range items {
 			if info.Name() == v.Filename() {
 				parentBaseDir := fileutil.ParentBaseDir(path)
@@ -70,7 +78,7 @@ func firefoxWalkFunc(items []types.DataType, multiItemPaths map[string]map[types
 			}
 		}
 
-		return err
+		return nil
 	}
 }
 
