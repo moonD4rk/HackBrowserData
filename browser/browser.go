@@ -65,13 +65,13 @@ func pickChromium(name, profile string) []Browser {
 		if !fileutil.IsDirExists(filepath.Clean(profile)) {
 			slog.Error("find browser failed, profile folder does not exist", "browser", c.name)
 		}
-		chromiumList, err := chromium.New(c.name, c.storage, profile, c.dataTypes)
+		chromes, err := chromium.New(c.name, c.storage, profile, c.dataTypes)
 		if err != nil {
 			slog.Error("new chromium error", "err", err)
 		}
-		for _, b := range chromiumList {
-			slog.Warn("find browser success", "browser", b.Name())
-			browsers = append(browsers, b)
+		for _, chrome := range chromes {
+			slog.Warn("find browser success", "browser", chrome.Name())
+			browsers = append(browsers, chrome)
 		}
 	}
 	return browsers
