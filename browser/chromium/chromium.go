@@ -3,6 +3,7 @@ package chromium
 import (
 	"io/fs"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -136,6 +137,13 @@ func (c *Chromium) userDataTypePaths(profilePath string, items []types.DataType)
 // chromiumWalkFunc return a filepath.WalkFunc to find item's path
 func chromiumWalkFunc(items []types.DataType, multiItemPaths map[string]map[types.DataType]string) filepath.WalkFunc {
 	return func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			if os.IsPermission(err) {
+				slog.Warn("skipping walk chromium path permission error", "path", path, "err", err)
+				return nil
+			}
+			return err
+		}
 		for _, v := range items {
 			if info.Name() != v.Filename() {
 				continue
@@ -156,7 +164,7 @@ func chromiumWalkFunc(items []types.DataType, multiItemPaths map[string]map[type
 				multiItemPaths[profileFolder] = map[types.DataType]string{v: path}
 			}
 		}
-		return err
+		return nil
 	}
 }
 
