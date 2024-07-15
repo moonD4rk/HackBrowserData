@@ -1,11 +1,13 @@
+name: Tests
+
 on:
   pull_request:
   push:
     branches:
       - main
+      - dev
   workflow_dispatch:
 
-name: Tests
 jobs:
   test:
     strategy:
