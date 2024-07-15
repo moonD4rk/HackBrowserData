@@ -1,0 +1,60 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: "hack-browser-data"
+    main: ./cmd/hack-browser-data/main.go
+    binary: hack-browser-data
+    env:
+      - CGO_ENABLED=0
+    goos: [windows, linux, darwin]
+    goarch: [amd64, "386", arm, arm64]
+    ignore:
+      - goos: darwin
+        goarch: "386"
+      - goos: windows
+        goarch: "386"
+      - goos: windows
+        goarch: arm
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+
+archives:
+  - id: "archive"
+    format: zip
+    builds: ["hack-browser-data"]
+    name_template: >-
+      hack-browser-data-
+      {{- if eq .Os "darwin" }}osx
+      {{- else if eq .Os "linux" }}linux
+      {{- else if eq .Os "windows" }}windows
+      {{- else }}{{ .Os }}{{ end }}-
+      {{- if eq .Arch "amd64" }}64bit
+      {{- else if eq .Arch "386" }}32bit
+      {{- else if eq .Arch "arm64" }}arm64
+      {{- else if eq .Arch "arm" }}arm
+      {{- else }}{{ .Arch }}{{ end }}
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore\\(deps\\):"
+      - "merge conflict"
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+      - go mod tidy
+checksum:
+  name_template: "checksums-v{{ .Version }}.txt"
+  algorithm: sha256
+
+release:
+  prerelease: auto
