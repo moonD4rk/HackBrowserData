@@ -4,7 +4,7 @@
 
 # HackBrowserData
 
-[![Lint](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml) [![build](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml) [![Release](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml) [![unit tests](https://github.com/moonD4rk/HackBrowserData/actions/workflows/unittest.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/unittest.yml) [![Coverage Status](https://coveralls.io/repos/github/moonD4rk/HackBrowserData/badge.svg)](https://coveralls.io/github/moonD4rk/HackBrowserData)
+[![Lint](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml) [![build](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml) [![Release](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml) [![Tests](https://github.com/moonD4rk/HackBrowserData/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/test.yml) [![Coverage Status](https://coveralls.io/repos/github/moonD4rk/HackBrowserData/badge.svg)](https://coveralls.io/github/moonD4rk/HackBrowserData)
 
 [中文说明](https://github.com/moonD4rk/HackBrowserData/blob/master/README_ZH.md)
 
@@ -96,45 +96,41 @@ $ git clone https://github.com/moonD4rk/HackBrowserData
 
 $ cd HackBrowserData/cmd/hack-browser-data
 
-$ CGO_ENABLED=1 go build
+$ go build
 ```
 
 ### Cross compile
 
-Need install target OS's `gcc` library, here's an example of use `Mac` building for `Windows` and `Linux`
+Here's an example of use `Mac` building for `Windows` and `Linux`
 
 #### For Windows
 
 ```shell
-brew install mingw-w64
-
-CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc go build
+GOOS=windows GOARCH=amd64 go build
 ```
 
 #### For Linux
 
 ````shell
-brew install FiloSottile/musl-cross/musl-cross
-
-CC=x86_64-linux-musl-gcc CXX=x86_64-linux-musl-g++ GOARCH=amd64 GOOS=linux CGO_ENABLED=1 go build -ldflags "-linkmode external -extldflags -static"
+GOOS=linux GOARCH=amd64 go build
 ````
 
 ### Run
 
 You can double-click to run, or use command line.
 
-```
-PS C:\test> .\hack-browser-data.exe -h
+```powershell
+PS C:\Users\moond4rk\Desktop> .\hack-browser-data.exe -h
 NAME:
    hack-browser-data - Export passwords|bookmarks|cookies|history|credit cards|download history|localStorage|extensions from browser
 
 USAGE:
-   [hack-browser-data -b chrome -f json --dir results --zip]
+   [hack-browser-data -b chrome -f json -dir results --zip]
    Export all browsing data (passwords/cookies/history/bookmarks) from browser
    Github Link: https://github.com/moonD4rk/HackBrowserData
 
 VERSION:
-   0.4.5
+   0.4.6
 
 GLOBAL OPTIONS:
    --verbose, --vv                   verbose (default: false)
@@ -146,25 +142,20 @@ GLOBAL OPTIONS:
    --full-export, --full             is export full browsing data (default: true)
    --help, -h                        show help
    --version, -v                     print the version
-
-
-PS C:\test> .\hack-browser-data.exe -b all -f json --dir results --zip
-[NOTICE] [browser.go:46,pickChromium] find browser Chrome success  
-[NOTICE] [browser.go:46,pickChromium] find browser Microsoft Edge success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_download.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_password.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_creditcard.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_bookmark.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_cookie.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_history.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_history.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_download.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_password.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_creditcard.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_bookmark.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_cookie.json success  
+```
+For example, the following is an automatic scan of the browser on the current computer, outputting the decryption results in `JSON` format and compressing as `zip`.
 
 ```
+PS C:\Users\moond4rk\Desktop> .\hack-browser-data.exe -b all -f json --dir results --zip
+
+PS C:\Users\moond4rk\Desktop> ls -l .\results\
+    Directory: C:\Users\moond4rk\Desktop\results
+    
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----         7/15/2024  10:55 PM          44982 results.zip
+```
+
 ### Run with custom browser profile folder
 
 If you want to export data from a custom browser profile folder, you can use the `-p` parameter to specify the path of the browser profile folder. PS: use double quotes to wrap the path.

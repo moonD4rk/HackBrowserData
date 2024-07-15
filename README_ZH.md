@@ -86,51 +86,47 @@
 
 ### 从源码编译
 
-仅支持 `go 1.18+` 以后版本，一些函数使用到了泛型
+仅支持 `go 1.21+` 以后版本，一些函数使用到了泛型基础库
 
 ``` bash
 $ git clone https://github.com/moonD4rk/HackBrowserData
 
 $ cd HackBrowserData/cmd/hack-browser-data
 
-$ CGO_ENABLED=1 go build
+$ go build
 ```
 
 ### 跨平台编译
 
-由于用到了 `go-sqlite3` 库，在跨平台编译时需提前安装支持目标平台的 `GCC` 工具，下面以 `MacOS` 下分别编译 `Windows` 和 `Linux` 程序为例：
+以 macOS` 下分别编译 `Windows` 和 `Linux` 程序为例：
 
 #### Windows
 
 ``` shell
-brew install mingw-w64
-
-CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc go build
+GOOS=windows GOARCH=amd64 go build
 ```
 
 #### Linux
 
 ``` shell
-brew install FiloSottile/musl-cross/musl-cross
-
-CC=x86_64-linux-musl-gcc CXX=x86_64-linux-musl-g++ GOARCH=amd64 GOOS=linux CGO_ENABLED=1 go build -ldflags "-linkmode external -extldflags -static"
+GOOS=linux GOARCH=amd64 go build
 ```
 
 ### 运行
 双击直接运行，也可以使用命令行调用相应的命令。
 
-```
-PS C:\test> .\hack-browser-data.exe -h
+```powershell
+PS C:\Users\moond4rk\Desktop> .\hack-browser-data.exe -h
 NAME:
    hack-browser-data - Export passwords|bookmarks|cookies|history|credit cards|download history|localStorage|extensions from browser
 
 USAGE:
-   [hack-browser-data -b chrome -f json --dir results --zip]
+   [hack-browser-data -b chrome -f json -dir results --zip]
    Export all browsing data (passwords/cookies/history/bookmarks) from browser
    Github Link: https://github.com/moonD4rk/HackBrowserData
 
 VERSION:
-   0.4.5
+   0.4.6
 
 GLOBAL OPTIONS:
    --verbose, --vv                   verbose (default: false)
@@ -142,27 +138,23 @@ GLOBAL OPTIONS:
    --full-export, --full             is export full browsing data (default: true)
    --help, -h                        show help
    --version, -v                     print the version
+```
 
+举个例子：下面是自动扫描当前电脑上的浏览器数据，以 `JSON` 格式输出解密结果并压缩为 `zip` 文件
 
-PS C:\test> .\hack-browser-data.exe -b all -f json --dir results --zip
-[NOTICE] [browser.go:46,pickChromium] find browser Chrome success  
-[NOTICE] [browser.go:46,pickChromium] find browser Microsoft Edge success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_download.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_password.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_creditcard.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_bookmark.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_cookie.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/microsoft_edge_history.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_history.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_download.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_password.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_creditcard.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_bookmark.json success  
-[NOTICE] [browsingdata.go:59,Output] output to file results/chrome_cookie.json success  
+```powershell
+PS C:\Users\moond4rk\Desktop> .\hack-browser-data.exe -b all -f json --dir results --zip
 
+PS C:\Users\moond4rk\Desktop> ls -l .\results\
+    Directory: C:\Users\moond4rk\Desktop\results
+    
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----         7/15/2024  10:55 PM          44982 results.zip
 ```
 
 ### 基于此工具的一些其他项目
+
 [Sharp-HackBrowserData](https://github.com/S3cur3Th1sSh1t/Sharp-HackBrowserData)
 
 [Reflective-HackBrowserData](https://github.com/idiotc4t/Reflective-HackBrowserData)
