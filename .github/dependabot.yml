@@ -5,6 +5,7 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    target-branch: dev
 #    ignore:
 #      - dependency-name: "example-package"
 #        versions: ["2.x.x"]
@@ -13,3 +14,4 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
+    target-branch: dev
