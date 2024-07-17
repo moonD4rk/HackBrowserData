@@ -102,7 +102,9 @@ func CompressDir(dir string) error {
 
 	buffer := new(bytes.Buffer)
 	zipWriter := zip.NewWriter(buffer)
-	defer zipWriter.Close()
+	defer func() {
+		_ = zipWriter.Close()
+	}()
 
 	for _, file := range files {
 		if err := addFileToZip(zipWriter, filepath.Join(dir, file.Name())); err != nil {
@@ -145,7 +147,9 @@ func writeFile(buffer *bytes.Buffer, filename string) error {
 	if err != nil {
 		return fmt.Errorf("error creating output file %s: %w", filename, err)
 	}
-	defer outFile.Close()
+	defer func() {
+		_ = outFile.Close()
+	}()
 
 	if _, err = buffer.WriteTo(outFile); err != nil {
 		return fmt.Errorf("error writing data to file %s: %w", filename, err)
