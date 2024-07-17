@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -94,40 +93,67 @@ func ParentBaseDir(p string) string {
 func CompressDir(dir string) error {
 	files, err := os.ReadDir(dir)
 	if err != nil {
-		return err
+		return fmt.Errorf("read dir error: %w", err)
 	}
-	b := new(bytes.Buffer)
-	zw := zip.NewWriter(b)
-	for _, f := range files {
-		fw, err := zw.Create(f.Name())
-		if err != nil {
-			return err
-		}
-		name := path.Join(dir, f.Name())
-		content, err := os.ReadFile(name)
-		if err != nil {
-			return err
-		}
-		_, err = fw.Write(content)
-		if err != nil {
-			return err
-		}
-		err = os.Remove(name)
-		if err != nil {
-			return err
+	if len(files) == 0 {
+		// Return an error if no files are found in the directory
+		return fmt.Errorf("no files to compress in: %s", dir)
+	}
+
+	buffer := new(bytes.Buffer)
+	zipWriter := zip.NewWriter(buffer)
+	defer func() {
+		_ = zipWriter.Close()
+	}()
+
+	for _, file := range files {
+		if err := addFileToZip(zipWriter, filepath.Join(dir, file.Name())); err != nil {
+			return fmt.Errorf("failed to add file to zip: %w", err)
 		}
 	}
-	if err := zw.Close(); err != nil {
-		return err
+
+	if err := zipWriter.Close(); err != nil {
+		return fmt.Errorf("error closing zip writer: %w", err)
 	}
-	filename := filepath.Join(dir, fmt.Sprintf("%s.zip", dir))
-	outFile, err := os.Create(filepath.Clean(filename))
+
+	zipFilename := filepath.Join(dir, filepath.Base(dir)+".zip")
+	return writeFile(buffer, zipFilename)
+}
+
+func addFileToZip(zw *zip.Writer, filename string) error {
+	content, err := os.ReadFile(filename)
 	if err != nil {
-		return err
+		return fmt.Errorf("error reading file %s: %w", filename, err)
 	}
-	_, err = b.WriteTo(outFile)
+
+	fw, err := zw.Create(filepath.Base(filename))
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating zip entry for %s: %w", filename, err)
 	}
-	return outFile.Close()
+
+	if _, err = fw.Write(content); err != nil {
+		return fmt.Errorf("error writing content to zip for %s: %w", filename, err)
+	}
+
+	if err = os.Remove(filename); err != nil {
+		return fmt.Errorf("error removing original file %s: %w", filename, err)
+	}
+
+	return nil
+}
+
+func writeFile(buffer *bytes.Buffer, filename string) error {
+	outFile, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("error creating output file %s: %w", filename, err)
+	}
+	defer func() {
+		_ = outFile.Close()
+	}()
+
+	if _, err = buffer.WriteTo(outFile); err != nil {
+		return fmt.Errorf("error writing data to file %s: %w", filename, err)
+	}
+
+	return nil
 }

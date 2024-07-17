@@ -62,7 +62,7 @@ func Execute() {
 
 			if compress {
 				if err = fileutil.CompressDir(outputDir); err != nil {
-					slog.Error("compress error: ", "err", err)
+					slog.Error("compress error", "err", err)
 				}
 				slog.Info("compress success")
 			}
