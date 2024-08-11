@@ -13,7 +13,7 @@ require (
 	github.com/tidwall/gjson v1.17.3
 	github.com/urfave/cli/v2 v2.27.1
 	golang.org/x/text v0.14.0
-	modernc.org/sqlite v1.31.1
+	modernc.org/sqlite v1.32.0
 )
 
 require (
