@@ -12,7 +12,7 @@ require (
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/tidwall/gjson v1.17.3
 	github.com/urfave/cli/v2 v2.27.4
-	golang.org/x/text v0.17.0
+	golang.org/x/text v0.18.0
 	modernc.org/sqlite v1.32.0
 )
 
