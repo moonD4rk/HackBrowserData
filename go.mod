@@ -10,7 +10,7 @@ require (
 	github.com/ppacher/go-dbus-keyring v1.0.1
 	github.com/stretchr/testify v1.9.0
 	github.com/syndtr/goleveldb v1.0.0
-	github.com/tidwall/gjson v1.17.3
+	github.com/tidwall/gjson v1.18.0
 	github.com/urfave/cli/v2 v2.27.4
 	golang.org/x/text v0.18.0
 	modernc.org/sqlite v1.33.1
