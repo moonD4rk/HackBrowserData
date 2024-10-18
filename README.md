@@ -87,7 +87,7 @@ Installation of `HackBrowserData` is dead-simple, just download [the release for
 
 ### Building from source
 
-only support `go 1.21+` with go generics and `log/slog` standard library.
+only support `go 1.20+` with go generics.
 
 ```bash
 $ git clone https://github.com/moonD4rk/HackBrowserData
