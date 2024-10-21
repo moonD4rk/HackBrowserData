@@ -2,13 +2,13 @@ package chromium
 
 import (
 	"io/fs"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/moond4rk/hackbrowserdata/browserdata"
+	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
@@ -96,7 +96,7 @@ func (c *Chromium) copyItemToLocal() error {
 			err = fileutil.CopyFile(path, filename)
 		}
 		if err != nil {
-			slog.Error("copy item to local error", "path", path, "filename", filename, "err", err)
+			log.Errorf("copy item to local, path %s, filename %s err %v", path, filename, err)
 			continue
 		}
 	}
@@ -139,7 +139,7 @@ func chromiumWalkFunc(items []types.DataType, multiItemPaths map[string]map[type
 	return func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			if os.IsPermission(err) {
-				slog.Warn("skipping walk chromium path permission error", "path", path, "err", err)
+				log.Warnf("skipping walk chromium path permission error, path %s, err %v", path, err)
 				return nil
 			}
 			return err

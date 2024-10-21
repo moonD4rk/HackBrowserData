@@ -2,7 +2,6 @@ package history
 
 import (
 	"database/sql"
-	"log/slog"
 	"os"
 	"sort"
 	"time"
@@ -11,6 +10,7 @@ import (
 	_ "modernc.org/sqlite"
 
 	"github.com/moond4rk/hackbrowserdata/extractor"
+	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
@@ -57,7 +57,7 @@ func (c *ChromiumHistory) Extract(_ []byte) error {
 			lastVisitTime int64
 		)
 		if err := rows.Scan(&url, &title, &visitCount, &lastVisitTime); err != nil {
-			slog.Warn("scan chromium history error", "err", err)
+			log.Warnf("scan chromium history error: %v", err)
 		}
 		data := history{
 			URL:           url,
@@ -113,7 +113,7 @@ func (f *FirefoxHistory) Extract(_ []byte) error {
 			visitCount    int
 		)
 		if err = rows.Scan(&id, &url, &visitDate, &title, &visitCount); err != nil {
-			slog.Error("scan firefox history error", "err", err)
+			log.Errorf("scan firefox history error: %v", err)
 		}
 		*f = append(*f, history{
 			Title:         title,
