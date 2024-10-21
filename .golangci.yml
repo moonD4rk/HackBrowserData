@@ -1,7 +1,7 @@
 run:
   timeout: '5m'
   allow-parallel-runners: true
-  modules-download-mode: 'readonly'
+  modules-download-mode: 'mod'
 
 linters:
   enable:
@@ -43,11 +43,8 @@ linters:
     - 'noctx'
     - 'sqlclosecheck'
     - 'staticcheck'
-    - 'structcheck'
     - 'stylecheck'
     - 'unused'
-    - 'deadcode'
-    - 'varcheck'
     - 'paralleltest'
 
 issues:

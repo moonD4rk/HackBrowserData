@@ -24,6 +24,11 @@ jobs:
         with:
           config: ./.typos.toml
 
+      - name: Get dependencies
+        run: |
+          go mod tidy
+          go mod download
+
       - name: Lint
         uses: golangci/golangci-lint-action@v6
         with:
