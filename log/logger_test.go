@@ -46,6 +46,7 @@ func TestLoggerDebug(t *testing.T) {
 		t.Run(tc.description, func(t *testing.T) {
 			var buf bytes.Buffer
 			logger := NewLogger(newBase(&buf))
+			logger.SetLevel(level2.DebugLevel)
 			logger.Debug(message)
 			got := buf.String()
 			assert.Regexp(t, tc.wantedPattern, got)
@@ -149,6 +150,7 @@ func TestLoggerDebugf(t *testing.T) {
 		t.Run(tc.description, func(t *testing.T) {
 			var buf bytes.Buffer
 			logger := NewLogger(newBase(&buf))
+			logger.SetLevel(level2.DebugLevel)
 			logger.Debugf(tc.format, tc.args...)
 			got := buf.String()
 			assert.Regexp(t, tc.wantedPattern, got)
