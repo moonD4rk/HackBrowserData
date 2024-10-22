@@ -4,7 +4,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/moond4rk/hackbrowserdata/browserdata"
@@ -53,9 +52,12 @@ func (c *Chromium) Name() string {
 
 func (c *Chromium) BrowsingData(isFullExport bool) (*browserdata.BrowserData, error) {
 	// delete chromiumKey from dataTypes, doesn't need to export key
-	dataTypes := slices.DeleteFunc(c.dataTypes, func(i types.DataType) bool {
-		return i == types.ChromiumKey
-	})
+	var dataTypes []types.DataType
+	for _, dt := range c.dataTypes {
+		if dt != types.ChromiumKey {
+			dataTypes = append(dataTypes, dt)
+		}
+	}
 
 	if !isFullExport {
 		dataTypes = types.FilterSensitiveItems(c.dataTypes)
