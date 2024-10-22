@@ -5,12 +5,12 @@ package chromium
 import (
 	"encoding/base64"
 	"errors"
-	"log/slog"
 	"os"
 
 	"github.com/tidwall/gjson"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
+	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
@@ -35,9 +35,9 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 	}
 	c.masterKey, err = crypto.DecryptWithDPAPI(key[5:])
 	if err != nil {
-		slog.Error("decrypt master key failed", "err", err)
+		log.Errorf("decrypt master key failed, err %v", err)
 		return nil, err
 	}
-	slog.Info("get master key success", "browser", c.name)
+	log.Debugf("get master key success, browser %s", c.name)
 	return c.masterKey, nil
 }

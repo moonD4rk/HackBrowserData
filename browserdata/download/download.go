@@ -2,7 +2,6 @@ package download
 
 import (
 	"database/sql"
-	"log/slog"
 	"os"
 	"sort"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	_ "modernc.org/sqlite" // import sqlite3 driver
 
 	"github.com/moond4rk/hackbrowserdata/extractor"
+	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
@@ -58,7 +58,7 @@ func (c *ChromiumDownload) Extract(_ []byte) error {
 			totalBytes, startTime, endTime int64
 		)
 		if err := rows.Scan(&targetPath, &tabURL, &totalBytes, &startTime, &endTime, &mimeType); err != nil {
-			slog.Warn("scan chromium download error", "err", err)
+			log.Warnf("scan chromium download error: %v", err)
 		}
 		data := download{
 			TargetPath: targetPath,
@@ -101,7 +101,7 @@ func (f *FirefoxDownload) Extract(_ []byte) error {
 
 	_, err = db.Exec(closeJournalMode)
 	if err != nil {
-		slog.Error("close journal mode error", "err", err)
+		log.Errorf("close journal mode error: %v", err)
 	}
 	rows, err := db.Query(queryFirefoxDownload)
 	if err != nil {
@@ -114,7 +114,7 @@ func (f *FirefoxDownload) Extract(_ []byte) error {
 			placeID, dateAdded int64
 		)
 		if err = rows.Scan(&placeID, &content, &url, &dateAdded); err != nil {
-			slog.Warn("scan firefox download error", "err", err)
+			log.Warnf("scan firefox download error: %v", err)
 		}
 		contentList := strings.Split(content, ",{")
 		if len(contentList) > 1 {
