@@ -60,6 +60,57 @@ var itemFileNames = map[DataType]string{
 	FirefoxCreditCard:      UnsupportedItem,
 }
 
+func (i DataType) String() string {
+	switch i {
+	case ChromiumKey:
+		return "ChromiumKey"
+	case ChromiumPassword:
+		return "ChromiumPassword"
+	case ChromiumCookie:
+		return "ChromiumCookie"
+	case ChromiumBookmark:
+		return "ChromiumBookmark"
+	case ChromiumHistory:
+		return "ChromiumHistory"
+	case ChromiumDownload:
+		return "ChromiumDownload"
+	case ChromiumCreditCard:
+		return "ChromiumCreditCard"
+	case ChromiumLocalStorage:
+		return "ChromiumLocalStorage"
+	case ChromiumSessionStorage:
+		return "ChromiumSessionStorage"
+	case ChromiumExtension:
+		return "ChromiumExtension"
+	case YandexPassword:
+		return "YandexPassword"
+	case YandexCreditCard:
+		return "YandexCreditCard"
+	case FirefoxKey4:
+		return "FirefoxKey4"
+	case FirefoxPassword:
+		return "FirefoxPassword"
+	case FirefoxCookie:
+		return "FirefoxCookie"
+	case FirefoxBookmark:
+		return "FirefoxBookmark"
+	case FirefoxHistory:
+		return "FirefoxHistory"
+	case FirefoxDownload:
+		return "FirefoxDownload"
+	case FirefoxCreditCard:
+		return "FirefoxCreditCard"
+	case FirefoxLocalStorage:
+		return "FirefoxLocalStorage"
+	case FirefoxSessionStorage:
+		return "FirefoxSessionStorage"
+	case FirefoxExtension:
+		return "FirefoxExtension"
+	default:
+		return "UnsupportedItem"
+	}
+}
+
 // Filename returns the filename for the item, defined by browser
 // chromium local storage is a folder, so it returns the file name of the folder
 func (i DataType) Filename() string {

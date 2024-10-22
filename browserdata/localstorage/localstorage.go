@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	"log/slog"
 	"os"
 	"strings"
 
@@ -13,6 +12,7 @@ import (
 	"golang.org/x/text/transform"
 
 	"github.com/moond4rk/hackbrowserdata/extractor"
+	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/byteutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
@@ -125,7 +125,7 @@ func (f *FirefoxLocalStorage) Extract(_ []byte) error {
 
 	_, err = db.Exec(closeJournalMode)
 	if err != nil {
-		slog.Error("close journal mode error", "err", err)
+		log.Errorf("close journal mode error: %v", err)
 	}
 	rows, err := db.Query(queryLocalStorage)
 	if err != nil {
@@ -135,7 +135,7 @@ func (f *FirefoxLocalStorage) Extract(_ []byte) error {
 	for rows.Next() {
 		var originKey, key, value string
 		if err = rows.Scan(&originKey, &key, &value); err != nil {
-			slog.Error("scan firefox local storage error", "err", err)
+			log.Errorf("scan firefox local storage error: %v", err)
 		}
 		s := new(storage)
 		s.fillFirefox(originKey, key, value)
