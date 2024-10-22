@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -14,6 +13,7 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/browserdata"
 	"github.com/moond4rk/hackbrowserdata/crypto"
+	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
@@ -62,7 +62,7 @@ func firefoxWalkFunc(items []types.DataType, multiItemPaths map[string]map[types
 	return func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
 			if os.IsPermission(err) {
-				slog.Warn("skipping walk firefox path permission error", "path", path, "err", err)
+				log.Warnf("skipping walk firefox path %s permission error: %v", path, err)
 				return nil
 			}
 			return err

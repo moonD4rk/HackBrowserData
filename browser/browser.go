@@ -1,7 +1,6 @@
 package browser
 
 import (
-	"log/slog"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -9,6 +8,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/browser/chromium"
 	"github.com/moond4rk/hackbrowserdata/browser/firefox"
 	"github.com/moond4rk/hackbrowserdata/browserdata"
+	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
@@ -44,16 +44,16 @@ func pickChromium(name, profile string) []Browser {
 	if name == "all" {
 		for _, v := range chromiumList {
 			if !fileutil.IsDirExists(filepath.Clean(v.profilePath)) {
-				slog.Warn("find browser failed, profile folder does not exist", "browser", v.name)
+				log.Warnf("find browser failed, profile folder does not exist, browser %s", v.name)
 				continue
 			}
 			multiChromium, err := chromium.New(v.name, v.storage, v.profilePath, v.dataTypes)
 			if err != nil {
-				slog.Error("new chromium error", "err", err)
+				log.Errorf("new chromium error %v", err)
 				continue
 			}
 			for _, b := range multiChromium {
-				slog.Warn("find browser success", "browser", b.Name())
+				log.Warnf("find browser success, browser %s", b.Name())
 				browsers = append(browsers, b)
 			}
 		}
@@ -63,14 +63,14 @@ func pickChromium(name, profile string) []Browser {
 			profile = c.profilePath
 		}
 		if !fileutil.IsDirExists(filepath.Clean(profile)) {
-			slog.Error("find browser failed, profile folder does not exist", "browser", c.name)
+			log.Errorf("find browser failed, profile folder does not exist, browser %s", c.name)
 		}
 		chromes, err := chromium.New(c.name, c.storage, profile, c.dataTypes)
 		if err != nil {
-			slog.Error("new chromium error", "err", err)
+			log.Errorf("new chromium error %v", err)
 		}
 		for _, chrome := range chromes {
-			slog.Warn("find browser success", "browser", chrome.Name())
+			log.Warnf("find browser success, browser %s", chrome.Name())
 			browsers = append(browsers, chrome)
 		}
 	}
@@ -89,17 +89,17 @@ func pickFirefox(name, profile string) []Browser {
 			}
 
 			if !fileutil.IsDirExists(filepath.Clean(profile)) {
-				slog.Warn("find browser failed, profile folder does not exist", "browser", v.name)
+				log.Warnf("find browser failed, profile folder does not exist, browser %s", v.name)
 				continue
 			}
 
 			if multiFirefox, err := firefox.New(profile, v.dataTypes); err == nil {
 				for _, b := range multiFirefox {
-					slog.Warn("find browser success", "browser", b.Name())
+					log.Warnf("find browser success, browser %s", b.Name())
 					browsers = append(browsers, b)
 				}
 			} else {
-				slog.Error("new firefox error", "err", err)
+				log.Errorf("new firefox error %v", err)
 			}
 		}
 

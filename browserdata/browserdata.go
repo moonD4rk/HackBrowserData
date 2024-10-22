@@ -1,9 +1,8 @@
 package browserdata
 
 import (
-	"log/slog"
-
 	"github.com/moond4rk/hackbrowserdata/extractor"
+	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
@@ -23,7 +22,7 @@ func New(items []types.DataType) *BrowserData {
 func (d *BrowserData) Recovery(masterKey []byte) error {
 	for _, source := range d.extractors {
 		if err := source.Extract(masterKey); err != nil {
-			slog.Error("parse error", "source_data", source.Name(), "err", err.Error())
+			log.Errorf("parse %s error: %v", source.Name(), err)
 			continue
 		}
 	}
@@ -42,18 +41,18 @@ func (d *BrowserData) Output(dir, browserName, flag string) {
 
 		f, err := output.CreateFile(dir, filename)
 		if err != nil {
-			slog.Error("create file error", "filename", filename, "err", err.Error())
+			log.Errorf("create file %s error: %v", filename, err)
 			continue
 		}
 		if err := output.Write(source, f); err != nil {
-			slog.Error("write to file error", "filename", filename, "err", err.Error())
+			log.Errorf("write to file %s error: %v", filename, err)
 			continue
 		}
 		if err := f.Close(); err != nil {
-			slog.Error("close file error", "filename", filename, "err", err.Error())
+			log.Errorf("close file %s error: %v", filename, err)
 			continue
 		}
-		slog.Warn("export success", "filename", filename)
+		log.Warnf("export success: %s", filename)
 	}
 }
 
@@ -62,7 +61,7 @@ func (d *BrowserData) addExtractors(items []types.DataType) {
 		if source := extractor.CreateExtractor(itemType); source != nil {
 			d.extractors[itemType] = source
 		} else {
-			slog.Debug("source not found", "source", itemType)
+			log.Debugf("source not found: %s", itemType)
 		}
 	}
 }

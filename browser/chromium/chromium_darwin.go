@@ -7,12 +7,12 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
+	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -54,6 +54,6 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 		return nil, errWrongSecurityCommand
 	}
 	c.masterKey = key
-	slog.Info("get master key success", "browser", c.name)
+	log.Debugf("get master key success, browser %s", c.name)
 	return key, nil
 }
