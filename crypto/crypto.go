@@ -88,7 +88,7 @@ func DES3Encrypt(key, iv, plaintext []byte) ([]byte, error) {
 	return dst, nil
 }
 
-// AESGCMDecrypt chromium > 80 https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_win.cc
+// AESGCMDecrypt chromium > 80 https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/sync/os_crypt_win.cc
 func AESGCMDecrypt(key, nounce, ciphertext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
