@@ -156,6 +156,9 @@ func chromiumWalkFunc(items []types.DataType, multiItemPaths map[string]map[type
 			if strings.Contains(path, "Snapshot") {
 				continue
 			}
+			if strings.Contains(path, "def") {
+				continue
+			}
 			profileFolder := fileutil.ParentBaseDir(path)
 			if strings.Contains(filepath.ToSlash(path), "/Network/Cookies") {
 				profileFolder = fileutil.BaseDir(strings.ReplaceAll(filepath.ToSlash(path), "/Network/Cookies", ""))
