@@ -22,7 +22,7 @@ func New(items []types.DataType) *BrowserData {
 func (d *BrowserData) Recovery(masterKey []byte) error {
 	for _, source := range d.extractors {
 		if err := source.Extract(masterKey); err != nil {
-			log.Errorf("parse %s error: %v", source.Name(), err)
+			log.Debugf("parse %s error: %v", source.Name(), err)
 			continue
 		}
 	}
@@ -41,15 +41,15 @@ func (d *BrowserData) Output(dir, browserName, flag string) {
 
 		f, err := output.CreateFile(dir, filename)
 		if err != nil {
-			log.Errorf("create file %s error: %v", filename, err)
+			log.Debugf("create file %s error: %v", filename, err)
 			continue
 		}
 		if err := output.Write(source, f); err != nil {
-			log.Errorf("write to file %s error: %v", filename, err)
+			log.Debugf("write to file %s error: %v", filename, err)
 			continue
 		}
 		if err := f.Close(); err != nil {
-			log.Errorf("close file %s error: %v", filename, err)
+			log.Debugf("close file %s error: %v", filename, err)
 			continue
 		}
 		log.Warnf("export success: %s", filename)

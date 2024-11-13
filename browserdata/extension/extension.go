@@ -63,7 +63,7 @@ func parseChromiumExtensions(content string) ([]*extension, error) {
 		}
 	}
 	if !settings.Exists() {
-		return nil, fmt.Errorf("cannot find extensions in settings")
+		return nil, fmt.Debugf("cannot find extensions in settings")
 	}
 	var c []*extension
 

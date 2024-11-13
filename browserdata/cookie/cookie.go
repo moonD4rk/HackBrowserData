@@ -65,7 +65,7 @@ func (c *ChromiumCookie) Extract(masterKey []byte) error {
 			value, encryptValue                           []byte
 		)
 		if err = rows.Scan(&key, &encryptValue, &host, &path, &createDate, &expireDate, &isSecure, &isHTTPOnly, &hasExpire, &isPersistent); err != nil {
-			log.Errorf("scan chromium cookie error: %v", err)
+			log.Debugf("scan chromium cookie error: %v", err)
 		}
 
 		cookie := cookie{
@@ -86,7 +86,7 @@ func (c *ChromiumCookie) Extract(masterKey []byte) error {
 			if err != nil {
 				value, err = crypto.DecryptWithChromium(masterKey, encryptValue)
 				if err != nil {
-					log.Errorf("decrypt chromium cookie error: %v", err)
+					log.Debugf("decrypt chromium cookie error: %v", err)
 				}
 			}
 		}
@@ -134,7 +134,7 @@ func (f *FirefoxCookie) Extract(_ []byte) error {
 			creationTime, expiry    int64
 		)
 		if err = rows.Scan(&name, &value, &host, &path, &creationTime, &expiry, &isSecure, &isHTTPOnly); err != nil {
-			log.Errorf("scan firefox cookie error: %v", err)
+			log.Debugf("scan firefox cookie error: %v", err)
 		}
 		*f = append(*f, cookie{
 			KeyName:    name,

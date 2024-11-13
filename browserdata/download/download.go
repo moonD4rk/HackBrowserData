@@ -101,7 +101,7 @@ func (f *FirefoxDownload) Extract(_ []byte) error {
 
 	_, err = db.Exec(closeJournalMode)
 	if err != nil {
-		log.Errorf("close journal mode error: %v", err)
+		log.Debugf("close journal mode error: %v", err)
 	}
 	rows, err := db.Query(queryFirefoxDownload)
 	if err != nil {
