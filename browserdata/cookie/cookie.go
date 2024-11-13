@@ -80,16 +80,17 @@ func (c *ChromiumCookie) Extract(masterKey []byte) error {
 			CreateDate:   typeutil.TimeEpoch(createDate),
 			ExpireDate:   typeutil.TimeEpoch(expireDate),
 		}
+
 		if len(encryptValue) > 0 {
-			if len(masterKey) == 0 {
-				value, err = crypto.DecryptWithDPAPI(encryptValue)
-			} else {
-				value, err = crypto.DecryptWithChromium(masterKey, encryptValue)
-			}
+			value, err = crypto.DecryptWithDPAPI(encryptValue)
 			if err != nil {
-				log.Errorf("decrypt chromium cookie error: %v", err)
+				value, err = crypto.DecryptWithChromium(masterKey, encryptValue)
+				if err != nil {
+					log.Errorf("decrypt chromium cookie error: %v", err)
+				}
 			}
 		}
+
 		cookie.Value = string(value)
 		*c = append(*c, cookie)
 	}

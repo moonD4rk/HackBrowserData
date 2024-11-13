@@ -72,16 +72,17 @@ func (c *ChromiumPassword) Extract(masterKey []byte) error {
 			encryptPass: pwd,
 			LoginURL:    url,
 		}
+
 		if len(pwd) > 0 {
-			if len(masterKey) == 0 {
-				password, err = crypto.DecryptWithDPAPI(pwd)
-			} else {
-				password, err = crypto.DecryptWithChromium(masterKey, pwd)
-			}
+			password, err = crypto.DecryptWithDPAPI(pwd)
 			if err != nil {
-				log.Errorf("decrypt chromium password error: %v", err)
+				password, err = crypto.DecryptWithChromium(masterKey, pwd)
+				if err != nil {
+					log.Errorf("decrypt chromium password error: %v", err)
+				}
 			}
 		}
+
 		if create > time.Now().Unix() {
 			login.CreateDate = typeutil.TimeEpoch(create)
 		} else {
