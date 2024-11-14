@@ -111,7 +111,7 @@ func (f *FirefoxBookmark) Extract(_ []byte) error {
 	defer db.Close()
 	_, err = db.Exec(closeJournalMode)
 	if err != nil {
-		log.Errorf("close journal mode error: %v", err)
+		log.Debugf("close journal mode error: %v", err)
 	}
 	rows, err := db.Query(queryFirefoxBookMark)
 	if err != nil {
@@ -124,7 +124,7 @@ func (f *FirefoxBookmark) Extract(_ []byte) error {
 			title, url        string
 		)
 		if err = rows.Scan(&id, &url, &bt, &dateAdded, &title); err != nil {
-			log.Errorf("scan bookmark error: %v", err)
+			log.Debugf("scan bookmark error: %v", err)
 		}
 		*f = append(*f, bookmark{
 			ID:        id,

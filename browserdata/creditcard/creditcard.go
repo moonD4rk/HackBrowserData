@@ -57,7 +57,7 @@ func (c *ChromiumCreditCard) Extract(masterKey []byte) error {
 			value, encryptValue                        []byte
 		)
 		if err := rows.Scan(&guid, &name, &month, &year, &encryptValue, &address, &nickname); err != nil {
-			log.Errorf("scan chromium credit card error: %v", err)
+			log.Debugf("scan chromium credit card error: %v", err)
 		}
 		ccInfo := card{
 			GUID:            guid,
@@ -74,7 +74,7 @@ func (c *ChromiumCreditCard) Extract(masterKey []byte) error {
 				value, err = crypto.DecryptWithChromium(masterKey, encryptValue)
 			}
 			if err != nil {
-				log.Errorf("decrypt chromium credit card error: %v", err)
+				log.Debugf("decrypt chromium credit card error: %v", err)
 			}
 		}
 
@@ -112,7 +112,7 @@ func (c *YandexCreditCard) Extract(masterKey []byte) error {
 			value, encryptValue                        []byte
 		)
 		if err := rows.Scan(&guid, &name, &month, &year, &encryptValue, &address, &nickname); err != nil {
-			log.Errorf("scan chromium credit card error: %v", err)
+			log.Debugf("scan chromium credit card error: %v", err)
 		}
 		ccInfo := card{
 			GUID:            guid,
@@ -129,7 +129,7 @@ func (c *YandexCreditCard) Extract(masterKey []byte) error {
 				value, err = crypto.DecryptWithChromium(masterKey, encryptValue)
 			}
 			if err != nil {
-				log.Errorf("decrypt chromium credit card error: %v", err)
+				log.Debugf("decrypt chromium credit card error: %v", err)
 			}
 		}
 		ccInfo.CardNumber = string(value)

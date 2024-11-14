@@ -113,7 +113,7 @@ func (f *FirefoxHistory) Extract(_ []byte) error {
 			visitCount    int
 		)
 		if err = rows.Scan(&id, &url, &visitDate, &title, &visitCount); err != nil {
-			log.Errorf("scan firefox history error: %v", err)
+			log.Debugf("scan firefox history error: %v", err)
 		}
 		*f = append(*f, history{
 			Title:         title,
