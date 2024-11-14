@@ -65,23 +65,24 @@ func (c *ChromiumPassword) Extract(masterKey []byte) error {
 			create        int64
 		)
 		if err := rows.Scan(&url, &username, &pwd, &create); err != nil {
-			log.Errorf("scan chromium password error: %v", err)
+			log.Debugf("scan chromium password error: %v", err)
 		}
 		login := loginData{
 			UserName:    username,
 			encryptPass: pwd,
 			LoginURL:    url,
 		}
+
 		if len(pwd) > 0 {
-			if len(masterKey) == 0 {
-				password, err = crypto.DecryptWithDPAPI(pwd)
-			} else {
-				password, err = crypto.DecryptWithChromium(masterKey, pwd)
-			}
+			password, err = crypto.DecryptWithDPAPI(pwd)
 			if err != nil {
-				log.Errorf("decrypt chromium password error: %v", err)
+				password, err = crypto.DecryptWithChromium(masterKey, pwd)
+				if err != nil {
+					log.Debugf("decrypt chromium password error: %v", err)
+				}
 			}
 		}
+
 		if create > time.Now().Unix() {
 			login.CreateDate = typeutil.TimeEpoch(create)
 		} else {
@@ -132,7 +133,7 @@ func (c *YandexPassword) Extract(masterKey []byte) error {
 			create        int64
 		)
 		if err := rows.Scan(&url, &username, &pwd, &create); err != nil {
-			log.Errorf("scan yandex password error: %v", err)
+			log.Debugf("scan yandex password error: %v", err)
 		}
 		login := loginData{
 			UserName:    username,
@@ -147,7 +148,7 @@ func (c *YandexPassword) Extract(masterKey []byte) error {
 				password, err = crypto.DecryptWithChromium(masterKey, pwd)
 			}
 			if err != nil {
-				log.Errorf("decrypt yandex password error: %v", err)
+				log.Debugf("decrypt yandex password error: %v", err)
 			}
 		}
 		if create > time.Now().Unix() {

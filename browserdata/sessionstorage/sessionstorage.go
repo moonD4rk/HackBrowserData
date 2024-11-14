@@ -133,7 +133,7 @@ func (f *FirefoxSessionStorage) Extract(_ []byte) error {
 
 	_, err = db.Exec(closeJournalMode)
 	if err != nil {
-		log.Errorf("close journal mode error: %v", err)
+		log.Debugf("close journal mode error: %v", err)
 	}
 	rows, err := db.Query(querySessionStorage)
 	if err != nil {
@@ -143,7 +143,7 @@ func (f *FirefoxSessionStorage) Extract(_ []byte) error {
 	for rows.Next() {
 		var originKey, key, value string
 		if err = rows.Scan(&originKey, &key, &value); err != nil {
-			log.Errorf("scan session storage error: %v", err)
+			log.Debugf("scan session storage error: %v", err)
 		}
 		s := new(session)
 		s.fillFirefox(originKey, key, value)
