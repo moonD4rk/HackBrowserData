@@ -63,9 +63,14 @@ var (
 			profilePath: yandexProfilePath,
 			dataTypes:   types.DefaultYandexTypes,
 		},
-		"360": {
+		"360-speed": {
 			name:        speed360Name,
 			profilePath: speed360ProfilePath,
+			dataTypes:   types.DefaultChromiumTypes,
+		},
+		"360-speedx": {
+			name:        speedX360Name,
+			profilePath: speedX360ProfilePath,
 			dataTypes:   types.DefaultChromiumTypes,
 		},
 		"qq": {
@@ -105,6 +110,7 @@ var (
 	edgeProfilePath        = homeDir + "/AppData/Local/Microsoft/Edge/User Data/Default/"
 	braveProfilePath       = homeDir + "/AppData/Local/BraveSoftware/Brave-Browser/User Data/Default/"
 	speed360ProfilePath    = homeDir + "/AppData/Local/360chrome/Chrome/User Data/Default/"
+	speedX360ProfilePath   = homeDir + "/AppData/Local/360ChromeX/Chrome/User Data/Default/"
 	qqBrowserProfilePath   = homeDir + "/AppData/Local/Tencent/QQBrowser/User Data/Default/"
 	operaProfilePath       = homeDir + "/AppData/Roaming/Opera Software/Opera Stable/"
 	operaGXProfilePath     = homeDir + "/AppData/Roaming/Opera Software/Opera GX Stable/"
@@ -112,7 +118,7 @@ var (
 	coccocProfilePath      = homeDir + "/AppData/Local/CocCoc/Browser/User Data/Default/"
 	yandexProfilePath      = homeDir + "/AppData/Local/Yandex/YandexBrowser/User Data/Default/"
 	dcBrowserProfilePath   = homeDir + "/AppData/Local/DCBrowser/User Data/Default/"
-	sogouProfilePath       = homeDir + "/AppData/Roaming/SogouExplorer/Webkit/Default/"
+	sogouProfilePath       = homeDir + "/AppData/Local/Sogou/SogouExplorer/User Data/Default/"
 
 	firefoxProfilePath = homeDir + "/AppData/Roaming/Mozilla/Firefox/Profiles/"
 )

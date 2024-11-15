@@ -20,6 +20,7 @@ const (
 	yandexName     = "Yandex"
 	firefoxName    = "Firefox"
 	speed360Name   = "360speed"
+	speedX360Name  = "360speedX"
 	qqBrowserName  = "QQ"
 	dcBrowserName  = "DC"
 	sogouName      = "Sogou"
