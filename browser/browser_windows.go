@@ -112,7 +112,7 @@ var (
 	coccocProfilePath      = homeDir + "/AppData/Local/CocCoc/Browser/User Data/Default/"
 	yandexProfilePath      = homeDir + "/AppData/Local/Yandex/YandexBrowser/User Data/Default/"
 	dcBrowserProfilePath   = homeDir + "/AppData/Local/DCBrowser/User Data/Default/"
-	sogouProfilePath       = homeDir + "/AppData/Roaming/SogouExplorer/Webkit/Default/"
+	sogouProfilePath       = homeDir + "/AppData/Local/Sogou/SogouExplorer/User Data/Default/"
 
 	firefoxProfilePath = homeDir + "/AppData/Roaming/Mozilla/Firefox/Profiles/"
 )
