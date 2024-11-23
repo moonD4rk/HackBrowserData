@@ -138,5 +138,4 @@ func Test_extractProfileNameFromPath(t *testing.T) {
 			}
 		})
 	}
-
 }

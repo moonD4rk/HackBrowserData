@@ -41,9 +41,7 @@ func (m *Finder) FindProfiles(rootPath string, browserType types2.BrowserType, d
 	return profiles, nil
 }
 
-var (
-	defaultExcludeDirs = []string{"Snapshot", "System Profile", "Crash Reports", "def"}
-)
+var defaultExcludeDirs = []string{"Snapshot", "System Profile", "Crash Reports", "def"}
 
 func (m *Finder) findChromiumProfiles(rootPath string, browserType types2.BrowserType, dataTypes []types2.DataType) (Profiles, error) {
 	profiles := NewProfiles()
