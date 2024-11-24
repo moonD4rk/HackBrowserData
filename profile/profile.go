@@ -1,6 +1,8 @@
 package profile
 
 import (
+	"errors"
+
 	"github.com/moond4rk/hackbrowserdata/types2"
 )
 
@@ -28,6 +30,7 @@ func (profiles Profiles) SetMasterKey(path string) {
 	for _, profile := range profiles {
 		profile.MasterKeyPath = path
 	}
+	profiles.AssignMasterKey()
 }
 
 func (profiles Profiles) AssignMasterKey() {
@@ -59,4 +62,17 @@ func NewProfile(profileName string) *Profile {
 
 func (p *Profile) AddPath(dataType types2.DataType, path string) {
 	p.DataFilePath[dataType] = append(p.DataFilePath[dataType], path)
+}
+
+var ErrMissingMasterKey = errors.New("missing master key")
+var ErrMissingDataFiles = errors.New("missing data files")
+
+func (p *Profile) Validate() error {
+	if p.MasterKeyPath == "" {
+		return ErrMissingMasterKey
+	}
+	if len(p.DataFilePath) == 0 {
+		return ErrMissingDataFiles
+	}
+	return nil
 }
