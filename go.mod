@@ -8,7 +8,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/otiai10/copy v1.14.0
 	github.com/ppacher/go-dbus-keyring v1.0.1
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/tidwall/gjson v1.18.0
 	github.com/urfave/cli/v2 v2.27.4
