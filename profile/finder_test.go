@@ -1,6 +1,7 @@
 package profile
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -44,6 +45,58 @@ func TestProfileFinder_FirefoxMacOS(t *testing.T) {
 		t.Skip("no firefox profile found")
 	}
 	rootPath := paths[0]
+	browserType := types2.FirefoxType
+	dataTypes := types2.AllDataTypes
+	finder := NewFinder()
+	profiles, err := finder.FindProfiles(rootPath, browserType, dataTypes)
+	assert.NoError(t, err)
+	assert.NotNil(t, profiles)
+	for name, profile := range profiles {
+		for k, v := range profile.DataFilePath {
+			t.Logf("name: %s, datatype: %s, value: %s", name, k.String(), v)
+		}
+		t.Log(name, profile.MasterKeyPath)
+	}
+}
+
+func TestNewManager_ChromiumWindows(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("skipping test on non-windows system")
+	}
+	userProfile := os.Getenv("USERPROFILE")
+	rootPath := filepath.Join(userProfile, `AppData\Local\Google\Chrome\User Data`)
+	paths, err := filepath.Glob(rootPath)
+
+	assert.NoError(t, err)
+	if len(paths) == 0 {
+		t.Skip("no chrome profile found")
+	}
+	browserType := types2.ChromiumType
+	dataTypes := types2.AllDataTypes
+	finder := NewFinder()
+	profiles, err := finder.FindProfiles(rootPath, browserType, dataTypes)
+	assert.NoError(t, err)
+	assert.NotNil(t, profiles)
+	for name, profile := range profiles {
+		for k, v := range profile.DataFilePath {
+			t.Logf("name: %s, datatype: %s, datapath: %s", name, k.String(), v)
+		}
+		t.Log(name, profile.MasterKeyPath)
+	}
+}
+
+func TestProfileFinder_FirefoxWindows(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("skipping test on non-windows system")
+	}
+	userProfile := os.Getenv("USERPROFILE")
+	rootPath := filepath.Join(userProfile, `AppData\Roaming\Mozilla\Firefox\Profiles`)
+	paths, err := filepath.Glob(rootPath)
+
+	assert.NoError(t, err)
+	if len(paths) == 0 {
+		t.Skip("no firefox profile found")
+	}
 	browserType := types2.FirefoxType
 	dataTypes := types2.AllDataTypes
 	finder := NewFinder()
