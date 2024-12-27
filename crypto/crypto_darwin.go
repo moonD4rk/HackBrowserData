@@ -2,6 +2,10 @@
 
 package crypto
 
+import "errors"
+
+var ErrDarwinNotSupportDPAPI = errors.New("darwin not support dpapi")
+
 func DecryptWithChromium(key, password []byte) ([]byte, error) {
 	if len(password) <= 3 {
 		return nil, ErrCiphertextLengthIsInvalid
@@ -11,5 +15,5 @@ func DecryptWithChromium(key, password []byte) ([]byte, error) {
 }
 
 func DecryptWithDPAPI(_ []byte) ([]byte, error) {
-	return nil, nil
+	return nil, ErrDarwinNotSupportDPAPI
 }

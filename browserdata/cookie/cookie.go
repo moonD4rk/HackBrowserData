@@ -87,10 +87,12 @@ func (c *ChromiumCookie) Extract(masterKey []byte) error {
 				value, err = crypto.DecryptWithChromium(masterKey, encryptValue)
 				if err != nil {
 					log.Debugf("decrypt chromium cookie error: %v", err)
+				} else if len(value) > 32 {
+					// https://gist.github.com/kosh04/36cf6023fb75b516451ce933b9db2207?permalink_comment_id=5291243#gistcomment-5291243
+					value = value[32:]
 				}
 			}
 		}
-
 		cookie.Value = string(value)
 		*c = append(*c, cookie)
 	}
