@@ -228,7 +228,7 @@ func getFirefoxLoginData() ([]loginData, error) {
 				user []byte
 				pass []byte
 			)
-			m.LoginURL = v.Get("formSubmitURL").String()
+			m.LoginURL = v.Get("hostname").String()
 			user, err = base64.StdEncoding.DecodeString(v.Get("encryptedUsername").String())
 			if err != nil {
 				return nil, err
