@@ -1,5 +1,5 @@
 # golangci-lint configuration
-# Compatible with golangci-lint v2.1+ and Go 1.20
+# Compatible with golangci-lint v2.4+ and Go 1.20
 # This is a best practice starter configuration that can be gradually enhanced
 version: "2"
 
@@ -12,15 +12,6 @@ run:
   allow-parallel-runners: true
   # Module download mode
   modules-download-mode: "mod"
-  # Skip directories
-  skip-dirs:
-    - vendor
-    - third_party
-    - testdata
-  # Skip files
-  skip-files:
-    - ".*\\.pb\\.go$"
-    - ".*\\.gen\\.go$"
 
 # Code formatters configuration
 formatters:
@@ -35,8 +26,9 @@ formatters:
       simplify: true
 
     goimports:
-      # Local package prefix
-      local-prefixes: github.com/moond4rk/hackbrowserdata
+      # Local package prefix (must be array in v2)
+      local-prefixes:
+        - github.com/moond4rk/hackbrowserdata
 
     gci:
       # Import section order
@@ -44,13 +36,11 @@ formatters:
         - standard # Standard library
         - default # Third-party libraries
         - prefix(github.com/moond4rk/hackbrowserdata) # Local packages
-      skip-generated: true
-      custom-order: true
 
 # Linter configuration
 linters:
-  # Use minimal defaults, then explicitly enable needed linters
-  disable-all: false
+  # Use standard linters as base
+  default: standard
 
   # Additional enabled linters (best practices recommended)
   enable:
@@ -74,8 +64,6 @@ linters:
     - whitespace # Whitespace checks
 
     # Best practices
-    - govet # Go vet checks
-    - staticcheck # Static analysis (includes gosimple, stylecheck)
     - gocritic # Comprehensive code analysis
     - goprintffuncname # Printf function naming checks
 
@@ -98,7 +86,72 @@ linters:
     - gochecknoglobals # No global variables (sometimes needed)
     - gochecknoinits # No init functions (sometimes needed)
     - exhaustive # Enum completeness (too strict initially)
-    - unused # Temporarily disabled - will enable later
+    - unused # Temporarily disabled for gradual cleanup
+
+  # Exclusion configuration
+  exclusions:
+    # Paths to exclude
+    paths:
+      - vendor
+      - third_party
+      - testdata
+      - ".*\\.pb\\.go$"
+      - ".*\\.gen\\.go$"
+
+    # Use default exclusion presets
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+
+    # Exclusion rules
+    rules:
+      # Test file exclusions
+      - path: '_test\.go'
+        linters:
+          - dupl
+          - funlen
+          - goconst
+          - gosec
+          - errcheck
+
+      # Generated file exclusions
+      - path: '\.pb\.go$'
+        linters:
+          - all
+
+      # Vendor directory exclusions
+      - path: "vendor"
+        linters:
+          - all
+
+      # Defer statement exclusions
+      - source: "defer"
+        linters:
+          - errcheck
+
+      # SQL query exclusions
+      - text: "SELECT"
+        linters:
+          - gosec
+
+      # Package comment exclusions
+      - text: "should have a package comment"
+        linters:
+          - staticcheck
+          - revive
+
+      # Types package exclusions
+      - path: "types/types.go"
+        linters:
+          - revive
+
+      # Unused code exclusions (temporary)
+      - text: "is unused"
+        linters:
+          - unused
+          - staticcheck
 
   # Linter specific settings
   settings:
@@ -142,15 +195,20 @@ linters:
 
     # Static check settings
     staticcheck:
-      # Go version
-      go: "1.20"
       # Check all except the ones we exclude
-      checks: ["all", "-ST1000", "-ST1003", "-ST1016", "-ST1020", "-ST1021", "-ST1022"]
+      checks:
+        [
+          "all",
+          "-ST1000",
+          "-ST1003",
+          "-ST1016",
+          "-ST1020",
+          "-ST1021",
+          "-ST1022",
+        ]
 
     # Revive settings
     revive:
-      # Ignore generated files
-      ignore-generated-header: true
       severity: warning
       rules:
         - name: unused-parameter
@@ -205,106 +263,10 @@ linters:
       min-len: 5 # Minimum length of string constant
       min-occurrences: 5 # Increased from default 3
 
-# Issue exclusion rules
-issues:
-  # Don't use default exclusion rules
-  exclude-use-default: false
-
-  # Global exclusion rules - expanded to reduce noise
-  exclude:
-    # Comment related
-    - "should have a package comment"
-    - "should have comment"
-    - "comment on exported"
-    - "ST1000" # Package comments
-    - "at least one file in a package should have a package comment"
-    
-    # Error handling (handled by errcheck)
-    - "Error return value of .* is not checked"
-    - "error return value not checked"
-    
-    # Test related
-    - "don't use ALL_CAPS in Go names"
-    
-    # Security related false positives
-    - "G101: Potential hardcoded credentials"
-    - "G502: Blocklisted import"
-    - "G405: Use of weak cryptographic primitive"
-    
-    # Naming issues
-    - "var-naming: avoid meaningless package names"
-    
-    # Defer in loop - sometimes needed
-    - "defer statement in loop"
-    
-    # Unused code - will clean up later
-    - "field .* is unused"
-    - "func .* is unused"
-
-  # Conditional exclusion rules
-  exclude-rules:
-    # Special rules for test files
-    - path: '_test\.go'
-      linters:
-        - dupl # Test code can be duplicated
-        - funlen # Test functions can be longer
-        - goconst # Tests can have magic numbers
-        - gosec # Tests have lower security requirements
-        - errcheck # Tests don't need all error checks
-
-    # Generated file exclusions
-    - path: '\.pb\.go$'
-      linters:
-        - all
-
-    # Specific directory exclusions
-    - path: "vendor"
-      linters:
-        - all
-    
-    # Exclude errcheck for defer statements
-    - source: "defer"
-      linters:
-        - errcheck
-    
-    # Exclude gosec G101 for SQL queries
-    - text: "SELECT"
-      linters:
-        - gosec
-    
-    # Exclude package comment requirements
-    - text: "should have a package comment"
-      linters:
-        - staticcheck
-        - revive
-    
-    # Exclude var-naming for types package
-    - path: "types/types.go"
-      linters:
-        - revive
-    
-    # Exclude unused checks temporarily
-    - text: "is unused"
-      linters:
-        - unused
-        - staticcheck
-
-  # Maximum issue limits
-  max-issues-per-linter: 0 # No limit
-  max-same-issues: 0 # No limit on duplicate issues
-
 # Output configuration
 output:
-  # Output format
+  # Output format - use text format with colors
   formats:
-    colored-line-number:
+    text:
       path: stdout
-
-  # Sort by severity
-  sort-results: true
-
-  # Print linter name
-  print-linter-name: true
-
-  # Show all issues (no truncation)
-  uniq-by-line: false
+      colors: true
