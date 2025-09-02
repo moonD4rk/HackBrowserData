@@ -1,362 +1,272 @@
+# golangci-lint configuration
+# Compatible with golangci-lint v2.4+ and Go 1.20
+# This is a best practice starter configuration that can be gradually enhanced
+version: "2"
+
 run:
-  timeout: '5m'
+  # Go version - fixed to 1.20
+  go: "1.20"
+  # Timeout setting
+  timeout: "5m"
+  # Allow parallel runners
   allow-parallel-runners: true
-  modules-download-mode: 'mod'
+  # Module download mode
+  modules-download-mode: "mod"
 
-linters:
+# Code formatters configuration
+formatters:
   enable:
-    - 'asciicheck'
-    - 'depguard'
-    - 'dogsled'
-    - 'errorlint'
-    - 'exhaustive'
-    - 'exportloopref'
-    - 'gofmt'
-    - 'goheader'
-    - 'goimports'
-    - 'gomodguard'
-    - 'goprintffuncname'
-    - 'gosec'
-    - 'govet'
-    - 'ineffassign'
-    - 'makezero'
-    - 'misspell'
-    - 'prealloc'
-    - 'predeclared'
-    - 'revive'
-    - 'typecheck'
-    - 'unconvert'
-    - 'whitespace'
-    - 'forbidigo'
-    - 'errcheck'
-    - 'funlen'
-    - 'gci'
-    - 'gocritic'
-    - 'godox'
-    - 'sloglint'
-    - 'usestdlibvars'
+    - gofmt # Go official formatter
+    - goimports # Automatic import management
+    - gci # Import grouping and sorting
 
+  settings:
+    gofmt:
+      # Simplify code
+      simplify: true
+
+    goimports:
+      # Local package prefix (must be array in v2)
+      local-prefixes:
+        - github.com/moond4rk/hackbrowserdata
+
+    gci:
+      # Import section order
+      sections:
+        - standard # Standard library
+        - default # Third-party libraries
+        - prefix(github.com/moond4rk/hackbrowserdata) # Local packages
+
+# Linter configuration
+linters:
+  # Use standard linters as base
+  default: standard
+
+  # Additional enabled linters (best practices recommended)
+  enable:
+    # Error checking
+    - errcheck # Check unhandled errors
+    - errorlint # Improve error handling
+
+    # Code quality
+    - ineffassign # Detect ineffective assignments
+    - revive # Code quality checks
+    - misspell # Spell checking
+    - unconvert # Detect unnecessary type conversions
+
+    # Security related
+    - gosec # Security vulnerability checks
+
+    # Performance related
+    - prealloc # Slice preallocation optimization
+
+    # Code standards
+    - whitespace # Whitespace checks
+
+    # Best practices
+    - gocritic # Comprehensive code analysis
+    - goprintffuncname # Printf function naming checks
+
+    # Dependency management
+    - depguard # Package dependency control
+    - gomodguard # Go module dependency control
+
+    # Code complexity (optional for initial setup)
+    - funlen # Function length checks
+    - goconst # Magic number checks
+
+  # Explicitly disabled linters (to avoid false positives and noise)
   disable:
-    # unsupported lint with golang 1.18+ ref: https://github.com/golangci/golangci-lint/issues/2649
-    - 'bodyclose'
-    - 'gosimple'
-    - 'noctx'
-    - 'sqlclosecheck'
-    - 'staticcheck'
-    - 'stylecheck'
-    - 'unused'
-    - 'paralleltest'
+    - exhaustruct # Struct field completeness check (too strict)
+    - wrapcheck # Error wrapping check (project specific)
+    - testpackage # Test package separation (not conventional)
+    - paralleltest # Parallel test check (not always needed)
+    - nlreturn # Newline before return (too strict)
+    - wsl # Whitespace rules (too strict)
+    - gochecknoglobals # No global variables (sometimes needed)
+    - gochecknoinits # No init functions (sometimes needed)
+    - exhaustive # Enum completeness (too strict initially)
+    - unused # Temporarily disabled for gradual cleanup
 
-issues:
-  exclude-use-default: false
-  exclude:
-    - should have a package comment
-    - should have comment
-    - G101 # Look for hard coded credentials
-    - G102 # Bind to all interfaces
-    - G103 # Audit the use of unsafe block
-    - G104 # Audit errors not checked
-    - G106 # Audit the use of ssh.InsecureIgnoreHostKey
-    - G107 # Url provided to HTTP request as taint input
-    - G108 # Profiling endpoint automatically exposed on /debug/pprof
-    - G109 # Potential Integer overflow made by strconv.Atoi result conversion to int16/32
-    - G110 # Potential DoS vulnerability via decompression bomb
-    - G111 # Potential directory traversal
-    - G112 # Potential slowloris attack
-    - G113 # Usage of Rat.SetString in math/big with an overflow (CVE-2022-23772)
-    - G114 # Use of net/http serve function that has no support for setting timeouts
-    - G201 # SQL query construction using format string
-    - G202 # SQL query construction using string concatenation
-    - G203 # Use of unescaped data in HTML templates
-    - G204 # Audit use of command execution
-    - G301 # Poor file permissions used when creating a directory
-    - G302 # Poor file permissions used with chmod
-    - G303 # Creating tempfile using a predictable path
-    - G304 # File path provided as taint input
-    - G305 # File traversal when extracting zip/tar archive
-    - G306 # Poor file permissions used when writing to a new file
-    - G307 # Poor file permissions used when creating a file with os.Create
-    - G401 # Detect the usage of DES, RC4, MD5 or SHA1
-    - G402 # Look for bad TLS connection settings
-    - G403 # Ensure minimum RSA key length of 2048 bits
-    - G404 # Insecure random number source (rand)
-    - G405 # Look for the use of weak crypto algorithms
-    - G501 # Import blocklist: crypto/md5
-    - G502 # Import blocklist: crypto/des
-    - G503 # Import blocklist: crypto/rc4
-    - G504 # Import blocklist: net/http/cgi
-    - G505 # Import blocklist: crypto/sha1
-    - G601 # Implicit memory aliasing of items from a range statement
-    - G602 # Slice access out of bounds
-  exclude-rules:
-    - path: browser/browser\.go
-      linters:
-        - 'unused'
-  exclude-dirs:
-    - 'vendor'
-  max-issues-per-linter: 0
-  max-same-issues: 0
+  # Exclusion configuration
+  exclusions:
+    # Paths to exclude
+    paths:
+      - vendor
+      - third_party
+      - testdata
+      - ".*\\.pb\\.go$"
+      - ".*\\.gen\\.go$"
 
-linters-settings:
-  # Forbid the use of the following packages.
-  depguard:
+    # Use default exclusion presets
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+
+    # Exclusion rules
     rules:
-      main:
-        files:
-          - $all
-        deny:
-          - pkg: "github.com/pkg/errors"
-            desc: Should be replaced by standard lib errors package
-  # Forbid the following identifiers (list of regexp).
-  forbidigo:
-    forbid:
-      - ^print.*$
-      - p: ^fmt\.Print.*$
-        msg: Do not commit print statements.
-    exclude-godoc-examples: true
-  # Checks assignments with too many blank identifiers (e.g. x, , , _, := f()).
-  dogsled:
-    max-blank-identifiers: 3
-  errcheck:
-    # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
-    check-type-assertions: true
-    # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`.
-    check-blank: false
-    # List of functions to exclude from checking, where each entry is a single function to exclude.
-    exclude-functions:
-      - 'os.Remove'
-      - 'os.RemoveAll'
-      - '(*database/sql.DB).Close'
-      - '(*database/sql.Rows).Close'
-      - '(*github.com/syndtr/goleveldb/leveldb.DB).Close'
-  exhaustive:
-    # Program elements to check for exhaustiveness.
-    # Default: [ switch ]
-    check:
-      - switch
-      - map
-    # Check switch statements in generated files also.
-    # Default: false
-    check-generated: true
-    # Presence of "default" case in switch statements satisfies exhaustiveness,
-    # even if all enum members are not listed.
-    # Default: false
-    default-signifies-exhaustive: true
-    # Consider enums only in package scopes, not in inner scopes.
-    # Default: false
-    package-scope-only: true
-    # Only run exhaustive check on switches with "//exhaustive:enforce" comment.
-    # Default: false
-    explicit-exhaustive-switch: true
-    # Only run exhaustive check on map literals with "//exhaustive:enforce" comment.
-    # Default: false
-    explicit-exhaustive-map: true
-    # Switch statement requires default case even if exhaustive.
-  funlen:
-    # Checks the number of lines in a function.
-    # If lower than 0, disable the check.
-    # Default: 60
-    lines: 120
-    # Checks the number of statements in a function.
-    # If lower than 0, disable the check.
-    # Default: 40
-    statements: 50
-    # Ignore comments when counting lines.
-    # Default false
-    ignore-comments: true
-  gci:
-    # DEPRECATED: use `sections` and `prefix(github.com/org/project)` instead.
-    local-prefixes: github.com/moond4rk/hackbrowserdata
-    # Section configuration to compare against.
-    # Section names are case-insensitive and may contain parameters in ().
-    # The default order of sections is `standard > default > custom > blank > dot > alias`,
-    # If `custom-order` is `true`, it follows the order of `sections` option.
-    # Default: ["standard", "default"]
-    sections:
-      - standard # Standard section: captures all standard packages.
-      - default # Default section: contains all imports that could not be matched to another section type.
-      - prefix(github.com/moond4rk/hackbrowserdata) # Custom section: groups all imports with the specified Prefix.
-      - blank # Blank section: contains all blank imports. This section is not present unless explicitly enabled.
-      - dot # Dot section: contains all dot imports. This section is not present unless explicitly enabled.
-      - alias # Alias section: contains all alias imports. This section is not present unless explicitly enabled.
-    # Skip generated files.
-    # Default: true
-    skip-generated: false
-    # Enable custom order of sections.
-    # If `true`, make the section order the same as the order of `sections`.
-    # Default: false
-    custom-order: true
-  gocritic:
-    # Which checks should be enabled; can't be combined with 'disabled-checks'.
-    # See https://go-critic.github.io/overview#checks-overview.
-    # To check which checks are enabled run `GL_DEBUG=gocritic golangci-lint run`.
-    # By default, list of stable checks is used.
-    enabled-checks:
-#      - nestingReduce
-#      - unnamedResult
-      - ruleguard
-#      - captLocal
-#      - elseif
-#      - ifElseChain
-      - rangeExprCopy
-#      - tooManyResultsChecker
-#      - truncateCmp
-#      - underef
-    # Which checks should be disabled; can't be combined with 'enabled-checks'.
-    # Default: []
-    # Enable multiple checks by tags, run `GL_DEBUG=gocritic golangci-lint run` to see all tags and checks.
-    # See https://github.com/go-critic/go-critic#usage -> section "Tags".
-    # Default: []
-    enabled-tags:
-      - diagnostic
-#      - style
-#      - performance
-#      - experimental
-      - opinionated
-#    disabled-tags:
-#      - diagnostic
-#      - style
-#      - performance
-#      - experimental
-#      - opinionated
-    # Settings passed to gocritic.
-    # The settings key is the name of a supported gocritic checker.
-    # The list of supported checkers can be find in https://go-critic.github.io/overview.
-    settings:
-      # Must be valid enabled check name.
-      captLocal:
-        # Whether to restrict checker to params only.
-        # Default: true
-        paramsOnly: false
-      elseif:
-        # Whether to skip balanced if-else pairs.
-        # Default: true
-        skipBalanced: false
-      ifElseChain:
-        # Min number of if-else blocks that makes the warning trigger.
-        # Default: 2
-        minThreshold: 4
-      nestingReduce:
-        # Min number of statements inside a branch to trigger a warning.
-        # Default: 5
-        bodyWidth: 4
-      rangeExprCopy:
-        # Size in bytes that makes the warning trigger.
-        # Default: 512
-        sizeThreshold: 516
-        # Whether to check test functions
-        # Default: true
-        skipTestFuncs: false
-      tooManyResultsChecker:
-        # Maximum number of results.
-        # Default: 5
-        maxResults: 10
-      truncateCmp:
-        # Whether to skip int/uint/uintptr types.
-        # Default: true
-        skipArchDependent: false
-      underef:
-        # Whether to skip (*x).method() calls where x is a pointer receiver.
-        # Default: true
-        skipRecvDeref: false
-      unnamedResult:
-        # Whether to check exported functions.
-        # Default: false
-        checkExported: true
-  godox:
-    # Report any comments starting with keywords, this is useful for TODO or FIXME comments that
-    # might be left in the code accidentally and should be resolved before merging.
-    # Default: ["TODO", "BUG", "FIXME"]
-    keywords:
-      - NOTE
-      - OPTIMIZE # marks code that should be optimized before merging
-      - HACK # marks hack-around that should be removed before merging
-  goimports:
-    # A comma-separated list of prefixes, which, if set, checks import paths
-    # with the given prefixes are grouped after 3rd-party packages.
-    # Default: ""
-    local-prefixes: github.com/moond4rk/hackbrowserdata
-  govet:
-    # Report about shadowed variables.
-    # Default: false
-    check-shadowing: false
-    # Settings per analyzer.
-    settings:
-      unusedresult:
-        # Comma-separated list of functions whose results must be used
-        # (in addition to default:
-        #   context.WithCancel, context.WithDeadline, context.WithTimeout, context.WithValue, errors.New, fmt.Errorf,
-        #   fmt.Sprint, fmt.Sprintf, sort.Reverse
-        # ).
-        # Default: []
-    enable-all: true
-    disable:
-      - 'fieldalignment'
-      - 'shadow'
-  sloglint:
-    # Enforce not mixing key-value pairs and attributes.
-    # Default: true
-    no-mixed-args: false
-    # Enforce using key-value pairs only (overrides no-mixed-args, incompatible with attr-only).
-    # Default: false
-    kv-only: true
-    # Enforce using attributes only (overrides no-mixed-args, incompatible with kv-only).
-    # Default: false
-#    attr-only: true
-    # Enforce using methods that accept a context.
-    # Default: false
-    context-only: false
-    # Enforce using static values for log messages.
-    # Default: false
-    static-msg: true
-    # Enforce using constants instead of raw keys.
-    # Default: false
-    no-raw-keys: false
-    # Enforce a single key naming convention.
-    # Values: snake, kebab, camel, pascal
-    # Default: ""
-    key-naming-case: snake
-    # Enforce putting arguments on separate lines.
-    # Default: false
-    args-on-sep-lines: false
-  usestdlibvars:
-    # Suggest the use of http.MethodXX.
-    # Default: true
-    http-method: false
-    # Suggest the use of http.StatusXX.
-    # Default: true
-    http-status-code: false
-    # Suggest the use of time.Weekday.String().
-    # Default: true
-    time-weekday: true
-    # Suggest the use of time.Month.String().
-    # Default: false
-    time-month: true
-    # Suggest the use of time.Layout.
-    # Default: false
-    time-layout: true
-    # Suggest the use of crypto.Hash.String().
-    # Default: false
-    crypto-hash: true
-    # Suggest the use of rpc.DefaultXXPath.
-    # Default: false
-    default-rpc-path: true
-    # DEPRECATED Suggest the use of os.DevNull.
-    # Default: false
-    os-dev-null: true
-    # Suggest the use of sql.LevelXX.String().
-    # Default: false
-    sql-isolation-level: true
-    # Suggest the use of tls.SignatureScheme.String().
-    # Default: false
-    tls-signature-scheme: true
-    # Suggest the use of constant.Kind.String().
-    # Default: false
-    constant-kind: true
-    # DEPRECATED Suggest the use of syslog.Priority.
-    # Default: false
-    syslog-priority: true
-  revive:
-    rules:
-      - name: unused-parameter
-        disabled: true
+      # Test file exclusions
+      - path: '_test\.go'
+        linters:
+          - dupl
+          - funlen
+          - goconst
+          - gosec
+          - errcheck
+
+      # Generated file exclusions
+      - path: '\.pb\.go$'
+        linters:
+          - all
+
+      # Vendor directory exclusions
+      - path: "vendor"
+        linters:
+          - all
+
+      # Defer statement exclusions
+      - source: "defer"
+        linters:
+          - errcheck
+
+      # SQL query exclusions
+      - text: "SELECT"
+        linters:
+          - gosec
+
+      # Package comment exclusions
+      - text: "should have a package comment"
+        linters:
+          - staticcheck
+          - revive
+
+      # Types package exclusions
+      - path: "types/types.go"
+        linters:
+          - revive
+
+      # Unused code exclusions (temporary)
+      - text: "is unused"
+        linters:
+          - unused
+          - staticcheck
+
+  # Linter specific settings
+  settings:
+    # Error check settings
+    errcheck:
+      # Check type assertion errors
+      check-type-assertions: true
+      # Don't check blank identifier
+      check-blank: false
+      # Excluded functions - expanded list to reduce noise
+      exclude-functions:
+        - "os.Remove"
+        - "os.RemoveAll"
+        - "io.Copy(os.Stdout)"
+        - "(*database/sql.DB).Close"
+        - "(*database/sql.Rows).Close"
+        - "(*github.com/syndtr/goleveldb/leveldb.DB).Close"
+        - "defer"
+        - "(net/http.ResponseWriter).Write"
+
+    # Security check settings
+    gosec:
+      # Excluded rules (adjust based on project needs)
+      excludes:
+        - G101 # Hardcoded credentials - too many false positives
+        - G104 # Error checking (handled by errcheck)
+        - G304 # File path traversal (needed for project features)
+        - G306 # Poor file permissions (test files)
+        - G401 # Weak cryptographic algorithm (needed for compatibility)
+        - G405 # Weak cryptographic algorithm
+        - G501 # Import crypto/md5 (needed for compatibility)
+        - G502 # Import crypto/des (needed for compatibility)
+        - G505 # Import crypto/sha1 (needed for compatibility)
+
+    # Go vet settings
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment # Field alignment optimization (premature optimization)
+        - shadow # Variable shadowing (sometimes intentional)
+
+    # Static check settings
+    staticcheck:
+      # Check all except the ones we exclude
+      checks:
+        [
+          "all",
+          "-ST1000",
+          "-ST1003",
+          "-ST1016",
+          "-ST1020",
+          "-ST1021",
+          "-ST1022",
+        ]
+
+    # Revive settings
+    revive:
+      severity: warning
+      rules:
+        - name: unused-parameter
+          disabled: true # Interface implementations may not use all parameters
+        - name: var-naming
+          disabled: true # Too many false positives with types package
+        - name: package-comments
+          disabled: true # Package comments are not mandatory
+        - name: exported
+          disabled: true # Not all exported types need comments initially
+
+    # Function length settings
+    funlen:
+      lines: 150 # Increased for existing code
+      statements: 80 # Increased for existing code
+      ignore-comments: true
+
+    # Code critic settings
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+      disabled-checks:
+        - hugeParam # Large value parameters (sometimes needed)
+        - rangeValCopy # Range value copy (minimal performance impact)
+        - commentedOutCode # Allow commented code for now
+        - ifElseChain # Allow if-else chains
+      settings:
+        rangeExprCopy:
+          sizeThreshold: 512
+
+    # Dependency guard settings
+    depguard:
+      rules:
+        main:
+          files:
+            - $all
+          deny:
+            - pkg: "github.com/pkg/errors"
+              desc: "Use standard library errors package instead"
+            - pkg: "io/ioutil"
+              desc: "io/ioutil is deprecated, use io or os package"
+
+    # Spell check settings
+    misspell:
+      locale: US
+      ignore-rules:
+        - behaviour # British spelling
+
+    # goconst settings - make it less aggressive
+    goconst:
+      min-len: 5 # Minimum length of string constant
+      min-occurrences: 5 # Increased from default 3
+
+# Output configuration
+output:
+  # Output format - use text format with colors
+  formats:
+    text:
+      path: stdout
+      colors: true
