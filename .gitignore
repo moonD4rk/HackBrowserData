@@ -208,3 +208,6 @@ hack-browser-data
 !.github/*.yml
 !log/
 examples/*.go
+
+# Document
+!rfc/*.md
