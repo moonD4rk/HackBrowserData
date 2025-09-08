@@ -3,11 +3,11 @@
 **Author**: moonD4rk  
 **Status**: In Discussion  
 **Created**: 2025-09-07  
-**Updated**: 2025-09-07  
+**Updated**: 2025-09-08  
 
 ## Abstract
 
-This RFC documents discussions regarding API design, naming conventions, and architectural decisions during the HackBrowserData project refactoring. The document is divided into three parts: existing code analysis, confirmed directions, and issues under discussion.
+This RFC documents discussions regarding API design, naming conventions, and architectural decisions during the HackBrowserData project refactoring. The document includes existing code analysis, confirmed architectural designs, and remaining issues under discussion.
 
 ## Part 1: Existing Code Analysis
 
@@ -190,9 +190,259 @@ result, err := client.Extract()
 4. **No Backward Compatibility**: New version can be completely redesigned
 5. **Performance Not Critical**: Prioritize code clarity and testability
 
-## Part 3: Issues Under Discussion
+## Part 3: Confirmed Architectural Design
 
-### 3.1 Type Naming (Core Issue)
+### 3.1 Browser-Profile Relationship Model
+
+After extensive discussion, the following relationship model has been established:
+
+#### Core Relationship
+- **Browser is the main entity**: Manages key strategy and profile discovery
+- **Profile is subordinate**: Only responsible for data location, not key management
+- **Key Management**: Handled at Browser level for Chromium, Profile level for Firefox
+
+#### Layered Architecture
+```
+Scanner Layer (CLI only)
+    ↓
+Browser Layer (Key Management)
+    ↓
+Profile Layer (Data Location)
+    ↓
+Data Layer (Actual Files)
+```
+
+### 3.2 Usage Modes: API vs CLI
+
+The system supports two distinct usage modes with different entry points:
+
+#### API Mode (Programmatic Usage)
+```go
+// User specifies browser directly
+client := hbd.New(
+    hbd.WithBrowser(hbd.Chrome),
+    hbd.WithItems(hbd.Password, hbd.Cookie),
+)
+data, err := client.Extract()
+```
+
+**Flow**:
+1. Create specified Browser instance directly
+2. Browser initializes (gets MasterKey for Chromium)
+3. Browser scans its own Profiles
+4. Process each Profile with cached key
+
+#### CLI Mode (System Scanning)
+```bash
+# Automatically discover all browsers
+./hackbrowserdata --all
+```
+
+**Flow**:
+1. BrowserScanner scans system
+2. Check predefined paths for each browser type
+3. Create Browser instances for found browsers
+4. Each Browser processes its Profiles
+
+#### Scanner Layer (CLI Only)
+```go
+type BrowserScanner struct {
+    // Scanning strategy
+}
+
+func (s *BrowserScanner) ScanSystem() ([]Browser, error) {
+    var browsers []Browser
+    
+    // Check all known browser paths
+    for browserType, defaultPath := range DefaultPaths {
+        if pathExists(defaultPath) {
+            browser := createBrowser(browserType, defaultPath)
+            browsers = append(browsers, browser)
+        }
+    }
+    
+    return browsers, nil
+}
+```
+
+### 3.3 Platform-Specific Path Handling
+
+Using Go build tags to handle platform differences:
+
+```go
+// browser_paths_darwin.go
+// +build darwin
+
+var DefaultPaths = map[BrowserType]string{
+    Chrome:  "~/Library/Application Support/Google/Chrome",
+    Firefox: "~/Library/Application Support/Firefox/Profiles",
+    Edge:    "~/Library/Application Support/Microsoft Edge",
+}
+```
+
+```go
+// browser_paths_windows.go
+// +build windows
+
+var DefaultPaths = map[BrowserType]string{
+    Chrome:  "%LOCALAPPDATA%/Google/Chrome/User Data",
+    Firefox: "%APPDATA%/Mozilla/Firefox/Profiles",
+    Edge:    "%LOCALAPPDATA%/Microsoft/Edge/User Data",
+}
+```
+
+```go
+// browser_paths_linux.go
+// +build linux
+
+var DefaultPaths = map[BrowserType]string{
+    Chrome:  "~/.config/google-chrome",
+    Firefox: "~/.mozilla/firefox",
+    Edge:    "~/.config/microsoft-edge",
+}
+```
+
+### 3.4 Key Management Architecture
+
+#### Chromium Key Management Flow
+
+```
+Browser Initialization:
+├── Create ChromiumKeyManager
+├── Read Local State file
+├── Extract encrypted_key field
+├── Platform-specific decryption:
+│   ├── Windows: CryptUnprotectData()
+│   ├── macOS: security command + PBKDF2(password, "saltysalt", 1003)
+│   └── Linux: SecretService + PBKDF2(password, "saltysalt", 1)
+└── Cache MasterKey (16 bytes)
+
+Profile Processing:
+├── Scan all Profile directories
+├── For each Profile:
+│   ├── Read data files (Cookies, Login Data)
+│   └── Use cached MasterKey for decryption
+└── Return results
+```
+
+**Key Points**:
+- MasterKey obtained once at Browser level
+- All Profiles share the same MasterKey
+- Key is cached for entire extraction process
+
+#### Firefox Key Management Flow
+
+```
+Browser Initialization:
+├── Create FirefoxBrowser
+└── No key retrieval (delayed to Profile processing)
+
+Profile Processing:
+├── Scan all Profile directories
+├── For each Profile:
+│   ├── Create Profile-specific FirefoxKeyManager
+│   ├── Read key4.db
+│   ├── Query: SELECT item1, item2 FROM metadata WHERE id = 'password'
+│   ├── NSS decryption to get MasterKey
+│   ├── Read data files (logins.json, cookies.sqlite)
+│   ├── Use Profile's MasterKey for decryption
+│   └── Clean up Profile's key
+└── Return results
+```
+
+**Key Points**:
+- Each Profile has independent key4.db
+- MasterKey obtained per Profile
+- Keys are Profile-specific and isolated
+
+### 3.5 Interface Design
+
+Based on the architectural decisions, the following interfaces have been designed:
+
+```go
+// Browser is the main entity
+type Browser interface {
+    Type() BrowserType                       // Chrome, Firefox, Edge
+    Name() string                            // "Google Chrome", "Firefox"
+    RootPath() string                        // Browser data root directory
+    Profiles() ([]Profile, error)           // Get all profiles
+    ProcessProfile(p Profile) (*Data, error) // Process single profile
+}
+
+// Profile only handles data location
+type Profile interface {
+    Name() string                    // "Default", "Profile 1"
+    Path() string                    // Full profile path
+    DataFiles() map[Item]string     // Data file mapping
+}
+
+// KeyManager handles platform-specific key operations
+type KeyManager interface {
+    FetchRawKey() ([]byte, error)      // Get encrypted key
+    DecryptKey(raw []byte) ([]byte, error) // Decrypt to MasterKey
+    GetMasterKey() ([]byte, error)     // Combined operation
+}
+
+// BrowserScanner for CLI mode
+type BrowserScanner interface {
+    ScanSystem() ([]Browser, error)
+    FindByType(t BrowserType) ([]Browser, error)
+    IdentifyBrowser(path string) (BrowserType, error)
+}
+```
+
+### 3.6 Implementation Examples
+
+#### Chromium Implementation
+```go
+type ChromiumBrowser struct {
+    browserType BrowserType
+    rootPath    string
+    keyManager  *ChromiumKeyManager  // Browser-level key management
+}
+
+func (b *ChromiumBrowser) ProcessProfile(profile Profile) (*ProfileData, error) {
+    // 1. Get shared MasterKey (cached)
+    masterKey, err := b.keyManager.GetMasterKey()
+    
+    // 2. Read Profile data files
+    files := profile.DataFiles()
+    
+    // 3. Decrypt using MasterKey
+    data := DecryptData(files, masterKey)
+    
+    return data, nil
+}
+```
+
+#### Firefox Implementation
+```go
+type FirefoxBrowser struct {
+    browserType BrowserType
+    rootPath    string
+    // No Browser-level key management
+}
+
+func (b *FirefoxBrowser) ProcessProfile(profile Profile) (*ProfileData, error) {
+    // 1. Create Profile-specific key manager
+    keyManager := NewFirefoxKeyManager(profile.Path())
+    
+    // 2. Get Profile's MasterKey
+    masterKey, err := keyManager.GetMasterKey()
+    
+    // 3. Read Profile data files
+    files := profile.DataFiles()
+    
+    // 4. Decrypt using MasterKey
+    data := DecryptData(files, masterKey)
+    
+    return data, nil
+}
+```
+
+## Part 4: Issues Still Under Discussion
+
+### 4.1 Type Naming (Core Issue)
 
 Naming system to be determined:
 
@@ -238,7 +488,7 @@ const (
 )
 ```
 
-### 3.2 Data Flow Stage Naming
+### 4.2 Data Flow Stage Naming
 
 Naming for data at different stages is undecided:
 
@@ -251,30 +501,7 @@ Possible naming chains:
 3. Source → Encrypted → Plain → Structured → Result
 ```
 
-### 3.3 Profile Concept Unification
-
-**Biggest Challenge**: Chrome and Firefox have completely different Profile concepts
-
-Chrome Profile characteristics:
-- Subdirectory under User Data
-- All profiles share one MasterKey
-- Profile only for data isolation
-
-Firefox Profile characteristics:
-- Completely independent instance
-- Each profile has its own key4.db
-- Complete isolation between profiles
-
-**Design proposals under discussion**:
-```go
-// How to unify the abstraction?
-type Profile struct {
-    // What fields to include?
-    // How to express shared keys vs independent keys?
-}
-```
-
-### 3.4 Key Management Hierarchy Naming
+### 4.3 Key Management Hierarchy Naming
 
 Key-related concept naming:
 ```
@@ -286,46 +513,16 @@ Possible naming:
 - DecryptionKey / FinalKey / ActiveKey
 ```
 
-### 3.5 Internal Interface Design
+## Part 5: Implementation Challenges
 
-Interfaces and method naming to be determined:
-
-```go
-// Interface naming and responsibility division
-type ??? interface {
-    // Browser discovery
-}
-
-type ??? interface {
-    // Key management
-}
-
-type ??? interface {
-    // Data extraction
-}
-
-type ??? interface {
-    // Decryption processing
-}
-```
-
-## Part 4: Implementation Challenges
-
-### 4.1 Profile Abstraction Unification (Most Difficult)
-
-The fundamental differences between Chrome and Firefox make unified abstraction difficult, affecting:
-- Key management strategy
-- Data extraction flow
-- Result organization
-
-### 4.2 Cross-platform Code Organization
+### 5.1 Cross-platform Code Organization
 
 Using build tags to organize platform-specific code:
 - How to name platform-specific functions?
 - Where to place common code?
 - How to handle platform-specific errors?
 
-### 4.3 Error Handling Consistency
+### 5.2 Error Handling Consistency
 
 Current error handling is inconsistent:
 - Chrome decryption failure attempts fallback
@@ -334,10 +531,10 @@ Current error handling is inconsistent:
 
 ## Next Steps
 
-1. **Priority: Solve Profile abstraction** - Foundation for all other design
-2. **Determine type naming scheme** - Browser, Item, and other basic types
-3. **Determine data flow naming** - Names for each stage of data
-4. **Design internal interfaces** - Based on previous decisions
+1. **Determine type naming scheme** - Browser, Item, and other basic types
+2. **Determine data flow naming** - Names for each stage of data
+3. **Refine interface details** - Based on confirmed architecture
+4. **Begin implementation** - Start with core interfaces and Browser abstraction
 
 ## References
 
