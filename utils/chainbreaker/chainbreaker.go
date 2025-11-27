@@ -89,7 +89,6 @@ type dbBlob struct {
 
 type keyBlobRecordHeader struct {
 	RecordSize  uint32
-	RecordCount uint32
 }
 
 type keyBlob struct {
@@ -375,7 +374,7 @@ func (kc *Keychain) getKeyblobRecord(recordOffset uint32) ([]byte, []byte, []byt
 	}
 	hdr := keyBlobRecordHeader{}
 	hdr.RecordSize = binary.BigEndian.Uint32(kc.buf[base : base+4])
-	hdr.RecordCount = binary.BigEndian.Uint32(kc.buf[base+4 : base+8])
+	_ = binary.BigEndian.Uint32(kc.buf[base+4 : base+8]) // Skip RecordCount
 
 	recordStart := base + keyBlobRecordHeaderSize
 	recordEnd := base + int(hdr.RecordSize)

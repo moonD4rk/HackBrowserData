@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-func TestUnlock(t *testing.T) {
-	keychain, err := New("./testdata/test.keychain-db", "xxx")
+func TestUnlockKeychain(t *testing.T) {
+	keychain, err := New("./testdata/test.keychain-db", "6d43376c0d257bbaca2c41eded65b3b34a1a96bd19979bde")
 	if err != nil {
 		t.Fatalf("Failed to unlock keychain: %v", err)
 	}
