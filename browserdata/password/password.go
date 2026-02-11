@@ -228,7 +228,11 @@ func getFirefoxLoginData() ([]loginData, error) {
 				user []byte
 				pass []byte
 			)
+			// Use formSubmitURL if available, otherwise fallback to hostname
 			m.LoginURL = v.Get("formSubmitURL").String()
+			if m.LoginURL == "" {
+				m.LoginURL = v.Get("hostname").String()
+			}
 			user, err = base64.StdEncoding.DecodeString(v.Get("encryptedUsername").String())
 			if err != nil {
 				return nil, err

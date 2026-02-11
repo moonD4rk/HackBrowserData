@@ -117,7 +117,8 @@ func queryMetaData(db *sql.DB) ([]byte, []byte, error) {
 }
 
 func queryNssPrivate(db *sql.DB) ([]byte, []byte, error) {
-	const query = `SELECT a11, a102 from nssPrivate`
+	// To ensure compatibility with newer profiles, always select the newest key.
+	const query = `SELECT a11, a102 from nssPrivate ORDER BY id DESC LIMIT 1`
 	var nssA11, nssA102 []byte
 	if err := db.QueryRow(query).Scan(&nssA11, &nssA102); err != nil {
 		return nil, nil, err
@@ -160,7 +161,11 @@ func processMasterKey(metaItem1, metaItem2, nssA11, nssA102 []byte) ([]byte, err
 	if len(finallyKey) < 24 {
 		return nil, errors.New("length of final key is less than 24 bytes")
 	}
-	return finallyKey[:24], nil
+	// Historically, the derived PBE key was truncated to 24 bytes for 3DES usage.
+	// Starting from Firefox 144+, NSS switches to AES-256-CBC without changing
+	// the underlying key derivation logic. The full derived key must be preserved
+	// to support modern cipher suites.
+	return finallyKey, nil
 }
 
 func (f *Firefox) Name() string {
