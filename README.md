@@ -10,6 +10,19 @@
 
 > Disclaimer: This tool is only intended for security research. Users are responsible for all legal and related liabilities resulting from the use of this tool. The original author does not assume any legal responsibility.
 
+## Recent Updates
+
+### Firefox 144+ Support
+
+HackBrowserData now supports decryption of saved passwords in Firefox 144 and later versions.
+
+Starting from Firefox 144, Mozilla migrated password encryption from 3DES to AES-256-CBC to enhance security. HackBrowserData has been updated accordingly and remains fully compatible with the latest Firefox encryption scheme.
+
+For more details:
+- [Firefox 144.0 Release Notes](https://www.firefox.com/en-US/firefox/144.0/releasenotes/)
+- [How Firefox securely saves passwords](https://support.mozilla.org/en-US/kb/how-firefox-securely-saves-passwords)
+
+
 ## Supported Browser
 
 ### Windows

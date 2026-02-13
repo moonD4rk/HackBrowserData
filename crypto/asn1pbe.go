@@ -179,12 +179,37 @@ type loginPBE struct {
 
 func (l loginPBE) Decrypt(globalSalt []byte) ([]byte, error) {
 	key, iv := l.deriveKeyAndIV(globalSalt)
-	return DES3Decrypt(key, iv, l.Encrypted)
+	// The encryption algorithm can be reliably inferred from IV length:
+	// - 8 bytes  : 3DES-CBC (legacy Firefox versions)
+	// - 16 bytes : AES-CBC (Firefox 144+)
+	if len(iv) == 8 {
+		// Use 3DES for old Firefox versions
+		return DES3Decrypt(key[:24], iv, l.Encrypted)
+	} else if len(iv) == 16 {
+		// Firefox 144+ uses 32-byte keys (AES-256-CBC)
+		// Note: AES128CBCDecrypt is a misnomer - it actually supports all AES key lengths
+		return AES128CBCDecrypt(key, iv, l.Encrypted)
+	}
+
+	return nil, errors.New("unsupported IV length for loginPBE decryption")
 }
 
 func (l loginPBE) Encrypt(globalSalt, plaintext []byte) ([]byte, error) {
 	key, iv := l.deriveKeyAndIV(globalSalt)
-	return DES3Encrypt(key, iv, plaintext)
+	// The encryption algorithm can be reliably inferred from IV length:
+	// - 8 bytes  : 3DES-CBC (legacy Firefox versions)
+	// - 16 bytes : AES-CBC (Firefox 144+)
+	// This avoids relying on NSS-specific OIDs, which have changed historically.
+	if len(iv) == 8 {
+		// Use 3DES for old Firefox versions
+		return DES3Encrypt(key[:24], iv, plaintext)
+	} else if len(iv) == 16 {
+		// Firefox 144+ uses 32-byte keys (AES-256-CBC)
+		// Note: AES128CBCDecrypt is a misnomer - it actually supports all AES key lengths
+		return AES128CBCEncrypt(key, iv, plaintext)
+	}
+
+	return nil, errors.New("unsupported IV length for loginPBE encryption")
 }
 
 func (l loginPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
