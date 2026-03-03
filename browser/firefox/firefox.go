@@ -3,6 +3,7 @@ package firefox
 import (
 	"bytes"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -17,6 +18,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
+	"github.com/tidwall/gjson"
 )
 
 type Firefox struct {
@@ -99,12 +101,41 @@ func (f *Firefox) GetMasterKey() ([]byte, error) {
 		return nil, fmt.Errorf("query metadata error: %w", err)
 	}
 
-	nssA11, nssA102, err := queryNssPrivate(keyDB)
+	candidates, err := queryNssPrivateCandidates(keyDB)
 	if err != nil {
 		return nil, fmt.Errorf("query NSS private error: %w", err)
 	}
+	loginCipherPairs, _ := getFirefoxLoginCipherPairs()
 
-	return processMasterKey(metaItem1, metaItem2, nssA11, nssA102)
+	var (
+		fallbackKey []byte
+		lastErr     error
+	)
+	for _, c := range candidates {
+		masterKey, err := processMasterKey(metaItem1, metaItem2, c.a11, c.a102)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if fallbackKey == nil {
+			fallbackKey = masterKey
+		}
+
+		if len(loginCipherPairs) == 0 {
+			return masterKey, nil
+		}
+		if canDecryptAnyLoginCipherPair(masterKey, loginCipherPairs) {
+			return masterKey, nil
+		}
+	}
+
+	if fallbackKey != nil {
+		return fallbackKey, nil
+	}
+	if lastErr != nil {
+		return nil, lastErr
+	}
+	return nil, errors.New("no valid firefox master key found in nssPrivate")
 }
 
 func queryMetaData(db *sql.DB) ([]byte, []byte, error) {
@@ -116,14 +147,98 @@ func queryMetaData(db *sql.DB) ([]byte, []byte, error) {
 	return metaItem1, metaItem2, nil
 }
 
+type nssPrivateCandidate struct {
+	a11  []byte
+	a102 []byte
+}
+
+func queryNssPrivateCandidates(db *sql.DB) ([]nssPrivateCandidate, error) {
+	const query = `SELECT a11, a102 FROM nssPrivate`
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var candidates []nssPrivateCandidate
+	for rows.Next() {
+		var c nssPrivateCandidate
+		if err := rows.Scan(&c.a11, &c.a102); err != nil {
+			return nil, err
+		}
+		candidates = append(candidates, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(candidates) == 0 {
+		return nil, errors.New("nssPrivate is empty")
+	}
+	return candidates, nil
+}
+
 func queryNssPrivate(db *sql.DB) ([]byte, []byte, error) {
-	// To ensure compatibility with newer profiles, always select the newest key.
-	const query = `SELECT a11, a102 from nssPrivate ORDER BY id DESC LIMIT 1`
-	var nssA11, nssA102 []byte
-	if err := db.QueryRow(query).Scan(&nssA11, &nssA102); err != nil {
+	// Keep this helper for backward compatibility in tests.
+	candidates, err := queryNssPrivateCandidates(db)
+	if err != nil {
 		return nil, nil, err
 	}
-	return nssA11, nssA102, nil
+	return candidates[0].a11, candidates[0].a102, nil
+}
+
+type loginCipherPair struct {
+	username []byte
+	password []byte
+}
+
+func getFirefoxLoginCipherPairs() ([]loginCipherPair, error) {
+	raw, err := os.ReadFile(types.FirefoxPassword.TempFilename())
+	if err != nil {
+		return nil, err
+	}
+	arr := gjson.GetBytes(raw, "logins").Array()
+	pairs := make([]loginCipherPair, 0, len(arr))
+	for _, v := range arr {
+		uEnc := v.Get("encryptedUsername").String()
+		pEnc := v.Get("encryptedPassword").String()
+		if uEnc == "" || pEnc == "" {
+			continue
+		}
+		uRaw, err := base64.StdEncoding.DecodeString(uEnc)
+		if err != nil {
+			continue
+		}
+		pRaw, err := base64.StdEncoding.DecodeString(pEnc)
+		if err != nil {
+			continue
+		}
+		pairs = append(pairs, loginCipherPair{username: uRaw, password: pRaw})
+		if len(pairs) >= 5 {
+			break
+		}
+	}
+	return pairs, nil
+}
+
+func canDecryptAnyLoginCipherPair(masterKey []byte, pairs []loginCipherPair) bool {
+	for _, pair := range pairs {
+		uPBE, err := crypto.NewASN1PBE(pair.username)
+		if err != nil {
+			continue
+		}
+		if _, err := uPBE.Decrypt(masterKey); err != nil {
+			continue
+		}
+
+		pPBE, err := crypto.NewASN1PBE(pair.password)
+		if err != nil {
+			continue
+		}
+		if _, err := pPBE.Decrypt(masterKey); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 // processMasterKey process master key of Firefox.
