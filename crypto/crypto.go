@@ -143,6 +143,14 @@ func pkcs5UnPadding(src []byte) ([]byte, error) {
 	if padding < 1 || padding > aes.BlockSize {
 		return nil, errors.New("pkcs5UnPadding: invalid padding size")
 	}
+	if padding > length {
+		return nil, errors.New("pkcs5UnPadding: invalid padding length")
+	}
+	for _, b := range src[length-padding:] {
+		if int(b) != padding {
+			return nil, errors.New("pkcs5UnPadding: invalid padding content")
+		}
+	}
 	return src[:length-padding], nil
 }
 

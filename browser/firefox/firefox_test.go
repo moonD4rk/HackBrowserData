@@ -29,7 +29,7 @@ func TestQueryNssPrivate(t *testing.T) {
 
 	rows := sqlmock.NewRows([]string{"a11", "a102"}).
 		AddRow([]byte("nssA11"), []byte("nssA102"))
-	mock.ExpectQuery("SELECT a11, a102 from nssPrivate").WillReturnRows(rows)
+	mock.ExpectQuery("SELECT a11, a102 FROM nssPrivate").WillReturnRows(rows)
 
 	nssA11, nssA102, err := queryNssPrivate(db)
 	assert.NoError(t, err)
