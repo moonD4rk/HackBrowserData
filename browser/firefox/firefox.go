@@ -10,8 +10,6 @@ import (
 	"os"
 	"path/filepath"
 
-	_ "modernc.org/sqlite" // sqlite3 driver TODO: replace with chooseable driver
-
 	"github.com/moond4rk/hackbrowserdata/browserdata"
 	"github.com/moond4rk/hackbrowserdata/crypto"
 	"github.com/moond4rk/hackbrowserdata/log"
@@ -19,6 +17,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 	"github.com/tidwall/gjson"
+	_ "modernc.org/sqlite" // sqlite3 driver TODO: replace with chooseable driver
 )
 
 type Firefox struct {
