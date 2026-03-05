@@ -121,14 +121,15 @@ func (f *FirefoxBookmark) Extract(_ []byte) error {
 	for rows.Next() {
 		var (
 			id, bt, dateAdded int64
-			title, url        string
+			url               string
+			title             sql.NullString
 		)
 		if err = rows.Scan(&id, &url, &bt, &dateAdded, &title); err != nil {
 			log.Debugf("scan bookmark error: %v", err)
 		}
 		*f = append(*f, bookmark{
 			ID:        id,
-			Name:      title,
+			Name:      title.String,
 			Type:      linkType(bt),
 			URL:       url,
 			DateAdded: typeutil.TimeStamp(dateAdded / 1000000),
