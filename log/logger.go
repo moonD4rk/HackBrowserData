@@ -136,7 +136,7 @@ func (l *baseLogger) prefixPrint(prefix string, args ...any) {
 }
 
 func (l *baseLogger) getCallDepth() int {
-	var defaultCallDepth = 2
+	defaultCallDepth := 2
 	pcs := make([]uintptr, 10)
 	n := runtime.Callers(defaultCallDepth, pcs)
 	frames := runtime.CallersFrames(pcs[:n])

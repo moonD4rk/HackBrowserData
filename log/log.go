@@ -4,10 +4,8 @@ import (
 	"github.com/moond4rk/hackbrowserdata/log/level"
 )
 
-var (
-	// defaultLogger is the default logger used by the package-level functions.
-	defaultLogger = NewLogger(nil)
-)
+// defaultLogger is the default logger used by the package-level functions.
+var defaultLogger = NewLogger(nil)
 
 func SetVerbose() {
 	defaultLogger.SetLevel(level.DebugLevel)

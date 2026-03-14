@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 
@@ -30,7 +31,7 @@ func TestDataType_TempFilename(t *testing.T) {
 	}{
 		{ChromiumKey, "Local State"},
 		{ChromiumPassword, "Login Data"},
-		{ChromiumLocalStorage, "Local Storage/leveldb"},
+		{ChromiumLocalStorage, filepath.Join("Local Storage", "leveldb")},
 		{FirefoxSessionStorage, "unsupported item"},
 		{FirefoxLocalStorage, "webappsstore.sqlite"},
 		{YandexPassword, "Ya Passman Data"},

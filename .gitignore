@@ -208,3 +208,4 @@ hack-browser-data
 !.github/*.yml
 !log/
 examples/*.go
+profile/**/*.go
