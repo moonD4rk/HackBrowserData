@@ -3,20 +3,21 @@
 **Author**: moonD4rk
 **Status**: Proposed
 **Created**: 2025-09-01
-**Updated**: 2026-03-15
+**Updated**: 2026-03-16
 
 ## Abstract
 
-This RFC addresses the overall architecture of HackBrowserData, focusing on areas NOT covered by RFC-002:
+This RFC addresses the overall architecture of HackBrowserData:
 
-1. **Crypto layer**: cipher version detection, cross-platform algorithm differences, master key retrieval abstraction
-2. **Browser registration & discovery**: declarative config, direct profile scanning
-3. **CLI / library separation**: top-level `Run()` API
-4. **Error handling**: structured errors with context
+1. **Data model redesign**: `Category` enum + browser-agnostic `*Entry` structs
+2. **Crypto layer**: cipher version detection, master key retrieval abstraction
+3. **Browser registration & discovery**: declarative config, direct profile scanning
+4. **Yandex variant handling**: source overrides + query overrides
+5. **Error handling**: collect-and-continue pattern
 
 **Constraint**: Go 1.20 (Windows 7 support).
 
-See RFC-002 for data extraction layer and file acquisition layer details.
+See RFC-002 for file acquisition, extract method details, and output.
 
 ---
 
@@ -24,83 +25,94 @@ See RFC-002 for data extraction layer and file acquisition layer details.
 
 ```
 hackbrowserdata/
-├── hackbrowserdata.go              # top-level library API: Run(), Option, Result
-├── errors.go                       # structured ExtractionError type and sentinels
-│
 ├── cmd/
 │   └── hack-browser-data/
-│       └── main.go                 # CLI entry point (thin shell over library API)
+│       └── main.go                    # CLI: flag parsing → PickBrowsers → BrowsingData → Output
 │
 ├── browser/
-│   ├── browser.go                  # Browser interface, BrowserConfig, PickBrowsers()
-│   ├── browser_darwin.go           # platformBrowsers() -> []BrowserConfig
-│   ├── browser_windows.go          # platformBrowsers() -> []BrowserConfig
-│   ├── browser_linux.go            # platformBrowsers() -> []BrowserConfig
+│   ├── browser.go                     # Browser interface, BrowserKind, BrowserConfig, PickBrowsers()
+│   ├── browser_darwin.go              # platformBrowsers() → []BrowserConfig
+│   ├── browser_windows.go             # platformBrowsers() → []BrowserConfig
+│   ├── browser_linux.go               # platformBrowsers() → []BrowserConfig
 │   │
 │   ├── chromium/
-│   │   ├── chromium.go             # Chromium struct, BrowsingData(), profile discovery
-│   │   ├── chromium_darwin.go      # GetMasterKey() delegates to keyretriever
-│   │   ├── chromium_windows.go     # GetMasterKey() delegates to keyretriever
-│   │   ├── chromium_linux.go       # GetMasterKey() delegates to keyretriever
-│   │   └── source.go              # chromiumSources: Category -> file paths mapping
+│   │   ├── chromium.go                # Chromium struct, BrowsingData()
+│   │   ├── chromium_darwin.go         # GetMasterKey() → delegates to keyretriever
+│   │   ├── chromium_windows.go        # GetMasterKey() → delegates to keyretriever
+│   │   ├── chromium_linux.go          # GetMasterKey() → delegates to keyretriever
+│   │   ├── source.go                  # chromiumSources, yandexSources maps
+│   │   ├── extract_password.go        # extractPasswords() + default SQL query
+│   │   ├── extract_cookie.go          # extractCookies() + default SQL query
+│   │   ├── extract_history.go         # extractHistories() + default SQL query
+│   │   ├── extract_download.go        # extractDownloads() + default SQL query
+│   │   ├── extract_bookmark.go        # extractBookmarks() (JSON)
+│   │   ├── extract_creditcard.go      # extractCreditCards() + default SQL query
+│   │   ├── extract_extension.go       # extractExtensions() (JSON)
+│   │   └── extract_storage.go         # extractLocalStorage(), extractSessionStorage() (LevelDB)
 │   │
 │   ├── firefox/
-│   │   ├── firefox.go              # Firefox struct, BrowsingData(), profile discovery
+│   │   ├── firefox.go                 # Firefox struct, BrowsingData(), deriveMasterKey()
 │   │   ├── firefox_test.go
-│   │   └── source.go              # firefoxSources: Category -> file paths mapping
+│   │   ├── source.go                  # firefoxSources map
+│   │   ├── extract_password.go        # extractPasswords() (JSON + ASN1PBE)
+│   │   ├── extract_cookie.go          # extractCookies() (SQLite, no encryption)
+│   │   ├── extract_history.go         # extractHistories() (SQLite)
+│   │   ├── extract_download.go        # extractDownloads() (SQLite)
+│   │   ├── extract_bookmark.go        # extractBookmarks() (SQLite)
+│   │   ├── extract_extension.go       # extractExtensions() (JSON)
+│   │   └── extract_storage.go         # extractLocalStorage() (SQLite)
 │   │
 │   └── exploit/
 │       └── gcoredump/
-│           └── gcoredump.go        # CVE-2025-24204 macOS exploit (darwin only)
+│           └── gcoredump.go           # CVE-2025-24204 macOS exploit (darwin only)
 │
 ├── browserdata/
-│   ├── browserdata.go              # BrowserData container struct, Output()
-│   ├── outputter.go                # CSV/JSON output writer
-│   ├── outputter_test.go
+│   ├── browserdata.go                 # BrowserData struct (typed slices)
+│   ├── output.go                      # BrowserData.Output() — CSV/JSON writer
+│   ├── output_test.go
 │   │
-│   └── datautil/                   # shared helpers for extract methods
-│       ├── sqlite.go              # QuerySQLite() helper
-│       └── decrypt.go             # DecryptChromiumValue() helper
+│   └── datautil/
+│       ├── sqlite.go                  # QuerySQLite() helper
+│       └── decrypt.go                 # DecryptChromiumValue() helper
 │
 ├── crypto/
-│   ├── crypto.go                   # AESCBCDecrypt (renamed), AESGCMDecrypt, DES3, PKCS5
-│   ├── crypto_darwin.go            # DecryptWithChromium (CBC), DecryptWithDPAPI (stub)
-│   ├── crypto_windows.go           # DecryptWithChromium (GCM), DecryptWithDPAPI
-│   ├── crypto_linux.go             # DecryptWithChromium (CBC), DecryptWithDPAPI (stub)
+│   ├── crypto.go                      # AESCBCDecrypt, AESGCMDecrypt, DES3, PKCS5
+│   ├── crypto_darwin.go               # DecryptWithChromium (CBC), DecryptWithDPAPI (returns error)
+│   ├── crypto_windows.go              # DecryptWithChromium (GCM), DecryptWithDPAPI
+│   ├── crypto_linux.go                # DecryptWithChromium (CBC), DecryptWithDPAPI (returns error)
 │   ├── crypto_test.go
-│   ├── version.go                  # DetectVersion(), StripPrefix(), CipherVersion type
-│   ├── asn1pbe.go                  # Firefox ASN.1 PBE key derivation
+│   ├── version.go                     # DetectVersion(), StripPrefix(), CipherVersion
+│   ├── asn1pbe.go                     # Firefox ASN.1 PBE key derivation
 │   ├── asn1pbe_test.go
-│   ├── pbkdf2.go                   # PBKDF2Key wrapper
+│   ├── pbkdf2.go
 │   │
-│   └── keyretriever/              # master key retrieval abstraction
-│       ├── keyretriever.go         # KeyRetriever interface, ChainRetriever
-│       ├── keyretriever_darwin.go  # GcoredumpRetriever, SecurityCmdRetriever
-│       ├── keyretriever_windows.go # DPAPIRetriever
-│       ├── keyretriever_linux.go   # DBusRetriever, FallbackRetriever
-│       └── params.go              # PBKDF2Params constants (saltysalt, iterations, etc.)
+│   └── keyretriever/
+│       ├── keyretriever.go            # KeyRetriever interface, ChainRetriever
+│       ├── keyretriever_darwin.go     # GcoredumpRetriever, SecurityCmdRetriever
+│       ├── keyretriever_windows.go    # DPAPIRetriever
+│       ├── keyretriever_linux.go      # DBusRetriever, FallbackRetriever
+│       └── params.go                  # PBKDF2Params (saltysalt, iterations)
 │
 ├── filemanager/
-│   ├── session.go                  # Session: MkdirTemp, TempDir(), Acquire(), Cleanup()
-│   └── acquirer.go                 # Acquirer interface, CopyAcquirer (with WAL/SHM)
+│   └── session.go                     # Session: MkdirTemp, TempDir(), Acquire(), Cleanup()
 │
 ├── types/
-│   ├── category.go                 # Category enum: Password, Cookie, History, ...
-│   ├── models.go                   # Data models: LoginEntry, CookieEntry, ...
+│   ├── category.go                    # Category enum (9 values)
+│   ├── models.go                      # LoginEntry, CookieEntry, ... (browser-agnostic)
 │   └── types_test.go
 │
 ├── log/
-│   ├── log.go                      # global logger instance
-│   ├── logger.go                   # Logger implementation
+│   ├── log.go
+│   ├── logger.go
 │   ├── logger_test.go
 │   └── level/
-│       └── level.go                # log level type
+│       └── level.go
 │
 └── utils/
     ├── byteutil/
     │   └── byteutil.go
     ├── fileutil/
-    │   ├── fileutil.go             # renamed from filetutil.go (typo fix)
+    │   ├── fileutil.go                # renamed from filetutil.go
     │   └── fileutil_test.go
     ├── typeutil/
     │   ├── typeutil.go
@@ -114,18 +126,20 @@ hackbrowserdata/
 
 | Change | Current | Target |
 |--------|---------|--------|
-| **New** root-level API | — | `hackbrowserdata.go`, `errors.go` |
-| **New** datautil helpers | — | `browserdata/datautil/` |
-| **New** file manager | — | `filemanager/` |
-| **New** key retriever | — | `crypto/keyretriever/` |
-| **New** cipher version | — | `crypto/version.go` |
-| **Restructured** types | `types/types.go` (22 DataType constants + file mappings) | `types/category.go` (9 Category constants) + `types/models.go` (data structs) |
-| **Deleted** | `extractor/` package (interface + registry + factory) | no longer needed |
-| **Deleted** | `browserdata/imports.go` | no longer needed |
-| **Deleted** | `browserdata/localstorage/` + `browserdata/sessionstorage/` | merged into chromium/firefox extract methods |
-| **Deleted** | `browser/consts.go` (27 constants) | inlined into `browser_*.go` configs |
-| **Renamed** | `utils/fileutil/filetutil.go` (typo) | `utils/fileutil/fileutil.go` |
-| **Renamed** | `AES128CBCDecrypt` | `AESCBCDecrypt` |
+| **New** `browserdata/datautil/` | — | SQLite + decrypt helpers |
+| **New** `filemanager/` | — | Session-based temp file management |
+| **New** `crypto/keyretriever/` | — | Master key retrieval abstraction |
+| **New** `crypto/version.go` | — | Cipher version detection |
+| **New** `browser/chromium/extract_*.go` | — | Per-category extract methods |
+| **New** `browser/firefox/extract_*.go` | — | Per-category extract methods |
+| **New** `browser/*/source.go` | — | File source mapping per engine |
+| **Restructured** `types/` | 22 DataType constants + file mappings | 9 Category constants + data model structs |
+| **Deleted** `extractor/` | interface + registry + factory | not needed |
+| **Deleted** `browserdata/imports.go` | init() side-effect registration | not needed |
+| **Deleted** `browserdata/password/`, `cookie/`, etc. | 9 sub-packages | extract logic moved into browser engines |
+| **Deleted** `browser/consts.go` | 27 scattered constants | inlined into BrowserConfig |
+| **Renamed** `filetutil.go` | typo | `fileutil.go` |
+| **Renamed** `AES128CBCDecrypt` | misleading name | `AESCBCDecrypt` |
 
 ### Naming conventions
 
@@ -133,27 +147,16 @@ hackbrowserdata/
 |---------|---------|-----------|------|
 | Data category | `types` | `Category` (int enum) | `category.go` |
 | Data models | `types` | `LoginEntry`, `CookieEntry`, ... | `models.go` |
-| Result container | `browserdata` | `BrowserData` (struct with typed slices) | `browserdata.go` |
+| Result container | `browserdata` | `BrowserData` | `browserdata.go` |
 | Browser config | `browser` | `BrowserConfig` | `browser.go` |
 | Browser engine kind | `browser` | `BrowserKind` | `browser.go` |
-| File source mapping | `chromium`/`firefox` | `source` (struct), `chromiumSources` (map) | `source.go` |
+| File source mapping | `chromium`/`firefox` | `source` struct, `chromiumSources` map | `source.go` |
 | Key retrieval | `keyretriever` | `KeyRetriever` (interface) | `keyretriever.go` |
 | Strategy chain | `keyretriever` | `ChainRetriever` | `keyretriever.go` |
-| macOS keychain | `keyretriever` | `SecurityCmdRetriever` | `keyretriever_darwin.go` |
-| macOS exploit | `keyretriever` | `GcoredumpRetriever` | `keyretriever_darwin.go` |
-| Windows DPAPI | `keyretriever` | `DPAPIRetriever` | `keyretriever_windows.go` |
-| Linux D-Bus | `keyretriever` | `DBusRetriever` | `keyretriever_linux.go` |
-| Linux fallback | `keyretriever` | `FallbackRetriever` | `keyretriever_linux.go` |
-| PBKDF2 parameters | `keyretriever` | `PBKDF2Params` | `params.go` |
-| Cipher version | `crypto` | `CipherVersion` (string) | `version.go` |
+| Cipher version | `crypto` | `CipherVersion` | `version.go` |
 | Temp file session | `filemanager` | `Session` | `session.go` |
-| File acquisition | `filemanager` | `Acquirer` (interface) | `acquirer.go` |
-| Default acquirer | `filemanager` | `CopyAcquirer` | `acquirer.go` |
 | SQLite helper | `datautil` | `QuerySQLite` (func) | `sqlite.go` |
 | Decrypt helper | `datautil` | `DecryptChromiumValue` (func) | `decrypt.go` |
-| Library options | root | `Option`, `Config` | `hackbrowserdata.go` |
-| Library result | root | `Result` | `hackbrowserdata.go` |
-| Structured error | root | `ExtractionError` | `errors.go` |
 
 ---
 
@@ -161,13 +164,13 @@ hackbrowserdata/
 
 ### 2.1 Problem: MasterKey mixed with data types
 
-The current `DataType` enum contains 22 constants that conflate three different concerns:
+The current `DataType` enum contains 22 constants that conflate three concerns:
 
 - **Infrastructure** (keys): `ChromiumKey`, `FirefoxKey4`
 - **Browser engine prefix**: `ChromiumPassword` vs `FirefoxPassword` vs `YandexPassword`
 - **File layout**: `Filename()`, `TempFilename()` methods on the enum
 
-A password is a password regardless of which browser it came from. The browser engine determines *how* to extract it, not *what* it is.
+A password is a password regardless of which browser it came from. The browser engine determines *how* to extract, not *what* the data is.
 
 ### 2.2 New design: Category + Models
 
@@ -204,6 +207,16 @@ func (c Category) IsSensitive() bool {
     default:
         return false
     }
+}
+
+func NonSensitiveCategories() []Category {
+    var cats []Category
+    for _, c := range AllCategories {
+        if !c.IsSensitive() {
+            cats = append(cats, c)
+        }
+    }
+    return cats
 }
 ```
 
@@ -280,10 +293,6 @@ type ExtensionEntry struct {
 **`browserdata/browserdata.go`**:
 
 ```go
-package browserdata
-
-import "github.com/moond4rk/hackbrowserdata/types"
-
 type BrowserData struct {
     Passwords      []types.LoginEntry
     Cookies        []types.CookieEntry
@@ -297,72 +306,86 @@ type BrowserData struct {
 }
 ```
 
-No `Extractor` interface, no registry, no factory pattern. `BrowserData` is a plain struct with typed slices.
-
 ### 2.4 What was removed from types/
 
 | Removed | Reason |
 |---------|--------|
-| `ChromiumKey`, `FirefoxKey4` | MasterKey is infrastructure, not data. Handled inside browser engine. |
-| `Chromium*`/`Firefox*`/`Yandex*` prefixes | Browser engine is an extraction concern, not a type concern. |
-| `Filename()`, `TempFilename()` methods | File layout is browser engine's internal knowledge. |
-| `itemFileNames` map | Moved into `chromium/source.go` and `firefox/source.go`. |
-| `DefaultChromiumTypes`, `DefaultFirefoxTypes`, `DefaultYandexTypes` | Replaced by `types.AllCategories`. |
-| `extractor/` package | No longer needed — browser engines have typed extract methods. |
+| `ChromiumKey`, `FirefoxKey4` | MasterKey is infrastructure, handled inside browser engine |
+| `Chromium*`/`Firefox*`/`Yandex*` prefixes | Browser engine is extraction concern, not type concern |
+| `Filename()`, `TempFilename()` | File layout is browser engine's internal knowledge |
+| `itemFileNames` map | Moved into `chromium/source.go` and `firefox/source.go` |
+| `DefaultChromiumTypes`, `DefaultFirefoxTypes`, `DefaultYandexTypes` | Replaced by `types.AllCategories` |
+| `extractor/` package | No longer needed — browser engines have typed extract methods |
+| `browserdata/imports.go` | No longer needed — no init() registration |
 
 ---
 
 ## 3. Crypto Layer
 
-### 3.1 Current issues
-
-Three platforms use completely different algorithms behind the same `DecryptWithChromium()` signature:
-
-| Platform | File | Algorithm | IV/Nonce |
-|----------|------|-----------|----------|
-| Windows | `crypto/crypto_windows.go:17` | AES-256-GCM | 12-byte nonce from ciphertext |
-| macOS | `crypto/crypto_darwin.go:9` | AES-128-CBC | hardcoded 16-byte space IV |
-| Linux | `crypto/crypto_linux.go:5` | AES-128-CBC | hardcoded 16-byte space IV |
-
-All three hardcode `ciphertext[3:]` to skip the "v10" prefix without checking the prefix.
-
-Master key retrieval is scattered across three platform-specific `GetMasterKey()` methods with no shared abstraction.
-
-### 3.2 Cipher version detection
+### 3.1 Cipher version detection
 
 **New file**: `crypto/version.go`
 
 ```go
-package crypto
-
 type CipherVersion string
 
 const (
     CipherV10   CipherVersion = "v10"   // Chrome 80+
-    CipherDPAPI CipherVersion = "dpapi"  // pre-Chrome 80, raw DPAPI
+    CipherV20   CipherVersion = "v20"   // Chrome 127+ App-Bound Encryption
+    CipherDPAPI CipherVersion = "dpapi"  // pre-Chrome 80
 )
 
 func DetectVersion(ciphertext []byte) CipherVersion {
-    if len(ciphertext) >= 3 && string(ciphertext[:3]) == "v10" {
+    if len(ciphertext) < 3 { return CipherDPAPI }
+    prefix := string(ciphertext[:3])
+    switch prefix {
+    case "v10":
         return CipherV10
+    case "v20":
+        return CipherV20
+    default:
+        return CipherDPAPI
     }
-    return CipherDPAPI
 }
 
 func StripPrefix(ciphertext []byte) []byte {
-    if DetectVersion(ciphertext) == CipherV10 {
+    ver := DetectVersion(ciphertext)
+    if ver == CipherV10 || ver == CipherV20 {
         return ciphertext[3:]
     }
     return ciphertext
 }
 ```
 
-### 3.3 Key retriever abstraction
+Version-specific post-processing (e.g., v20 cookie value has a 32-byte header) belongs here, not in extract methods:
+
+```go
+// DecryptCookieValue handles version-specific cookie decryption.
+func DecryptCookieValue(key, ciphertext []byte) ([]byte, error) {
+    version := DetectVersion(ciphertext)
+    payload := StripPrefix(ciphertext)
+
+    switch version {
+    case CipherV10:
+        return decryptPayload(key, payload)
+    case CipherV20:
+        value, err := decryptPayload(key, payload)
+        if err != nil { return nil, err }
+        if len(value) > 32 {
+            return value[32:], nil  // strip App-Bound header
+        }
+        return value, nil
+    default:
+        return nil, fmt.Errorf("unsupported cipher version: %s", version)
+    }
+}
+```
+
+### 3.2 Key retriever abstraction
 
 **New package**: `crypto/keyretriever/`
 
 ```go
-// keyretriever.go
 type KeyRetriever interface {
     RetrieveKey(browserStorage string) ([]byte, error)
 }
@@ -389,11 +412,13 @@ Platform defaults:
 - Windows: `&DPAPIRetriever{}`
 - Linux: `NewChain(&DBusRetriever{}, &FallbackRetriever{})`
 
-**`params.go`** centralizes magic values:
+**`params.go`** centralizes PBKDF2 magic values with source links:
 
 ```go
 var (
+    // https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm
     ChromiumMacOS = PBKDF2Params{Salt: []byte("saltysalt"), Iterations: 1003, KeyLen: 16}
+    // https://source.chromium.org/chromium/chromium/src/+/main:components/os_crypt/os_crypt_linux.cc
     ChromiumLinux = PBKDF2Params{Salt: []byte("saltysalt"), Iterations: 1, KeyLen: 16}
 )
 ```
@@ -409,16 +434,16 @@ var (
 type BrowserKind int
 const (
     KindChromium BrowserKind = iota
+    KindChromiumYandex  // Chromium variant with different file names and SQL queries
     KindFirefox
 )
 
 type BrowserConfig struct {
-    Key         string
-    Name        string
+    Key         string          // lookup key: "chrome", "firefox"
+    Name        string          // display name: "Chrome", "Firefox"
     Kind        BrowserKind
-    Storage     string
-    UserDataDir string
-    DataTypes   []types.Category
+    Storage     string          // keychain label (macOS/Linux)
+    UserDataDir string          // e.g. ~/Library/Application Support/Google/Chrome/
 }
 
 type Browser interface {
@@ -427,26 +452,10 @@ type Browser interface {
 }
 ```
 
-Platform files return `[]BrowserConfig`:
-
-```go
-// browser/browser_darwin.go
-func platformBrowsers() []BrowserConfig {
-    appSupport := homeDir + "/Library/Application Support"
-    return []BrowserConfig{
-        {Key: "chrome", Name: "Chrome", Kind: KindChromium, Storage: "Chrome",
-         UserDataDir: appSupport + "/Google/Chrome"},
-        // ...
-        {Key: "firefox", Name: "Firefox", Kind: KindFirefox,
-         UserDataDir: appSupport + "/Firefox/Profiles"},
-    }
-}
-```
-
 ### 4.2 Unified PickBrowsers
 
 ```go
-func PickBrowsers(name string, profile string) ([]Browser, error) {
+func PickBrowsers(name, profile string) ([]Browser, error) {
     name = strings.ToLower(name)
     var browsers []Browser
     for _, cfg := range platformBrowsers() {
@@ -462,85 +471,197 @@ func PickBrowsers(name string, profile string) ([]Browser, error) {
     }
     return browsers, nil
 }
+
+func newBrowserFromConfig(cfg BrowserConfig, dir string) ([]Browser, error) {
+    switch cfg.Kind {
+    case KindChromium, KindChromiumYandex:
+        return chromium.New(cfg, dir)
+    case KindFirefox:
+        return firefox.New(dir)
+    default:
+        return nil, fmt.Errorf("unknown browser kind: %d", cfg.Kind)
+    }
+}
 ```
 
-### 4.3 Direct profile discovery (replace filepath.Walk)
+### 4.3 Direct profile discovery
 
-Chromium profiles are deterministic (`Default/`, `Profile 1/`, ...). Directly enumerate and check known file paths instead of walking the entire directory tree.
+Chromium profiles are deterministic (`Default/`, `Profile 1/`, ...). Directly `os.ReadDir()` and check known file paths instead of `filepath.Walk`.
 
-Firefox profiles are `xxxxxxxx.name/` directories. Enumerate and check for known files like `key4.db` or `logins.json`.
+Firefox profiles are `xxxxxxxx.name/` directories. Enumerate and check for `key4.db` or `logins.json`.
 
 ---
 
-## 5. CLI / Library Separation
+## 5. Yandex Variant Handling
 
-**`hackbrowserdata.go`**:
+Yandex is Chromium-based with 3 differences:
+
+| Aspect | Standard Chromium | Yandex |
+|--------|------------------|--------|
+| Password file | `Login Data` | `Ya Passman Data` |
+| Password SQL | `SELECT origin_url, ...` | `SELECT action_url, ...` |
+| CreditCard file | `Web Data` | `Ya Credit Cards` |
+
+### 5.1 Separate source map
 
 ```go
-package hackbrowserdata
+// browser/chromium/source.go
 
-type Option func(*Config)
-type Config struct {
-    BrowserName string
-    ProfilePath string
-    FullExport  bool
+var yandexSources = map[types.Category]source{
+    types.Password:       {paths: []string{"Ya Passman Data"}},        // different
+    types.Cookie:         {paths: []string{"Network/Cookies", "Cookies"}},
+    types.History:        {paths: []string{"History"}},
+    types.Download:       {paths: []string{"History"}},
+    types.Bookmark:       {paths: []string{"Bookmarks"}},
+    types.CreditCard:     {paths: []string{"Ya Credit Cards"}},        // different
+    types.Extension:      {paths: []string{"Secure Preferences"}},
+    types.LocalStorage:   {paths: []string{"Local Storage/leveldb"}, isDir: true},
+    types.SessionStorage: {paths: []string{"Session Storage"}, isDir: true},
 }
-
-func WithBrowser(name string) Option  { return func(c *Config) { c.BrowserName = name } }
-func WithProfile(path string) Option  { return func(c *Config) { c.ProfilePath = path } }
-func WithFullExport(v bool) Option    { return func(c *Config) { c.FullExport = v } }
-
-type Result struct {
-    BrowserName string
-    Data        *browserdata.BrowserData
-}
-
-func Run(opts ...Option) ([]Result, error) { ... }
 ```
+
+### 5.2 Query overrides (default + override pattern)
+
+Each extract method defines its own default SQL query constant. The Chromium struct holds an optional override map:
+
+```go
+// browser/chromium/chromium.go
+type Chromium struct {
+    name           string
+    storage        string
+    profileDir     string
+    sources        map[types.Category]source    // chromiumSources or yandexSources
+    queryOverrides map[types.Category]string    // nil for standard Chromium
+    keyRetriever   keyretriever.KeyRetriever
+}
+
+var yandexQueryOverrides = map[types.Category]string{
+    types.Password: `SELECT action_url, username_value, password_value, date_created FROM logins`,
+}
+```
+
+Extract methods check for overrides locally:
+
+```go
+// browser/chromium/extract_password.go
+const defaultLoginQuery = `SELECT origin_url, username_value, password_value, date_created FROM logins`
+
+func (c *Chromium) extractPasswords(masterKey []byte, path string) ([]types.LoginEntry, error) {
+    query := defaultLoginQuery
+    if q, ok := c.queryOverrides[types.Password]; ok {
+        query = q
+    }
+    // ... rest of extraction
+}
+```
+
+### 5.3 Wiring at creation time
+
+```go
+func New(cfg browser.BrowserConfig, userDataDir string) ([]*Chromium, error) {
+    sources := chromiumSources
+    var overrides map[types.Category]string
+    if cfg.Kind == browser.KindChromiumYandex {
+        sources = yandexSources
+        overrides = yandexQueryOverrides
+    }
+    // ... discover profiles, create Chromium instances with sources + overrides
+}
+```
+
+Zero if-branches in any extract method. All variant differences concentrated in `source.go` and `New()`.
 
 ---
 
 ## 6. Error Handling
 
-**`errors.go`**:
+### 6.1 Collect-and-continue pattern
+
+`BrowsingData()` collects errors per category but continues extracting. The returned `data` and `err` can both be non-nil:
 
 ```go
-package hackbrowserdata
+func (c *Chromium) BrowsingData(categories []types.Category) (*browserdata.BrowserData, error) {
+    session, err := filemanager.NewSession()
+    if err != nil { return nil, err }
+    defer session.Cleanup()
 
-type ExtractionError struct {
-    Browser  string
-    DataType string
-    Op       string
-    Err      error
+    files := c.acquireFiles(session, categories)
+    masterKey, err := c.keyRetriever.RetrieveKey(c.storage)
+    if err != nil { return nil, err }  // fatal: can't decrypt anything
+
+    data := &browserdata.BrowserData{}
+    var errs []error
+
+    for _, cat := range categories {
+        path, ok := files[cat]
+        if !ok { continue }
+
+        switch cat {
+        case types.Password:
+            data.Passwords, err = c.extractPasswords(masterKey, path)
+        case types.Cookie:
+            data.Cookies, err = c.extractCookies(masterKey, path)
+        case types.History:
+            data.Histories, err = c.extractHistories(path)
+        case types.Download:
+            data.Downloads, err = c.extractDownloads(path)
+        case types.Bookmark:
+            data.Bookmarks, err = c.extractBookmarks(path)
+        case types.CreditCard:
+            data.CreditCards, err = c.extractCreditCards(masterKey, path)
+        case types.Extension:
+            data.Extensions, err = c.extractExtensions(path)
+        case types.LocalStorage:
+            data.LocalStorage, err = c.extractLocalStorage(path)
+        case types.SessionStorage:
+            data.SessionStorage, err = c.extractSessionStorage(path)
+        }
+        if err != nil {
+            log.Debugf("extract %s: %v", cat, err)
+            errs = append(errs, fmt.Errorf("%s: %w", cat, err))
+        }
+    }
+    return data, errors.Join(errs...)  // Go 1.20
 }
+```
 
-func (e *ExtractionError) Error() string {
-    return fmt.Sprintf("%s/%s: %s: %v", e.Browser, e.DataType, e.Op, e.Err)
+### 6.2 Error severity levels
+
+| Level | Behavior | Example |
+|-------|----------|---------|
+| Session/key failure | `return nil, err` — abort entirely | Disk full, keychain denied |
+| Category failure | Log, skip, continue next category | Cookie file locked |
+| Single record failure | Skip record, continue extraction | One cookie decryption failed |
+
+### 6.3 Caller pattern
+
+```go
+data, err := b.BrowsingData(categories)
+if err != nil {
+    log.Warnf("%s: %v", b.Name(), err)  // partial failure
 }
-func (e *ExtractionError) Unwrap() error { return e.Err }
-
-var (
-    ErrFileNotFound   = errors.New("file not found")
-    ErrFileLocked     = errors.New("file locked by browser")
-    ErrDecryptFailed  = errors.New("decryption failed")
-    ErrKeyNotFound    = errors.New("master key not found")
-    ErrUnsupportedVer = errors.New("unsupported encryption version")
-)
+if data == nil {
+    continue  // total failure
+}
+data.Output(dir, b.Name(), format)  // output whatever succeeded
 ```
 
 ---
 
 ## 7. Implementation Order
 
-| Phase | Scope | Depends on |
-|-------|-------|------------|
-| **RFC-002 Phase 1** | `datautil/` helpers | — |
-| **RFC-001 Phase 1** | `types/category.go` + `types/models.go` + `browserdata/browserdata.go` redesign | — |
-| **RFC-001 Phase 2** | `crypto/version.go`, rename `AESCBCDecrypt` | — |
-| **RFC-001 Phase 3** | `crypto/keyretriever/` | Phase 2 |
-| **RFC-001 Phase 4** | Browser config + direct profile discovery | Phase 1 |
-| **RFC-002 Phase 2** | `filemanager/` Session + Acquirer | RFC-001 Phase 1 |
-| **RFC-001 Phase 5** | `hackbrowserdata.go`, `errors.go`, CLI separation | All above |
+| Phase | Scope | Risk |
+|-------|-------|------|
+| 1 | `types/category.go` + `types/models.go` + `browserdata/browserdata.go` | Zero — new files only |
+| 2 | `browserdata/datautil/sqlite.go` + `decrypt.go` | Zero — new files only |
+| 3 | `crypto/version.go`, rename `AESCBCDecrypt` | Low — internal crypto changes |
+| 4 | `crypto/keyretriever/` | Low — new package |
+| 5 | `browser/chromium/source.go` + `extract_*.go` | Medium — new extract methods |
+| 6 | `browser/firefox/source.go` + `extract_*.go` | Medium — new extract methods |
+| 7 | `filemanager/session.go` | Low — new package |
+| 8 | Wire `BrowsingData()` + `BrowserConfig` + `PickBrowsers()` | High — connects everything |
+| 9 | Delete old code: `extractor/`, `browserdata/*/`, `imports.go` | High — removal |
+| 10 | Update CLI, tests, cross-platform build verification | Medium |
 
 ---
 
@@ -548,24 +669,27 @@ var (
 
 | Area | RFC-001 (this doc) | RFC-002 |
 |------|-------------------|---------|
-| Data model redesign | covered | uses these types |
-| Cipher version detection | covered | — |
+| Data model (Category + *Entry) | defines | uses |
+| BrowserData container | defines | implements Output |
+| Cipher version | covered | — |
 | Master key retrieval | covered | — |
 | Browser registration | covered | — |
-| Profile discovery | covered | — |
-| CLI separation | covered | — |
-| Error types | covered | uses these types |
-| File acquisition | — | covered |
-| SQLite/decrypt helpers | — | covered |
+| Yandex variant | covered | — |
+| Error handling pattern | covered | — |
+| BrowsingData() orchestration | covered | — |
+| File source mapping | — | covered |
+| File acquisition (Session) | — | covered |
+| Extract method details | — | covered |
+| datautil helpers | — | covered |
+| Output implementation | — | covered |
 
 ---
 
 ## 9. Open Questions
 
-1. **App-Bound Encryption (Chrome 127+)**: reserve extension points now or defer?
-2. **Library API granularity**: is `Run()` sufficient, or do callers need per-data-type extraction?
-3. **Firefox version detection**: is the key-length heuristic in `processMasterKey()` sufficient?
-4. **Yandex special handling**: Yandex uses slightly different SQL queries and decryption. Keep as separate extract methods in `chromium/` or create a `yandex/` sub-package?
+1. **App-Bound Encryption (Chrome 127+ v20)**: `crypto/version.go` has the extension point. Implementation deferred until tested.
+2. **Firefox version detection**: is the key-length heuristic in `processMasterKey()` sufficient, or formalize it?
+3. **Sort direction**: standardize all categories to DESC by date? (Firefox history/download currently ASC)
 
 ---
 

