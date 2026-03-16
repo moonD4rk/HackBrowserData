@@ -73,6 +73,7 @@ hackbrowserdata/
 │   │
 │   └── datautil/
 │       ├── sqlite.go                  # QuerySQLite() helper
+│       ├── query.go                   # queryRows[T]() generic helper (Go 1.20)
 │       └── decrypt.go                 # DecryptChromiumValue() helper
 │
 ├── crypto/
@@ -156,7 +157,30 @@ hackbrowserdata/
 | Cipher version | `crypto` | `CipherVersion` | `version.go` |
 | Temp file session | `filemanager` | `Session` | `session.go` |
 | SQLite helper | `datautil` | `QuerySQLite` (func) | `sqlite.go` |
+| Generic query helper | `datautil` | `queryRows[T]` (func) | `query.go` |
 | Decrypt helper | `datautil` | `DecryptChromiumValue` (func) | `decrypt.go` |
+
+### File naming convention for `extract_*.go`
+
+Files inside `browser/chromium/` and `browser/firefox/` use the `extract_` prefix for extraction logic. This groups them visually when sorted alphabetically:
+
+```
+chromium.go                 ← struct + BrowsingData orchestration
+chromium_darwin.go          ← platform: master key
+chromium_linux.go
+chromium_windows.go
+extract_bookmark.go         ← extract: one file per Category
+extract_cookie.go
+extract_creditcard.go
+extract_download.go
+extract_extension.go
+extract_history.go
+extract_password.go
+extract_storage.go
+source.go                   ← file source mapping
+```
+
+Three natural groups: `chromium*` (struct + platform), `extract_*` (data extraction), `source.go` (file mapping). Each `extract_*.go` file contains the default SQL query constant and the extract method (~20-30 lines).
 
 ---
 

@@ -191,7 +191,27 @@ func QuerySQLite(dbPath string, journalOff bool, query string, scanFn func(*sql.
 }
 ```
 
-### 3.2 Chromium decrypt helper
+### 3.2 Generic query helper — `datautil/query.go`
+
+```go
+package datautil
+
+// queryRows is a generic helper (Go 1.20) that wraps QuerySQLite
+// and collects results into a typed slice. Each extract method
+// only needs to provide the scan function.
+func QueryRows[T any](path string, journalOff bool, query string, scanRow func(*sql.Rows) (T, error)) ([]T, error) {
+    var items []T
+    err := QuerySQLite(path, journalOff, query, func(rows *sql.Rows) error {
+        item, err := scanRow(rows)
+        if err != nil { return nil } // skip bad row
+        items = append(items, item)
+        return nil
+    })
+    return items, err
+}
+```
+
+### 3.3 Chromium decrypt helper
 
 ```go
 // browserdata/datautil/decrypt.go
@@ -213,7 +233,7 @@ func DecryptChromiumValue(masterKey, encrypted []byte) ([]byte, error) {
 
 ## 4. Extract Method Examples
 
-Each extract method lives in its own file inside the browser engine package. The default SQL query is a `const` in the same file. Override is checked via `c.queryOverrides`.
+Each extract method lives in its own `extract_*.go` file inside the browser engine package (see RFC-001 for naming convention). The default SQL query is a `const` in the same file. Override is checked via `c.queryOverrides`.
 
 ### 4.1 Chromium password (SQLite + decryption)
 
@@ -223,32 +243,22 @@ Each extract method lives in its own file inside the browser engine package. The
 const defaultLoginQuery = `SELECT origin_url, username_value, password_value, date_created FROM logins`
 
 func (c *Chromium) extractPasswords(masterKey []byte, path string) ([]types.LoginEntry, error) {
-    query := defaultLoginQuery
-    if q, ok := c.queryOverrides[types.Password]; ok {
-        query = q  // Yandex: SELECT action_url, ...
-    }
-
-    var logins []types.LoginEntry
-    err := datautil.QuerySQLite(path, false, query, func(rows *sql.Rows) error {
-        var url, username string
-        var pwd []byte
-        var created int64
-        if err := rows.Scan(&url, &username, &pwd, &created); err != nil { return err }
-
-        password, err := datautil.DecryptChromiumValue(masterKey, pwd)
-        if err != nil {
-            log.Debugf("decrypt password for %s: %v", url, err)
-            return nil  // skip this record, continue extraction
-        }
-
-        logins = append(logins, types.LoginEntry{
-            URL:       url,
-            Username:  username,
-            Password:  string(password),
-            CreatedAt: typeutil.TimeEpoch(created),
+    logins, err := datautil.QueryRows(path, false, c.query(types.Password),
+        func(rows *sql.Rows) (types.LoginEntry, error) {
+            var url, username string
+            var pwd []byte
+            var created int64
+            if err := rows.Scan(&url, &username, &pwd, &created); err != nil {
+                return types.LoginEntry{}, err
+            }
+            password, _ := datautil.DecryptChromiumValue(masterKey, pwd)
+            return types.LoginEntry{
+                URL:       url,
+                Username:  username,
+                Password:  string(password),
+                CreatedAt: typeutil.TimeEpoch(created),
+            }, nil
         })
-        return nil
-    })
     if err != nil { return nil, err }
 
     sort.Slice(logins, func(i, j int) bool {
@@ -268,43 +278,32 @@ const defaultCookieQuery = `SELECT name, encrypted_value, host_key, path,
     has_expires, is_persistent FROM cookies`
 
 func (c *Chromium) extractCookies(masterKey []byte, path string) ([]types.CookieEntry, error) {
-    query := defaultCookieQuery
-    if q, ok := c.queryOverrides[types.Cookie]; ok {
-        query = q
-    }
+    cookies, err := datautil.QueryRows(path, false, c.query(types.Cookie),
+        func(rows *sql.Rows) (types.CookieEntry, error) {
+            var (
+                name, host, path                               string
+                isSecure, isHTTPOnly, hasExpire, isPersistent   int
+                createdAt, expireAt                             int64
+                encryptedValue                                  []byte
+            )
+            if err := rows.Scan(&name, &encryptedValue, &host, &path,
+                &createdAt, &expireAt, &isSecure, &isHTTPOnly,
+                &hasExpire, &isPersistent); err != nil {
+                return types.CookieEntry{}, err
+            }
 
-    var cookies []types.CookieEntry
-    err := datautil.QuerySQLite(path, false, query, func(rows *sql.Rows) error {
-        var (
-            name, host, path                               string
-            isSecure, isHTTPOnly, hasExpire, isPersistent   int
-            createdAt, expireAt                             int64
-            encryptedValue                                  []byte
-        )
-        if err := rows.Scan(&name, &encryptedValue, &host, &path,
-            &createdAt, &expireAt, &isSecure, &isHTTPOnly,
-            &hasExpire, &isPersistent); err != nil {
-            return err
-        }
-
-        value, err := datautil.DecryptChromiumValue(masterKey, encryptedValue)
-        if err != nil {
-            log.Debugf("decrypt cookie %s on %s: %v", name, host, err)
-            return nil  // skip record
-        }
-
-        cookies = append(cookies, types.CookieEntry{
-            Name:       name,
-            Host:       host,
-            Path:       path,
-            Value:      string(value),
-            IsSecure:   isSecure != 0,
-            IsHTTPOnly: isHTTPOnly != 0,
-            ExpireAt:   typeutil.TimeEpoch(expireAt),
-            CreatedAt:  typeutil.TimeEpoch(createdAt),
+            value, _ := datautil.DecryptChromiumValue(masterKey, encryptedValue)
+            return types.CookieEntry{
+                Name:       name,
+                Host:       host,
+                Path:       path,
+                Value:      string(value),
+                IsSecure:   isSecure != 0,
+                IsHTTPOnly: isHTTPOnly != 0,
+                ExpireAt:   typeutil.TimeEpoch(expireAt),
+                CreatedAt:  typeutil.TimeEpoch(createdAt),
+            }, nil
         })
-        return nil
-    })
     if err != nil { return nil, err }
 
     sort.Slice(cookies, func(i, j int) bool {
@@ -361,30 +360,28 @@ const firefoxCookieQuery = `SELECT name, value, host, path,
     creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
 
 func (f *Firefox) extractCookies(path string) ([]types.CookieEntry, error) {
-    var cookies []types.CookieEntry
-    err := datautil.QuerySQLite(path, true, firefoxCookieQuery, func(rows *sql.Rows) error {
-        var (
-            name, value, host, path string
-            isSecure, isHTTPOnly    int
-            createdAt, expiry       int64
-        )
-        if err := rows.Scan(&name, &value, &host, &path,
-            &createdAt, &expiry, &isSecure, &isHTTPOnly); err != nil {
-            return err
-        }
-
-        cookies = append(cookies, types.CookieEntry{
-            Name:       name,
-            Host:       host,
-            Path:       path,
-            Value:      value,  // not encrypted
-            IsSecure:   isSecure != 0,
-            IsHTTPOnly: isHTTPOnly != 0,
-            ExpireAt:   typeutil.TimeStamp(expiry),
-            CreatedAt:  typeutil.TimeStamp(createdAt / 1000000),
+    cookies, err := datautil.QueryRows(path, true, firefoxCookieQuery,
+        func(rows *sql.Rows) (types.CookieEntry, error) {
+            var (
+                name, value, host, path string
+                isSecure, isHTTPOnly    int
+                createdAt, expiry       int64
+            )
+            if err := rows.Scan(&name, &value, &host, &path,
+                &createdAt, &expiry, &isSecure, &isHTTPOnly); err != nil {
+                return types.CookieEntry{}, err
+            }
+            return types.CookieEntry{
+                Name:       name,
+                Host:       host,
+                Path:       path,
+                Value:      value,  // not encrypted
+                IsSecure:   isSecure != 0,
+                IsHTTPOnly: isHTTPOnly != 0,
+                ExpireAt:   typeutil.TimeStamp(expiry),
+                CreatedAt:  typeutil.TimeStamp(createdAt / 1000000),
+            }, nil
         })
-        return nil
-    })
     if err != nil { return nil, err }
 
     sort.Slice(cookies, func(i, j int) bool {
