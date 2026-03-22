@@ -341,21 +341,7 @@ func QueryRows[T any](path string, journalOff bool, query string, scanRow func(*
 
 ### 3.3 Chromium decrypt helper
 
-```go
-// browserdata/datautil/decrypt.go
-
-func DecryptChromiumValue(masterKey, encrypted []byte) ([]byte, error) {
-    if len(encrypted) == 0 { return nil, nil }
-    if len(masterKey) == 0 {
-        return crypto.DecryptWithDPAPI(encrypted)
-    }
-    value, err := crypto.DecryptWithDPAPI(encrypted)
-    if err != nil {
-        value, err = crypto.DecryptWithChromium(masterKey, encrypted)
-    }
-    return value, err
-}
-```
+Moved to `browser/chromium/decrypt.go` as an unexported function `decryptValue()`. It is Chromium-specific (DPAPI → AES-GCM/CBC fallback) and only used by Chromium extract methods. See RFC-001 for details.
 
 ---
 
@@ -379,7 +365,7 @@ func (c *Chromium) extractPasswords(masterKey []byte, path string) ([]types.Logi
             if err := rows.Scan(&url, &username, &pwd, &created); err != nil {
                 return types.LoginEntry{}, err
             }
-            password, _ := datautil.DecryptChromiumValue(masterKey, pwd)
+            password, _ := decryptValue(masterKey, pwd)
             return types.LoginEntry{
                 URL:       url,
                 Username:  username,
@@ -420,7 +406,7 @@ func (c *Chromium) extractCookies(masterKey []byte, path string) ([]types.Cookie
                 return types.CookieEntry{}, err
             }
 
-            value, _ := datautil.DecryptChromiumValue(masterKey, encryptedValue)
+            value, _ := decryptValue(masterKey, encryptedValue)
             return types.CookieEntry{
                 Name:       name,
                 Host:       host,
@@ -778,7 +764,7 @@ func formatFilename(browserName, dataName, format string) string {
 2. `types/models.go` — all *Entry structs
 3. `browserdata/browserdata.go` — BrowserData struct
 4. `browserdata/datautil/sqlite.go` — QuerySQLite()
-5. `browserdata/datautil/decrypt.go` — DecryptChromiumValue()
+5. `browser/chromium/decrypt.go` — decryptValue() (Chromium-specific, unexported)
 6. `filemanager/session.go` — Session
 
 ### Phase 2: Extract methods (new files, coexist with old code)

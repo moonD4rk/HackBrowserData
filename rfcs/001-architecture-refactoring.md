@@ -41,6 +41,7 @@ hackbrowserdata/
 │   │   ├── chromium_windows.go        # platform key retriever wiring
 │   │   ├── chromium_linux.go          # platform key retriever wiring
 │   │   ├── source.go                  # chromiumSources, yandexSources maps
+│   │   ├── decrypt.go                # decryptValue() — Chromium-specific DPAPI/AES fallback
 │   │   ├── extract_password.go        # extractPasswords() + default SQL query
 │   │   ├── extract_cookie.go          # extractCookies() + default SQL query
 │   │   ├── extract_history.go         # extractHistories() + default SQL query
@@ -73,8 +74,7 @@ hackbrowserdata/
 │   │
 │   └── datautil/
 │       ├── sqlite.go                  # QuerySQLite() helper
-│       ├── query.go                   # queryRows[T]() generic helper (Go 1.20)
-│       └── decrypt.go                 # DecryptChromiumValue() helper
+│       └── query.go                   # QueryRows[T]() generic helper (Go 1.20)
 │
 ├── crypto/
 │   ├── crypto.go                      # AESCBCDecrypt, AESGCMDecrypt, DES3, PKCS5
@@ -157,7 +157,7 @@ hackbrowserdata/
 | Temp file session | `filemanager` | `Session` | `session.go` |
 | SQLite helper | `datautil` | `QuerySQLite` (func) | `sqlite.go` |
 | Generic query helper | `datautil` | `queryRows[T]` (func) | `query.go` |
-| Decrypt helper | `datautil` | `DecryptChromiumValue` (func) | `decrypt.go` |
+| Chromium decrypt | `chromium` | `decryptValue` (unexported func) | `decrypt.go` |
 
 ### Public vs private
 
@@ -751,7 +751,7 @@ data.Output(dir, b.Name(), format)  // output whatever succeeded
 | Phase | Scope | Risk |
 |-------|-------|------|
 | 1 | `types/category.go` + `types/models.go` + `browserdata/browserdata.go` | Zero — new files only |
-| 2 | `browserdata/datautil/sqlite.go` + `decrypt.go` | Zero — new files only |
+| 2 | `browserdata/datautil/sqlite.go` + `query.go` | Zero — new files only |
 | 3 | `crypto/version.go`, rename `AESCBCDecrypt` | Low — internal crypto changes |
 | 4 | `crypto/keyretriever/` | Low — new package |
 | 5 | `browser/chromium/source.go` + `extract_*.go` | Medium — new extract methods |

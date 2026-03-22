@@ -136,13 +136,3 @@ func TestQueryRows_Empty(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Nil(t, results)
 }
-
-func TestDecryptChromiumValue_Empty(t *testing.T) {
-	result, err := DecryptChromiumValue([]byte("key"), nil)
-	assert.NoError(t, err)
-	assert.Nil(t, result)
-
-	result, err = DecryptChromiumValue([]byte("key"), []byte{})
-	assert.NoError(t, err)
-	assert.Nil(t, result)
-}
