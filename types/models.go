@@ -17,7 +17,7 @@ type CookieEntry struct {
 	Name       string    `json:"name"        csv:"name"`
 	Value      string    `json:"value"       csv:"value"`
 	IsSecure   bool      `json:"is_secure"   csv:"is_secure"`
-	IsHTTPOnly bool      `json:"is_httponly"  csv:"is_httponly"`
+	IsHTTPOnly bool      `json:"is_http_only" csv:"is_http_only"`
 	ExpireAt   time.Time `json:"expire_at"   csv:"expire_at"`
 	CreatedAt  time.Time `json:"created_at"  csv:"created_at"`
 }
