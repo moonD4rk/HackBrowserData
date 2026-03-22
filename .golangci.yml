@@ -109,6 +109,7 @@ linters:
         - G502
         - G505
         - G115
+        - G117
         - G204
     errcheck:
       check-type-assertions: true
@@ -159,9 +160,6 @@ linters:
         linters:
           - errcheck
       - text: "SELECT"
-        linters:
-          - gosec
-      - text: "matches secret pattern"
         linters:
           - gosec
       # Temporary: known issues in pre-refactoring code (will be removed during refactoring)
