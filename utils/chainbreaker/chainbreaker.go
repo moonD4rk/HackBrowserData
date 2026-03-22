@@ -425,7 +425,7 @@ func parseKeyBlob(buf []byte) (keyBlob, error) {
 	return kb, nil
 }
 
-func (kc *Keychain) getBaseAddress(tableID uint32, offset uint32) (int, error) {
+func (kc *Keychain) getBaseAddress(tableID, offset uint32) (int, error) {
 	switch tableID {
 	case 23972, 30912:
 		tableID = 16

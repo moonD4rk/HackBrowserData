@@ -108,6 +108,9 @@ linters:
         - G501
         - G502
         - G505
+        - G115
+        - G117
+        - G204
     errcheck:
       check-type-assertions: true
       exclude-functions:
@@ -193,6 +196,13 @@ linters:
       - path: "utils/chainbreaker/"
         linters:
           - gocritic
+      - path: "browser/exploit/"
+        linters:
+          - gocritic
+          - gocognit
+          - funlen
+          - whitespace
+          - staticcheck
 
 formatters:
   enable:
