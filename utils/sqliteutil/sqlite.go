@@ -1,4 +1,4 @@
-package datautil
+package sqliteutil
 
 import (
 	"database/sql"
