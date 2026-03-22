@@ -26,6 +26,11 @@ jobs:
           go-version-file: go.mod
 
       - name: Run tests
+        if: matrix.os == 'windows-latest'
+        run: go test -v ./...
+
+      - name: Run tests with coverage
+        if: matrix.os != 'windows-latest'
         run: go test -v -coverprofile=coverage.out ./...
 
       - name: Upload coverage

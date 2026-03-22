@@ -151,12 +151,29 @@ linters:
           - funlen
           - gosec
           - errcheck
+          - testifylint
+          - lll
       - source: "defer"
         linters:
           - errcheck
       - text: "SELECT"
         linters:
           - gosec
+      # Temporary: known issues in pre-refactoring code (will be removed during refactoring)
+      - text: "result 0 .* is always nil"
+        linters:
+          - unparam
+      - text: "result 0 .* is never used"
+        linters:
+          - unparam
+      - path: "browser/firefox/firefox.go"
+        text: "field .* is unused"
+        linters:
+          - unused
+      - path: "browserdata/sessionstorage/"
+        text: "is unused"
+        linters:
+          - unused
 
 formatters:
   enable:
