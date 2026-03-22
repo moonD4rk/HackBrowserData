@@ -22,20 +22,18 @@ type baseTestCase struct {
 	wantedPattern string
 }
 
-var (
-	baseTestCases = []baseTestCase{
-		{
-			description: "without trailing newline, logger adds newline",
-			message:     "hello, hacker!",
-			suffix:      "",
-		},
-		{
-			description: "with trailing newline, logger preserves newline",
-			message:     "hello, hacker!",
-			suffix:      "\n",
-		},
-	}
-)
+var baseTestCases = []baseTestCase{
+	{
+		description: "without trailing newline, logger adds newline",
+		message:     "hello, hacker!",
+		suffix:      "",
+	},
+	{
+		description: "with trailing newline, logger preserves newline",
+		message:     "hello, hacker!",
+		suffix:      "\n",
+	},
+}
 
 func TestLoggerDebug(t *testing.T) {
 	for _, tc := range baseTestCases {
@@ -121,25 +119,23 @@ type formatTestCase struct {
 	wantedPattern string
 }
 
-var (
-	formatTestCases = []formatTestCase{
-		{
-			description: "message with format prefix",
-			format:      "hello, %s!",
-			args:        []any{"Hacker"},
-		},
-		{
-			description: "message with format prefix",
-			format:      "hello, %d,%d,%d!",
-			args:        []any{1, 2, 3},
-		},
-		{
-			description: "message with format prefix",
-			format:      "hello, %s,%d,%d!",
-			args:        []any{"Hacker", 2, 3},
-		},
-	}
-)
+var formatTestCases = []formatTestCase{
+	{
+		description: "message with format prefix",
+		format:      "hello, %s!",
+		args:        []any{"Hacker"},
+	},
+	{
+		description: "message with format prefix",
+		format:      "hello, %d,%d,%d!",
+		args:        []any{1, 2, 3},
+	},
+	{
+		description: "message with format prefix",
+		format:      "hello, %s,%d,%d!",
+		args:        []any{"Hacker", 2, 3},
+	},
+}
 
 func TestLoggerDebugf(t *testing.T) {
 	for _, tc := range formatTestCases {

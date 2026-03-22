@@ -177,6 +177,22 @@ linters:
       - path: "cmd/hack-browser-data/main.go"
         linters:
           - lll
+      # Temporary: pre-refactoring code issues (all will be rewritten)
+      - path: "browserdata/"
+        linters:
+          - dupl
+          - gochecknoinits
+          - goconst
+          - lll
+      - path: "browser/firefox/"
+        linters:
+          - gocritic
+      - path: "crypto/"
+        linters:
+          - gocritic
+      - path: "utils/chainbreaker/"
+        linters:
+          - gocritic
 
 formatters:
   enable:
