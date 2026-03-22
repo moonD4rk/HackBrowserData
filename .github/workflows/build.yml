@@ -7,6 +7,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build on ${{ matrix.os }}
@@ -14,38 +17,12 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        goVer: ["1.20.x"]
-
     steps:
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Set up Go ${{ matrix.goVer }}
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version: ${{ matrix.goVer }}
-          cache: false
-        id: go
-
-      - name: cache go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Format Check
-        if: matrix.os != 'windows-latest'
-        run: |
-          diff -u <(echo -n) <(gofmt -d .)
-
-      - name: Get dependencies
-        run: |
-          go mod tidy
-          go mod download
+          go-version-file: go.mod
 
       - name: Build
         run: go build -v ./...

@@ -1,51 +1,38 @@
 name: Tests
 
 on:
-  pull_request:
   push:
     branches:
       - main
-      - dev
+  pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   test:
+    name: Test (${{ matrix.os }})
     strategy:
       matrix:
-        go-version: [ "1.20.x" ]
-        platform: [ubuntu-latest]
-    runs-on: ${{ matrix.platform }}
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Install Go
-        if: success()
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version-file: go.mod
 
       - name: Run tests
-        run: go test -v ./... -covermode=count
+        run: go test -v -coverprofile=coverage.out ./...
 
-  coverage:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install Go
-        if: success()
-        uses: actions/setup-go@v5
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v5
         with:
-          go-version: "1.20.x"
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Calc coverage
-        run: |
-          go test -v ./... -covermode=count -coverprofile=coverage.out
-
-      - name: Convert coverage.out to coverage.lcov
-        uses: jandelgado/gcov2lcov-action@v1
-      - name: Coveralls
-        uses: coverallsapp/github-action@v2
-        with:
-          github-token: ${{ secrets.github_token }}
-          path-to-lcov: coverage.lcov
+          use_oidc: true
+          files: ./coverage.out
+          fail_ci_if_error: false
+          flags: unittests
