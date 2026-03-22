@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 
@@ -39,9 +40,9 @@ func TestDataType_TempFilename(t *testing.T) {
 
 	for _, tc := range testCases {
 		expectedPrefix := tc.expected + "_" + strconv.Itoa(int(tc.item)) + ".temp"
-		actualPath := tc.item.TempFilename()
+		actualPath := filepath.ToSlash(tc.item.TempFilename())
 		asserts.Contains(actualPath, expectedPrefix, "TempFilename should contain the correct prefix for "+tc.expected)
-		asserts.Contains(actualPath, os.TempDir(), "TempFilename should be in the system temp directory for "+tc.expected)
+		asserts.Contains(actualPath, filepath.ToSlash(os.TempDir()), "TempFilename should be in the system temp directory for "+tc.expected)
 	}
 }
 
