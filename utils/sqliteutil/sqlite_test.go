@@ -21,7 +21,7 @@ func TestQuerySQLite(t *testing.T) {
 	require.NoError(t, err)
 	_, err = db.Exec("INSERT INTO items VALUES (1, 'alpha'), (2, 'beta'), (3, 'gamma')")
 	require.NoError(t, err)
-	db.Close()
+	require.NoError(t, db.Close())
 
 	// Query using our helper
 	var names []string
@@ -48,7 +48,7 @@ func TestQuerySQLite_JournalOff(t *testing.T) {
 	require.NoError(t, err)
 	_, err = db.Exec("INSERT INTO t VALUES ('ok')")
 	require.NoError(t, err)
-	db.Close()
+	require.NoError(t, db.Close())
 
 	var values []string
 	err = QuerySQLite(dbPath, true, "SELECT v FROM t", func(rows *sql.Rows) error {
@@ -78,7 +78,7 @@ func TestQuerySQLite_BadQuery(t *testing.T) {
 	require.NoError(t, err)
 	_, err = db.Exec("CREATE TABLE t (v TEXT)")
 	require.NoError(t, err)
-	db.Close()
+	require.NoError(t, db.Close())
 
 	err = QuerySQLite(dbPath, false, "SELECT nonexistent FROM t", func(rows *sql.Rows) error {
 		return nil
@@ -96,7 +96,7 @@ func TestQueryRows(t *testing.T) {
 	require.NoError(t, err)
 	_, err = db.Exec("INSERT INTO users VALUES ('alice', 30), ('bob', 25)")
 	require.NoError(t, err)
-	db.Close()
+	require.NoError(t, db.Close())
 
 	type user struct {
 		Name string
@@ -122,7 +122,7 @@ func TestQueryRows_Empty(t *testing.T) {
 	require.NoError(t, err)
 	_, err = db.Exec("CREATE TABLE empty (v TEXT)")
 	require.NoError(t, err)
-	db.Close()
+	require.NoError(t, db.Close())
 
 	results, err := QueryRows(dbPath, false, "SELECT v FROM empty",
 		func(rows *sql.Rows) (string, error) {
