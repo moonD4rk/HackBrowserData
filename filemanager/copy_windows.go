@@ -81,7 +81,7 @@ func copyLocked(src, dst string) error {
 	}
 	defer windows.CloseHandle(handle)
 
-	data, err := readViaFileMapping(handle)
+	data, err := readFileContent(handle)
 	if err != nil {
 		return fmt.Errorf("read via file mapping: %w", err)
 	}
@@ -232,11 +232,11 @@ func getFinalPathName(handle windows.Handle) (string, error) {
 	}
 }
 
-// readViaFileMapping reads file content using memory-mapped I/O.
-// This works even when ReadFile fails on certain Chrome versions,
-// because MapViewOfFile accesses the file through the memory manager
-// rather than the file system I/O path.
-func readViaFileMapping(handle windows.Handle) ([]byte, error) {
+// readFileContent reads file content from a duplicated handle.
+// It tries ReadFile first (works in most cases), and falls back to
+// CreateFileMapping + MapViewOfFile for Chrome versions where ReadFile
+// fails on duplicated handles.
+func readFileContent(handle windows.Handle) ([]byte, error) {
 	// Get file size
 	var fileSize int64
 	ret, _, err := procGetFileSizeEx.Call(
@@ -250,32 +250,48 @@ func readViaFileMapping(handle windows.Handle) ([]byte, error) {
 		return nil, fmt.Errorf("file is empty")
 	}
 
-	// Create read-only file mapping
+	size := int(fileSize)
+
+	// Try ReadFile first — simpler and works in most cases
+	data := make([]byte, size)
+	var bytesRead uint32
+	if err := windows.ReadFile(handle, data, &bytesRead, nil); err == nil {
+		return data[:bytesRead], nil
+	}
+
+	// ReadFile failed, fall back to memory-mapped I/O.
+	// This works even when ReadFile fails on certain Chrome versions,
+	// because MapViewOfFile accesses the file through the memory manager
+	// rather than the file system I/O path.
+	return readViaFileMapping(handle, size)
+}
+
+// readViaFileMapping reads file content using CreateFileMapping + MapViewOfFile.
+func readViaFileMapping(handle windows.Handle, size int) ([]byte, error) {
 	mapping, _, err := procCreateFileMappingW.Call(
 		uintptr(handle),
 		0, pageReadonly,
-		0, 0, // use file size
-		0, // unnamed
+		0, 0, 0,
 	)
 	if mapping == 0 {
 		return nil, fmt.Errorf("CreateFileMapping: %w", err)
 	}
 	defer windows.CloseHandle(windows.Handle(mapping))
 
-	// Map entire file into our address space
 	viewPtr, _, err := procMapViewOfFile.Call(
 		mapping, fileMAPRead,
-		0, 0, 0, // offset=0, size=0 means entire file
+		0, 0, 0,
 	)
 	if viewPtr == 0 {
 		return nil, fmt.Errorf("MapViewOfFile: %w", err)
 	}
 	defer procUnmapViewOfFile.Call(viewPtr)
 
-	// Copy mapped memory into a Go byte slice
-	size := int(fileSize)
+	// viewPtr is a valid pointer from MapViewOfFile syscall.
+	// go vet flags this as "possible misuse of unsafe.Pointer" but it's
+	// correct usage for Windows memory-mapped I/O.
 	data := make([]byte, size)
-	copy(data, unsafe.Slice((*byte)(unsafe.Pointer(viewPtr)), size))
+	copy(data, (*[1 << 30]byte)(unsafe.Pointer(viewPtr))[:size]) //nolint:govet
 	return data, nil
 }
 
