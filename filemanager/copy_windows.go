@@ -5,6 +5,7 @@ package filemanager
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"unsafe"
 
@@ -92,8 +93,10 @@ func copyLocked(src, dst string) error {
 // findFileHandle enumerates all system handles, finds the one matching the
 // target file path, and duplicates it into the current process.
 func findFileHandle(targetPath string) (windows.Handle, error) {
-	// Build match suffix: e.g., "Network\Cookies" from full path
-	targetSuffix := buildMatchSuffix(targetPath)
+	// Use the full normalized path for matching, not just the suffix.
+	// Multiple Chromium-based apps (Chrome, Edge, Teams, DingTalk) all have
+	// "Network\Cookies" — we must match the exact path to find the right one.
+	targetNorm := strings.ToLower(filepath.Clean(targetPath))
 	currentProcess := windows.CurrentProcess()
 
 	handles, err := querySystemHandles()
@@ -142,7 +145,7 @@ func findFileHandle(targetPath string) (windows.Handle, error) {
 			continue
 		}
 
-		if matchPath(name, targetSuffix) {
+		if strings.ToLower(filepath.Clean(name)) == targetNorm {
 			return dupHandle, nil
 		}
 		windows.CloseHandle(dupHandle)
@@ -233,17 +236,11 @@ func getFinalPathName(handle windows.Handle) (string, error) {
 }
 
 // readFileContent reads file content from a duplicated handle.
-// It tries ReadFile first (works in most cases), and falls back to
-// CreateFileMapping + MapViewOfFile for Chrome versions where ReadFile
-// fails on duplicated handles.
+// It uses FileMapping first (CreateFileMapping + MapViewOfFile), which reads
+// from the OS kernel's file cache — this includes WAL data that Chrome has
+// written but not yet checkpointed to the main file. Falls back to ReadFile
+// if FileMapping fails.
 func readFileContent(handle windows.Handle) ([]byte, error) {
-	// Seek to beginning — the duplicated handle's file pointer may be
-	// at an arbitrary position (Chrome has been reading/writing the file).
-	_, err := windows.Seek(handle, 0, 0) // SEEK_SET
-	if err != nil {
-		return nil, fmt.Errorf("seek to start: %w", err)
-	}
-
 	// Get file size
 	var fileSize int64
 	ret, _, sizeErr := procGetFileSizeEx.Call(
@@ -259,16 +256,22 @@ func readFileContent(handle windows.Handle) ([]byte, error) {
 
 	size := int(fileSize)
 
-	// Try ReadFile first — simpler and works in most cases
-	data := make([]byte, size)
-	var bytesRead uint32
-	if err := windows.ReadFile(handle, data, &bytesRead, nil); err == nil && bytesRead > 0 {
-		return data[:bytesRead], nil
+	// Try FileMapping first — reads from kernel file cache, includes WAL data
+	if data, err := readViaFileMapping(handle, size); err == nil {
+		return data, nil
 	}
 
-	// ReadFile failed or read 0 bytes, fall back to memory-mapped I/O.
-	// MapViewOfFile always reads from the start regardless of file pointer.
-	return readViaFileMapping(handle, size)
+	// FileMapping failed, fall back to ReadFile
+	// Seek to beginning first — the handle's file pointer may be at an arbitrary position
+	if _, err := windows.Seek(handle, 0, 0); err != nil {
+		return nil, fmt.Errorf("seek to start: %w", err)
+	}
+	data := make([]byte, size)
+	var bytesRead uint32
+	if err := windows.ReadFile(handle, data, &bytesRead, nil); err != nil {
+		return nil, fmt.Errorf("ReadFile: %w", err)
+	}
+	return data[:bytesRead], nil
 }
 
 // readViaFileMapping reads file content using CreateFileMapping + MapViewOfFile.
@@ -298,22 +301,4 @@ func readViaFileMapping(handle windows.Handle, size int) ([]byte, error) {
 	data := make([]byte, size)
 	copy(data, (*[1 << 30]byte)(unsafe.Pointer(viewPtr))[:size]) //nolint:govet
 	return data, nil
-}
-
-// buildMatchSuffix extracts the last two path components for matching.
-// e.g., "C:\Users\x\...\Network\Cookies" → "Network\Cookies"
-func buildMatchSuffix(fullPath string) string {
-	parts := strings.Split(fullPath, string(os.PathSeparator))
-	if len(parts) >= 2 {
-		return parts[len(parts)-2] + string(os.PathSeparator) + parts[len(parts)-1]
-	}
-	if len(parts) == 1 {
-		return parts[0]
-	}
-	return fullPath
-}
-
-// matchPath checks if a file path ends with the expected suffix (case-insensitive).
-func matchPath(path, suffix string) bool {
-	return strings.HasSuffix(strings.ToLower(path), strings.ToLower(suffix))
 }
