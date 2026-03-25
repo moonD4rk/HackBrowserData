@@ -3,6 +3,7 @@
 package filemanager
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -48,16 +49,20 @@ func TestCopyLocked_WriteThenRead(t *testing.T) {
 	defer syscall.CloseHandle(handle)
 
 	// Seek to end and write additional data
-	syscall.Seek(handle, 0, 2) // SEEK_END
+	_, seekErr := syscall.Seek(handle, 0, 2) // SEEK_END
+	require.NoError(t, seekErr)
 	additional := []byte(" + appended data")
 	var written uint32
-	syscall.WriteFile(handle, additional, &written, nil)
-	syscall.FlushFileBuffers(handle)
+	writeErr := syscall.WriteFile(handle, additional, &written, nil)
+	require.NoError(t, writeErr)
+	require.Equal(t, uint32(len(additional)), written)
+	flushErr := syscall.FlushFileBuffers(handle)
+	require.NoError(t, flushErr)
 
 	// copyLocked should read the full content including appended data
 	lockedDst := filepath.Join(dir, "modified_copy.db")
-	err := copyLocked(src, lockedDst)
-	assert.NoError(t, err)
+	copyErr := copyLocked(src, lockedDst)
+	assert.NoError(t, copyErr)
 
 	copied, err := os.ReadFile(lockedDst)
 	require.NoError(t, err)
@@ -86,7 +91,7 @@ func TestCopyLocked_LargeFile(t *testing.T) {
 	copied, err := os.ReadFile(lockedDst)
 	require.NoError(t, err)
 	assert.Equal(t, len(data), len(copied), "file sizes should match")
-	assert.Equal(t, data, copied, "file content should match byte-for-byte")
+	assert.True(t, bytes.Equal(data, copied), "file content should match byte-for-byte")
 }
 
 func TestCopyLocked_FileNotFound(t *testing.T) {
