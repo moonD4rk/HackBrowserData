@@ -5,7 +5,6 @@ package filemanager
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"unsafe"
 
@@ -93,10 +92,12 @@ func copyLocked(src, dst string) error {
 // findFileHandle enumerates all system handles, finds the one matching the
 // target file path, and duplicates it into the current process.
 func findFileHandle(targetPath string) (windows.Handle, error) {
-	// Use the full normalized path for matching, not just the suffix.
-	// Multiple Chromium-based apps (Chrome, Edge, Teams, DingTalk) all have
-	// "Network\Cookies" — we must match the exact path to find the right one.
-	targetNorm := strings.ToLower(filepath.Clean(targetPath))
+	// Extract a stable suffix for matching that avoids short path name issues
+	// (e.g., RUNNER~1 vs runneradmin in the username portion).
+	// We match from AppData onwards, which uniquely identifies each browser:
+	//   Google\Chrome\User Data\Default\Network\Cookies  (Chrome)
+	//   Microsoft\Edge\User Data\Default\Network\Cookies (Edge)
+	targetSuffix := extractStableSuffix(targetPath)
 	currentProcess := windows.CurrentProcess()
 
 	handles, err := querySystemHandles()
@@ -145,7 +146,7 @@ func findFileHandle(targetPath string) (windows.Handle, error) {
 			continue
 		}
 
-		if strings.ToLower(filepath.Clean(name)) == targetNorm {
+		if strings.HasSuffix(strings.ToLower(name), targetSuffix) {
 			return dupHandle, nil
 		}
 		windows.CloseHandle(dupHandle)
@@ -301,4 +302,31 @@ func readViaFileMapping(handle windows.Handle, size int) ([]byte, error) {
 	data := make([]byte, size)
 	copy(data, (*[1 << 30]byte)(unsafe.Pointer(viewPtr))[:size]) //nolint:govet
 	return data, nil
+}
+
+// extractStableSuffix extracts a path suffix that is stable across short/long
+// path name variations. It finds "AppData" in the path and returns everything
+// after "AppData\Local\" or "AppData\Roaming\" in lowercase.
+//
+// Example:
+//
+//	C:\Users\RUNNER~1\AppData\Local\Google\Chrome\...\Cookies
+//	→ google\chrome\...\cookies
+//
+// For paths without "AppData" (e.g., test temp dirs), it falls back to
+// the last 3 path components to provide reasonable matching specificity.
+func extractStableSuffix(path string) string {
+	lower := strings.ToLower(path)
+	// Try to find AppData\Local\ or AppData\Roaming\
+	for _, marker := range []string{`appdata\local\`, `appdata\roaming\`} {
+		if idx := strings.Index(lower, marker); idx != -1 {
+			return lower[idx+len(marker):]
+		}
+	}
+	// Fallback: use last 3 components for test paths
+	parts := strings.Split(lower, string(os.PathSeparator))
+	if len(parts) >= 3 {
+		return strings.Join(parts[len(parts)-3:], string(os.PathSeparator))
+	}
+	return lower
 }
