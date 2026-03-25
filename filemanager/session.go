@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-
-	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
 // Session manages temporary files for a single browser extraction run.
@@ -38,11 +36,11 @@ func (s *Session) TempDir() string {
 // it falls back to a platform-specific locked-file copy method.
 func (s *Session) Acquire(src, dst string, isDir bool) error {
 	if isDir {
-		return fileutil.CopyDir(src, dst, "lock")
+		return copyDir(src, dst, "lock")
 	}
 
 	// Try normal copy first
-	err := fileutil.CopyFile(src, dst)
+	err := copyFile(src, dst)
 	if err != nil {
 		// Normal copy failed, try platform-specific locked file copy
 		if err2 := copyLocked(src, dst); err2 != nil {
@@ -56,8 +54,8 @@ func (s *Session) Acquire(src, dst string, isDir bool) error {
 	// Copy SQLite WAL/SHM companion files if present
 	for _, suffix := range []string{"-wal", "-shm"} {
 		walSrc := src + suffix
-		if fileutil.IsFileExists(walSrc) {
-			_ = fileutil.CopyFile(walSrc, dst+suffix)
+		if isFileExists(walSrc) {
+			_ = copyFile(walSrc, dst+suffix)
 		}
 	}
 	return nil
