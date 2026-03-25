@@ -103,7 +103,7 @@ func findFileHandle(targetPath string) (windows.Handle, error) {
 
 	for _, h := range handles {
 		pid := uint32(h.UniqueProcessID)
-		if pid == 0 || pid == uint32(os.Getpid()) {
+		if pid == 0 {
 			continue
 		}
 
