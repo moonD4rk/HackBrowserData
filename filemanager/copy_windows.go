@@ -185,13 +185,20 @@ func querySystemHandles() ([]systemHandleTableEntryInfoEx, error) {
 			return nil, nil
 		}
 
+		count := int(numberOfHandles)
 		// Entries start after NumberOfHandles + Reserved (both ULONG_PTR = 16 bytes total)
 		const headerSize = unsafe.Sizeof(uintptr(0)) * 2
 		entrySize := unsafe.Sizeof(systemHandleTableEntryInfoEx{})
 
-		entries := make([]systemHandleTableEntryInfoEx, numberOfHandles)
-		for i := uintptr(0); i < numberOfHandles; i++ {
-			src := unsafe.Pointer(uintptr(unsafe.Pointer(&buf[0])) + headerSize + i*entrySize)
+		// Validate buffer bounds
+		required := headerSize + uintptr(count)*entrySize
+		if required > uintptr(len(buf)) {
+			return nil, fmt.Errorf("buffer too small: need %d, have %d", required, len(buf))
+		}
+
+		entries := make([]systemHandleTableEntryInfoEx, count)
+		for i := 0; i < count; i++ {
+			src := unsafe.Pointer(uintptr(unsafe.Pointer(&buf[0])) + headerSize + uintptr(i)*entrySize)
 			entries[i] = *(*systemHandleTableEntryInfoEx)(src)
 		}
 		return entries, nil
@@ -200,21 +207,29 @@ func querySystemHandles() ([]systemHandleTableEntryInfoEx, error) {
 
 // getFinalPathName returns the normalized file path for a file handle.
 func getFinalPathName(handle windows.Handle) (string, error) {
-	buf := make([]uint16, 512)
-	n, _, err := procGetFinalPathNameByHandleW.Call(
-		uintptr(handle),
-		uintptr(unsafe.Pointer(&buf[0])),
-		uintptr(len(buf)),
-		0, // FILE_NAME_NORMALIZED
-	)
-	if n == 0 {
-		return "", fmt.Errorf("GetFinalPathNameByHandle: %w", err)
-	}
+	size := 512
+	for {
+		buf := make([]uint16, size)
+		n, _, err := procGetFinalPathNameByHandleW.Call(
+			uintptr(handle),
+			uintptr(unsafe.Pointer(&buf[0])),
+			uintptr(len(buf)),
+			0, // FILE_NAME_NORMALIZED
+		)
+		if n == 0 {
+			return "", fmt.Errorf("GetFinalPathNameByHandle: %w", err)
+		}
+		if int(n) > len(buf) {
+			// Buffer too small, retry with required size
+			size = int(n)
+			continue
+		}
 
-	path := windows.UTF16ToString(buf[:n])
-	// Remove \\?\ prefix added by GetFinalPathNameByHandle
-	path = strings.TrimPrefix(path, `\\?\`)
-	return path, nil
+		path := windows.UTF16ToString(buf[:n])
+		// Remove \\?\ prefix added by GetFinalPathNameByHandle
+		path = strings.TrimPrefix(path, `\\?\`)
+		return path, nil
+	}
 }
 
 // readViaFileMapping reads file content using memory-mapped I/O.
@@ -258,8 +273,9 @@ func readViaFileMapping(handle windows.Handle) ([]byte, error) {
 	defer procUnmapViewOfFile.Call(viewPtr)
 
 	// Copy mapped memory into a Go byte slice
-	data := make([]byte, fileSize)
-	copy(data, unsafe.Slice((*byte)(unsafe.Pointer(viewPtr)), fileSize))
+	size := int(fileSize)
+	data := make([]byte, size)
+	copy(data, unsafe.Slice((*byte)(unsafe.Pointer(viewPtr)), size))
 	return data, nil
 }
 
