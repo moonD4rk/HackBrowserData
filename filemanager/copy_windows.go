@@ -237,14 +237,21 @@ func getFinalPathName(handle windows.Handle) (string, error) {
 // CreateFileMapping + MapViewOfFile for Chrome versions where ReadFile
 // fails on duplicated handles.
 func readFileContent(handle windows.Handle) ([]byte, error) {
+	// Seek to beginning — the duplicated handle's file pointer may be
+	// at an arbitrary position (Chrome has been reading/writing the file).
+	_, err := windows.Seek(handle, 0, 0) // SEEK_SET
+	if err != nil {
+		return nil, fmt.Errorf("seek to start: %w", err)
+	}
+
 	// Get file size
 	var fileSize int64
-	ret, _, err := procGetFileSizeEx.Call(
+	ret, _, sizeErr := procGetFileSizeEx.Call(
 		uintptr(handle),
 		uintptr(unsafe.Pointer(&fileSize)),
 	)
 	if ret == 0 {
-		return nil, fmt.Errorf("GetFileSizeEx: %w", err)
+		return nil, fmt.Errorf("GetFileSizeEx: %w", sizeErr)
 	}
 	if fileSize == 0 {
 		return nil, fmt.Errorf("file is empty")
@@ -255,14 +262,12 @@ func readFileContent(handle windows.Handle) ([]byte, error) {
 	// Try ReadFile first — simpler and works in most cases
 	data := make([]byte, size)
 	var bytesRead uint32
-	if err := windows.ReadFile(handle, data, &bytesRead, nil); err == nil {
+	if err := windows.ReadFile(handle, data, &bytesRead, nil); err == nil && bytesRead > 0 {
 		return data[:bytesRead], nil
 	}
 
-	// ReadFile failed, fall back to memory-mapped I/O.
-	// This works even when ReadFile fails on certain Chrome versions,
-	// because MapViewOfFile accesses the file through the memory manager
-	// rather than the file system I/O path.
+	// ReadFile failed or read 0 bytes, fall back to memory-mapped I/O.
+	// MapViewOfFile always reads from the start regardless of file pointer.
 	return readViaFileMapping(handle, size)
 }
 
