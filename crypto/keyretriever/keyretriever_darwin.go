@@ -4,12 +4,12 @@ package keyretriever
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"fmt"
 	"os/exec"
 	"strings"
-
-	"github.com/moond4rk/hackbrowserdata/browser/exploit/gcoredump"
+	"time"
 )
 
 // https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157
@@ -20,35 +20,41 @@ var darwinParams = pbkdf2Params{
 	hashFunc:   sha1.New,
 }
 
-// GcoredumpRetriever uses CVE-2025-24204 to extract keychain secrets.
-// Requires root privileges on some systems.
+// securityCmdTimeout is the maximum time to wait for the security command.
+const securityCmdTimeout = 30 * time.Second
+
+// GcoredumpRetriever uses CVE-2025-24204 to extract keychain secrets
+// by dumping the securityd process memory. Requires root privileges.
 type GcoredumpRetriever struct{}
 
 func (r *GcoredumpRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
-	secret, err := gcoredump.DecryptKeychain(storage)
+	secret, err := DecryptKeychain(storage)
 	if err != nil {
 		return nil, fmt.Errorf("gcoredump: %w", err)
 	}
 	if secret == "" {
 		return nil, fmt.Errorf("gcoredump: empty secret for %s", storage)
 	}
-	key := darwinParams.deriveKey([]byte(secret))
-	if key == nil {
-		return nil, fmt.Errorf("gcoredump: PBKDF2 derivation failed")
-	}
-	return key, nil
+	return darwinParams.deriveKey([]byte(secret)), nil
 }
 
 // SecurityCmdRetriever uses macOS `security` CLI to query Keychain.
+// This may trigger a password dialog on macOS.
 type SecurityCmdRetriever struct{}
 
 func (r *SecurityCmdRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), securityCmdTimeout)
+	defer cancel()
+
 	var stdout, stderr bytes.Buffer
-	cmd := exec.Command("security", "find-generic-password", "-wa", strings.TrimSpace(storage)) //nolint:gosec
+	cmd := exec.CommandContext(ctx, "security", "find-generic-password", "-wa", strings.TrimSpace(storage)) //nolint:gosec
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return nil, fmt.Errorf("security command timed out after %s", securityCmdTimeout)
+		}
 		return nil, fmt.Errorf("security command: %w (%s)", err, strings.TrimSpace(stderr.String()))
 	}
 	if stderr.Len() > 0 {
@@ -60,11 +66,7 @@ func (r *SecurityCmdRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
 		return nil, fmt.Errorf("keychain: empty secret for %s", storage)
 	}
 
-	key := darwinParams.deriveKey(secret)
-	if key == nil {
-		return nil, fmt.Errorf("PBKDF2 derivation failed")
-	}
-	return key, nil
+	return darwinParams.deriveKey(secret), nil
 }
 
 // DefaultRetriever returns the macOS retriever chain:
