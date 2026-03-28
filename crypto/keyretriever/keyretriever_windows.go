@@ -32,12 +32,16 @@ func (r *DPAPIRetriever) RetrieveKey(_, localStatePath string) ([]byte, error) {
 		return nil, fmt.Errorf("base64 decode encrypted_key: %w", err)
 	}
 
-	// First 5 bytes are the "DPAPI" prefix, skip them
-	if len(keyBytes) <= 5 {
+	// First 5 bytes are the "DPAPI" prefix, validate and skip them
+	const dpapiPrefix = "DPAPI"
+	if len(keyBytes) <= len(dpapiPrefix) {
 		return nil, fmt.Errorf("encrypted_key too short: %d bytes", len(keyBytes))
 	}
+	if string(keyBytes[:len(dpapiPrefix)]) != dpapiPrefix {
+		return nil, fmt.Errorf("encrypted_key unexpected prefix: got %q, want %q", keyBytes[:len(dpapiPrefix)], dpapiPrefix)
+	}
 
-	masterKey, err := crypto.DecryptWithDPAPI(keyBytes[5:])
+	masterKey, err := crypto.DecryptWithDPAPI(keyBytes[len(dpapiPrefix):])
 	if err != nil {
 		return nil, fmt.Errorf("DPAPI decrypt: %w", err)
 	}

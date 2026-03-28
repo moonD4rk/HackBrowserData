@@ -68,7 +68,7 @@ func (r *DBusRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
 	return nil, fmt.Errorf("secret %q not found in keyring", storage)
 }
 
-// FallbackRetriever uses the hardcoded "peanuts" salt when D-Bus is unavailable.
+// FallbackRetriever uses the hardcoded "peanuts" password when D-Bus is unavailable.
 // https://source.chromium.org/chromium/chromium/src/+/main:components/os_crypt/os_crypt_linux.cc;l=100
 type FallbackRetriever struct{}
 

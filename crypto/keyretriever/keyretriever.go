@@ -9,13 +9,13 @@ import (
 // Each platform has different implementations:
 //   - macOS: Keychain access (security command) or gcoredump exploit
 //   - Windows: DPAPI decryption of Local State file
-//   - Linux: D-Bus Secret Service or fallback to "peanuts" salt
+//   - Linux: D-Bus Secret Service or fallback to "peanuts" password
 type KeyRetriever interface {
 	RetrieveKey(storage, localStatePath string) ([]byte, error)
 }
 
 // ChainRetriever tries multiple retrievers in order, returning the first success.
-// This is used on macOS where gcoredump is tried first, then security command.
+// Used on macOS (gcoredump → password → security) and Linux (D-Bus → peanuts).
 type ChainRetriever struct {
 	retrievers []KeyRetriever
 }
@@ -33,7 +33,7 @@ func (c *ChainRetriever) RetrieveKey(storage, localStatePath string) ([]byte, er
 			return key, nil
 		}
 		if err != nil {
-			errs = append(errs, err)
+			errs = append(errs, fmt.Errorf("%T: %w", r, err))
 		}
 	}
 	return nil, fmt.Errorf("all retrievers failed: %w", errors.Join(errs...))
