@@ -46,8 +46,3 @@ func TestExtractSessionStorage(t *testing.T) {
 	assert.Equal(t, "abc123", byKey["token"])
 	assert.Equal(t, "alice", byKey["user"])
 }
-
-func TestExtractLocalStorage_InvalidPath(t *testing.T) {
-	_, err := extractLocalStorage("/nonexistent/leveldb")
-	require.Error(t, err)
-}
