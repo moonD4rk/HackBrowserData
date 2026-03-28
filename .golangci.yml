@@ -193,16 +193,9 @@ linters:
       - path: "crypto/"
         linters:
           - gocritic
-      - path: "utils/chainbreaker/"
+      - path: "crypto/keyretriever/gcoredump_darwin.go"
         linters:
-          - gocritic
-      - path: "browser/exploit/"
-        linters:
-          - gocritic
           - gocognit
-          - funlen
-          - whitespace
-          - staticcheck
 
 formatters:
   enable:

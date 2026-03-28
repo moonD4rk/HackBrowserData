@@ -36,9 +36,6 @@
 # === RFCs ===
 !rfcs/*.md
 
-# === Test fixtures ===
-!utils/chainbreaker/testdata/*.keychain-db
-
 # === Always ignore (override !*/) ===
 .git/
 .idea/

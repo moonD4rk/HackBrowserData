@@ -6,6 +6,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/gocarina/gocsv v0.0.0-20240520201108-78e41c74b4b1
 	github.com/godbus/dbus/v5 v5.2.2
+	github.com/moond4rk/keychainbreaker v0.1.0
 	github.com/otiai10/copy v1.14.1
 	github.com/ppacher/go-dbus-keyring v1.0.1
 	github.com/stretchr/testify v1.11.1

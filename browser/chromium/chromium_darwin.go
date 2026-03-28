@@ -11,8 +11,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/moond4rk/hackbrowserdata/browser/exploit/gcoredump"
 	"github.com/moond4rk/hackbrowserdata/crypto"
+	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
 	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
@@ -27,7 +27,7 @@ func (c *Chromium) GetMasterKey() ([]byte, error) {
 	defer os.Remove(types.ChromiumKey.TempFilename())
 
 	// Try get the master key via gcoredump(CVE-2025-24204)
-	secret, err := gcoredump.DecryptKeychain(c.storage)
+	secret, err := keyretriever.DecryptKeychain(c.storage)
 	if err == nil && secret != "" {
 		log.Debugf("get master key via gcoredump(CVE-2025-24204) success, browser %s", c.name)
 		if key, err := c.parseSecret([]byte(secret)); err == nil {
