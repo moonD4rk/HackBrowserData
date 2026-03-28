@@ -45,6 +45,7 @@ func (r *DPAPIRetriever) RetrieveKey(_, localStatePath string) ([]byte, error) {
 }
 
 // DefaultRetriever returns the Windows retriever (DPAPI only).
-func DefaultRetriever() KeyRetriever {
+// The keychainPassword parameter is unused on Windows.
+func DefaultRetriever(_ string) KeyRetriever {
 	return &DPAPIRetriever{}
 }

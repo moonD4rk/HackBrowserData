@@ -78,7 +78,8 @@ func (r *FallbackRetriever) RetrieveKey(_, _ string) ([]byte, error) {
 
 // DefaultRetriever returns the Linux retriever chain:
 // D-Bus Secret Service first, then "peanuts" fallback.
-func DefaultRetriever() KeyRetriever {
+// The keychainPassword parameter is unused on Linux.
+func DefaultRetriever(_ string) KeyRetriever {
 	return NewChain(
 		&DBusRetriever{},
 		&FallbackRetriever{},
