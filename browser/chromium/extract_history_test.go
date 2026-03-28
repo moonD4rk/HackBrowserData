@@ -1,0 +1,48 @@
+package chromium
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestExtractHistories(t *testing.T) {
+	path := createTestDB(t, "History", urlsSchema,
+		insertURL("https://github.com", "GitHub", 100, 13370000000000000),
+		insertURL("https://go.dev", "Go Dev", 50, 13360000000000000),
+		insertURL("https://example.com", "Example", 200, 13350000000000000),
+	)
+
+	got, err := extractHistories(path, "")
+	require.NoError(t, err)
+	require.Len(t, got, 3)
+
+	// Verify sort order: visit count descending
+	assert.Equal(t, 200, got[0].VisitCount)
+	assert.Equal(t, 100, got[1].VisitCount)
+	assert.Equal(t, 50, got[2].VisitCount)
+
+	// Verify field mapping
+	assert.Equal(t, "https://example.com", got[0].URL)
+	assert.Equal(t, "Example", got[0].Title)
+	assert.False(t, got[0].LastVisit.IsZero())
+}
+
+func TestExtractHistories_CustomQuery(t *testing.T) {
+	path := createTestDB(t, "History", urlsSchema,
+		insertURL("https://rare.com", "Rare", 2, 13350000000000000),
+		insertURL("https://popular.com", "Popular", 500, 13360000000000000),
+	)
+
+	query := `SELECT url, title, visit_count, last_visit_time FROM urls WHERE visit_count > 10`
+	got, err := extractHistories(path, query)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, "https://popular.com", got[0].URL)
+}
+
+func TestExtractHistories_FileNotFound(t *testing.T) {
+	_, err := extractHistories("/nonexistent/History", "")
+	require.Error(t, err)
+}
