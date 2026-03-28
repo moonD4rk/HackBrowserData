@@ -13,7 +13,7 @@ func TestExtractCookies(t *testing.T) {
 		insertCookie("token", ".new.com", "/api", "", 13360000000000000, 13370000000000000, 1, 0),
 	)
 
-	got, err := extractCookies(nil, path, "")
+	got, err := extractCookies(nil, path)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 

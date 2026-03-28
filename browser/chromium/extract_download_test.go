@@ -13,7 +13,7 @@ func TestExtractDownloads(t *testing.T) {
 		insertDownload("/tmp/new.pdf", "https://new.com/doc.pdf", 2048, 13360000000000000, 13360000200000000),
 	)
 
-	got, err := extractDownloads(path, "")
+	got, err := extractDownloads(path)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 

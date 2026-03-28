@@ -13,7 +13,7 @@ func TestExtractCreditCards(t *testing.T) {
 		insertCreditCard("Jane Smith", 6, 2027, ""),
 	)
 
-	got, err := extractCreditCards(nil, path, "")
+	got, err := extractCreditCards(nil, path)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 

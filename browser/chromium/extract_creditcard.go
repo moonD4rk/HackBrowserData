@@ -10,12 +10,8 @@ import (
 const defaultCreditCardQuery = `SELECT name_on_card, expiration_month, expiration_year,
 	card_number_encrypted FROM credit_cards`
 
-func extractCreditCards(masterKey []byte, path, query string) ([]types.CreditCardEntry, error) {
-	if query == "" {
-		query = defaultCreditCardQuery
-	}
-
-	return sqliteutil.QueryRows(path, false, query,
+func extractCreditCards(masterKey []byte, path string) ([]types.CreditCardEntry, error) {
+	return sqliteutil.QueryRows(path, false, defaultCreditCardQuery,
 		func(rows *sql.Rows) (types.CreditCardEntry, error) {
 			var name, month, year string
 			var encNumber []byte

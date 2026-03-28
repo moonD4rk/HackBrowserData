@@ -13,12 +13,8 @@ const defaultCookieQuery = `SELECT name, encrypted_value, host_key, path,
 	creation_utc, expires_utc, is_secure, is_httponly,
 	has_expires, is_persistent FROM cookies`
 
-func extractCookies(masterKey []byte, path, query string) ([]types.CookieEntry, error) {
-	if query == "" {
-		query = defaultCookieQuery
-	}
-
-	cookies, err := sqliteutil.QueryRows(path, false, query,
+func extractCookies(masterKey []byte, path string) ([]types.CookieEntry, error) {
+	cookies, err := sqliteutil.QueryRows(path, false, defaultCookieQuery,
 		func(rows *sql.Rows) (types.CookieEntry, error) {
 			var (
 				name, host, cookiePath  string

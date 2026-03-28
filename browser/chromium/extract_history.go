@@ -11,12 +11,8 @@ import (
 
 const defaultHistoryQuery = `SELECT url, title, visit_count, last_visit_time FROM urls`
 
-func extractHistories(path, query string) ([]types.HistoryEntry, error) {
-	if query == "" {
-		query = defaultHistoryQuery
-	}
-
-	histories, err := sqliteutil.QueryRows(path, false, query,
+func extractHistories(path string) ([]types.HistoryEntry, error) {
+	histories, err := sqliteutil.QueryRows(path, false, defaultHistoryQuery,
 		func(rows *sql.Rows) (types.HistoryEntry, error) {
 			var url, title string
 			var visitCount int

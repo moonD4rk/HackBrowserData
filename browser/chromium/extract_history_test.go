@@ -14,7 +14,7 @@ func TestExtractHistories(t *testing.T) {
 		insertURL("https://example.com", "Example", 200, 13350000000000000),
 	)
 
-	got, err := extractHistories(path, "")
+	got, err := extractHistories(path)
 	require.NoError(t, err)
 	require.Len(t, got, 3)
 
@@ -29,20 +29,7 @@ func TestExtractHistories(t *testing.T) {
 	assert.False(t, got[0].LastVisit.IsZero())
 }
 
-func TestExtractHistories_CustomQuery(t *testing.T) {
-	path := createTestDB(t, "History", urlsSchema,
-		insertURL("https://rare.com", "Rare", 2, 13350000000000000),
-		insertURL("https://popular.com", "Popular", 500, 13360000000000000),
-	)
-
-	query := `SELECT url, title, visit_count, last_visit_time FROM urls WHERE visit_count > 10`
-	got, err := extractHistories(path, query)
-	require.NoError(t, err)
-	require.Len(t, got, 1)
-	assert.Equal(t, "https://popular.com", got[0].URL)
-}
-
 func TestExtractHistories_FileNotFound(t *testing.T) {
-	_, err := extractHistories("/nonexistent/History", "")
+	_, err := extractHistories("/nonexistent/History")
 	require.Error(t, err)
 }

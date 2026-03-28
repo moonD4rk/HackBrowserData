@@ -11,12 +11,8 @@ import (
 
 const defaultDownloadQuery = `SELECT target_path, tab_url, total_bytes, start_time, end_time FROM downloads`
 
-func extractDownloads(path, query string) ([]types.DownloadEntry, error) {
-	if query == "" {
-		query = defaultDownloadQuery
-	}
-
-	downloads, err := sqliteutil.QueryRows(path, false, query,
+func extractDownloads(path string) ([]types.DownloadEntry, error) {
+	downloads, err := sqliteutil.QueryRows(path, false, defaultDownloadQuery,
 		func(rows *sql.Rows) (types.DownloadEntry, error) {
 			var targetPath, url string
 			var totalBytes, startTime, endTime int64
