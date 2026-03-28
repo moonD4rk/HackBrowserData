@@ -1,21 +1,28 @@
 package chromium
 
-import "github.com/moond4rk/hackbrowserdata/crypto"
+import (
+	"fmt"
+
+	"github.com/moond4rk/hackbrowserdata/crypto"
+)
 
 // decryptValue decrypts a Chromium-encrypted value using the master key.
-// It tries AES decryption first (v10 prefix), then falls back to DPAPI
-// for legacy values without a version prefix.
+// It detects the cipher version from the ciphertext prefix and routes
+// to the appropriate decryption function.
 func decryptValue(masterKey, ciphertext []byte) ([]byte, error) {
 	if len(ciphertext) == 0 {
 		return nil, nil
 	}
 
-	value, err := crypto.DecryptWithChromium(masterKey, ciphertext)
-	if err != nil {
-		value, err = crypto.DecryptWithDPAPI(ciphertext)
-		if err != nil {
-			return nil, err
-		}
+	switch crypto.DetectVersion(ciphertext) {
+	case crypto.CipherV10:
+		return crypto.DecryptWithChromium(masterKey, ciphertext)
+	case crypto.CipherV20:
+		// TODO: implement App-Bound Encryption (Chrome 127+)
+		return nil, fmt.Errorf("v20 App-Bound Encryption not yet supported")
+	case crypto.CipherDPAPI:
+		return crypto.DecryptWithDPAPI(ciphertext)
+	default:
+		return nil, fmt.Errorf("unsupported cipher version: %s", crypto.DetectVersion(ciphertext))
 	}
-	return value, nil
 }
