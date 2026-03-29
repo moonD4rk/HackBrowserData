@@ -196,6 +196,13 @@ linters:
       - path: "crypto/keyretriever/gcoredump_darwin.go"
         linters:
           - gocognit
+      # Temporary: new v2 extract files have no callers until Phase 8 wiring
+      - path: "browser/chromium/(source|decrypt|extract_.*)\\.go"
+        linters:
+          - unused
+      - path: "browser/firefox/source\\.go"
+        linters:
+          - unused
 
 formatters:
   enable:
