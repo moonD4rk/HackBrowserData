@@ -22,9 +22,10 @@ func TestDecryptValue_V10(t *testing.T) {
 	v10Ciphertext := append([]byte("v10"), encrypted...)
 
 	tests := []struct {
-		name string
-		key  []byte
-		want []byte
+		name    string
+		key     []byte
+		want    []byte
+		wantErr bool
 	}{
 		{
 			name: "decrypts correctly",
@@ -32,15 +33,21 @@ func TestDecryptValue_V10(t *testing.T) {
 			want: plaintext,
 		},
 		{
-			name: "wrong key returns error-free empty result",
-			key:  []byte("wrong_key_1234!!"),
-			want: nil,
+			name:    "wrong key returns error",
+			key:     []byte("wrong_key_1234!!"),
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, _ := decryptValue(tt.key, v10Ciphertext)
+			got, err := decryptValue(tt.key, v10Ciphertext)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Nil(t, got)
+				return
+			}
+			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
 	}

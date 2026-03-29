@@ -22,12 +22,13 @@ func encryptWithDPAPI(plaintext []byte) ([]byte, error) {
 	protectDataProc := crypt32.NewProc("CryptProtectData")
 	localFreeProc := kernel32.NewProc("LocalFree")
 
-	inBlob := struct {
+	var inBlob struct {
 		cbData uint32
 		pbData *byte
-	}{
-		cbData: uint32(len(plaintext)),
-		pbData: &plaintext[0],
+	}
+	inBlob.cbData = uint32(len(plaintext))
+	if len(plaintext) > 0 {
+		inBlob.pbData = &plaintext[0]
 	}
 
 	var outBlob struct {
@@ -45,8 +46,9 @@ func encryptWithDPAPI(plaintext []byte) ([]byte, error) {
 	}
 	defer localFreeProc.Call(uintptr(unsafe.Pointer(outBlob.pbData)))
 
-	result := make([]byte, outBlob.cbData)
-	copy(result, (*[1 << 30]byte)(unsafe.Pointer(outBlob.pbData))[:outBlob.cbData])
+	size := int(outBlob.cbData)
+	result := make([]byte, size)
+	copy(result, (*[1 << 30]byte)(unsafe.Pointer(outBlob.pbData))[:size])
 	return result, nil
 }
 
