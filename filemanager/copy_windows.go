@@ -127,7 +127,7 @@ func findFileHandle(targetPath string) (windows.Handle, error) {
 			0, false,
 			windows.DUPLICATE_SAME_ACCESS,
 		)
-		windows.CloseHandle(process)
+		_ = windows.CloseHandle(process)
 		if err != nil {
 			continue
 		}
@@ -135,21 +135,21 @@ func findFileHandle(targetPath string) (windows.Handle, error) {
 		// Verify it's a disk file (not a pipe, device, etc.)
 		fileType, _, _ := procGetFileType.Call(uintptr(dupHandle))
 		if fileType != fileTypeDisk {
-			windows.CloseHandle(dupHandle)
+			_ = windows.CloseHandle(dupHandle)
 			continue
 		}
 
 		// Get the file path and check if it matches our target
 		name, err := getFinalPathName(dupHandle)
 		if err != nil {
-			windows.CloseHandle(dupHandle)
+			_ = windows.CloseHandle(dupHandle)
 			continue
 		}
 
 		if strings.HasSuffix(strings.ToLower(name), targetSuffix) {
 			return dupHandle, nil
 		}
-		windows.CloseHandle(dupHandle)
+		_ = windows.CloseHandle(dupHandle)
 	}
 
 	return 0, fmt.Errorf("no process has file open: %s", targetPath)
