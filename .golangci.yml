@@ -156,8 +156,6 @@ linters:
           - errcheck
           - testifylint
           - lll
-          - gocognit
-          - gocritic
       - source: "defer"
         linters:
           - errcheck
