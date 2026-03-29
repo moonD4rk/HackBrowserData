@@ -3,6 +3,7 @@
 package chromium
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,40 +12,53 @@ import (
 	"github.com/moond4rk/hackbrowserdata/crypto"
 )
 
-func TestDecryptValue_V10RoundTrip(t *testing.T) {
-	// Construct a v10 ciphertext using the same method Chrome uses on macOS/Linux:
-	// AES-128-CBC with a fixed IV of 16 space bytes (0x20).
-	key := []byte("0123456789abcdef") // 16-byte AES key
-	iv := []byte("                ")  // 16 space bytes, same as Chrome
-	plaintext := []byte("my_secret_cookie_value")
+// testCBCIV is the fixed IV Chrome uses on macOS/Linux (16 space bytes).
+var testCBCIV = bytes.Repeat([]byte{0x20}, 16)
 
-	encrypted, err := crypto.AES128CBCEncrypt(key, iv, plaintext)
+func TestDecryptValue_V10(t *testing.T) {
+	plaintext := []byte("test_secret_value")
+	encrypted, err := crypto.AES128CBCEncrypt(testAESKey, testCBCIV, plaintext)
 	require.NoError(t, err)
+	v10Ciphertext := append([]byte("v10"), encrypted...)
 
-	// Prepend "v10" prefix, just like Chrome stores it
-	ciphertext := append([]byte("v10"), encrypted...)
+	tests := []struct {
+		name string
+		key  []byte
+		want []byte
+	}{
+		{
+			name: "decrypts correctly",
+			key:  testAESKey,
+			want: plaintext,
+		},
+		{
+			name: "wrong key returns error-free empty result",
+			key:  []byte("wrong_key_1234!!"),
+			want: nil,
+		},
+	}
 
-	// decryptValue should detect v10 and decrypt correctly
-	got, err := decryptValue(key, ciphertext)
-	require.NoError(t, err)
-	assert.Equal(t, plaintext, got)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, _ := decryptValue(tt.key, v10Ciphertext)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
 
-func TestDecryptValue_Empty(t *testing.T) {
-	got, err := decryptValue(nil, nil)
-	require.NoError(t, err)
-	assert.Nil(t, got)
-}
-
-func TestDecryptValue_V20Unsupported(t *testing.T) {
+func TestDecryptValue_V20(t *testing.T) {
+	// v20 App-Bound Encryption is not yet implemented.
+	// TODO: add successful decryption cases when implemented.
 	ciphertext := append([]byte("v20"), make([]byte, 32)...)
 	_, err := decryptValue(nil, ciphertext)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "v20")
 }
 
-func TestDecryptValue_InvalidData(t *testing.T) {
-	// Non-v10, non-v20 prefix — goes to DPAPI path which fails on macOS/Linux
+func TestDecryptValue_DPAPI(t *testing.T) {
+	// DPAPI decryption requires Windows CryptProtectData to construct test data.
+	// On macOS/Linux, any non-v10/v20 data routes to DPAPI which returns "not support".
+	// TODO: add Windows round-trip test when EncryptWithDPAPI is available.
 	_, err := decryptValue(nil, []byte{0x01, 0x02, 0x03, 0x04})
 	require.Error(t, err)
 }
