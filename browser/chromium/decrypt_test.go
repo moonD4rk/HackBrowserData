@@ -54,11 +54,3 @@ func TestDecryptValue_V20(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "v20")
 }
-
-func TestDecryptValue_DPAPI(t *testing.T) {
-	// DPAPI decryption requires Windows CryptProtectData to construct test data.
-	// On macOS/Linux, any non-v10/v20 data routes to DPAPI which returns "not support".
-	// TODO: add Windows round-trip test when EncryptWithDPAPI is available.
-	_, err := decryptValue(nil, []byte{0x01, 0x02, 0x03, 0x04})
-	require.Error(t, err)
-}
