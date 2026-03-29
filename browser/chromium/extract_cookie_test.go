@@ -26,63 +26,63 @@ func TestExtractCookies(t *testing.T) {
 	assert.Equal(t, "token", got[0].Name)
 	assert.Equal(t, "/api", got[0].Path)
 	assert.True(t, got[0].IsSecure)
-	assert.False(t, got[0].IsHTTPOnly) // httpOnly=0
+	assert.False(t, got[0].IsHTTPOnly)
 	assert.False(t, got[0].CreatedAt.IsZero())
-	assert.False(t, got[0].ExpireAt.IsZero())
 	assert.True(t, got[0].ExpireAt.After(got[0].CreatedAt))
-
-	// Verify second cookie flags
-	assert.True(t, got[1].IsHTTPOnly) // httpOnly=1
+	assert.True(t, got[1].IsHTTPOnly)
 }
 
-func TestStripCookieHash_ChromeV24(t *testing.T) {
-	host := ".google.com"
-	realValue := "GA1.3.240937927.1770097858"
+func TestStripCookieHash(t *testing.T) {
+	googleHash := sha256.Sum256([]byte(".google.com"))
+	shopifyHash := sha256.Sum256([]byte(".shopify.com"))
 
-	// Simulate Chrome 130+ (DB v24): SHA256(host) prepended to value
-	hash := sha256.Sum256([]byte(host))
-	withHash := append(hash[:], []byte(realValue)...)
+	tests := []struct {
+		name    string
+		value   []byte
+		hostKey string
+		want    string
+	}{
+		{
+			name:    "Chrome 130+ strips SHA256 prefix",
+			value:   append(googleHash[:], []byte("GA1.3.240937927.1770097858")...),
+			hostKey: ".google.com",
+			want:    "GA1.3.240937927.1770097858",
+		},
+		{
+			name:    "Chrome 130+ empty original value",
+			value:   shopifyHash[:],
+			hostKey: ".shopify.com",
+			want:    "",
+		},
+		{
+			name:    "older Chrome no prefix",
+			value:   []byte("plain_cookie_value"),
+			hostKey: ".example.com",
+			want:    "plain_cookie_value",
+		},
+		{
+			name:    "short value unchanged",
+			value:   []byte("short"),
+			hostKey: ".example.com",
+			want:    "short",
+		},
+		{
+			name:    "host mismatch not stripped",
+			value:   append(googleHash[:], []byte("value")...),
+			hostKey: ".other.com",
+			want:    string(append(googleHash[:], []byte("value")...)),
+		},
+	}
 
-	got := stripCookieHash(withHash, host)
-	assert.Equal(t, realValue, string(got))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := stripCookieHash(tt.value, tt.hostKey)
+			assert.Equal(t, tt.want, string(got))
+		})
+	}
 }
 
-func TestStripCookieHash_OlderChrome(t *testing.T) {
-	// Pre-Chrome 130: no hash prefix, value returned unchanged
-	oldValue := []byte("plain_cookie_value")
-	got := stripCookieHash(oldValue, ".example.com")
-	assert.Equal(t, "plain_cookie_value", string(got))
-}
-
-func TestStripCookieHash_EmptyOriginalValue(t *testing.T) {
-	// Chrome 130+: cookie with empty value → only SHA256(host) remains after decryption
-	host := ".shopify.com"
-	hash := sha256.Sum256([]byte(host))
-
-	got := stripCookieHash(hash[:], host)
-	assert.Empty(t, got) // actual value was "", so result should be empty
-}
-
-func TestStripCookieHash_ShortValue(t *testing.T) {
-	// Value shorter than 32 bytes: returned unchanged
-	got := stripCookieHash([]byte("short"), ".example.com")
-	assert.Equal(t, "short", string(got))
-}
-
-func TestStripCookieHash_EmptyValue(t *testing.T) {
+func TestStripCookieHash_NilValue(t *testing.T) {
 	got := stripCookieHash(nil, ".example.com")
 	assert.Nil(t, got)
-}
-
-func TestStripCookieHash_HostMismatch(t *testing.T) {
-	host := ".google.com"
-	realValue := "some_value"
-
-	// Hash was computed for .google.com
-	hash := sha256.Sum256([]byte(host))
-	withHash := append(hash[:], []byte(realValue)...)
-
-	// But we check against a different host — should NOT strip
-	got := stripCookieHash(withHash, ".other.com")
-	assert.Len(t, got, sha256.Size+len(realValue)) // unchanged
 }

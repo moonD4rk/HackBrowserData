@@ -1,0 +1,4 @@
+# Force LF line endings for all text files.
+# Prevents gofmt/gofumpt/goimports CRLF false positives on Windows CI.
+# See: golangci/golangci-lint#580, golang/go#16355
+* text=auto eol=lf
