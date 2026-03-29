@@ -14,7 +14,8 @@ func decryptValue(masterKey, ciphertext []byte) ([]byte, error) {
 		return nil, nil
 	}
 
-	switch crypto.DetectVersion(ciphertext) {
+	version := crypto.DetectVersion(ciphertext)
+	switch version {
 	case crypto.CipherV10:
 		return crypto.DecryptWithChromium(masterKey, ciphertext)
 	case crypto.CipherV20:
@@ -23,6 +24,6 @@ func decryptValue(masterKey, ciphertext []byte) ([]byte, error) {
 	case crypto.CipherDPAPI:
 		return crypto.DecryptWithDPAPI(ciphertext)
 	default:
-		return nil, fmt.Errorf("unsupported cipher version: %s", crypto.DetectVersion(ciphertext))
+		return nil, fmt.Errorf("unsupported cipher version: %s", version)
 	}
 }

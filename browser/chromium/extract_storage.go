@@ -2,6 +2,8 @@ package chromium
 
 import (
 	"bytes"
+	"fmt"
+	"os"
 
 	"github.com/syndtr/goleveldb/leveldb"
 
@@ -19,6 +21,9 @@ func extractSessionStorage(path string) ([]types.StorageEntry, error) {
 // extractLevelDB iterates over all entries in a LevelDB directory,
 // splitting each key by the separator into (url, name).
 func extractLevelDB(path string, separator []byte) ([]types.StorageEntry, error) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil, fmt.Errorf("leveldb path not found: %s", path)
+	}
 	db, err := leveldb.OpenFile(path, nil)
 	if err != nil {
 		return nil, err

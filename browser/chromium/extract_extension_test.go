@@ -70,7 +70,7 @@ func TestExtractExtensions_NoManifestSkipped(t *testing.T) {
 	assert.Empty(t, got)
 }
 
-func TestExtractExtensions_InvalidJSON(t *testing.T) {
+func TestExtractExtensions_MissingSettingsPath(t *testing.T) {
 	path := createTestJSON(t, "Secure Preferences", `{"something": "else"}`)
 	_, err := extractExtensions(path)
 	require.Error(t, err)

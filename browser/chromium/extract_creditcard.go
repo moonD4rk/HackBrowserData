@@ -2,6 +2,7 @@ package chromium
 
 import (
 	"database/sql"
+	"strconv"
 
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
@@ -13,7 +14,8 @@ const defaultCreditCardQuery = `SELECT name_on_card, expiration_month, expiratio
 func extractCreditCards(masterKey []byte, path string) ([]types.CreditCardEntry, error) {
 	return sqliteutil.QueryRows(path, false, defaultCreditCardQuery,
 		func(rows *sql.Rows) (types.CreditCardEntry, error) {
-			var name, month, year string
+			var name string
+			var month, year int
 			var encNumber []byte
 			if err := rows.Scan(&name, &month, &year, &encNumber); err != nil {
 				return types.CreditCardEntry{}, err
@@ -22,8 +24,8 @@ func extractCreditCards(masterKey []byte, path string) ([]types.CreditCardEntry,
 			return types.CreditCardEntry{
 				Name:     name,
 				Number:   string(number),
-				ExpMonth: month,
-				ExpYear:  year,
+				ExpMonth: strconv.Itoa(month),
+				ExpYear:  strconv.Itoa(year),
 			}, nil
 		})
 }
