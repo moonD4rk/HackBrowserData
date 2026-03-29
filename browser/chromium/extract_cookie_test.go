@@ -1,6 +1,7 @@
 package chromium
 
 import (
+	"crypto/sha256"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,11 +26,63 @@ func TestExtractCookies(t *testing.T) {
 	assert.Equal(t, "token", got[0].Name)
 	assert.Equal(t, "/api", got[0].Path)
 	assert.True(t, got[0].IsSecure)
-	assert.False(t, got[0].IsHTTPOnly) // httpOnly=0
+	assert.False(t, got[0].IsHTTPOnly)
 	assert.False(t, got[0].CreatedAt.IsZero())
-	assert.False(t, got[0].ExpireAt.IsZero())
 	assert.True(t, got[0].ExpireAt.After(got[0].CreatedAt))
+	assert.True(t, got[1].IsHTTPOnly)
+}
 
-	// Verify second cookie flags
-	assert.True(t, got[1].IsHTTPOnly) // httpOnly=1
+func TestStripCookieHash(t *testing.T) {
+	googleHash := sha256.Sum256([]byte(".google.com"))
+	shopifyHash := sha256.Sum256([]byte(".shopify.com"))
+
+	tests := []struct {
+		name    string
+		value   []byte
+		hostKey string
+		want    string
+	}{
+		{
+			name:    "Chrome 130+ strips SHA256 prefix",
+			value:   append(googleHash[:], []byte("GA1.3.240937927.1770097858")...),
+			hostKey: ".google.com",
+			want:    "GA1.3.240937927.1770097858",
+		},
+		{
+			name:    "Chrome 130+ empty original value",
+			value:   shopifyHash[:],
+			hostKey: ".shopify.com",
+			want:    "",
+		},
+		{
+			name:    "older Chrome no prefix",
+			value:   []byte("plain_cookie_value"),
+			hostKey: ".example.com",
+			want:    "plain_cookie_value",
+		},
+		{
+			name:    "short value unchanged",
+			value:   []byte("short"),
+			hostKey: ".example.com",
+			want:    "short",
+		},
+		{
+			name:    "host mismatch not stripped",
+			value:   append(googleHash[:], []byte("value")...),
+			hostKey: ".other.com",
+			want:    string(append(googleHash[:], []byte("value")...)),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := stripCookieHash(tt.value, tt.hostKey)
+			assert.Equal(t, tt.want, string(got))
+		})
+	}
+}
+
+func TestStripCookieHash_NilValue(t *testing.T) {
+	got := stripCookieHash(nil, ".example.com")
+	assert.Nil(t, got)
 }

@@ -12,6 +12,7 @@
 !go.sum
 
 # === Project root config ===
+!.gitattributes
 !.gitignore
 !.golangci.yml
 !.goreleaser.yml

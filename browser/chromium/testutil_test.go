@@ -13,6 +13,14 @@ import (
 )
 
 // ---------------------------------------------------------------------------
+// Shared test constants for Chromium encryption.
+// Reusable across decrypt, cookie, password, and creditcard tests.
+// ---------------------------------------------------------------------------
+
+// testAESKey is a 16-byte AES-128 key for constructing test ciphertext.
+var testAESKey = []byte("0123456789abcdef")
+
+// ---------------------------------------------------------------------------
 // Real Chrome table schemas — extracted via `sqlite3 <db> ".schema <table>"`.
 // Using complete schemas ensures our SQL queries work against real browser data.
 // ---------------------------------------------------------------------------

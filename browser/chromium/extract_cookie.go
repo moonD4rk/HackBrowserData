@@ -1,6 +1,8 @@
 package chromium
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"database/sql"
 	"sort"
 
@@ -30,6 +32,7 @@ func extractCookies(masterKey []byte, path string) ([]types.CookieEntry, error) 
 			}
 
 			value, _ := decryptValue(masterKey, encryptedValue)
+			value = stripCookieHash(value, host)
 			return types.CookieEntry{
 				Name:       name,
 				Host:       host,
@@ -49,4 +52,20 @@ func extractCookies(masterKey []byte, path string) ([]types.CookieEntry, error) 
 		return cookies[i].CreatedAt.After(cookies[j].CreatedAt)
 	})
 	return cookies, nil
+}
+
+// stripCookieHash removes the SHA256(host_key) prefix from a decrypted cookie value.
+// Chrome 130+ (Cookie DB schema version 24) prepends SHA256(domain) to the cookie
+// value before encryption to prevent cross-domain cookie replay attacks.
+// If the first 32 bytes don't match SHA256(hostKey), the value is returned unchanged,
+// which handles both older Chrome versions and tampered data.
+func stripCookieHash(value []byte, hostKey string) []byte {
+	if len(value) < sha256.Size {
+		return value
+	}
+	hash := sha256.Sum256([]byte(hostKey))
+	if bytes.Equal(value[:sha256.Size], hash[:]) {
+		return value[sha256.Size:] // empty slice if value was exactly 32 bytes
+	}
+	return value
 }
