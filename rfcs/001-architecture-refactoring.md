@@ -1,9 +1,9 @@
 # RFC-001: Architecture Refactoring
 
 **Author**: moonD4rk
-**Status**: Proposed
+**Status**: In Progress (Phase 8a)
 **Created**: 2025-09-01
-**Updated**: 2026-03-22
+**Updated**: 2026-03-30
 
 ## Abstract
 
@@ -747,18 +747,30 @@ data.Output(dir, b.Name(), format)  // output whatever succeeded
 
 ## 7. Implementation Order
 
-| Phase | Scope | Risk |
-|-------|-------|------|
-| 1 | `types/category.go` + `types/models.go` + `browserdata/browserdata.go` | Zero — new files only |
-| 2 | `utils/sqliteutil/sqlite.go` + `query.go` | Zero — new files only |
-| 3 | `crypto/version.go`, rename `AESCBCDecrypt` | Low — internal crypto changes |
-| 4 | `crypto/keyretriever/` | Low — new package |
-| 5 | `browser/chromium/source.go` + `extract_*.go` | Medium — new extract methods |
-| 6 | `browser/firefox/source.go` + `extract_*.go` | Medium — new extract methods |
-| 7 | `filemanager/session.go` | Low — new package |
-| 8 | Wire `Extract()` + `Config` + `PickBrowsers()` | High — connects everything |
-| 9 | Delete old code: `extractor/`, `browserdata/*/`, `imports.go` | High — removal |
-| 10 | Update CLI, tests, cross-platform build verification | Medium |
+| Phase | Scope | Risk | Status |
+|-------|-------|------|--------|
+| 1 | `types/category.go` + `types/models.go` + `browserdata/browserdata.go` | Zero — new files only | ✅ Done |
+| 2 | `utils/sqliteutil/sqlite.go` + `query.go` | Zero — new files only | ✅ Done |
+| 3 | `crypto/version.go`, rename `AESCBCDecrypt` | Low — internal crypto changes | ✅ Done |
+| 4 | `crypto/keyretriever/` | Low — new package | ✅ Done |
+| 5 | `browser/chromium/source.go` + `extract_*.go` | Medium — new extract methods | ✅ Done (#521) |
+| 6 | `browser/firefox/source.go` + `extract_*.go` | Medium — new extract methods | ✅ Done (#527) |
+| 7 | `filemanager/session.go` | Low — new package | ✅ Done (#516) |
+| 8a | `browser/browser.go`: Browser interface + Category→extract routing | Medium | ⏳ |
+| 8b | `browser/chromium/chromium.go`: Chromium Browser impl + keyretriever wiring | Medium | ⏳ |
+| 8c | `browser/firefox/firefox.go` refactor: Firefox Browser impl + GetMasterKey migration | Medium | ⏳ |
+| 8d | `browser/browser_*.go`: PickBrowsers() + platform browser discovery | High | ⏳ |
+| 9 | Delete old code: `extractor/`, `browserdata/*/`, `imports.go` | High — removal | ⏳ |
+| 10 | Update CLI, tests, cross-platform build verification | Medium | ⏳ |
+
+Phase 8 was split into 4 sub-phases because it connects all components:
+- **8a** defines the interface contract (no system interaction)
+- **8b** and **8c** implement the two browser engines (can be done in parallel)
+- **8d** adds platform-specific browser discovery (depends on 8b+8c)
+
+Additional PRs merged during implementation:
+- #524: Cookie SHA256 hash stripping for Chrome 130+
+- #525: Issue tracking LocalStorage LevelDB parsing bugs
 
 ---
 
@@ -785,8 +797,13 @@ data.Output(dir, b.Name(), format)  // output whatever succeeded
 ## 9. Open Questions
 
 1. **App-Bound Encryption (Chrome 127+ v20)**: `crypto/version.go` has the extension point. Implementation deferred until tested.
-2. **Firefox version detection**: is the key-length heuristic in `processMasterKey()` sufficient, or formalize it?
-3. **Sort direction**: standardize all categories to DESC by date? (Firefox history/download currently ASC)
+2. ~~**Firefox version detection**: is the key-length heuristic in `processMasterKey()` sufficient?~~ — **Resolved**: IV length (8=3DES, 16=AES-256-CBC) determines algorithm. Full key returned without truncation. See #498/#499.
+3. ~~**Sort direction**: standardize all categories to DESC by date?~~ — **Resolved**: preserved original sort behavior per browser engine (Firefox history ASC, Chromium history DESC).
+
+### Known Issues (tracked)
+
+- **#522**: TimeEpoch/TimeStamp conditional heuristic removed — needs investigation
+- **#525**: LocalStorage/SessionStorage LevelDB key parsing incorrect (encoding prefix, META entries)
 
 ---
 
