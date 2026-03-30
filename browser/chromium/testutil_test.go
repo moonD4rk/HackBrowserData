@@ -173,22 +173,22 @@ func insertURL(url, title string, visitCount int, lastVisitTime int64) string {
 	)
 }
 
-func insertDownload(targetPath, tabURL string, totalBytes, startTime, endTime int64) string {
+func insertDownload(targetPath, tabURL, mimeType string, totalBytes, startTime, endTime int64) string {
 	return fmt.Sprintf(
 		`INSERT INTO downloads (id, guid, current_path, target_path, start_time, received_bytes,
 		 total_bytes, state, danger_type, interrupt_reason, hash, end_time, opened, last_access_time,
 		 transient, referrer, site_url, embedder_download_data, tab_url, tab_referrer_url,
 		 http_method, by_ext_id, by_ext_name, by_web_app_id, etag, last_modified, mime_type, original_mime_type)
-		 VALUES (NULL, '', '', '%s', %d, %d, %d, 1, 0, 0, x'', %d, 0, 0, 0, '', '', '', '%s', '', 'GET', '', '', '', '', '', '', '')`,
-		targetPath, startTime, totalBytes, totalBytes, endTime, tabURL,
+		 VALUES (NULL, '', '', '%s', %d, %d, %d, 1, 0, 0, x'', %d, 0, 0, 0, '', '', '', '%s', '', 'GET', '', '', '', '', '', '%s', '')`,
+		targetPath, startTime, totalBytes, totalBytes, endTime, tabURL, mimeType,
 	)
 }
 
-func insertCreditCard(name string, month, year int, encNumberHex string) string {
+func insertCreditCard(name string, month, year int, encNumberHex, nickName, address string) string {
 	return fmt.Sprintf(
-		`INSERT INTO credit_cards (guid, name_on_card, expiration_month, expiration_year, card_number_encrypted)
-		 VALUES ('%s-%d-%d', '%s', %d, %d, x'%s')`,
-		name, month, year, name, month, year, encNumberHex,
+		`INSERT INTO credit_cards (guid, name_on_card, expiration_month, expiration_year, card_number_encrypted, nickname, billing_address_id)
+		 VALUES ('%s-%d-%d', '%s', %d, %d, x'%s', '%s', '%s')`,
+		name, month, year, name, month, year, encNumberHex, nickName, address,
 	)
 }
 

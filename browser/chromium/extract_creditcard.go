@@ -8,14 +8,14 @@ import (
 )
 
 const defaultCreditCardQuery = `SELECT name_on_card, expiration_month, expiration_year,
-	card_number_encrypted FROM credit_cards`
+	card_number_encrypted, COALESCE(nickname, ''), COALESCE(billing_address_id, '') FROM credit_cards`
 
 func extractCreditCards(masterKey []byte, path string) ([]types.CreditCardEntry, error) {
 	return sqliteutil.QueryRows(path, false, defaultCreditCardQuery,
 		func(rows *sql.Rows) (types.CreditCardEntry, error) {
-			var name, month, year string
+			var name, month, year, nickName, address string
 			var encNumber []byte
-			if err := rows.Scan(&name, &month, &year, &encNumber); err != nil {
+			if err := rows.Scan(&name, &month, &year, &encNumber, &nickName, &address); err != nil {
 				return types.CreditCardEntry{}, err
 			}
 			number, _ := decryptValue(masterKey, encNumber)
@@ -24,6 +24,8 @@ func extractCreditCards(masterKey []byte, path string) ([]types.CreditCardEntry,
 				Number:   string(number),
 				ExpMonth: month,
 				ExpYear:  year,
+				NickName: nickName,
+				Address:  address,
 			}, nil
 		})
 }
