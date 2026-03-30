@@ -27,6 +27,8 @@ func TestExtractCookies(t *testing.T) {
 	assert.Equal(t, "/api", got[0].Path)
 	assert.True(t, got[0].IsSecure)
 	assert.False(t, got[0].IsHTTPOnly)
+	assert.True(t, got[0].HasExpire)    // expiry > 0
+	assert.True(t, got[0].IsPersistent) // expiry > 0
 
 	assert.Equal(t, "abc123", got[1].Value)
 	assert.True(t, got[1].IsHTTPOnly)

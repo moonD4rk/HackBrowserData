@@ -13,7 +13,7 @@ const firefoxHistoryQuery = `SELECT url, COALESCE(last_visit_date, 0),
 	COALESCE(title, ''), visit_count FROM moz_places`
 
 func extractHistories(path string) ([]types.HistoryEntry, error) {
-	histories, err := sqliteutil.QueryRows(path, false, firefoxHistoryQuery,
+	histories, err := sqliteutil.QueryRows(path, true, firefoxHistoryQuery,
 		func(rows *sql.Rows) (types.HistoryEntry, error) {
 			var url, title string
 			var visitCount int

@@ -17,7 +17,7 @@ const firefoxDownloadQuery = `SELECT place_id, GROUP_CONCAT(content), url, dateA
 	t GROUP BY place_id`
 
 func extractDownloads(path string) ([]types.DownloadEntry, error) {
-	downloads, err := sqliteutil.QueryRows(path, false, firefoxDownloadQuery,
+	downloads, err := sqliteutil.QueryRows(path, true, firefoxDownloadQuery,
 		func(rows *sql.Rows) (types.DownloadEntry, error) {
 			var placeID, dateAdded int64
 			var content, url string

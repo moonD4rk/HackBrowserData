@@ -24,15 +24,18 @@ func extractCookies(path string) ([]types.CookieEntry, error) {
 				&createdAt, &expiry, &isSecure, &isHTTPOnly); err != nil {
 				return types.CookieEntry{}, err
 			}
+			hasExpire := expiry > 0
 			return types.CookieEntry{
-				Name:       name,
-				Host:       host,
-				Path:       cookiePath,
-				Value:      value, // Firefox cookies are not encrypted
-				IsSecure:   isSecure != 0,
-				IsHTTPOnly: isHTTPOnly != 0,
-				ExpireAt:   typeutil.TimeStamp(expiry),
-				CreatedAt:  typeutil.TimeStamp(createdAt / 1000000),
+				Name:         name,
+				Host:         host,
+				Path:         cookiePath,
+				Value:        value, // Firefox cookies are not encrypted
+				IsSecure:     isSecure != 0,
+				IsHTTPOnly:   isHTTPOnly != 0,
+				HasExpire:    hasExpire,
+				IsPersistent: hasExpire,
+				ExpireAt:     typeutil.TimeStamp(expiry),
+				CreatedAt:    typeutil.TimeStamp(createdAt / 1000000),
 			}, nil
 		})
 	if err != nil {
