@@ -34,14 +34,16 @@ func extractCookies(masterKey []byte, path string) ([]types.CookieEntry, error) 
 			value, _ := decryptValue(masterKey, encryptedValue)
 			value = stripCookieHash(value, host)
 			return types.CookieEntry{
-				Name:       name,
-				Host:       host,
-				Path:       cookiePath,
-				Value:      string(value),
-				IsSecure:   isSecure != 0,
-				IsHTTPOnly: isHTTPOnly != 0,
-				ExpireAt:   typeutil.TimeEpoch(expireAt),
-				CreatedAt:  typeutil.TimeEpoch(createdAt),
+				Name:         name,
+				Host:         host,
+				Path:         cookiePath,
+				Value:        string(value),
+				IsSecure:     isSecure != 0,
+				IsHTTPOnly:   isHTTPOnly != 0,
+				HasExpire:    hasExpire != 0,
+				IsPersistent: isPersistent != 0,
+				ExpireAt:     typeutil.TimeEpoch(expireAt),
+				CreatedAt:    typeutil.TimeEpoch(createdAt),
 			}, nil
 		})
 	if err != nil {

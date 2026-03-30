@@ -200,7 +200,7 @@ linters:
       - path: "browser/chromium/(source|decrypt|extract_.*)\\.go"
         linters:
           - unused
-      - path: "browser/firefox/source\\.go"
+      - path: "browser/firefox/(source|extract_.*)\\.go"
         linters:
           - unused
 

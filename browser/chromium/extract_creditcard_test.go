@@ -9,8 +9,8 @@ import (
 
 func TestExtractCreditCards(t *testing.T) {
 	path := createTestDB(t, "Web Data", creditCardsSchema,
-		insertCreditCard("John Doe", 12, 2025, ""),
-		insertCreditCard("Jane Smith", 6, 2027, ""),
+		insertCreditCard("John Doe", 12, 2025, "", "Johnny", "addr-1"),
+		insertCreditCard("Jane Smith", 6, 2027, "", "", ""),
 	)
 
 	got, err := extractCreditCards(nil, path)

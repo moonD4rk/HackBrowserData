@@ -9,19 +9,21 @@ import (
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
-const defaultDownloadQuery = `SELECT target_path, tab_url, total_bytes, start_time, end_time FROM downloads`
+const defaultDownloadQuery = `SELECT target_path, tab_url, total_bytes, start_time, end_time,
+	mime_type FROM downloads`
 
 func extractDownloads(path string) ([]types.DownloadEntry, error) {
 	downloads, err := sqliteutil.QueryRows(path, false, defaultDownloadQuery,
 		func(rows *sql.Rows) (types.DownloadEntry, error) {
-			var targetPath, url string
+			var targetPath, url, mimeType string
 			var totalBytes, startTime, endTime int64
-			if err := rows.Scan(&targetPath, &url, &totalBytes, &startTime, &endTime); err != nil {
+			if err := rows.Scan(&targetPath, &url, &totalBytes, &startTime, &endTime, &mimeType); err != nil {
 				return types.DownloadEntry{}, err
 			}
 			return types.DownloadEntry{
 				URL:        url,
 				TargetPath: targetPath,
+				MimeType:   mimeType,
 				TotalBytes: totalBytes,
 				StartTime:  typeutil.TimeEpoch(startTime),
 				EndTime:    typeutil.TimeEpoch(endTime),

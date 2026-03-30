@@ -51,6 +51,8 @@ func extractExtensions(path string) ([]types.ExtensionEntry, error) {
 			ID:          id.String(),
 			Description: manifest.Get("description").String(),
 			Version:     manifest.Get("version").String(),
+			HomepageURL: manifest.Get("homepage_url").String(),
+			Enabled:     ext.Get("state").Int() == 1,
 		})
 		return true
 	})
