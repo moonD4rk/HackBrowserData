@@ -1,32 +1,44 @@
 package chromium
 
-import "github.com/moond4rk/hackbrowserdata/types"
+import (
+	"path/filepath"
 
-// dataSource maps a Category to one or more candidate file paths within a profile directory.
-// paths are tried in order; the first one that exists is used.
+	"github.com/moond4rk/hackbrowserdata/types"
+)
+
+// sourcePath describes a single candidate location for browser data,
+// relative to the profile directory.
+type sourcePath struct {
+	rel   string // relative path from profileDir, e.g. "Network/Cookies"
+	isDir bool   // true for directory targets (LevelDB, Session Storage)
+}
+
+func file(rel string) sourcePath { return sourcePath{rel: filepath.FromSlash(rel), isDir: false} }
+func dir(rel string) sourcePath  { return sourcePath{rel: filepath.FromSlash(rel), isDir: true} }
+
+// dataSource holds one or more candidate sourcePaths in priority order.
+// The first candidate that exists on disk wins.
 type dataSource struct {
-	paths []string // candidate relative paths in priority order
-	isDir bool     // true for LevelDB directories
+	candidates []sourcePath
 }
 
 // chromiumSources defines the standard Chromium file layout.
 var chromiumSources = map[types.Category]dataSource{
-	types.Password:       {paths: []string{"Login Data"}},
-	types.Cookie:         {paths: []string{"Network/Cookies", "Cookies"}},
-	types.History:        {paths: []string{"History"}},
-	types.Download:       {paths: []string{"History"}}, // same file, different query
-	types.Bookmark:       {paths: []string{"Bookmarks"}},
-	types.CreditCard:     {paths: []string{"Web Data"}},
-	types.Extension:      {paths: []string{"Secure Preferences"}},
-	types.LocalStorage:   {paths: []string{"Local Storage/leveldb"}, isDir: true},
-	types.SessionStorage: {paths: []string{"Session Storage"}, isDir: true},
+	types.Password:       {candidates: []sourcePath{file("Login Data")}},
+	types.Cookie:         {candidates: []sourcePath{file("Network/Cookies"), file("Cookies")}},
+	types.History:        {candidates: []sourcePath{file("History")}},
+	types.Download:       {candidates: []sourcePath{file("History")}},
+	types.Bookmark:       {candidates: []sourcePath{file("Bookmarks")}},
+	types.CreditCard:     {candidates: []sourcePath{file("Web Data")}},
+	types.Extension:      {candidates: []sourcePath{file("Secure Preferences")}},
+	types.LocalStorage:   {candidates: []sourcePath{dir("Local Storage/leveldb")}},
+	types.SessionStorage: {candidates: []sourcePath{dir("Session Storage")}},
 }
 
 // yandexSourceOverrides contains only the entries that differ from chromiumSources.
-// At initialization time, these are merged into a copy of chromiumSources.
 var yandexSourceOverrides = map[types.Category]dataSource{
-	types.Password:   {paths: []string{"Ya Passman Data"}},
-	types.CreditCard: {paths: []string{"Ya Credit Cards"}},
+	types.Password:   {candidates: []sourcePath{file("Ya Passman Data")}},
+	types.CreditCard: {candidates: []sourcePath{file("Ya Credit Cards")}},
 }
 
 // yandexSources returns chromiumSources with Yandex-specific overrides applied.
@@ -42,7 +54,6 @@ func yandexSources() map[types.Category]dataSource {
 }
 
 // yandexQueryOverrides provides SQL query overrides for Yandex Browser.
-// Yandex uses action_url instead of origin_url for password storage.
 var yandexQueryOverrides = map[types.Category]string{
 	types.Password: `SELECT action_url, username_value, password_value, date_created FROM logins`,
 }

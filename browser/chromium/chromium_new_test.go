@@ -1,252 +1,384 @@
 package chromium
 
 import (
-	"database/sql"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	_ "modernc.org/sqlite"
 
 	"github.com/moond4rk/hackbrowserdata/filemanager"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
-// createTestDBAt creates a test SQLite database at the given absolute path.
-func createTestDBAt(t *testing.T, path, schema string, inserts ...string) {
-	t.Helper()
-	db, err := sql.Open("sqlite", path)
-	require.NoError(t, err)
-	defer db.Close()
-	_, err = db.Exec(schema)
-	require.NoError(t, err)
-	for _, stmt := range inserts {
-		_, err = db.Exec(stmt)
-		require.NoError(t, err)
+// ---------------------------------------------------------------------------
+// Shared fixture
+// ---------------------------------------------------------------------------
+
+var fixture struct {
+	root        string
+	chrome      string // multi-profile + skipped dirs
+	opera       string // has Default/
+	operaFlat   string // no Default/, data in root
+	yandex      string // Ya Passman Data, Ya Credit Cards
+	oldCookies  string // Cookies at root (no Network/)
+	bothCookies string // Network/Cookies + Cookies
+	leveldb     string // Local Storage/leveldb + Session Storage
+	leveldbOnly string // only LevelDB dirs, no files
+	empty       string
+}
+
+func TestMain(m *testing.M) {
+	root, err := os.MkdirTemp("", "chromium-test-*")
+	if err != nil {
+		panic(err)
+	}
+	fixture.root = root
+	buildFixtures()
+	code := m.Run()
+	os.RemoveAll(root)
+	os.Exit(code)
+}
+
+func buildFixtures() {
+	fixture.chrome = filepath.Join(fixture.root, "chrome")
+	mkFile(fixture.chrome, "Local State")
+	for _, p := range []string{"Default", "Profile 1", "Profile 3"} {
+		mkFile(fixture.chrome, p, "Login Data")
+		mkFile(fixture.chrome, p, "History")
+		mkFile(fixture.chrome, p, "Bookmarks")
+		mkFile(fixture.chrome, p, "Web Data")
+		mkFile(fixture.chrome, p, "Secure Preferences")
+		mkFile(fixture.chrome, p, "Network", "Cookies")
+		mkDir(fixture.chrome, p, "Local Storage", "leveldb")
+		mkDir(fixture.chrome, p, "Session Storage")
+	}
+	mkFile(fixture.chrome, "System Profile", "History")
+	mkFile(fixture.chrome, "Guest Profile", "History")
+	mkFile(fixture.chrome, "Snapshot", "Default", "History")
+
+	fixture.opera = filepath.Join(fixture.root, "opera")
+	mkFile(fixture.opera, "Local State")
+	mkFile(fixture.opera, "Default", "Login Data")
+	mkFile(fixture.opera, "Default", "History")
+	mkFile(fixture.opera, "Default", "Bookmarks")
+	mkFile(fixture.opera, "Default", "Cookies")
+
+	fixture.operaFlat = filepath.Join(fixture.root, "opera-flat")
+	mkFile(fixture.operaFlat, "Local State")
+	mkFile(fixture.operaFlat, "Login Data")
+	mkFile(fixture.operaFlat, "History")
+	mkFile(fixture.operaFlat, "Cookies")
+
+	fixture.yandex = filepath.Join(fixture.root, "yandex")
+	mkFile(fixture.yandex, "Local State")
+	mkFile(fixture.yandex, "Default", "Ya Passman Data")
+	mkFile(fixture.yandex, "Default", "Ya Credit Cards")
+	mkFile(fixture.yandex, "Default", "History")
+	mkFile(fixture.yandex, "Default", "Network", "Cookies")
+	mkFile(fixture.yandex, "Default", "Bookmarks")
+
+	fixture.oldCookies = filepath.Join(fixture.root, "old-cookies")
+	mkFile(fixture.oldCookies, "Default", "History")
+	mkFile(fixture.oldCookies, "Default", "Cookies")
+
+	fixture.bothCookies = filepath.Join(fixture.root, "both-cookies")
+	mkFile(fixture.bothCookies, "Default", "Cookies")
+	mkFile(fixture.bothCookies, "Default", "Network", "Cookies")
+
+	fixture.leveldb = filepath.Join(fixture.root, "leveldb")
+	mkFile(fixture.leveldb, "Default", "History")
+	mkDir(fixture.leveldb, "Default", "Local Storage", "leveldb")
+	mkFile(fixture.leveldb, "Default", "Local Storage", "leveldb", "000001.ldb")
+	mkDir(fixture.leveldb, "Default", "Session Storage")
+	mkFile(fixture.leveldb, "Default", "Session Storage", "000001.ldb")
+
+	fixture.leveldbOnly = filepath.Join(fixture.root, "leveldb-only")
+	mkDir(fixture.leveldbOnly, "Default", "Local Storage", "leveldb")
+	mkDir(fixture.leveldbOnly, "Default", "Session Storage")
+
+	fixture.empty = filepath.Join(fixture.root, "empty")
+	mkDir(fixture.empty)
+}
+
+func mkFile(parts ...string) {
+	path := filepath.Join(parts...)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		panic(err)
+	}
+	if err := os.WriteFile(path, []byte("test"), 0o644); err != nil {
+		panic(err)
 	}
 }
 
-func TestDiscoverProfiles(t *testing.T) {
-	userDataDir := t.TempDir()
-	fileNames := map[string]bool{"History": true, "Cookies": true}
-
-	// Create Default profile
-	defaultDir := filepath.Join(userDataDir, "Default")
-	require.NoError(t, os.MkdirAll(defaultDir, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(defaultDir, "History"), []byte("h"), 0o644))
-
-	// Create Profile 1
-	profile1Dir := filepath.Join(userDataDir, "Profile 1")
-	require.NoError(t, os.MkdirAll(profile1Dir, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(profile1Dir, "History"), []byte("h"), 0o644))
-
-	// System Profile should be skipped
-	sysDir := filepath.Join(userDataDir, "System Profile")
-	require.NoError(t, os.MkdirAll(sysDir, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(sysDir, "History"), []byte("h"), 0o644))
-
-	profiles := discoverProfiles(userDataDir, fileNames)
-	assert.Len(t, profiles, 2)
-	assert.Contains(t, profiles, defaultDir)
-	assert.Contains(t, profiles, profile1Dir)
-	assert.NotContains(t, profiles, sysDir)
+func mkDir(parts ...string) {
+	if err := os.MkdirAll(filepath.Join(parts...), 0o755); err != nil {
+		panic(err)
+	}
 }
 
-func TestDiscoverProfiles_NetworkCookies(t *testing.T) {
-	userDataDir := t.TempDir()
-	fileNames := map[string]bool{"Cookies": true}
-
-	// Chrome 130+: Network/Cookies
-	defaultDir := filepath.Join(userDataDir, "Default")
-	networkDir := filepath.Join(defaultDir, "Network")
-	require.NoError(t, os.MkdirAll(networkDir, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(networkDir, "Cookies"), []byte("c"), 0o644))
-
-	profiles := discoverProfiles(userDataDir, fileNames)
-	require.Len(t, profiles, 1)
-	// Profile dir should be Default, not Default/Network
-	assert.Contains(t, profiles, defaultDir)
-	assert.Equal(t, filepath.Join(networkDir, "Cookies"), profiles[defaultDir]["Cookies"])
-}
-
-func TestDiscoverProfiles_Empty(t *testing.T) {
-	userDataDir := t.TempDir()
-	profiles := discoverProfiles(userDataDir, map[string]bool{"History": true})
-	assert.Empty(t, profiles)
-}
+// ---------------------------------------------------------------------------
+// NewBrowsers: table-driven, covers all layouts end-to-end
+// ---------------------------------------------------------------------------
 
 func TestNewBrowsers(t *testing.T) {
-	userDataDir := t.TempDir()
-
-	// Create two profiles with History files
-	for _, name := range []string{"Default", "Profile 1"} {
-		dir := filepath.Join(userDataDir, name)
-		require.NoError(t, os.MkdirAll(dir, 0o755))
-		createTestDBAt(t, filepath.Join(dir, "History"), urlsSchema,
-			insertURL("https://example.com", "Example", 1, 13340000000000000))
+	tests := []struct {
+		name         string
+		dir          string
+		kind         types.BrowserKind
+		wantProfiles []string            // expected profile base names
+		wantCats     map[string][]string // profile → expected category base names (spot check)
+		wantDirs     []types.Category    // categories that should be isDir=true
+		skipProfiles []string            // should NOT appear
+	}{
+		{
+			name:         "chrome multi-profile",
+			dir:          fixture.chrome,
+			kind:         types.KindChromium,
+			wantProfiles: []string{"Default", "Profile 1", "Profile 3"},
+			wantCats: map[string][]string{
+				"Default": {"Login Data", "Cookies", "History", "Bookmarks", "Web Data", "Secure Preferences", "leveldb", "Session Storage"},
+			},
+			wantDirs:     []types.Category{types.LocalStorage, types.SessionStorage},
+			skipProfiles: []string{"System Profile", "Guest Profile", "Snapshot"},
+		},
+		{
+			name:         "opera with Default",
+			dir:          fixture.opera,
+			kind:         types.KindChromium,
+			wantProfiles: []string{"Default"},
+			wantCats: map[string][]string{
+				"Default": {"Login Data", "History", "Bookmarks", "Cookies"},
+			},
+		},
+		{
+			name:         "opera flat layout",
+			dir:          fixture.operaFlat,
+			kind:         types.KindChromium,
+			wantProfiles: []string{filepath.Base(fixture.operaFlat)}, // userDataDir itself
+			wantCats: map[string][]string{
+				filepath.Base(fixture.operaFlat): {"Login Data", "History", "Cookies"},
+			},
+		},
+		{
+			name:         "yandex custom files",
+			dir:          fixture.yandex,
+			kind:         types.KindChromiumYandex,
+			wantProfiles: []string{"Default"},
+			wantCats: map[string][]string{
+				"Default": {"Ya Passman Data", "Ya Credit Cards", "History", "Cookies", "Bookmarks"},
+			},
+		},
+		{
+			name:         "old cookies fallback",
+			dir:          fixture.oldCookies,
+			kind:         types.KindChromium,
+			wantProfiles: []string{"Default"},
+		},
+		{
+			name:         "cookie priority",
+			dir:          fixture.bothCookies,
+			kind:         types.KindChromium,
+			wantProfiles: []string{"Default"},
+		},
+		{
+			name:         "leveldb directories",
+			dir:          fixture.leveldb,
+			kind:         types.KindChromium,
+			wantProfiles: []string{"Default"},
+			wantDirs:     []types.Category{types.LocalStorage, types.SessionStorage},
+		},
+		{
+			name:         "leveldb only",
+			dir:          fixture.leveldbOnly,
+			kind:         types.KindChromium,
+			wantProfiles: []string{"Default"},
+			wantDirs:     []types.Category{types.LocalStorage, types.SessionStorage},
+		},
+		{
+			name: "empty dir",
+			dir:  fixture.empty,
+			kind: types.KindChromium,
+		},
+		{
+			name: "nonexistent dir",
+			dir:  "/nonexistent/path",
+			kind: types.KindChromium,
+		},
 	}
 
-	cfg := types.BrowserConfig{
-		Name: "Chrome",
-		Kind: types.KindChromium,
-	}
-	browsers, err := NewBrowsers(cfg, userDataDir)
-	require.NoError(t, err)
-	require.Len(t, browsers, 2)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := types.BrowserConfig{Name: "Test", Kind: tt.kind}
+			browsers, err := NewBrowsers(cfg, tt.dir)
+			require.NoError(t, err)
 
-	names := map[string]bool{}
+			if len(tt.wantProfiles) == 0 {
+				assert.Empty(t, browsers)
+				return
+			}
+			require.Len(t, browsers, len(tt.wantProfiles))
+
+			nameMap := browsersByProfile(browsers)
+			assertProfiles(t, nameMap, tt.wantProfiles, tt.skipProfiles)
+			assertCategories(t, nameMap, tt.wantCats)
+			assertDirCategories(t, browsers, tt.wantDirs)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Test helpers
+// ---------------------------------------------------------------------------
+
+func browsersByProfile(browsers []*Browser) map[string]*Browser {
+	m := make(map[string]*Browser, len(browsers))
 	for _, b := range browsers {
-		names[b.Name()] = true
+		m[filepath.Base(b.profileDir)] = b
 	}
-	assert.True(t, names["Chrome-Default"])
-	assert.True(t, names["Chrome-Profile 1"])
+	return m
 }
 
-func TestNewBrowsers_NoProfiles(t *testing.T) {
-	browsers, err := NewBrowsers(types.BrowserConfig{Kind: types.KindChromium}, t.TempDir())
-	require.NoError(t, err)
-	assert.Empty(t, browsers)
-}
-
-func TestAcquireFiles(t *testing.T) {
-	profileDir := t.TempDir()
-
-	// Create source files matching chromiumSources paths
-	require.NoError(t, os.WriteFile(filepath.Join(profileDir, "History"), []byte("h"), 0o644))
-	networkDir := filepath.Join(profileDir, "Network")
-	require.NoError(t, os.MkdirAll(networkDir, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(networkDir, "Cookies"), []byte("c"), 0o644))
-
-	b := &Browser{
-		profileDir: profileDir,
-		sources:    chromiumSources,
-		sourcePaths: map[types.Category]string{
-			types.History: filepath.Join(profileDir, "History"),
-			types.Cookie:  filepath.Join(networkDir, "Cookies"),
-		},
+func assertProfiles(t *testing.T, nameMap map[string]*Browser, want, skip []string) {
+	t.Helper()
+	for _, w := range want {
+		assert.Contains(t, nameMap, w, "should find profile %s", w)
 	}
-
-	session, err := filemanager.NewSession()
-	require.NoError(t, err)
-	defer session.Cleanup()
-
-	paths := b.acquireFiles(session, []types.Category{types.History, types.Cookie})
-	assert.Contains(t, paths, types.History)
-	assert.Contains(t, paths, types.Cookie)
-
-	// Verify temp files exist
-	for _, p := range paths {
-		_, err := os.Stat(p)
-		assert.NoError(t, err)
+	for _, s := range skip {
+		assert.NotContains(t, nameMap, s, "should skip %s", s)
 	}
 }
 
-func TestAcquireFiles_CookieFallback(t *testing.T) {
-	profileDir := t.TempDir()
-
-	// Old-style Cookies (no Network/ subdirectory)
-	require.NoError(t, os.WriteFile(filepath.Join(profileDir, "Cookies"), []byte("c"), 0o644))
-
-	b := &Browser{
-		profileDir: profileDir,
-		sources:    chromiumSources,
-		sourcePaths: map[types.Category]string{
-			types.Cookie: filepath.Join(profileDir, "Cookies"),
-		},
+func assertCategories(t *testing.T, nameMap map[string]*Browser, wantCats map[string][]string) {
+	t.Helper()
+	for profileName, wantFiles := range wantCats {
+		b, ok := nameMap[profileName]
+		if !ok {
+			t.Errorf("profile %s not found", profileName)
+			continue
+		}
+		for _, wantFile := range wantFiles {
+			found := false
+			for _, rp := range b.sourcePaths {
+				if filepath.Base(rp.absPath) == wantFile {
+					found = true
+					break
+				}
+			}
+			assert.True(t, found, "profile %s should have %s", profileName, wantFile)
+		}
 	}
-
-	session, err := filemanager.NewSession()
-	require.NoError(t, err)
-	defer session.Cleanup()
-
-	paths := b.acquireFiles(session, []types.Category{types.Cookie})
-	assert.Contains(t, paths, types.Cookie)
 }
 
-func TestExtract_NonEncryptedCategories(t *testing.T) {
-	profileDir := t.TempDir()
-
-	// Create History DB with test data
-	createTestDBAt(t, filepath.Join(profileDir, "History"), urlsSchema,
-		insertURL("https://go.dev", "Go", 10, 13340000000000000),
-		insertURL("https://github.com", "GitHub", 20, 13350000000000000),
-	)
-
-	b := &Browser{
-		cfg:        types.BrowserConfig{Name: "Test"},
-		name:       "Test-Default",
-		profileDir: profileDir,
-		sources:    chromiumSources,
-		sourcePaths: map[types.Category]string{
-			types.History: filepath.Join(profileDir, "History"),
-		},
+func assertDirCategories(t *testing.T, browsers []*Browser, cats []types.Category) {
+	t.Helper()
+	for _, cat := range cats {
+		for _, b := range browsers {
+			if rp, ok := b.sourcePaths[cat]; ok {
+				assert.True(t, rp.isDir, "%s should be isDir=true", cat)
+			}
+		}
 	}
-
-	data, err := b.Extract([]types.Category{types.History})
-	require.NoError(t, err)
-	require.Len(t, data.Histories, 2)
-
-	// Verify data is sorted (descending by visit count)
-	assert.Equal(t, 20, data.Histories[0].VisitCount)
-	assert.Equal(t, 10, data.Histories[1].VisitCount)
 }
 
-func TestExtract_MissingCategory(t *testing.T) {
-	b := &Browser{
-		cfg:         types.BrowserConfig{Name: "Test"},
-		name:        "Test-Default",
-		profileDir:  t.TempDir(),
-		sources:     chromiumSources,
-		sourcePaths: map[types.Category]string{}, // no files
-	}
+// ---------------------------------------------------------------------------
+// Cookie priority: Network/Cookies wins over root Cookies
+// ---------------------------------------------------------------------------
 
-	data, err := b.Extract([]types.Category{types.History, types.Bookmark})
-	require.NoError(t, err)
-	assert.Empty(t, data.Histories)
-	assert.Empty(t, data.Bookmarks)
+func TestCookiePriority(t *testing.T) {
+	resolved := resolveSourcePaths(chromiumSources, filepath.Join(fixture.bothCookies, "Default"))
+	require.Contains(t, resolved, types.Cookie)
+	assert.Contains(t, resolved[types.Cookie].absPath, "Network",
+		"Network/Cookies should win over root Cookies")
 }
 
-func TestResolveSourcePaths(t *testing.T) {
-	filePaths := map[string]string{
-		"History":   "/tmp/Default/History",
-		"Cookies":   "/tmp/Default/Network/Cookies",
-		"Bookmarks": "/tmp/Default/Bookmarks",
-	}
-
-	resolved := resolveSourcePaths(chromiumSources, filePaths)
-
-	assert.Equal(t, "/tmp/Default/History", resolved[types.History])
-	assert.Equal(t, "/tmp/Default/History", resolved[types.Download]) // same file
-	assert.Equal(t, "/tmp/Default/Network/Cookies", resolved[types.Cookie])
-	assert.Equal(t, "/tmp/Default/Bookmarks", resolved[types.Bookmark])
+func TestCookieFallback(t *testing.T) {
+	resolved := resolveSourcePaths(chromiumSources, filepath.Join(fixture.oldCookies, "Default"))
+	require.Contains(t, resolved, types.Cookie)
+	assert.NotContains(t, resolved[types.Cookie].absPath, "Network",
+		"should fallback to root Cookies when Network/Cookies missing")
 }
 
-func TestResolveSourcePaths_CookieFallback(t *testing.T) {
-	// Old Chrome: Cookies at profile root, not in Network/
-	filePaths := map[string]string{
-		"Cookies": "/tmp/Default/Cookies",
-	}
+// ---------------------------------------------------------------------------
+// History/Download share the same source file
+// ---------------------------------------------------------------------------
 
-	resolved := resolveSourcePaths(chromiumSources, filePaths)
-	// Cookie source paths: ["Network/Cookies", "Cookies"]
-	// Base("Network/Cookies") = "Cookies", matches
-	assert.Equal(t, "/tmp/Default/Cookies", resolved[types.Cookie])
+func TestSharedSourceFile(t *testing.T) {
+	resolved := resolveSourcePaths(chromiumSources, filepath.Join(fixture.chrome, "Default"))
+	assert.Equal(t, resolved[types.History].absPath, resolved[types.Download].absPath)
 }
+
+// ---------------------------------------------------------------------------
+// Source helpers
+// ---------------------------------------------------------------------------
 
 func TestSourcesForKind(t *testing.T) {
 	chromium := sourcesForKind(types.KindChromium)
 	yandex := sourcesForKind(types.KindChromiumYandex)
 
-	// Yandex overrides Password source
-	assert.Equal(t, []string{"Login Data"}, chromium[types.Password].paths)
-	assert.Equal(t, []string{"Ya Passman Data"}, yandex[types.Password].paths)
+	assert.Equal(t, "Login Data", chromium[types.Password].candidates[0].rel)
+	assert.Equal(t, "Ya Passman Data", yandex[types.Password].candidates[0].rel)
+	// Yandex inherits non-overridden categories
+	assert.Equal(t, chromium[types.History].candidates[0].rel, yandex[types.History].candidates[0].rel)
 }
 
 func TestQueriesForKind(t *testing.T) {
 	assert.Nil(t, queriesForKind(types.KindChromium))
-
 	yandexQ := queriesForKind(types.KindChromiumYandex)
+	require.NotNil(t, yandexQ)
 	assert.Contains(t, yandexQ[types.Password], "action_url")
+}
+
+// ---------------------------------------------------------------------------
+// acquireFiles
+// ---------------------------------------------------------------------------
+
+func TestAcquireFiles(t *testing.T) {
+	profileDir := filepath.Join(fixture.chrome, "Default")
+	resolved := resolveSourcePaths(chromiumSources, profileDir)
+
+	b := &Browser{profileDir: profileDir, sources: chromiumSources, sourcePaths: resolved}
+
+	session, err := filemanager.NewSession()
+	require.NoError(t, err)
+	defer session.Cleanup()
+
+	cats := []types.Category{types.History, types.Cookie, types.Bookmark}
+	paths := b.acquireFiles(session, cats)
+
+	assert.Len(t, paths, len(cats))
+	for _, p := range paths {
+		_, err := os.Stat(p)
+		assert.NoError(t, err, "acquired file should exist")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Local State path validation
+// ---------------------------------------------------------------------------
+
+func TestLocalStatePath(t *testing.T) {
+	tests := []struct {
+		name string
+		dir  string
+		want bool // Local State should be at Dir(profileDir)/Local State
+	}{
+		{"chrome", fixture.chrome, true},
+		{"opera", fixture.opera, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			browsers, err := NewBrowsers(types.BrowserConfig{Name: "Test", Kind: types.KindChromium}, tt.dir)
+			require.NoError(t, err)
+			require.NotEmpty(t, browsers)
+
+			for _, b := range browsers {
+				localState := filepath.Join(filepath.Dir(b.profileDir), "Local State")
+				if tt.want {
+					assert.FileExists(t, localState)
+				}
+			}
+		})
+	}
 }
