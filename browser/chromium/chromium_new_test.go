@@ -317,10 +317,10 @@ func TestSourcesForKind(t *testing.T) {
 	chromium := sourcesForKind(types.KindChromium)
 	yandex := sourcesForKind(types.KindChromiumYandex)
 
-	assert.Equal(t, "Login Data", chromium[types.Password].candidates[0].rel)
-	assert.Equal(t, "Ya Passman Data", yandex[types.Password].candidates[0].rel)
+	assert.Equal(t, "Login Data", chromium[types.Password][0].rel)
+	assert.Equal(t, "Ya Passman Data", yandex[types.Password][0].rel)
 	// Yandex inherits non-overridden categories
-	assert.Equal(t, chromium[types.History].candidates[0].rel, yandex[types.History].candidates[0].rel)
+	assert.Equal(t, chromium[types.History][0].rel, yandex[types.History][0].rel)
 }
 
 func TestExtractorsForKind(t *testing.T) {

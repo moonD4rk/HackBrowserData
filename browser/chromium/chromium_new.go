@@ -16,7 +16,7 @@ type Browser struct {
 	cfg         types.BrowserConfig
 	name        string                               // display name: "Chrome-Default"
 	profileDir  string                               // absolute path to profile directory
-	sources     map[types.Category]dataSource        // Category → source mapping
+	sources     map[types.Category][]sourcePath      // Category → candidate paths (priority order)
 	extractors  map[types.Category]categoryExtractor // Category → custom extract function override
 	sourcePaths map[types.Category]resolvedPath      // Category → discovered absolute path
 }
@@ -158,7 +158,7 @@ func (b *Browser) extractCategory(data *types.BrowserData, cat types.Category, m
 
 // discoverProfiles lists subdirectories of userDataDir that contain at least
 // one known data source. Each such directory is a browser profile.
-func discoverProfiles(userDataDir string, sources map[types.Category]dataSource) []string {
+func discoverProfiles(userDataDir string, sources map[types.Category][]sourcePath) []string {
 	entries, err := os.ReadDir(userDataDir)
 	if err != nil {
 		return nil
@@ -183,9 +183,9 @@ func discoverProfiles(userDataDir string, sources map[types.Category]dataSource)
 }
 
 // hasAnySource checks if dir contains at least one source file or directory.
-func hasAnySource(sources map[types.Category]dataSource, dir string) bool {
-	for _, ds := range sources {
-		for _, sp := range ds.candidates {
+func hasAnySource(sources map[types.Category][]sourcePath, dir string) bool {
+	for _, candidates := range sources {
+		for _, sp := range candidates {
 			abs := filepath.Join(dir, sp.rel)
 			if _, err := os.Stat(abs); err == nil {
 				return true
@@ -203,10 +203,10 @@ type resolvedPath struct {
 
 // resolveSourcePaths checks which sources actually exist in profileDir.
 // Candidates are tried in priority order; the first existing path wins.
-func resolveSourcePaths(sources map[types.Category]dataSource, profileDir string) map[types.Category]resolvedPath {
+func resolveSourcePaths(sources map[types.Category][]sourcePath, profileDir string) map[types.Category]resolvedPath {
 	resolved := make(map[types.Category]resolvedPath)
-	for cat, ds := range sources {
-		for _, sp := range ds.candidates {
+	for cat, candidates := range sources {
+		for _, sp := range candidates {
 			abs := filepath.Join(profileDir, sp.rel)
 			info, err := os.Stat(abs)
 			if err != nil {

@@ -16,34 +16,30 @@ type sourcePath struct {
 func file(rel string) sourcePath { return sourcePath{rel: filepath.FromSlash(rel), isDir: false} }
 func dir(rel string) sourcePath  { return sourcePath{rel: filepath.FromSlash(rel), isDir: true} }
 
-// dataSource holds one or more candidate sourcePaths in priority order.
-// The first candidate that exists on disk wins.
-type dataSource struct {
-	candidates []sourcePath
-}
-
 // chromiumSources defines the standard Chromium file layout.
-var chromiumSources = map[types.Category]dataSource{
-	types.Password:       {candidates: []sourcePath{file("Login Data")}},
-	types.Cookie:         {candidates: []sourcePath{file("Network/Cookies"), file("Cookies")}},
-	types.History:        {candidates: []sourcePath{file("History")}},
-	types.Download:       {candidates: []sourcePath{file("History")}},
-	types.Bookmark:       {candidates: []sourcePath{file("Bookmarks")}},
-	types.CreditCard:     {candidates: []sourcePath{file("Web Data")}},
-	types.Extension:      {candidates: []sourcePath{file("Secure Preferences")}},
-	types.LocalStorage:   {candidates: []sourcePath{dir("Local Storage/leveldb")}},
-	types.SessionStorage: {candidates: []sourcePath{dir("Session Storage")}},
+// Each category maps to one or more candidate paths tried in priority order;
+// the first existing path wins.
+var chromiumSources = map[types.Category][]sourcePath{
+	types.Password:       {file("Login Data")},
+	types.Cookie:         {file("Network/Cookies"), file("Cookies")},
+	types.History:        {file("History")},
+	types.Download:       {file("History")},
+	types.Bookmark:       {file("Bookmarks")},
+	types.CreditCard:     {file("Web Data")},
+	types.Extension:      {file("Secure Preferences")},
+	types.LocalStorage:   {dir("Local Storage/leveldb")},
+	types.SessionStorage: {dir("Session Storage")},
 }
 
 // yandexSourceOverrides contains only the entries that differ from chromiumSources.
-var yandexSourceOverrides = map[types.Category]dataSource{
-	types.Password:   {candidates: []sourcePath{file("Ya Passman Data")}},
-	types.CreditCard: {candidates: []sourcePath{file("Ya Credit Cards")}},
+var yandexSourceOverrides = map[types.Category][]sourcePath{
+	types.Password:   {file("Ya Passman Data")},
+	types.CreditCard: {file("Ya Credit Cards")},
 }
 
 // yandexSources returns chromiumSources with Yandex-specific overrides applied.
-func yandexSources() map[types.Category]dataSource {
-	sources := make(map[types.Category]dataSource, len(chromiumSources))
+func yandexSources() map[types.Category][]sourcePath {
+	sources := make(map[types.Category][]sourcePath, len(chromiumSources))
 	for k, v := range chromiumSources {
 		sources[k] = v
 	}
@@ -54,7 +50,7 @@ func yandexSources() map[types.Category]dataSource {
 }
 
 // sourcesForKind returns the source mapping for a browser kind.
-func sourcesForKind(kind types.BrowserKind) map[types.Category]dataSource {
+func sourcesForKind(kind types.BrowserKind) map[types.Category][]sourcePath {
 	switch kind {
 	case types.KindChromiumYandex:
 		return yandexSources()
