@@ -21,14 +21,14 @@ type Browser struct {
 	sourcePaths map[types.Category]resolvedPath      // Category → discovered absolute path
 }
 
-// NewBrowsers discovers Chromium profiles under userDataDir and returns
+// NewBrowsers discovers Chromium profiles under cfg.UserDataDir and returns
 // one Browser per profile. Uses ReadDir to find profile directories,
 // then Stat to check which data sources exist in each profile.
-func NewBrowsers(cfg types.BrowserConfig, userDataDir string) ([]*Browser, error) {
+func NewBrowsers(cfg types.BrowserConfig) ([]*Browser, error) {
 	sources := sourcesForKind(cfg.Kind)
 	extractors := extractorsForKind(cfg.Kind)
 
-	profileDirs := discoverProfiles(userDataDir, sources)
+	profileDirs := discoverProfiles(cfg.UserDataDir, sources)
 	if len(profileDirs) == 0 {
 		return nil, nil
 	}
@@ -105,8 +105,17 @@ func (b *Browser) acquireFiles(session *filemanager.Session, categories []types.
 // otherwise falls back to GcoredumpRetriever → SecurityCmdRetriever.
 // On Windows/Linux the password is ignored.
 func (b *Browser) getMasterKey(session *filemanager.Session) ([]byte, error) {
-	localStateSrc := filepath.Join(filepath.Dir(b.profileDir), "Local State")
-	if !fileutil.IsFileExists(localStateSrc) {
+	// Try parent directory first (multi-profile: Default/, Profile 1/, etc.),
+	// then profileDir itself (flat layout: Opera stores Local State alongside data files).
+	localStateSrc := ""
+	for _, dir := range []string{filepath.Dir(b.profileDir), b.profileDir} {
+		candidate := filepath.Join(dir, "Local State")
+		if fileutil.IsFileExists(candidate) {
+			localStateSrc = candidate
+			break
+		}
+	}
+	if localStateSrc == "" {
 		return nil, nil
 	}
 
@@ -161,6 +170,7 @@ func (b *Browser) extractCategory(data *types.BrowserData, cat types.Category, m
 func discoverProfiles(userDataDir string, sources map[types.Category][]sourcePath) []string {
 	entries, err := os.ReadDir(userDataDir)
 	if err != nil {
+		log.Debugf("read user data dir %s: %v", userDataDir, err)
 		return nil
 	}
 
