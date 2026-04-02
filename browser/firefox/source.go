@@ -15,19 +15,16 @@ type sourcePath struct {
 
 func file(rel string) sourcePath { return sourcePath{rel: filepath.FromSlash(rel), isDir: false} }
 
-// dataSource holds one or more candidate sourcePaths in priority order.
-type dataSource struct {
-	candidates []sourcePath
-}
-
 // firefoxSources defines the Firefox file layout.
+// Each category maps to one or more candidate paths tried in priority order;
+// the first existing path wins.
 // Firefox does not support SessionStorage or CreditCard extraction.
-var firefoxSources = map[types.Category]dataSource{
-	types.Password:     {candidates: []sourcePath{file("logins.json")}},
-	types.Cookie:       {candidates: []sourcePath{file("cookies.sqlite")}},
-	types.History:      {candidates: []sourcePath{file("places.sqlite")}},
-	types.Download:     {candidates: []sourcePath{file("places.sqlite")}},
-	types.Bookmark:     {candidates: []sourcePath{file("places.sqlite")}},
-	types.Extension:    {candidates: []sourcePath{file("extensions.json")}},
-	types.LocalStorage: {candidates: []sourcePath{file("webappsstore.sqlite")}},
+var firefoxSources = map[types.Category][]sourcePath{
+	types.Password:     {file("logins.json")},
+	types.Cookie:       {file("cookies.sqlite")},
+	types.History:      {file("places.sqlite")},
+	types.Download:     {file("places.sqlite")},
+	types.Bookmark:     {file("places.sqlite")},
+	types.Extension:    {file("extensions.json")},
+	types.LocalStorage: {file("webappsstore.sqlite")},
 }
