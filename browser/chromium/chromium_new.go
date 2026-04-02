@@ -101,27 +101,27 @@ func (b *Browser) acquireFiles(session *filemanager.Session, categories []types.
 }
 
 // getMasterKey retrieves the Chromium master encryption key.
-// On macOS, if cfg.KeychainPassword is set, KeychainPasswordRetriever is used;
-// otherwise falls back to GcoredumpRetriever → SecurityCmdRetriever.
-// On Windows/Linux the password is ignored.
+//
+// On Windows, the key is read from the Local State file and decrypted via DPAPI.
+// On macOS, the key is derived from Keychain (Local State is not needed).
+// On Linux, the key is derived from D-Bus Secret Service or a fallback password.
+//
+// The retriever is always called regardless of whether Local State exists,
+// because macOS/Linux retrievers don't need it.
 func (b *Browser) getMasterKey(session *filemanager.Session) ([]byte, error) {
-	// Try parent directory first (multi-profile: Default/, Profile 1/, etc.),
-	// then profileDir itself (flat layout: Opera stores Local State alongside data files).
-	localStateSrc := ""
+	// Try to locate and copy Local State (needed on Windows, ignored on macOS/Linux).
+	// Multi-profile layout: Local State is in the parent of profileDir.
+	// Flat layout (Opera): Local State is alongside data files in profileDir.
+	var localStateDst string
 	for _, dir := range []string{filepath.Dir(b.profileDir), b.profileDir} {
 		candidate := filepath.Join(dir, "Local State")
 		if fileutil.IsFileExists(candidate) {
-			localStateSrc = candidate
+			localStateDst = filepath.Join(session.TempDir(), "Local State")
+			if err := session.Acquire(candidate, localStateDst, false); err != nil {
+				return nil, err
+			}
 			break
 		}
-	}
-	if localStateSrc == "" {
-		return nil, nil
-	}
-
-	localStateDst := filepath.Join(session.TempDir(), "Local State")
-	if err := session.Acquire(localStateSrc, localStateDst, false); err != nil {
-		return nil, err
 	}
 
 	retriever := keyretriever.DefaultRetriever(b.cfg.KeychainPassword)
