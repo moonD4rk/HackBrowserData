@@ -1,7 +1,6 @@
 package firefox
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"os"
@@ -122,71 +121,30 @@ func (b *Browser) getMasterKey(session *filemanager.Session, tempPaths map[types
 // If loginsPath is non-empty, the derived key is validated against actual
 // login data to ensure the correct candidate is selected.
 func retrieveMasterKey(key4Path, loginsPath string) ([]byte, error) {
-	keys, err := deriveKeys(key4Path)
+	k4, err := readKey4DB(key4Path)
 	if err != nil {
 		return nil, err
 	}
 
-	if loginsPath != "" {
-		if key := validateKeyWithLogins(keys, loginsPath); key != nil {
-			return key, nil
-		}
+	keys, err := k4.deriveKeys()
+	if err != nil {
+		return nil, err
+	}
+	if len(keys) == 0 {
+		return nil, errors.New("no valid master key candidates in key4.db")
 	}
 
-	if len(keys) > 0 {
+	// No logins to validate against — return the first derived key.
+	if loginsPath == "" {
 		return keys[0], nil
 	}
-	return nil, errors.New("no valid firefox master key found in nssPrivate")
-}
 
-// deriveKeys opens key4.db and derives all valid master key candidates
-// from the nssPrivate table.
-func deriveKeys(key4Path string) ([][]byte, error) {
-	keyDB, err := sql.Open("sqlite", key4Path)
-	if err != nil {
-		return nil, fmt.Errorf("open key4.db: %w", err)
-	}
-	defer keyDB.Close()
-
-	metaItem1, metaItem2, err := queryMetaData(keyDB)
-	if err != nil {
-		return nil, fmt.Errorf("query metadata: %w", err)
+	// Validate against actual login data.
+	if key := validateKeyWithLogins(keys, loginsPath); key != nil {
+		return key, nil
 	}
 
-	candidates, err := queryNssPrivateCandidates(keyDB)
-	if err != nil {
-		return nil, fmt.Errorf("query nssPrivate: %w", err)
-	}
-
-	var keys [][]byte
-	for _, c := range candidates {
-		key, err := processMasterKey(metaItem1, metaItem2, c.a11, c.a102)
-		if err != nil {
-			log.Debugf("process nss candidate: %v", err)
-			continue
-		}
-		keys = append(keys, key)
-	}
-	return keys, nil
-}
-
-// validateKeyWithLogins reads logins.json and returns the first key that
-// can successfully decrypt an actual login entry. Returns nil if no key matches.
-func validateKeyWithLogins(keys [][]byte, loginsPath string) []byte {
-	raw, err := os.ReadFile(loginsPath)
-	if err != nil {
-		return nil
-	}
-	pairs, _ := parseLoginCipherPairs(raw)
-	if len(pairs) == 0 {
-		return nil
-	}
-	for _, key := range keys {
-		if canDecryptAnyLoginCipherPair(key, pairs) {
-			return key
-		}
-	}
-	return nil
+	return nil, fmt.Errorf("derived %d key(s) but none could decrypt logins", len(keys))
 }
 
 // extractCategory calls the appropriate extract function for a category.

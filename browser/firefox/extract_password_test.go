@@ -77,8 +77,8 @@ func TestExtractPasswords_FormSubmitURLFallback(t *testing.T) {
 	assert.Equal(t, "https://fallback.com", got[0].URL)
 }
 
-func TestExtractPasswords_InvalidBase64Skipped(t *testing.T) {
-	// Invalid base64 in encryptedUsername — entry should be skipped
+func TestExtractPasswords_DecryptFailureKeepsEntry(t *testing.T) {
+	// Invalid base64 — decryptPBE fails, but entry is still kept with empty user/pwd
 	json := `{
 		"logins": [
 			{
@@ -94,7 +94,10 @@ func TestExtractPasswords_InvalidBase64Skipped(t *testing.T) {
 
 	got, err := extractPasswords(testGlobalSalt, path)
 	require.NoError(t, err)
-	assert.Empty(t, got) // skipped, not error
+	require.Len(t, got, 1)
+	assert.Equal(t, "https://bad.com", got[0].URL)
+	assert.Empty(t, got[0].Username) // decrypt failed → empty
+	assert.Empty(t, got[0].Password) // decrypt failed → empty
 }
 
 func TestExtractPasswords_EmptyLogins(t *testing.T) {

@@ -1,7 +1,6 @@
 package firefox
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -83,65 +82,10 @@ func firefoxWalkFunc(items []types.DataType, multiItemPaths map[string]map[types
 // GetMasterKey returns master key of Firefox. from key4.db
 func (f *Firefox) GetMasterKey() ([]byte, error) {
 	tempFilename := types.FirefoxKey4.TempFilename()
-
-	// Open and defer close of the database.
-	keyDB, err := sql.Open("sqlite", tempFilename)
-	if err != nil {
-		return nil, fmt.Errorf("open key4.db error: %w", err)
-	}
 	defer os.Remove(tempFilename)
-	defer keyDB.Close()
 
-	metaItem1, metaItem2, err := queryMetaData(keyDB)
-	if err != nil {
-		return nil, fmt.Errorf("query metadata error: %w", err)
-	}
-
-	candidates, err := queryNssPrivateCandidates(keyDB)
-	if err != nil {
-		return nil, fmt.Errorf("query NSS private error: %w", err)
-	}
-	loginCipherPairs, _ := getFirefoxLoginCipherPairs()
-
-	var (
-		fallbackKey []byte
-		lastErr     error
-	)
-	for _, c := range candidates {
-		masterKey, err := processMasterKey(metaItem1, metaItem2, c.a11, c.a102)
-		if err != nil {
-			lastErr = err
-			continue
-		}
-		if fallbackKey == nil {
-			fallbackKey = masterKey
-		}
-
-		if len(loginCipherPairs) == 0 {
-			return masterKey, nil
-		}
-		if canDecryptAnyLoginCipherPair(masterKey, loginCipherPairs) {
-			return masterKey, nil
-		}
-	}
-
-	if fallbackKey != nil {
-		return fallbackKey, nil
-	}
-	if lastErr != nil {
-		return nil, lastErr
-	}
-	return nil, errors.New("no valid firefox master key found in nssPrivate")
-}
-
-// getFirefoxLoginCipherPairs reads login cipher pairs from the old temp file path.
-// Used by the old architecture (GetMasterKey); new code uses parseLoginCipherPairs / validateKeyWithLogins.
-func getFirefoxLoginCipherPairs() ([]loginCipherPair, error) {
-	raw, err := os.ReadFile(types.FirefoxPassword.TempFilename())
-	if err != nil {
-		return nil, err
-	}
-	return parseLoginCipherPairs(raw)
+	loginsPath := types.FirefoxPassword.TempFilename()
+	return retrieveMasterKey(tempFilename, loginsPath)
 }
 
 func (f *Firefox) Name() string {

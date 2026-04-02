@@ -6,162 +6,204 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/tidwall/gjson"
 	_ "modernc.org/sqlite"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
+	"github.com/moond4rk/hackbrowserdata/log"
 )
 
-// loginCipherPair holds base64-decoded encrypted username/password from logins.json,
-// used to validate a candidate master key.
-type loginCipherPair struct {
-	username []byte
-	password []byte
+// key4DB holds the parsed contents of Firefox's key4.db NSS key storage.
+//
+// Firefox stores the master encryption key in key4.db using two SQLite tables:
+//   - metaData: contains the global salt and an encrypted "password-check" marker
+//   - nssPrivate: contains one or more encrypted master key candidates
+//
+// Reference: https://searchfox.org/mozilla-central/source/security/nss/lib/softoken/
+type key4DB struct {
+	globalSalt    []byte       // metaData.item1: salt used as PBE decryption input
+	passwordCheck []byte       // metaData.item2: encrypted marker to verify DB integrity
+	privateKeys   []privateKey // nssPrivate rows: encrypted master key candidates
 }
 
-// parseLoginCipherPairs extracts up to 5 encrypted username/password pairs
-// from Firefox logins.json content for master key validation.
-func parseLoginCipherPairs(raw []byte) ([]loginCipherPair, error) {
+// privateKey is a single encrypted master key entry from nssPrivate.
+type privateKey struct {
+	encrypted []byte // a11: PBE-encrypted master key blob
+	typeTag   []byte // a102: key type identifier (must match nssKeyTypeTag)
+}
+
+// nssKeyTypeTag identifies valid master key entries in key4.db.
+// Only nssPrivate rows where a102 matches this tag contain actual master keys;
+// other rows may be certificates or other NSS objects.
+// See: https://searchfox.org/mozilla-central/source/security/nss/lib/softoken/pkcs11i.h
+var nssKeyTypeTag = []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+
+// readKey4DB opens key4.db and parses it into a structured key4DB.
+func readKey4DB(path string) (*key4DB, error) {
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		return nil, fmt.Errorf("open key4.db: %w", err)
+	}
+	defer db.Close()
+
+	var record key4DB
+
+	// Read metaData table
+	const metaQuery = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
+	if err := db.QueryRow(metaQuery).Scan(&record.globalSalt, &record.passwordCheck); err != nil {
+		return nil, fmt.Errorf("query metaData: %w", err)
+	}
+
+	// Read nssPrivate table
+	const nssQuery = `SELECT a11, a102 FROM nssPrivate`
+	rows, err := db.Query(nssQuery)
+	if err != nil {
+		return nil, fmt.Errorf("query nssPrivate: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var pk privateKey
+		if err := rows.Scan(&pk.encrypted, &pk.typeTag); err != nil {
+			return nil, fmt.Errorf("scan nssPrivate row: %w", err)
+		}
+		record.privateKeys = append(record.privateKeys, pk)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate nssPrivate: %w", err)
+	}
+	if len(record.privateKeys) == 0 {
+		return nil, errors.New("nssPrivate table is empty")
+	}
+
+	return &record, nil
+}
+
+// deriveKeys verifies the database integrity via the password-check marker,
+// then decrypts all valid master key candidates.
+func (k *key4DB) deriveKeys() ([][]byte, error) {
+	if err := k.verifyPasswordCheck(); err != nil {
+		return nil, err
+	}
+
+	var keys [][]byte
+	for _, pk := range k.privateKeys {
+		if !bytes.Equal(pk.typeTag, nssKeyTypeTag) {
+			continue
+		}
+		key, err := k.decryptPrivateKey(pk)
+		if err != nil {
+			log.Debugf("decrypt nss private key: %v", err)
+			continue
+		}
+		keys = append(keys, key)
+	}
+	return keys, nil
+}
+
+// verifyPasswordCheck decrypts the password-check marker from metaData
+// to confirm the database is valid and accessible.
+func (k *key4DB) verifyPasswordCheck() error {
+	pbe, err := crypto.NewASN1PBE(k.passwordCheck)
+	if err != nil {
+		return fmt.Errorf("parse password check: %w", err)
+	}
+	plain, err := pbe.Decrypt(k.globalSalt)
+	if err != nil {
+		return fmt.Errorf("decrypt password check: %w", err)
+	}
+	if !bytes.Contains(plain, []byte("password-check")) {
+		return errors.New("password check verification failed")
+	}
+	return nil
+}
+
+// decryptPrivateKey decrypts a single master key candidate using the global salt.
+func (k *key4DB) decryptPrivateKey(pk privateKey) ([]byte, error) {
+	pbe, err := crypto.NewASN1PBE(pk.encrypted)
+	if err != nil {
+		return nil, fmt.Errorf("parse private key: %w", err)
+	}
+	derivedKey, err := pbe.Decrypt(k.globalSalt)
+	if err != nil {
+		return nil, fmt.Errorf("decrypt private key: %w", err)
+	}
+	if len(derivedKey) < 24 {
+		return nil, fmt.Errorf("derived key too short: %d bytes (need >= 24)", len(derivedKey))
+	}
+	// Firefox 144+ uses AES-256-CBC instead of 3DES; the full derived key
+	// must be preserved to support modern cipher suites.
+	return derivedKey, nil
+}
+
+// encryptedLogin holds PBE-encrypted credentials from logins.json,
+// used as test samples for master key validation.
+type encryptedLogin struct {
+	username []byte // PBE-encrypted username blob
+	password []byte // PBE-encrypted password blob
+}
+
+// validateKeyWithLogins reads logins.json and returns the first key that
+// can successfully decrypt an actual login entry. Returns nil if no key matches.
+func validateKeyWithLogins(keys [][]byte, loginsPath string) []byte {
+	raw, err := os.ReadFile(loginsPath)
+	if err != nil {
+		return nil
+	}
+	samples := sampleEncryptedLogins(raw)
+	if len(samples) == 0 {
+		return nil
+	}
+	for _, key := range keys {
+		if tryDecryptLogins(key, samples) {
+			return key
+		}
+	}
+	return nil
+}
+
+// sampleEncryptedLogins extracts up to 5 encrypted login entries from
+// logins.json as test samples for master key validation.
+func sampleEncryptedLogins(raw []byte) []encryptedLogin {
 	arr := gjson.GetBytes(raw, "logins").Array()
-	pairs := make([]loginCipherPair, 0, len(arr))
+	var samples []encryptedLogin
 	for _, v := range arr {
-		uEnc := v.Get("encryptedUsername").String()
-		pEnc := v.Get("encryptedPassword").String()
-		if uEnc == "" || pEnc == "" {
-			continue
-		}
-		uRaw, err := base64.StdEncoding.DecodeString(uEnc)
+		userRaw, err := base64.StdEncoding.DecodeString(v.Get("encryptedUsername").String())
 		if err != nil {
 			continue
 		}
-		pRaw, err := base64.StdEncoding.DecodeString(pEnc)
+		pwdRaw, err := base64.StdEncoding.DecodeString(v.Get("encryptedPassword").String())
 		if err != nil {
 			continue
 		}
-		pairs = append(pairs, loginCipherPair{username: uRaw, password: pRaw})
-		if len(pairs) >= 5 {
+		samples = append(samples, encryptedLogin{username: userRaw, password: pwdRaw})
+		if len(samples) >= 5 {
 			break
 		}
 	}
-	return pairs, nil
+	return samples
 }
 
-// canDecryptAnyLoginCipherPair checks if masterKey can decrypt at least one
-// login entry. Used to validate the correct master key when multiple NSS
-// private candidates exist.
-func canDecryptAnyLoginCipherPair(masterKey []byte, pairs []loginCipherPair) bool {
-	for _, pair := range pairs {
-		uPBE, err := crypto.NewASN1PBE(pair.username)
+// tryDecryptLogins checks if masterKey can decrypt at least one encrypted
+// login entry (both username and password).
+func tryDecryptLogins(masterKey []byte, samples []encryptedLogin) bool {
+	for _, login := range samples {
+		userPBE, err := crypto.NewASN1PBE(login.username)
 		if err != nil {
 			continue
 		}
-		if _, err := uPBE.Decrypt(masterKey); err != nil {
+		if _, err := userPBE.Decrypt(masterKey); err != nil {
 			continue
 		}
-
-		pPBE, err := crypto.NewASN1PBE(pair.password)
+		pwdPBE, err := crypto.NewASN1PBE(login.password)
 		if err != nil {
 			continue
 		}
-		if _, err := pPBE.Decrypt(masterKey); err == nil {
+		if _, err := pwdPBE.Decrypt(masterKey); err == nil {
 			return true
 		}
 	}
 	return false
-}
-
-// nssPrivateCandidate holds a row from the nssPrivate table in key4.db.
-type nssPrivateCandidate struct {
-	a11  []byte
-	a102 []byte
-}
-
-// queryMetaData reads the password-check metadata from key4.db.
-func queryMetaData(db *sql.DB) ([]byte, []byte, error) {
-	const query = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
-	var metaItem1, metaItem2 []byte
-	if err := db.QueryRow(query).Scan(&metaItem1, &metaItem2); err != nil {
-		return nil, nil, err
-	}
-	return metaItem1, metaItem2, nil
-}
-
-// queryNssPrivateCandidates reads all NSS private key candidates from key4.db.
-func queryNssPrivateCandidates(db *sql.DB) ([]nssPrivateCandidate, error) {
-	const query = `SELECT a11, a102 FROM nssPrivate`
-	rows, err := db.Query(query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var candidates []nssPrivateCandidate
-	for rows.Next() {
-		var c nssPrivateCandidate
-		if err := rows.Scan(&c.a11, &c.a102); err != nil {
-			return nil, err
-		}
-		candidates = append(candidates, c)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	if len(candidates) == 0 {
-		return nil, errors.New("nssPrivate is empty")
-	}
-	return candidates, nil
-}
-
-// queryNssPrivate returns the first NSS private key candidate.
-// Kept for backward compatibility in tests.
-func queryNssPrivate(db *sql.DB) ([]byte, []byte, error) {
-	candidates, err := queryNssPrivateCandidates(db)
-	if err != nil {
-		return nil, nil, err
-	}
-	return candidates[0].a11, candidates[0].a102, nil
-}
-
-// processMasterKey derives the Firefox master key from key4.db data.
-// It decrypts metaItem2 with ASN1PBE, verifies the "password-check" flag,
-// validates nssA102, then decrypts nssA11 to obtain the final key.
-func processMasterKey(metaItem1, metaItem2, nssA11, nssA102 []byte) ([]byte, error) {
-	metaPBE, err := crypto.NewASN1PBE(metaItem2)
-	if err != nil {
-		return nil, fmt.Errorf("error creating ASN1PBE from metaItem2: %w", err)
-	}
-
-	flag, err := metaPBE.Decrypt(metaItem1)
-	if err != nil {
-		return nil, fmt.Errorf("error decrypting master key: %w", err)
-	}
-	const passwordCheck = "password-check"
-
-	if !bytes.Contains(flag, []byte(passwordCheck)) {
-		return nil, errors.New("flag verification failed: password-check not found")
-	}
-
-	keyLin := []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
-	if !bytes.Equal(nssA102, keyLin) {
-		return nil, errors.New("master key verification failed: nssA102 not equal to expected value")
-	}
-
-	nssA11PBE, err := crypto.NewASN1PBE(nssA11)
-	if err != nil {
-		return nil, fmt.Errorf("error creating ASN1PBE from nssA11: %w", err)
-	}
-
-	derivedKey, err := nssA11PBE.Decrypt(metaItem1)
-	if err != nil {
-		return nil, fmt.Errorf("error decrypting final key: %w", err)
-	}
-	if len(derivedKey) < 24 {
-		return nil, errors.New("length of final key is less than 24 bytes")
-	}
-	// Historically, the derived PBE key was truncated to 24 bytes for 3DES usage.
-	// Starting from Firefox 144+, NSS switches to AES-256-CBC without changing
-	// the underlying key derivation logic. The full derived key must be preserved
-	// to support modern cipher suites.
-	return derivedKey, nil
 }

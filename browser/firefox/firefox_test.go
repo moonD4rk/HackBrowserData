@@ -3,36 +3,55 @@ package firefox
 import (
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestQueryMetaData(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	assert.NoError(t, err)
-	defer db.Close()
+func TestReadKey4DB(t *testing.T) {
+	// Create a minimal key4.db with metaData and nssPrivate tables
+	path := createTestDB(t, "key4.db",
+		[]string{
+			`CREATE TABLE metaData (id TEXT PRIMARY KEY, item1 BLOB, item2 BLOB)`,
+			`CREATE TABLE nssPrivate (a11 BLOB, a102 BLOB)`,
+		},
+		`INSERT INTO metaData (id, item1, item2) VALUES ('password', x'aabbccdd', x'11223344')`,
+		`INSERT INTO nssPrivate (a11, a102) VALUES (x'deadbeef', x'cafebabe')`,
+		`INSERT INTO nssPrivate (a11, a102) VALUES (x'feedface', x'12345678')`,
+	)
 
-	rows := sqlmock.NewRows([]string{"item1", "item2"}).
-		AddRow([]byte("globalSalt"), []byte("metaBytes"))
-	mock.ExpectQuery("SELECT item1, item2 FROM metaData WHERE id = 'password'").WillReturnRows(rows)
+	k4, err := readKey4DB(path)
+	require.NoError(t, err)
 
-	globalSalt, metaBytes, err := queryMetaData(db)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte("globalSalt"), globalSalt)
-	assert.Equal(t, []byte("metaBytes"), metaBytes)
+	assert.Equal(t, []byte{0xaa, 0xbb, 0xcc, 0xdd}, k4.globalSalt)
+	assert.Equal(t, []byte{0x11, 0x22, 0x33, 0x44}, k4.passwordCheck)
+	require.Len(t, k4.privateKeys, 2)
+	assert.Equal(t, []byte{0xde, 0xad, 0xbe, 0xef}, k4.privateKeys[0].encrypted)
+	assert.Equal(t, []byte{0xca, 0xfe, 0xba, 0xbe}, k4.privateKeys[0].typeTag)
 }
 
-func TestQueryNssPrivate(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	assert.NoError(t, err)
-	defer db.Close()
+func TestReadKey4DB_EmptyNssPrivate(t *testing.T) {
+	path := createTestDB(t, "key4.db",
+		[]string{
+			`CREATE TABLE metaData (id TEXT PRIMARY KEY, item1 BLOB, item2 BLOB)`,
+			`CREATE TABLE nssPrivate (a11 BLOB, a102 BLOB)`,
+		},
+		`INSERT INTO metaData (id, item1, item2) VALUES ('password', x'aa', x'bb')`,
+	)
 
-	rows := sqlmock.NewRows([]string{"a11", "a102"}).
-		AddRow([]byte("nssA11"), []byte("nssA102"))
-	mock.ExpectQuery("SELECT a11, a102 FROM nssPrivate").WillReturnRows(rows)
+	_, err := readKey4DB(path)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "empty")
+}
 
-	nssA11, nssA102, err := queryNssPrivate(db)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte("nssA11"), nssA11)
-	assert.Equal(t, []byte("nssA102"), nssA102)
+func TestSampleEncryptedLogins(t *testing.T) {
+	raw := []byte(`{"logins":[
+		{"encryptedUsername":"dGVzdA==","encryptedPassword":"cGFzcw=="},
+		{"encryptedUsername":"!!!invalid","encryptedPassword":"cGFzcw=="},
+		{"encryptedUsername":"dGVzdA==","encryptedPassword":"cGFzcw=="}
+	]}`)
+
+	samples := sampleEncryptedLogins(raw)
+	require.Len(t, samples, 2) // second entry skipped (invalid base64)
+	assert.Equal(t, []byte("test"), samples[0].username)
+	assert.Equal(t, []byte("pass"), samples[0].password)
 }

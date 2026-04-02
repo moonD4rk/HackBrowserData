@@ -9,7 +9,6 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
@@ -39,21 +38,13 @@ func extractPasswords(masterKey []byte, path string) ([]types.LoginEntry, error)
 
 	var logins []types.LoginEntry
 	for _, v := range gjson.GetBytes(data, "logins").Array() {
-		user, err := decryptPBE(v.Get("encryptedUsername").String(), masterKey)
-		if err != nil {
-			log.Debugf("decrypt username: %v", err)
-			continue
-		}
-		pwd, err := decryptPBE(v.Get("encryptedPassword").String(), masterKey)
-		if err != nil {
-			log.Debugf("decrypt password: %v", err)
-			continue
-		}
-
 		url := v.Get("formSubmitURL").String()
 		if url == "" {
 			url = v.Get("hostname").String()
 		}
+
+		user, _ := decryptPBE(v.Get("encryptedUsername").String(), masterKey)
+		pwd, _ := decryptPBE(v.Get("encryptedPassword").String(), masterKey)
 
 		logins = append(logins, types.LoginEntry{
 			URL:       url,
