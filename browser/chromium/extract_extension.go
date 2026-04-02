@@ -9,20 +9,28 @@ import (
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
+// defaultExtensionKeys are the JSON paths tried for standard Chromium browsers.
+var defaultExtensionKeys = []string{
+	"extensions.settings",
+	"settings.extensions",
+	"settings.settings",
+}
+
 func extractExtensions(path string) ([]types.ExtensionEntry, error) {
+	return extractExtensionsWithKeys(path, defaultExtensionKeys)
+}
+
+// extractExtensionsWithKeys reads Secure Preferences and looks for extension
+// settings under the given JSON key paths. This allows browser variants
+// (e.g. Opera with "extensions.opsettings") to reuse the same parsing logic.
+func extractExtensionsWithKeys(path string, keys []string) ([]types.ExtensionEntry, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	// Try known JSON paths for extension settings
-	settingKeys := []string{
-		"extensions.settings",
-		"settings.extensions",
-		"settings.settings",
-	}
 	var settings gjson.Result
-	for _, key := range settingKeys {
+	for _, key := range keys {
 		settings = gjson.GetBytes(data, key)
 		if settings.Exists() {
 			break
@@ -58,4 +66,11 @@ func extractExtensions(path string) ([]types.ExtensionEntry, error) {
 	})
 
 	return extensions, nil
+}
+
+// extractOperaExtensions extracts extensions from Opera's Secure Preferences,
+// which stores extension data under "extensions.opsettings" instead of the
+// standard "extensions.settings".
+func extractOperaExtensions(path string) ([]types.ExtensionEntry, error) {
+	return extractExtensionsWithKeys(path, []string{"extensions.opsettings"})
 }

@@ -69,3 +69,36 @@ func NonSensitiveCategories() []Category {
 	}
 	return cats
 }
+
+// BrowserKind identifies the browser engine type.
+type BrowserKind int
+
+const (
+	KindChromium       BrowserKind = iota
+	KindChromiumYandex             // Chromium variant with different file names and extract logic
+	KindChromiumOpera              // Opera: extensions in "opsettings" key, data in Roaming
+	KindFirefox
+)
+
+// BrowserConfig holds the declarative configuration for a browser installation.
+type BrowserConfig struct {
+	Key              string      // lookup key: "chrome", "edge", "firefox"
+	Name             string      // display name: "Chrome", "Edge", "Firefox"
+	Kind             BrowserKind // engine type
+	Storage          string      // keychain/GNOME label (macOS/Linux); unused on Windows
+	KeychainPassword string      // macOS login password for KeychainPasswordRetriever; ignored on Windows/Linux
+	UserDataDir      string      // base browser directory
+}
+
+// BrowserData holds all extracted browser data with typed slices.
+type BrowserData struct {
+	Passwords      []LoginEntry
+	Cookies        []CookieEntry
+	Histories      []HistoryEntry
+	Downloads      []DownloadEntry
+	Bookmarks      []BookmarkEntry
+	CreditCards    []CreditCardEntry
+	Extensions     []ExtensionEntry
+	LocalStorage   []StorageEntry
+	SessionStorage []StorageEntry
+}

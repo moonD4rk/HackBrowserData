@@ -5,8 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 func TestExtractPasswords(t *testing.T) {
@@ -15,7 +13,7 @@ func TestExtractPasswords(t *testing.T) {
 		insertLogin("https://new.com", "https://new.com/login", "bob", "", 13360000000000000),
 	)
 
-	got, err := extractPasswords(nil, path, "")
+	got, err := extractPasswords(nil, path)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -30,13 +28,12 @@ func TestExtractPasswords(t *testing.T) {
 	assert.Empty(t, got[0].Password)
 }
 
-func TestExtractPasswords_YandexQueryOverride(t *testing.T) {
+func TestExtractYandexPasswords(t *testing.T) {
 	path := createTestDB(t, "Ya Passman Data", loginsSchema,
 		insertLogin("https://origin.yandex.ru", "https://action.yandex.ru/submit", "user", "", 13350000000000000),
 	)
 
-	// Yandex uses action_url instead of origin_url
-	got, err := extractPasswords(nil, path, yandexQueryOverrides[types.Password])
+	got, err := extractYandexPasswords(nil, path)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, "https://action.yandex.ru/submit", got[0].URL) // action_url, not origin_url
