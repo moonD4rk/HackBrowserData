@@ -53,7 +53,75 @@ func yandexSources() map[types.Category]dataSource {
 	return sources
 }
 
-// yandexQueryOverrides provides SQL query overrides for Yandex Browser.
-var yandexQueryOverrides = map[types.Category]string{
-	types.Password: `SELECT action_url, username_value, password_value, date_created FROM logins`,
+// sourcesForKind returns the source mapping for a browser kind.
+func sourcesForKind(kind types.BrowserKind) map[types.Category]dataSource {
+	switch kind {
+	case types.KindChromiumYandex:
+		return yandexSources()
+	default:
+		return chromiumSources
+	}
+}
+
+// categoryExtractor extracts data for a single category into BrowserData.
+// Implementations wrap typed extract functions to provide a uniform dispatch
+// interface while preserving the original function signatures.
+//
+// Use extractorsForKind to register per-Kind overrides. When an extractor
+// is present for a category, extractCategory uses it instead of the default
+// switch logic, enabling browser-specific parsing (e.g. Opera's opsettings
+// for extensions, Yandex's credit card table, QBCI-encrypted bookmarks).
+type categoryExtractor interface {
+	extract(masterKey []byte, path string, data *types.BrowserData) error
+}
+
+// passwordExtractor wraps a custom password extract function with a query override.
+type passwordExtractor struct {
+	fn func(masterKey []byte, path, query string) ([]types.LoginEntry, error)
+	q  string // SQL query to use
+}
+
+func (e passwordExtractor) extract(masterKey []byte, path string, data *types.BrowserData) error {
+	var err error
+	data.Passwords, err = e.fn(masterKey, path, e.q)
+	return err
+}
+
+// extensionExtractor wraps a custom extension extract function.
+type extensionExtractor struct {
+	fn func(path string) ([]types.ExtensionEntry, error)
+}
+
+func (e extensionExtractor) extract(_ []byte, path string, data *types.BrowserData) error {
+	var err error
+	data.Extensions, err = e.fn(path)
+	return err
+}
+
+// yandexExtractors overrides Password extraction for Yandex,
+// which uses a different SQL query (action_url instead of origin_url).
+var yandexExtractors = map[types.Category]categoryExtractor{
+	types.Password: passwordExtractor{
+		fn: extractPasswords,
+		q:  `SELECT action_url, username_value, password_value, date_created FROM logins`,
+	},
+}
+
+// operaExtractors overrides Extension extraction for Opera,
+// which stores settings under "extensions.opsettings".
+var operaExtractors = map[types.Category]categoryExtractor{
+	types.Extension: extensionExtractor{fn: extractOperaExtensions},
+}
+
+// extractorsForKind returns custom category extractors for a browser kind.
+// nil means all categories use the default extractCategory switch logic.
+func extractorsForKind(kind types.BrowserKind) map[types.Category]categoryExtractor {
+	switch kind {
+	case types.KindChromiumYandex:
+		return yandexExtractors
+	case types.KindChromiumOpera:
+		return operaExtractors
+	default:
+		return nil
+	}
 }

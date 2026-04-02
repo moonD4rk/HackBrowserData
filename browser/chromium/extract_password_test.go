@@ -35,8 +35,10 @@ func TestExtractPasswords_YandexQueryOverride(t *testing.T) {
 		insertLogin("https://origin.yandex.ru", "https://action.yandex.ru/submit", "user", "", 13350000000000000),
 	)
 
-	// Yandex uses action_url instead of origin_url
-	got, err := extractPasswords(nil, path, yandexQueryOverrides[types.Password])
+	// Yandex uses action_url instead of origin_url.
+	// The query is now registered via yandexExtractors[types.Password].
+	yandexPwdExt := yandexExtractors[types.Password].(passwordExtractor)
+	got, err := extractPasswords(nil, path, yandexPwdExt.q)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, "https://action.yandex.ru/submit", got[0].URL) // action_url, not origin_url

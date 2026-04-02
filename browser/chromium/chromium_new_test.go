@@ -323,11 +323,61 @@ func TestSourcesForKind(t *testing.T) {
 	assert.Equal(t, chromium[types.History].candidates[0].rel, yandex[types.History].candidates[0].rel)
 }
 
-func TestQueriesForKind(t *testing.T) {
-	assert.Nil(t, queriesForKind(types.KindChromium))
-	yandexQ := queriesForKind(types.KindChromiumYandex)
-	require.NotNil(t, yandexQ)
-	assert.Contains(t, yandexQ[types.Password], "action_url")
+func TestExtractorsForKind(t *testing.T) {
+	assert.Nil(t, extractorsForKind(types.KindChromium))
+
+	yandexExt := extractorsForKind(types.KindChromiumYandex)
+	require.NotNil(t, yandexExt)
+	assert.Contains(t, yandexExt, types.Password)
+
+	operaExt := extractorsForKind(types.KindChromiumOpera)
+	require.NotNil(t, operaExt)
+	assert.Contains(t, operaExt, types.Extension)
+}
+
+// TestExtractCategory_CustomExtractor verifies that extractCategory dispatches
+// through a registered extractor instead of the default switch logic.
+func TestExtractCategory_CustomExtractor(t *testing.T) {
+	// Create a Browser with a custom extractor that records it was called
+	called := false
+	testExtractor := extensionExtractor{
+		fn: func(path string) ([]types.ExtensionEntry, error) {
+			called = true
+			return []types.ExtensionEntry{{Name: "custom", ID: "test-id"}}, nil
+		},
+	}
+
+	b := &Browser{
+		extractors: map[types.Category]categoryExtractor{
+			types.Extension: testExtractor,
+		},
+	}
+
+	data := &types.BrowserData{}
+	b.extractCategory(data, types.Extension, nil, "unused-path")
+
+	assert.True(t, called, "custom extractor should be called")
+	require.Len(t, data.Extensions, 1)
+	assert.Equal(t, "custom", data.Extensions[0].Name)
+}
+
+// TestExtractCategory_DefaultFallback verifies that extractCategory uses
+// the default switch when no extractor is registered.
+func TestExtractCategory_DefaultFallback(t *testing.T) {
+	path := createTestDB(t, "History", urlsSchema,
+		insertURL("https://example.com", "Example", 3, 13350000000000000),
+	)
+
+	b := &Browser{
+		name:       "Test",
+		extractors: nil, // no custom extractors
+	}
+
+	data := &types.BrowserData{}
+	b.extractCategory(data, types.History, nil, path)
+
+	require.Len(t, data.Histories, 1)
+	assert.Equal(t, "Example", data.Histories[0].Title)
 }
 
 // ---------------------------------------------------------------------------

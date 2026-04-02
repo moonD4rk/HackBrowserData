@@ -11,20 +11,14 @@ import (
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
-// resolvedPath holds the absolute path and type for a discovered source.
-type resolvedPath struct {
-	absPath string
-	isDir   bool
-}
-
 // Browser represents a single Chromium profile ready for extraction.
 type Browser struct {
 	cfg         types.BrowserConfig
-	name        string                          // display name: "Chrome-Default"
-	profileDir  string                          // absolute path to profile directory
-	sources     map[types.Category]dataSource   // Category → source mapping
-	queries     map[types.Category]string       // Category → SQL query override (Yandex)
-	sourcePaths map[types.Category]resolvedPath // Category → discovered absolute path
+	name        string                               // display name: "Chrome-Default"
+	profileDir  string                               // absolute path to profile directory
+	sources     map[types.Category]dataSource        // Category → source mapping
+	extractors  map[types.Category]categoryExtractor // Category → custom extract function override
+	sourcePaths map[types.Category]resolvedPath      // Category → discovered absolute path
 }
 
 // NewBrowsers discovers Chromium profiles under userDataDir and returns
@@ -32,7 +26,7 @@ type Browser struct {
 // then Stat to check which data sources exist in each profile.
 func NewBrowsers(cfg types.BrowserConfig, userDataDir string) ([]*Browser, error) {
 	sources := sourcesForKind(cfg.Kind)
-	queries := queriesForKind(cfg.Kind)
+	extractors := extractorsForKind(cfg.Kind)
 
 	profileDirs := discoverProfiles(userDataDir, sources)
 	if len(profileDirs) == 0 {
@@ -50,7 +44,7 @@ func NewBrowsers(cfg types.BrowserConfig, userDataDir string) ([]*Browser, error
 			name:        cfg.Name + "-" + filepath.Base(profileDir),
 			profileDir:  profileDir,
 			sources:     sources,
-			queries:     queries,
+			extractors:  extractors,
 			sourcePaths: sourcePaths,
 		})
 	}
@@ -107,6 +101,9 @@ func (b *Browser) acquireFiles(session *filemanager.Session, categories []types.
 }
 
 // getMasterKey retrieves the Chromium master encryption key.
+// On macOS, if cfg.KeychainPassword is set, KeychainPasswordRetriever is used;
+// otherwise falls back to GcoredumpRetriever → SecurityCmdRetriever.
+// On Windows/Linux the password is ignored.
 func (b *Browser) getMasterKey(session *filemanager.Session) ([]byte, error) {
 	localStateSrc := filepath.Join(filepath.Dir(b.profileDir), "Local State")
 	if !fileutil.IsFileExists(localStateSrc) {
@@ -118,20 +115,25 @@ func (b *Browser) getMasterKey(session *filemanager.Session) ([]byte, error) {
 		return nil, err
 	}
 
-	retriever := keyretriever.DefaultRetriever("")
+	retriever := keyretriever.DefaultRetriever(b.cfg.KeychainPassword)
 	return retriever.RetrieveKey(b.cfg.Storage, localStateDst)
 }
 
 // extractCategory calls the appropriate extract function for a category.
+// If a custom extractor is registered for this category (via extractorsForKind),
+// it is used instead of the default switch logic.
 func (b *Browser) extractCategory(data *types.BrowserData, cat types.Category, masterKey []byte, path string) {
+	if ext, ok := b.extractors[cat]; ok {
+		if err := ext.extract(masterKey, path, data); err != nil {
+			log.Debugf("extract %s for %s: %v", cat, b.name, err)
+		}
+		return
+	}
+
 	var err error
 	switch cat {
 	case types.Password:
-		query := defaultLoginQuery
-		if q, ok := b.queries[types.Password]; ok {
-			query = q
-		}
-		data.Passwords, err = extractPasswords(masterKey, path, query)
+		data.Passwords, err = extractPasswords(masterKey, path, defaultLoginQuery)
 	case types.Cookie:
 		data.Cookies, err = extractCookies(masterKey, path)
 	case types.History:
@@ -153,10 +155,6 @@ func (b *Browser) extractCategory(data *types.BrowserData, cat types.Category, m
 		log.Debugf("extract %s for %s: %v", cat, b.name, err)
 	}
 }
-
-// ---------------------------------------------------------------------------
-// Profile discovery (ReadDir + Stat)
-// ---------------------------------------------------------------------------
 
 // discoverProfiles lists subdirectories of userDataDir that contain at least
 // one known data source. Each such directory is a browser profile.
@@ -197,6 +195,12 @@ func hasAnySource(sources map[types.Category]dataSource, dir string) bool {
 	return false
 }
 
+// resolvedPath holds the absolute path and type for a discovered source.
+type resolvedPath struct {
+	absPath string
+	isDir   bool
+}
+
 // resolveSourcePaths checks which sources actually exist in profileDir.
 // Candidates are tried in priority order; the first existing path wins.
 func resolveSourcePaths(sources map[types.Category]dataSource, profileDir string) map[types.Category]resolvedPath {
@@ -225,24 +229,4 @@ func isSkippedDir(name string) bool {
 		return true
 	}
 	return false
-}
-
-// ---------------------------------------------------------------------------
-// Source helpers
-// ---------------------------------------------------------------------------
-
-// sourcesForKind returns the source mapping for a browser kind.
-func sourcesForKind(kind types.BrowserKind) map[types.Category]dataSource {
-	if kind == types.KindChromiumYandex {
-		return yandexSources()
-	}
-	return chromiumSources
-}
-
-// queriesForKind returns SQL query overrides for a browser kind.
-func queriesForKind(kind types.BrowserKind) map[types.Category]string {
-	if kind == types.KindChromiumYandex {
-		return yandexQueryOverrides
-	}
-	return nil
 }

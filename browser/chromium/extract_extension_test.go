@@ -75,3 +75,37 @@ func TestExtractExtensions_MissingSettingsPath(t *testing.T) {
 	_, err := extractExtensions(path)
 	require.Error(t, err)
 }
+
+func TestExtractOperaExtensions(t *testing.T) {
+	path := createTestJSON(t, "Secure Preferences", `{
+		"extensions": {
+			"opsettings": {
+				"opera-ext-1": {
+					"location": 1,
+					"manifest": {
+						"name": "Opera Ad Blocker",
+						"description": "Blocks ads in Opera",
+						"version": "2.0.0"
+					},
+					"state": 1
+				},
+				"system-ext": {
+					"location": 5,
+					"manifest": {"name": "System", "version": "1.0"}
+				}
+			}
+		}
+	}`)
+
+	// extractOperaExtensions should find extensions under opsettings
+	got, err := extractOperaExtensions(path)
+	require.NoError(t, err)
+	require.Len(t, got, 1) // system extension skipped
+	assert.Equal(t, "Opera Ad Blocker", got[0].Name)
+	assert.Equal(t, "2.0.0", got[0].Version)
+	assert.True(t, got[0].Enabled)
+
+	// Standard extractExtensions should fail on the same file (no "extensions.settings")
+	_, err = extractExtensions(path)
+	require.Error(t, err)
+}
