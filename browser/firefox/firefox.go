@@ -135,7 +135,7 @@ func (f *Firefox) GetMasterKey() ([]byte, error) {
 }
 
 // getFirefoxLoginCipherPairs reads login cipher pairs from the old temp file path.
-// Used by the old architecture (GetMasterKey); new code uses readLoginCipherPairs.
+// Used by the old architecture (GetMasterKey); new code uses parseLoginCipherPairs / validateKeyWithLogins.
 func getFirefoxLoginCipherPairs() ([]loginCipherPair, error) {
 	raw, err := os.ReadFile(types.FirefoxPassword.TempFilename())
 	if err != nil {

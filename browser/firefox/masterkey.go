@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/tidwall/gjson"
+	_ "modernc.org/sqlite"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
 )
@@ -151,16 +152,16 @@ func processMasterKey(metaItem1, metaItem2, nssA11, nssA102 []byte) ([]byte, err
 		return nil, fmt.Errorf("error creating ASN1PBE from nssA11: %w", err)
 	}
 
-	finallyKey, err := nssA11PBE.Decrypt(metaItem1)
+	derivedKey, err := nssA11PBE.Decrypt(metaItem1)
 	if err != nil {
 		return nil, fmt.Errorf("error decrypting final key: %w", err)
 	}
-	if len(finallyKey) < 24 {
+	if len(derivedKey) < 24 {
 		return nil, errors.New("length of final key is less than 24 bytes")
 	}
 	// Historically, the derived PBE key was truncated to 24 bytes for 3DES usage.
 	// Starting from Firefox 144+, NSS switches to AES-256-CBC without changing
 	// the underlying key derivation logic. The full derived key must be preserved
 	// to support modern cipher suites.
-	return finallyKey, nil
+	return derivedKey, nil
 }
