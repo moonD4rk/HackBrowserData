@@ -133,7 +133,7 @@ func (b *Browser) extractCategory(data *types.BrowserData, cat types.Category, m
 	var err error
 	switch cat {
 	case types.Password:
-		data.Passwords, err = extractPasswords(masterKey, path, defaultLoginQuery)
+		data.Passwords, err = extractPasswords(masterKey, path)
 	case types.Cookie:
 		data.Cookies, err = extractCookies(masterKey, path)
 	case types.History:

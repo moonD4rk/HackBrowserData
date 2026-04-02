@@ -75,15 +75,14 @@ type categoryExtractor interface {
 	extract(masterKey []byte, path string, data *types.BrowserData) error
 }
 
-// passwordExtractor wraps a custom password extract function with a query override.
+// passwordExtractor wraps a custom password extract function.
 type passwordExtractor struct {
-	fn func(masterKey []byte, path, query string) ([]types.LoginEntry, error)
-	q  string // SQL query to use
+	fn func(masterKey []byte, path string) ([]types.LoginEntry, error)
 }
 
 func (e passwordExtractor) extract(masterKey []byte, path string, data *types.BrowserData) error {
 	var err error
-	data.Passwords, err = e.fn(masterKey, path, e.q)
+	data.Passwords, err = e.fn(masterKey, path)
 	return err
 }
 
@@ -99,12 +98,9 @@ func (e extensionExtractor) extract(_ []byte, path string, data *types.BrowserDa
 }
 
 // yandexExtractors overrides Password extraction for Yandex,
-// which uses a different SQL query (action_url instead of origin_url).
+// which uses action_url instead of origin_url.
 var yandexExtractors = map[types.Category]categoryExtractor{
-	types.Password: passwordExtractor{
-		fn: extractPasswords,
-		q:  `SELECT action_url, username_value, password_value, date_created FROM logins`,
-	},
+	types.Password: passwordExtractor{fn: extractYandexPasswords},
 }
 
 // operaExtractors overrides Extension extraction for Opera,
