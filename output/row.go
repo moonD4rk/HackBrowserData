@@ -1,124 +1,48 @@
 package output
 
-import "github.com/moond4rk/hackbrowserdata/types"
+import (
+	"encoding/json"
+	"reflect"
+)
 
-// Row types embed Entry structs and add browser/profile context.
-// All unexported — only used internally by Output.
-
-type passwordRow struct {
-	Browser string `json:"browser"`
-	Profile string `json:"profile"`
-	types.LoginEntry
+// row wraps any entry with browser/profile context for output.
+// A single type replaces per-category row types (passwordRow, cookieRow, etc.).
+type row struct {
+	Browser string
+	Profile string
+	entry   any
 }
 
-func (r passwordRow) csvHeader() []string {
-	return append([]string{"browser", "profile"}, r.CSVHeader()...)
+func (r row) csvHeader() []string {
+	return append([]string{"browser", "profile"}, structCSVHeader(r.entry)...)
 }
 
-func (r passwordRow) csvRow() []string {
-	return append([]string{r.Browser, r.Profile}, r.CSVRow()...)
+func (r row) csvRow() []string {
+	return append([]string{r.Browser, r.Profile}, structCSVRow(r.entry)...)
 }
 
-type cookieRow struct {
-	Browser string `json:"browser"`
-	Profile string `json:"profile"`
-	types.CookieEntry
-}
+// MarshalJSON produces flat JSON with browser/profile followed by the entry's fields.
+// Uses reflect.StructOf to dynamically build a struct that json.Marshal handles natively,
+// avoiding manual JSON string concatenation.
+func (r row) MarshalJSON() ([]byte, error) {
+	ev := reflect.ValueOf(r.entry)
+	et := ev.Type()
 
-func (r cookieRow) csvHeader() []string {
-	return append([]string{"browser", "profile"}, r.CSVHeader()...)
-}
+	fields := make([]reflect.StructField, 0, et.NumField()+2)
+	fields = append(fields,
+		reflect.StructField{Name: "Browser", Type: reflect.TypeOf(""), Tag: `json:"browser"`},
+		reflect.StructField{Name: "Profile", Type: reflect.TypeOf(""), Tag: `json:"profile"`},
+	)
+	for i := 0; i < et.NumField(); i++ {
+		fields = append(fields, et.Field(i))
+	}
 
-func (r cookieRow) csvRow() []string {
-	return append([]string{r.Browser, r.Profile}, r.CSVRow()...)
-}
+	flat := reflect.New(reflect.StructOf(fields)).Elem()
+	flat.Field(0).SetString(r.Browser)
+	flat.Field(1).SetString(r.Profile)
+	for i := 0; i < et.NumField(); i++ {
+		flat.Field(i + 2).Set(ev.Field(i))
+	}
 
-type historyRow struct {
-	Browser string `json:"browser"`
-	Profile string `json:"profile"`
-	types.HistoryEntry
-}
-
-func (r historyRow) csvHeader() []string {
-	return append([]string{"browser", "profile"}, r.CSVHeader()...)
-}
-
-func (r historyRow) csvRow() []string {
-	return append([]string{r.Browser, r.Profile}, r.CSVRow()...)
-}
-
-type downloadRow struct {
-	Browser string `json:"browser"`
-	Profile string `json:"profile"`
-	types.DownloadEntry
-}
-
-func (r downloadRow) csvHeader() []string {
-	return append([]string{"browser", "profile"}, r.CSVHeader()...)
-}
-
-func (r downloadRow) csvRow() []string {
-	return append([]string{r.Browser, r.Profile}, r.CSVRow()...)
-}
-
-type bookmarkRow struct {
-	Browser string `json:"browser"`
-	Profile string `json:"profile"`
-	types.BookmarkEntry
-}
-
-func (r bookmarkRow) csvHeader() []string {
-	return append([]string{"browser", "profile"}, r.CSVHeader()...)
-}
-
-func (r bookmarkRow) csvRow() []string {
-	return append([]string{r.Browser, r.Profile}, r.CSVRow()...)
-}
-
-type creditCardRow struct {
-	Browser string `json:"browser"`
-	Profile string `json:"profile"`
-	types.CreditCardEntry
-}
-
-func (r creditCardRow) csvHeader() []string {
-	return append([]string{"browser", "profile"}, r.CSVHeader()...)
-}
-
-func (r creditCardRow) csvRow() []string {
-	return append([]string{r.Browser, r.Profile}, r.CSVRow()...)
-}
-
-type extensionRow struct {
-	Browser string `json:"browser"`
-	Profile string `json:"profile"`
-	types.ExtensionEntry
-}
-
-func (r extensionRow) csvHeader() []string {
-	return append([]string{"browser", "profile"}, r.CSVHeader()...)
-}
-
-func (r extensionRow) csvRow() []string {
-	return append([]string{r.Browser, r.Profile}, r.CSVRow()...)
-}
-
-type storageRow struct {
-	Browser string `json:"browser"`
-	Profile string `json:"profile"`
-	types.StorageEntry
-}
-
-func (r storageRow) csvHeader() []string {
-	return append([]string{"browser", "profile"}, r.CSVHeader()...)
-}
-
-func (r storageRow) csvRow() []string {
-	return append([]string{r.Browser, r.Profile}, r.CSVRow()...)
-}
-
-// csvRecord is the internal interface for CSV serialization.
-type csvRecord interface {
-	csvHeader() []string
-	csvRow() []string
+	return json.Marshal(flat.Interface())
 }

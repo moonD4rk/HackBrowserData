@@ -5,9 +5,9 @@ import (
 	"io"
 )
 
-// formatter serializes data to a writer. Unexported — only used by Output.
+// formatter serializes rows to a writer. Unexported — only used by Writer.
 type formatter interface {
-	format(w io.Writer, data any) error
+	format(w io.Writer, rows []row) error
 	ext() string
 }
 

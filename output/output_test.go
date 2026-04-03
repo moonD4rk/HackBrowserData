@@ -156,19 +156,25 @@ func TestWrite_JSON_Password(t *testing.T) {
 	out.Add("Firefox", "abc123", firefoxData())
 	require.NoError(t, out.Write())
 
-	var rows []passwordRow
+	type pwJSON struct {
+		Browser   string    `json:"browser"`
+		Profile   string    `json:"profile"`
+		URL       string    `json:"url"`
+		Username  string    `json:"username"`
+		Password  string    `json:"password"`
+		CreatedAt time.Time `json:"created_at"`
+	}
+	var rows []pwJSON
 	readJSON(t, filepath.Join(dir, "password.json"), &rows)
 	require.Len(t, rows, 2)
 
-	assert.Equal(t, passwordRow{
-		Browser:    "Chrome",
-		Profile:    "Default",
-		LoginEntry: types.LoginEntry{URL: "https://example.com", Username: "alice", Password: "secret", CreatedAt: testTime},
+	assert.Equal(t, pwJSON{
+		Browser: "Chrome", Profile: "Default",
+		URL: "https://example.com", Username: "alice", Password: "secret", CreatedAt: testTime,
 	}, rows[0])
-	assert.Equal(t, passwordRow{
-		Browser:    "Firefox",
-		Profile:    "abc123",
-		LoginEntry: types.LoginEntry{URL: "https://reddit.com", Username: "bob", Password: "hunter2", CreatedAt: testTime},
+	assert.Equal(t, pwJSON{
+		Browser: "Firefox", Profile: "abc123",
+		URL: "https://reddit.com", Username: "bob", Password: "hunter2", CreatedAt: testTime,
 	}, rows[1])
 }
 
@@ -179,18 +185,29 @@ func TestWrite_JSON_Cookie(t *testing.T) {
 	out.Add("Chrome", "Default", chromeData())
 	require.NoError(t, out.Write())
 
-	var rows []cookieRow
+	type ckJSON struct {
+		Browser      string    `json:"browser"`
+		Profile      string    `json:"profile"`
+		Host         string    `json:"host"`
+		Path         string    `json:"path"`
+		Name         string    `json:"name"`
+		Value        string    `json:"value"`
+		IsSecure     bool      `json:"is_secure"`
+		IsHTTPOnly   bool      `json:"is_http_only"`
+		HasExpire    bool      `json:"has_expire"`
+		IsPersistent bool      `json:"is_persistent"`
+		ExpireAt     time.Time `json:"expire_at"`
+		CreatedAt    time.Time `json:"created_at"`
+	}
+	var rows []ckJSON
 	readJSON(t, filepath.Join(dir, "cookie.json"), &rows)
 	require.Len(t, rows, 1)
 
-	assert.Equal(t, cookieRow{
-		Browser: "Chrome",
-		Profile: "Default",
-		CookieEntry: types.CookieEntry{
-			Host: ".example.com", Path: "/", Name: "session", Value: "abc123",
-			IsSecure: true, IsHTTPOnly: true, HasExpire: true, IsPersistent: true,
-			ExpireAt: testTime, CreatedAt: testTime,
-		},
+	assert.Equal(t, ckJSON{
+		Browser: "Chrome", Profile: "Default",
+		Host: ".example.com", Path: "/", Name: "session", Value: "abc123",
+		IsSecure: true, IsHTTPOnly: true, HasExpire: true, IsPersistent: true,
+		ExpireAt: testTime, CreatedAt: testTime,
 	}, rows[0])
 }
 

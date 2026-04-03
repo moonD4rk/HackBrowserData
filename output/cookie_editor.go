@@ -3,28 +3,33 @@ package output
 import (
 	"encoding/json"
 	"io"
+
+	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 type cookieEditorFormatter struct{}
 
 func (f *cookieEditorFormatter) ext() string { return "json" }
 
-func (f *cookieEditorFormatter) format(w io.Writer, data any) error {
-	rows, ok := data.([]cookieRow)
-	if !ok {
-		return nil // silently skip non-cookie categories
-	}
-
+func (f *cookieEditorFormatter) format(w io.Writer, rows []row) error {
 	entries := make([]cookieEditorEntry, 0, len(rows))
 	for _, r := range rows {
+		c, ok := r.entry.(types.CookieEntry)
+		if !ok {
+			return nil // not cookies, skip
+		}
+		var expDate float64
+		if !c.ExpireAt.IsZero() {
+			expDate = float64(c.ExpireAt.Unix())
+		}
 		entries = append(entries, cookieEditorEntry{
-			Domain:         r.Host,
-			ExpirationDate: float64(r.ExpireAt.Unix()),
-			HTTPOnly:       r.IsHTTPOnly,
-			Name:           r.Name,
-			Path:           r.Path,
-			Secure:         r.IsSecure,
-			Value:          r.Value,
+			Domain:         c.Host,
+			ExpirationDate: expDate,
+			HTTPOnly:       c.IsHTTPOnly,
+			Name:           c.Name,
+			Path:           c.Path,
+			Secure:         c.IsSecure,
+			Value:          c.Value,
 		})
 	}
 
