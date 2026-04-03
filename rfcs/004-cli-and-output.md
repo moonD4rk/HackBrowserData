@@ -149,41 +149,40 @@ w.Write()
 
 ### Data layer stays pure
 
-Entry structs do NOT contain browser/profile:
+Entry structs do NOT contain browser/profile. Each field carries both
+`json` and `csv` struct tags — JSON output reads `json` tags, CSV output
+reads `csv` tags via reflection. No methods on entry types.
 
 ```go
-// types/models.go — unchanged
+// types/models.go — pure data, no methods
 type LoginEntry struct {
-    URL       string
-    Username  string
-    Password  string
-    CreatedAt time.Time
+    URL       string    `json:"url" csv:"url"`
+    Username  string    `json:"username" csv:"username"`
+    Password  string    `json:"password" csv:"password"`
+    CreatedAt time.Time `json:"created_at" csv:"created_at"`
 }
 ```
 
-### Internal row types (unexported)
+### Internal row type (unexported)
 
-Row types use struct embedding to add browser/profile context:
+A single `row` type wraps any entry with browser/profile context:
 
 ```go
 // output/row.go — unexported
 
-type passwordRow struct {
-    Browser string `json:"browser"`
-    Profile string `json:"profile"`
-    types.LoginEntry        // fields auto-expand in JSON
+type row struct {
+    Browser string
+    Profile string
+    entry   any
 }
-
-func (r passwordRow) CSVHeader() []string {
-    return append([]string{"browser", "profile"}, r.LoginEntry.CSVHeader()...)
-}
-
-func (r passwordRow) CSVRow() []string {
-    return append([]string{r.Browser, r.Profile}, r.LoginEntry.CSVRow()...)
-}
-
-// ... same pattern for cookieRow, historyRow, etc.
 ```
+
+- **CSV**: `row.csvHeader()` / `row.csvRow()` use reflection to read `csv`
+  struct tags and convert field values to strings (handles string, bool,
+  int, int64, time.Time).
+- **JSON**: `row.MarshalJSON()` uses `reflect.StructOf` to dynamically
+  build a flat struct with browser/profile fields followed by entry fields,
+  then delegates to `json.Marshal`. No manual string concatenation.
 
 ### Internal formatter interface (unexported)
 
@@ -191,7 +190,7 @@ func (r passwordRow) CSVRow() []string {
 // output/formatter.go — unexported
 
 type formatter interface {
-    format(w io.Writer, data any) error
+    format(w io.Writer, rows []row) error
     ext() string
 }
 
@@ -210,12 +209,12 @@ func newFormatter(name string) (formatter, error) {
 **CSV** (default):
 - Standard `encoding/csv` — **no gocsv dependency**
 - UTF-8 BOM for Excel compatibility
-- Row types implement CSVRecord (CSVHeader + CSVRow)
+- Headers and values derived from `csv` struct tags via reflection
 
 **JSON**:
 - Valid JSON Array per file (not JSON Lines)
 - Pretty-printed with `json.Encoder`, no HTML escape
-- Struct embedding auto-flattens browser/profile + entry fields
+- `reflect.StructOf` dynamically flattens browser/profile + entry fields
 
 **CookieEditor** (`--format cookie-editor`):
 - Only exports cookies, other categories skipped
@@ -232,7 +231,8 @@ func newFormatter(name string) (formatter, error) {
 ```
 output/
 ├── output.go           # Writer struct (exported): NewWriter(), Add(), Write()
-├── row.go              # Row types (unexported): passwordRow, cookieRow, ...
+├── row.go              # Unified row type (unexported) + MarshalJSON
+├── reflect.go          # Reflection helpers: csv tag parsing, field formatting
 ├── formatter.go        # formatter interface (unexported) + newFormatter()
 ├── csv.go              # csvFormatter (unexported)
 ├── json.go             # jsonFormatter (unexported)
@@ -289,10 +289,10 @@ CLI (cobra list)
 
 ## 5. Implementation status
 
-- [x] `output/` package: Writer struct + unexported row types + formatters
+- [x] `output/` package: Writer struct + unified row type + reflection-based CSV/JSON + formatters
 - [x] `types/category.go`: removed Each() and CategoryData
-- [x] `types/models.go`: CSVRecord interface on all Entry types
-- [x] Tests: 12 tests with struct comparison, UTF-8 BOM, CookieEditor format
+- [x] `types/models.go`: pure data structs with `json` + `csv` tags, no methods
+- [x] Tests: 27 tests covering CSV/JSON/CookieEditor output, reflection helpers, MarshalJSON, csv tag coverage
 - [ ] (PR 2) Rewrite browser dispatch + cobra CLI
 - [ ] (PR 3) Delete old code + rename files
 

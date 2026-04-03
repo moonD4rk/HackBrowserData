@@ -6,7 +6,6 @@ import (
 )
 
 // row wraps any entry with browser/profile context for output.
-// A single type replaces per-category row types (passwordRow, cookieRow, etc.).
 type row struct {
 	Browser string
 	Profile string

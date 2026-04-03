@@ -50,7 +50,12 @@ func NewBrowsers(cfg types.BrowserConfig) ([]*Browser, error) {
 }
 
 func (b *Browser) BrowserName() string { return b.cfg.Name }
-func (b *Browser) ProfileName() string { return filepath.Base(b.profileDir) }
+func (b *Browser) ProfileName() string {
+	if b.profileDir == "" {
+		return ""
+	}
+	return filepath.Base(b.profileDir)
+}
 
 // Extract copies browser files to a temp directory, retrieves the master key,
 // and extracts data for the requested categories.

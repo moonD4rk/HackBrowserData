@@ -122,7 +122,7 @@ func (o *Writer) aggregate() []categoryRows {
 	return s
 }
 
-func (o *Writer) writeFile(category string, rows []row) error {
+func (o *Writer) writeFile(category string, rows []row) (err error) {
 	// Format to buffer first — if formatter produces no output (e.g.
 	// cookie-editor skipping non-cookie data), don't create the file.
 	var buf bytes.Buffer
@@ -140,7 +140,11 @@ func (o *Writer) writeFile(category string, rows []row) error {
 	if err != nil {
 		return fmt.Errorf("create %s: %w", filename, err)
 	}
-	defer f.Close()
+	defer func() {
+		if cerr := f.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("close %s: %w", filename, cerr)
+		}
+	}()
 
 	if strings.HasSuffix(path, ".csv") {
 		if _, err := f.Write(utf8BOM); err != nil {
