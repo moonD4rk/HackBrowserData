@@ -14,7 +14,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/extractor"
 	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
-	"github.com/moond4rk/hackbrowserdata/utils/byteutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
@@ -38,34 +37,23 @@ type storage struct {
 
 const maxLocalStorageValueLength = 1024 * 2
 
+const (
+	chromiumLocalStorageVersionKey    = "VERSION"
+	chromiumLocalStorageMetaPrefix    = "META:"
+	chromiumLocalStorageMetaAccessKey = "METAACCESS:"
+	chromiumLocalStorageDataPrefix    = '_'
+	chromiumStringUTF16Format         = 0
+	chromiumStringLatin1Format        = 1
+)
+
 func (c *ChromiumLocalStorage) Extract(_ []byte) error {
-	db, err := leveldb.OpenFile(types.ChromiumLocalStorage.TempFilename(), nil)
+	entries, err := extractChromiumLocalStorage(types.ChromiumLocalStorage.TempFilename())
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(types.ChromiumLocalStorage.TempFilename())
-	defer db.Close()
-
-	iter := db.NewIterator(nil, nil)
-	for iter.Next() {
-		key := iter.Key()
-		value := iter.Value()
-		s := new(storage)
-		s.fillKey(key)
-		// don't all value upper than 2KB
-		if len(value) < maxLocalStorageValueLength {
-			s.fillValue(value)
-		} else {
-			s.Value = fmt.Sprintf("value is too long, length is %d, supported max length is %d", len(value), maxLocalStorageValueLength)
-		}
-		if s.IsMeta {
-			s.Value = fmt.Sprintf("meta data, value bytes is %v", value)
-		}
-		*c = append(*c, *s)
-	}
-	iter.Release()
-	err = iter.Error()
-	return err
+	*c = append(*c, entries...)
+	return nil
 }
 
 func (c *ChromiumLocalStorage) Name() string {
@@ -76,24 +64,69 @@ func (c *ChromiumLocalStorage) Len() int {
 	return len(*c)
 }
 
-func (s *storage) fillKey(b []byte) {
-	keys := bytes.Split(b, []byte("\x00"))
-	if len(keys) == 1 && bytes.HasPrefix(keys[0], []byte("META:")) {
-		s.IsMeta = true
-		s.fillMetaHeader(keys[0])
+func extractChromiumLocalStorage(path string) (ChromiumLocalStorage, error) {
+	db, err := leveldb.OpenFile(path, nil)
+	if err != nil {
+		return nil, err
 	}
-	if len(keys) == 2 && bytes.HasPrefix(keys[0], []byte("_")) {
-		s.fillHeader(keys[0], keys[1])
+	defer db.Close()
+
+	var entries ChromiumLocalStorage
+	iter := db.NewIterator(nil, nil)
+	defer iter.Release()
+
+	for iter.Next() {
+		entry, ok := parseChromiumLocalStorageEntry(iter.Key(), iter.Value())
+		if !ok {
+			continue
+		}
+		entries = append(entries, entry)
+	}
+	return entries, iter.Error()
+}
+
+func parseChromiumLocalStorageEntry(key, value []byte) (storage, bool) {
+	switch {
+	case bytes.Equal(key, []byte(chromiumLocalStorageVersionKey)):
+		return storage{}, false
+	case bytes.HasPrefix(key, []byte(chromiumLocalStorageMetaAccessKey)):
+		return storage{
+			IsMeta: true,
+			URL:    string(bytes.TrimPrefix(key, []byte(chromiumLocalStorageMetaAccessKey))),
+			Value:  fmt.Sprintf("meta data, value bytes is %v", value),
+		}, true
+	case bytes.HasPrefix(key, []byte(chromiumLocalStorageMetaPrefix)):
+		return storage{
+			IsMeta: true,
+			URL:    string(bytes.TrimPrefix(key, []byte(chromiumLocalStorageMetaPrefix))),
+			Value:  fmt.Sprintf("meta data, value bytes is %v", value),
+		}, true
+	case len(key) > 0 && key[0] == chromiumLocalStorageDataPrefix:
+		return parseChromiumLocalStorageDataEntry(key[1:], value), true
+	default:
+		return storage{}, false
 	}
 }
 
-func (s *storage) fillMetaHeader(b []byte) {
-	s.URL = string(bytes.Trim(b, "META:"))
-}
+func parseChromiumLocalStorageDataEntry(key, value []byte) storage {
+	entry := storage{
+		Value: decodeChromiumLocalStorageValue(value),
+	}
 
-func (s *storage) fillHeader(url, key []byte) {
-	s.URL = string(bytes.Trim(url, "_"))
-	s.Key = string(bytes.Trim(key, "\x01"))
+	separator := bytes.IndexByte(key, 0)
+	if separator < 0 {
+		entry.Key = "unsupported chromium localStorage key encoding: missing origin separator"
+		return entry
+	}
+
+	entry.URL = string(key[:separator])
+	scriptKey, err := decodeChromiumString(key[separator+1:])
+	if err != nil {
+		entry.Key = fmt.Sprintf("unsupported chromium localStorage key encoding: %v", err)
+		return entry
+	}
+	entry.Key = scriptKey
+	return entry
 }
 
 func convertUTF16toUTF8(source []byte, endian unicode.Endianness) ([]byte, error) {
@@ -101,11 +134,45 @@ func convertUTF16toUTF8(source []byte, endian unicode.Endianness) ([]byte, error
 	return r, err
 }
 
-// fillValue fills value of the storage
-// TODO: support unicode charter
-func (s *storage) fillValue(b []byte) {
-	value := bytes.Map(byteutil.OnSplitUTF8Func, b)
-	s.Value = string(value)
+func decodeChromiumString(b []byte) (string, error) {
+	if len(b) == 0 {
+		return "", fmt.Errorf("empty chromium string")
+	}
+
+	switch b[0] {
+	case chromiumStringLatin1Format:
+		return string(b[1:]), nil
+	case chromiumStringUTF16Format:
+		if len(b) == 1 {
+			return "", nil
+		}
+		if (len(b)-1)%2 != 0 {
+			return "", fmt.Errorf("invalid UTF-16 byte length %d", len(b)-1)
+		}
+		value, err := convertUTF16toUTF8(b[1:], unicode.LittleEndian)
+		if err != nil {
+			return "", err
+		}
+		return string(value), nil
+	default:
+		return "", fmt.Errorf("unknown chromium string format 0x%02x", b[0])
+	}
+}
+
+func decodeChromiumLocalStorageValue(value []byte) string {
+	if len(value) >= maxLocalStorageValueLength {
+		return fmt.Sprintf(
+			"value is too long, length is %d, supported max length is %d",
+			len(value),
+			maxLocalStorageValueLength,
+		)
+	}
+
+	decoded, err := decodeChromiumString(value)
+	if err != nil {
+		return fmt.Sprintf("unsupported chromium localStorage value encoding: %v", err)
+	}
+	return decoded
 }
 
 type FirefoxLocalStorage []storage
