@@ -6,119 +6,90 @@ import (
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
-var (
-	chromiumList = map[string]struct {
-		name        string
-		storage     string
-		profilePath string
-		dataTypes   []types.DataType
-	}{
-		"chrome": {
-			name:        chromeName,
-			storage:     chromeStorageName,
-			profilePath: chromeProfilePath,
-			dataTypes:   types.DefaultChromiumTypes,
+func platformBrowsers() []types.BrowserConfig {
+	return []types.BrowserConfig{
+		{
+			Key:         "chrome",
+			Name:        chromeName,
+			Kind:        types.KindChromium,
+			Storage:     "Chrome",
+			UserDataDir: homeDir + "/Library/Application Support/Google/Chrome",
 		},
-		"edge": {
-			name:        edgeName,
-			storage:     edgeStorageName,
-			profilePath: edgeProfilePath,
-			dataTypes:   types.DefaultChromiumTypes,
+		{
+			Key:         "edge",
+			Name:        edgeName,
+			Kind:        types.KindChromium,
+			Storage:     "Microsoft Edge",
+			UserDataDir: homeDir + "/Library/Application Support/Microsoft Edge",
 		},
-		"chromium": {
-			name:        chromiumName,
-			storage:     chromiumStorageName,
-			profilePath: chromiumProfilePath,
-			dataTypes:   types.DefaultChromiumTypes,
+		{
+			Key:         "chromium",
+			Name:        chromiumName,
+			Kind:        types.KindChromium,
+			Storage:     "Chromium",
+			UserDataDir: homeDir + "/Library/Application Support/Chromium",
 		},
-		"chrome-beta": {
-			name:        chromeBetaName,
-			storage:     chromeBetaStorageName,
-			profilePath: chromeBetaProfilePath,
-			dataTypes:   types.DefaultChromiumTypes,
+		{
+			Key:         "chrome-beta",
+			Name:        chromeBetaName,
+			Kind:        types.KindChromium,
+			Storage:     "Chrome",
+			UserDataDir: homeDir + "/Library/Application Support/Google/Chrome Beta",
 		},
-		"opera": {
-			name:        operaName,
-			profilePath: operaProfilePath,
-			storage:     operaStorageName,
-			dataTypes:   types.DefaultChromiumTypes,
+		{
+			Key:         "opera",
+			Name:        operaName,
+			Kind:        types.KindChromiumOpera,
+			Storage:     "Opera",
+			UserDataDir: homeDir + "/Library/Application Support/com.operasoftware.Opera",
 		},
-		"opera-gx": {
-			name:        operaGXName,
-			profilePath: operaGXProfilePath,
-			storage:     operaStorageName,
-			dataTypes:   types.DefaultChromiumTypes,
+		{
+			Key:         "opera-gx",
+			Name:        operaGXName,
+			Kind:        types.KindChromiumOpera,
+			Storage:     "Opera",
+			UserDataDir: homeDir + "/Library/Application Support/com.operasoftware.OperaGX",
 		},
-		"vivaldi": {
-			name:        vivaldiName,
-			storage:     vivaldiStorageName,
-			profilePath: vivaldiProfilePath,
-			dataTypes:   types.DefaultChromiumTypes,
+		{
+			Key:         "vivaldi",
+			Name:        vivaldiName,
+			Kind:        types.KindChromium,
+			Storage:     "Vivaldi",
+			UserDataDir: homeDir + "/Library/Application Support/Vivaldi",
 		},
-		"coccoc": {
-			name:        coccocName,
-			storage:     coccocStorageName,
-			profilePath: coccocProfilePath,
-			dataTypes:   types.DefaultChromiumTypes,
+		{
+			Key:         "coccoc",
+			Name:        coccocName,
+			Kind:        types.KindChromium,
+			Storage:     "CocCoc",
+			UserDataDir: homeDir + "/Library/Application Support/Coccoc",
 		},
-		"brave": {
-			name:        braveName,
-			profilePath: braveProfilePath,
-			storage:     braveStorageName,
-			dataTypes:   types.DefaultChromiumTypes,
+		{
+			Key:         "brave",
+			Name:        braveName,
+			Kind:        types.KindChromium,
+			Storage:     "Brave",
+			UserDataDir: homeDir + "/Library/Application Support/BraveSoftware/Brave-Browser",
 		},
-		"yandex": {
-			name:        yandexName,
-			storage:     yandexStorageName,
-			profilePath: yandexProfilePath,
-			dataTypes:   types.DefaultYandexTypes,
+		{
+			Key:         "yandex",
+			Name:        yandexName,
+			Kind:        types.KindChromiumYandex,
+			Storage:     "Yandex",
+			UserDataDir: homeDir + "/Library/Application Support/Yandex/YandexBrowser",
 		},
-		"arc": {
-			name:        arcName,
-			profilePath: arcProfilePath,
-			storage:     arcStorageName,
-			dataTypes:   types.DefaultChromiumTypes,
+		{
+			Key:         "arc",
+			Name:        arcName,
+			Kind:        types.KindChromium,
+			Storage:     "Arc",
+			UserDataDir: homeDir + "/Library/Application Support/Arc/User Data",
+		},
+		{
+			Key:         "firefox",
+			Name:        firefoxName,
+			Kind:        types.KindFirefox,
+			UserDataDir: homeDir + "/Library/Application Support/Firefox/Profiles",
 		},
 	}
-	firefoxList = map[string]struct {
-		name        string
-		storage     string
-		profilePath string
-		dataTypes   []types.DataType
-	}{
-		"firefox": {
-			name:        firefoxName,
-			profilePath: firefoxProfilePath,
-			dataTypes:   types.DefaultFirefoxTypes,
-		},
-	}
-)
-
-var (
-	chromeProfilePath     = homeDir + "/Library/Application Support/Google/Chrome/Default/"
-	chromeBetaProfilePath = homeDir + "/Library/Application Support/Google/Chrome Beta/Default/"
-	chromiumProfilePath   = homeDir + "/Library/Application Support/Chromium/Default/"
-	edgeProfilePath       = homeDir + "/Library/Application Support/Microsoft Edge/Default/"
-	braveProfilePath      = homeDir + "/Library/Application Support/BraveSoftware/Brave-Browser/Default/"
-	operaProfilePath      = homeDir + "/Library/Application Support/com.operasoftware.Opera/Default/"
-	operaGXProfilePath    = homeDir + "/Library/Application Support/com.operasoftware.OperaGX/Default/"
-	vivaldiProfilePath    = homeDir + "/Library/Application Support/Vivaldi/Default/"
-	coccocProfilePath     = homeDir + "/Library/Application Support/Coccoc/Default/"
-	yandexProfilePath     = homeDir + "/Library/Application Support/Yandex/YandexBrowser/Default/"
-	arcProfilePath        = homeDir + "/Library/Application Support/Arc/User Data/Default"
-
-	firefoxProfilePath = homeDir + "/Library/Application Support/Firefox/Profiles/"
-)
-
-const (
-	chromeStorageName     = "Chrome"
-	chromeBetaStorageName = "Chrome"
-	chromiumStorageName   = "Chromium"
-	edgeStorageName       = "Microsoft Edge"
-	braveStorageName      = "Brave"
-	operaStorageName      = "Opera"
-	vivaldiStorageName    = "Vivaldi"
-	coccocStorageName     = "CocCoc"
-	yandexStorageName     = "Yandex"
-	arcStorageName        = "Arc"
-)
+}

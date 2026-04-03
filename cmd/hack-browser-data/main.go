@@ -7,6 +7,8 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/browser"
 	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/output"
+	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
@@ -44,19 +46,35 @@ func Execute() {
 			if verbose {
 				log.SetVerbose()
 			}
+
 			browsers, err := browser.PickBrowsers(browserName, profilePath)
 			if err != nil {
-				log.Errorf("pick browsers %v", err)
+				log.Errorf("pick browsers: %v", err)
+				return err
+			}
+
+			categories := types.AllCategories
+			if !isFullExport {
+				categories = types.NonSensitiveCategories()
+			}
+
+			w, err := output.NewWriter(outputDir, outputFormat)
+			if err != nil {
+				log.Errorf("create output writer: %v", err)
 				return err
 			}
 
 			for _, b := range browsers {
-				data, err := b.BrowsingData(isFullExport)
+				data, err := b.Extract(categories)
 				if err != nil {
-					log.Errorf("get browsing data error %v", err)
-					continue
+					log.Errorf("extract %s/%s: %v", b.BrowserName(), b.ProfileName(), err)
 				}
-				data.Output(outputDir, b.Name(), outputFormat)
+				w.Add(b.BrowserName(), b.ProfileName(), data)
+			}
+
+			if err := w.Write(); err != nil {
+				log.Errorf("write output: %v", err)
+				return err
 			}
 
 			if compress {
