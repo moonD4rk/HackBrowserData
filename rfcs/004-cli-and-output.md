@@ -69,7 +69,7 @@ cmd/hack-browser-data/
 
 ## 2. Output Design
 
-### File organization (方案 B)
+### File organization
 
 One file per category. Browser and profile are columns, not filenames:
 
@@ -96,9 +96,60 @@ Chrome,Profile 1,https://github.com,bob,yyy,2026-02-01
 Firefox,abc123.default,https://reddit.com,charlie,zzz,2026-03-01
 ```
 
+Example `password.json`:
+```json
+[
+  {"browser":"Chrome","profile":"Default","url":"https://example.com","username":"alice","password":"xxx","created_at":"2026-01-01T00:00:00Z"},
+  {"browser":"Firefox","profile":"abc123.default","url":"https://reddit.com","username":"charlie","password":"zzz","created_at":"2026-03-01T00:00:00Z"}
+]
+```
+
+### Architecture: encapsulated Writer struct
+
+The `Writer` struct is the only exported type. All internals (formatter,
+row types, file management) are unexported. Caller sees 3 methods only.
+
+```go
+// output/output.go — the only exported type
+
+type Writer struct {
+    dir       string
+    formatter formatter      // unexported
+    results   []result       // unexported
+}
+
+func NewWriter(dir, format string) (*Writer, error) {
+    f, err := newFormatter(format)
+    if err != nil {
+        return nil, err
+    }
+    return &Writer{dir: dir, formatter: f}, nil
+}
+
+func (w *Writer) Add(browser, profile string, data *types.BrowserData) {
+    w.results = append(w.results, result{browser, profile, data})
+}
+
+func (w *Writer) Write() error {
+    // 1. aggregate all results by category into row slices
+    // 2. for each non-empty category, format to buffer, write file
+}
+```
+
+Caller code (3 lines):
+
+```go
+w, _ := output.NewWriter(dir, "csv")
+for _, b := range browsers {
+    data, _ := b.Extract(categories)
+    w.Add(b.BrowserName(), b.ProfileName(), data)
+}
+w.Write()
+```
+
 ### Data layer stays pure
 
-Entry structs do NOT contain browser/profile — that's output context:
+Entry structs do NOT contain browser/profile:
 
 ```go
 // types/models.go — unchanged
@@ -110,18 +161,47 @@ type LoginEntry struct {
 }
 ```
 
-Output layer wraps with context:
+### Internal row types (unexported)
+
+Row types use struct embedding to add browser/profile context:
 
 ```go
-// output layer adds browser/profile as prefix columns
-w.Write(append([]string{"browser", "profile"}, entry.CSVHeader()...))
-w.Write(append([]string{browserName, profileName}, entry.CSVRow()...))
+// output/row.go — unexported
 
-// JSON uses embedding to flatten
-type jsonRow struct {
+type passwordRow struct {
     Browser string `json:"browser"`
     Profile string `json:"profile"`
-    LoginEntry          // fields auto-expand
+    types.LoginEntry        // fields auto-expand in JSON
+}
+
+func (r passwordRow) CSVHeader() []string {
+    return append([]string{"browser", "profile"}, r.LoginEntry.CSVHeader()...)
+}
+
+func (r passwordRow) CSVRow() []string {
+    return append([]string{r.Browser, r.Profile}, r.LoginEntry.CSVRow()...)
+}
+
+// ... same pattern for cookieRow, historyRow, etc.
+```
+
+### Internal formatter interface (unexported)
+
+```go
+// output/formatter.go — unexported
+
+type formatter interface {
+    format(w io.Writer, data any) error
+    ext() string
+}
+
+func newFormatter(name string) (formatter, error) {
+    switch name {
+    case "csv":           return &csvFormatter{}, nil
+    case "json":          return &jsonFormatter{}, nil
+    case "cookie-editor": return &cookieEditorFormatter{}, nil
+    default:              return nil, fmt.Errorf("unsupported format: %s", name)
+    }
 }
 ```
 
@@ -130,40 +210,34 @@ type jsonRow struct {
 **CSV** (default):
 - Standard `encoding/csv` — **no gocsv dependency**
 - UTF-8 BOM for Excel compatibility
-- Each Entry type implements CSVRecord interface:
-
-```go
-type CSVRecord interface {
-    CSVHeader() []string
-    CSVRow() []string
-}
-```
+- Row types implement CSVRecord (CSVHeader + CSVRow)
 
 **JSON**:
-- `encoding/json` with `SetIndent`, no HTML escape
-- Wrapped with browser/profile fields via struct embedding
+- Valid JSON Array per file (not JSON Lines)
+- Pretty-printed with `json.Encoder`, no HTML escape
+- Struct embedding auto-flattens browser/profile + entry fields
 
 **CookieEditor** (`--format cookie-editor`):
 - Only exports cookies, other categories skipped
-- Field mapping to CookieEditor's expected format:
-
-```go
-type cookieEditorEntry struct {
-    Domain         string  `json:"domain"`         // ← Host
-    ExpirationDate float64 `json:"expirationDate"` // ← ExpireAt.Unix()
-    HTTPOnly       bool    `json:"httpOnly"`        // ← IsHTTPOnly
-    Name           string  `json:"name"`
-    Path           string  `json:"path"`
-    Secure         bool    `json:"secure"`          // ← IsSecure
-    Value          string  `json:"value"`
-}
-```
+- Field mapping: host→domain, IsSecure→secure, ExpireAt→expirationDate (unix)
 
 ### Dependency changes
 
 - **Remove**: `github.com/gocarina/gocsv`
-- **Remove**: `golang.org/x/text` (UTF-8 BOM can be 3 bytes written directly)
+- **Remove**: `golang.org/x/text` (UTF-8 BOM = 3 bytes directly)
 - **Add**: `github.com/spf13/cobra`
+
+### Output package structure
+
+```
+output/
+├── output.go           # Writer struct (exported): NewWriter(), Add(), Write()
+├── row.go              # Row types (unexported): passwordRow, cookieRow, ...
+├── formatter.go        # formatter interface (unexported) + newFormatter()
+├── csv.go              # csvFormatter (unexported)
+├── json.go             # jsonFormatter (unexported)
+└── cookie_editor.go    # cookieEditorFormatter (unexported)
+```
 
 ## 3. `list` Command
 
@@ -199,37 +273,32 @@ Firefox    abc123.default-release        3      48       53         7          0
 CLI (cobra dump)
   → Parse flags: browser, category, format, dir, keychain-pw
   → browser.Pick(browserName, keychainPwd)  → []Browser
+  → w, _ := output.NewWriter(dir, format)
   → For each browser:
-      → b.Extract(categories) → *types.BrowserData
-      → output.Write(data, b.Name(), profileName, dir, format)
-         → data.Each(): iterate non-empty categories
-         → For each category: append rows to category file
-            (browser + profile as prefix columns)
+      → data, _ := b.Extract(categories)
+      → w.Add(b.BrowserName(), b.ProfileName(), data)
+  → w.Write()
   → Optional: compress dir to zip
 
 CLI (cobra list)
   → browser.Pick("all", "")  → []Browser
   → For each browser:
-      → Print Name() + profileDir
+      → Print BrowserName() + ProfileName() + profileDir
       → If --detail: Extract + count entries
 ```
 
-## 5. Implementation order
+## 5. Implementation status
 
-1. Entry types implement `CSVRecord` interface
-2. Add `BrowserData.Each()` to `types/`
-3. Create output logic (CSV/JSON/CookieEditor writer)
-4. Rewrite `browser/browser.go` dispatch with v2 API
-5. Rewrite platform browser lists (`browser_darwin.go`, etc.)
-6. Create cobra CLI (`cmd/hack-browser-data/`)
-7. Remove `gocsv` + `golang.org/x/text` dependencies
-8. Delete old code (`browserdata/`, `extractor/`, old `chromium.go`/`firefox.go`)
-9. Rename `chromium_new.go` → `chromium.go`, `firefox_new.go` → `firefox.go`
-10. Update RFCs to reflect final state
+- [x] `output/` package: Writer struct + unexported row types + formatters
+- [x] `types/category.go`: removed Each() and CategoryData
+- [x] `types/models.go`: CSVRecord interface on all Entry types
+- [x] Tests: 12 tests with struct comparison, UTF-8 BOM, CookieEditor format
+- [ ] (PR 2) Rewrite browser dispatch + cobra CLI
+- [ ] (PR 3) Delete old code + rename files
 
 ## 6. Future extensions
 
-- `--group-by browser` — one file per browser+category (方案 C)
-- `--group-by profile` — one file per browser+profile+category (方案 A)
+- `--group-by browser` — one file per browser+category (group by browser)
+- `--group-by profile` — one file per browser+profile+category (group by profile)
 - `--format netscape` — Netscape cookie.txt format (curl/wget compatible)
 - `--format har` — HAR (HTTP Archive) format

@@ -1,13 +1,16 @@
 // Package output writes extracted browser data to files.
 //
-// Architecture:
-//   - Formatter interface: serializes data to io.Writer (csv.go, json.go, cookie_editor.go)
-//   - Write function: file management + calls Formatter
+// Usage:
 //
-// Supported formats: csv, json, cookie-editor
+//	w, _ := output.NewWriter(dir, "csv")
+//	w.Add(browserName, profileName, data)
+//	w.Write()
+//
+// Supported formats: csv, json, cookie-editor.
 package output
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,53 +23,153 @@ import (
 // utf8BOM is written at the start of CSV files for Excel compatibility.
 var utf8BOM = []byte{0xEF, 0xBB, 0xBF}
 
-// Write outputs all non-empty categories from data to files in dir.
-// Each category gets its own file (e.g. password.csv, cookie.csv).
-// Browser and profile are written as columns by the Formatter, not as filenames.
-func Write(data *types.BrowserData, browser, profile, dir string, f Formatter) {
-	data.Each(func(cd types.CategoryData) {
-		filename := fmt.Sprintf("%s.%s", cd.Category, f.Ext())
-		path := filepath.Join(dir, filename)
-
-		if err := writeToFile(path, f, cd, browser, profile); err != nil {
-			log.Debugf("write %s: %v", filename, err)
-			return
-		}
-		log.Warnf("export: %s (%d entries)", path, cd.Len)
-	})
+// Writer collects browser data and writes it to files.
+// It is the only exported type in this package.
+type Writer struct {
+	dir       string
+	formatter formatter
+	results   []result
 }
 
-func writeToFile(path string, f Formatter, cd types.CategoryData, browser, profile string) error {
-	file, err := openFileAppend(path)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	return f.Format(file, cd, browser, profile)
+type result struct {
+	browser string
+	profile string
+	data    *types.BrowserData
 }
 
-func openFileAppend(path string) (*os.File, error) {
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		return nil, fmt.Errorf("create dir %s: %w", dir, err)
-	}
-
-	f, err := os.OpenFile(filepath.Clean(path), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+// NewWriter creates a Writer that writes to dir in the given format.
+func NewWriter(dir, format string) (*Writer, error) {
+	f, err := newFormatter(format)
 	if err != nil {
 		return nil, err
 	}
+	return &Writer{dir: dir, formatter: f}, nil
+}
 
-	// Write UTF-8 BOM at the start of new CSV files
+// Add accumulates one browser profile's data for later writing.
+func (o *Writer) Add(browser, profile string, data *types.BrowserData) {
+	o.results = append(o.results, result{browser, profile, data})
+}
+
+// Write aggregates all accumulated data by category and writes each
+// non-empty category to its own file (e.g. password.csv, cookie.json).
+func (o *Writer) Write() error {
+	agg := o.aggregate()
+
+	if err := os.MkdirAll(o.dir, 0o750); err != nil {
+		return fmt.Errorf("create output dir: %w", err)
+	}
+
+	if len(agg.passwords) > 0 {
+		o.writeFile("password", agg.passwords)
+	}
+	if len(agg.cookies) > 0 {
+		o.writeFile("cookie", agg.cookies)
+	}
+	if len(agg.histories) > 0 {
+		o.writeFile("history", agg.histories)
+	}
+	if len(agg.downloads) > 0 {
+		o.writeFile("download", agg.downloads)
+	}
+	if len(agg.bookmarks) > 0 {
+		o.writeFile("bookmark", agg.bookmarks)
+	}
+	if len(agg.creditCards) > 0 {
+		o.writeFile("creditcard", agg.creditCards)
+	}
+	if len(agg.extensions) > 0 {
+		o.writeFile("extension", agg.extensions)
+	}
+	if len(agg.localStorage) > 0 {
+		o.writeFile("localstorage", agg.localStorage)
+	}
+	if len(agg.sessionStorage) > 0 {
+		o.writeFile("sessionstorage", agg.sessionStorage)
+	}
+	return nil
+}
+
+// aggregate merges all results into flat row slices grouped by category.
+func (o *Writer) aggregate() aggregated {
+	var agg aggregated
+	for _, r := range o.results {
+		for _, p := range r.data.Passwords {
+			agg.passwords = append(agg.passwords, passwordRow{r.browser, r.profile, p})
+		}
+		for _, c := range r.data.Cookies {
+			agg.cookies = append(agg.cookies, cookieRow{r.browser, r.profile, c})
+		}
+		for _, h := range r.data.Histories {
+			agg.histories = append(agg.histories, historyRow{r.browser, r.profile, h})
+		}
+		for _, d := range r.data.Downloads {
+			agg.downloads = append(agg.downloads, downloadRow{r.browser, r.profile, d})
+		}
+		for _, b := range r.data.Bookmarks {
+			agg.bookmarks = append(agg.bookmarks, bookmarkRow{r.browser, r.profile, b})
+		}
+		for _, c := range r.data.CreditCards {
+			agg.creditCards = append(agg.creditCards, creditCardRow{r.browser, r.profile, c})
+		}
+		for _, e := range r.data.Extensions {
+			agg.extensions = append(agg.extensions, extensionRow{r.browser, r.profile, e})
+		}
+		for _, s := range r.data.LocalStorage {
+			agg.localStorage = append(agg.localStorage, storageRow{r.browser, r.profile, s})
+		}
+		for _, s := range r.data.SessionStorage {
+			agg.sessionStorage = append(agg.sessionStorage, storageRow{r.browser, r.profile, s})
+		}
+	}
+	return agg
+}
+
+type aggregated struct {
+	passwords      []passwordRow
+	cookies        []cookieRow
+	histories      []historyRow
+	downloads      []downloadRow
+	bookmarks      []bookmarkRow
+	creditCards    []creditCardRow
+	extensions     []extensionRow
+	localStorage   []storageRow
+	sessionStorage []storageRow
+}
+
+func (o *Writer) writeFile(category string, data any) {
+	// Format to buffer first — if formatter produces no output (e.g.
+	// cookie-editor skipping non-cookie data), don't create the file.
+	var buf bytes.Buffer
+	if err := o.formatter.format(&buf, data); err != nil {
+		log.Debugf("format %s: %v", category, err)
+		return
+	}
+	if buf.Len() == 0 {
+		return
+	}
+
+	filename := fmt.Sprintf("%s.%s", category, o.formatter.ext())
+	path := filepath.Join(o.dir, filename)
+
+	f, err := os.OpenFile(filepath.Clean(path), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+	if err != nil {
+		log.Debugf("create %s: %v", filename, err)
+		return
+	}
+	defer f.Close()
+
+	// Write UTF-8 BOM for CSV files
 	if strings.HasSuffix(path, ".csv") {
-		info, _ := f.Stat()
-		if info != nil && info.Size() == 0 {
-			if _, err := f.Write(utf8BOM); err != nil {
-				f.Close()
-				return nil, fmt.Errorf("write BOM: %w", err)
-			}
+		if _, err := f.Write(utf8BOM); err != nil {
+			log.Debugf("write BOM: %v", err)
+			return
 		}
 	}
 
-	return f, nil
+	if _, err := f.Write(buf.Bytes()); err != nil {
+		log.Debugf("write %s: %v", filename, err)
+		return
+	}
+	log.Warnf("export: %s", path)
 }
