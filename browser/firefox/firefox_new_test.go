@@ -184,7 +184,7 @@ func TestExtractCategory(t *testing.T) {
 			insertMozPlace(1, "https://example.com", "Example", 3, 1000000),
 			insertMozPlace(2, "https://go.dev", "Go", 1, 2000000),
 		)
-		b := &Browser{name: "Test"}
+		b := &Browser{}
 		data := &types.BrowserData{}
 		b.extractCategory(data, types.History, nil, path)
 
@@ -199,7 +199,7 @@ func TestExtractCategory(t *testing.T) {
 			[]string{mozCookiesSchema},
 			insertMozCookie("session", "abc", ".example.com", "/", 1000000000000, 0, 0, 0),
 		)
-		b := &Browser{name: "Test"}
+		b := &Browser{}
 		data := &types.BrowserData{}
 		b.extractCategory(data, types.Cookie, nil, path)
 
@@ -214,7 +214,7 @@ func TestExtractCategory(t *testing.T) {
 			insertMozPlace(1, "https://github.com", "GitHub", 1, 1000000),
 			insertMozBookmark(1, 1, 1, "GitHub", 1000000),
 		)
-		b := &Browser{name: "Test"}
+		b := &Browser{}
 		data := &types.BrowserData{}
 		b.extractCategory(data, types.Bookmark, nil, path)
 
@@ -239,7 +239,7 @@ func TestExtractCategory(t *testing.T) {
 				}
 			]
 		}`)
-		b := &Browser{name: "Test"}
+		b := &Browser{}
 		data := &types.BrowserData{}
 		b.extractCategory(data, types.Extension, nil, path)
 
@@ -248,7 +248,7 @@ func TestExtractCategory(t *testing.T) {
 	})
 
 	t.Run("UnsupportedCategory", func(t *testing.T) {
-		b := &Browser{name: "Test"}
+		b := &Browser{}
 		data := &types.BrowserData{}
 		// CreditCard and SessionStorage are not supported by Firefox
 		b.extractCategory(data, types.CreditCard, nil, "unused")

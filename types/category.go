@@ -102,3 +102,31 @@ type BrowserData struct {
 	LocalStorage   []StorageEntry
 	SessionStorage []StorageEntry
 }
+
+// CategoryData holds one category's data with its metadata,
+// used by BrowserData.Each() for generic iteration.
+type CategoryData struct {
+	Category Category
+	Data     interface{} // typed slice ([]LoginEntry, []CookieEntry, etc.)
+	Len      int
+}
+
+// Each iterates over all non-empty categories in BrowserData.
+func (d *BrowserData) Each(fn func(CategoryData)) {
+	items := []CategoryData{
+		{Password, d.Passwords, len(d.Passwords)},
+		{Cookie, d.Cookies, len(d.Cookies)},
+		{History, d.Histories, len(d.Histories)},
+		{Download, d.Downloads, len(d.Downloads)},
+		{Bookmark, d.Bookmarks, len(d.Bookmarks)},
+		{CreditCard, d.CreditCards, len(d.CreditCards)},
+		{Extension, d.Extensions, len(d.Extensions)},
+		{LocalStorage, d.LocalStorage, len(d.LocalStorage)},
+		{SessionStorage, d.SessionStorage, len(d.SessionStorage)},
+	}
+	for _, item := range items {
+		if item.Len > 0 {
+			fn(item)
+		}
+	}
+}

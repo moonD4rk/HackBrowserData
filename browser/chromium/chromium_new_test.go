@@ -369,7 +369,6 @@ func TestExtractCategory_DefaultFallback(t *testing.T) {
 	)
 
 	b := &Browser{
-		name:       "Test",
 		extractors: nil, // no custom extractors
 	}
 

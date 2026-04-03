@@ -15,7 +15,6 @@ import (
 // Browser represents a single Firefox profile ready for extraction.
 type Browser struct {
 	cfg         types.BrowserConfig
-	name        string                          // display name: "Firefox-97nszz88.default-release"
 	profileDir  string                          // absolute path to profile directory
 	sources     map[types.Category][]sourcePath // Category → candidate paths (priority order)
 	sourcePaths map[types.Category]resolvedPath // Category → discovered absolute path
@@ -39,7 +38,6 @@ func NewBrowsers(cfg types.BrowserConfig) ([]*Browser, error) {
 		}
 		browsers = append(browsers, &Browser{
 			cfg:         cfg,
-			name:        cfg.Name + "-" + filepath.Base(profileDir),
 			profileDir:  profileDir,
 			sources:     firefoxSources,
 			sourcePaths: sourcePaths,
@@ -48,9 +46,8 @@ func NewBrowsers(cfg types.BrowserConfig) ([]*Browser, error) {
 	return browsers, nil
 }
 
-func (b *Browser) Name() string {
-	return b.name
-}
+func (b *Browser) BrowserName() string { return b.cfg.Name }
+func (b *Browser) ProfileName() string { return filepath.Base(b.profileDir) }
 
 // Extract copies browser files to a temp directory, retrieves the master key,
 // and extracts data for the requested categories.
@@ -65,7 +62,7 @@ func (b *Browser) Extract(categories []types.Category) (*types.BrowserData, erro
 
 	masterKey, err := b.getMasterKey(session, tempPaths)
 	if err != nil {
-		log.Debugf("get master key for %s: %v", b.name, err)
+		log.Debugf("get master key for %s: %v", b.BrowserName()+"/"+b.ProfileName(), err)
 	}
 
 	data := &types.BrowserData{}
@@ -169,7 +166,7 @@ func (b *Browser) extractCategory(data *types.BrowserData, cat types.Category, m
 		// Firefox does not support CreditCard or SessionStorage extraction.
 	}
 	if err != nil {
-		log.Debugf("extract %s for %s: %v", cat, b.name, err)
+		log.Debugf("extract %s for %s: %v", cat, b.BrowserName()+"/"+b.ProfileName(), err)
 	}
 }
 
