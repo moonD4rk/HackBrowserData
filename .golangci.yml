@@ -69,7 +69,9 @@ linters:
     goconst:
       min-len: 2
       min-occurrences: 3
-      ignore-string-values: 'csv|json'
+      ignore-string-values:
+        - "csv"
+        - "json"
     gocritic:
       enabled-tags:
         - diagnostic
