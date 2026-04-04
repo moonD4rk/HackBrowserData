@@ -81,6 +81,7 @@ func TestParseLocalStorageEntry(t *testing.T) {
 		key        []byte
 		value      []byte
 		wantParsed bool
+		wantMeta   bool
 		wantURL    string
 		wantKey    string
 		wantValue  string
@@ -91,16 +92,22 @@ func TestParseLocalStorageEntry(t *testing.T) {
 			wantParsed: false,
 		},
 		{
-			name:       "skip META",
+			name:       "META entry",
 			key:        []byte(localStorageMetaPrefix + "https://example.com"),
 			value:      []byte{0x08, 0x96, 0x01},
-			wantParsed: false,
+			wantParsed: true,
+			wantMeta:   true,
+			wantURL:    "https://example.com",
+			wantValue:  "meta data, value bytes is [8 150 1]",
 		},
 		{
-			name:       "skip METAACCESS",
+			name:       "METAACCESS entry",
 			key:        []byte(localStorageMetaAccessKey + "https://example.com"),
 			value:      []byte{0x10, 0x20},
-			wantParsed: false,
+			wantParsed: true,
+			wantMeta:   true,
+			wantURL:    "https://example.com",
+			wantValue:  "meta data, value bytes is [16 32]",
 		},
 		{
 			name:       "latin1 data entry",
@@ -138,6 +145,7 @@ func TestParseLocalStorageEntry(t *testing.T) {
 			if !parsed {
 				return
 			}
+			assert.Equal(t, tt.wantMeta, entry.IsMeta)
 			assert.Equal(t, tt.wantURL, entry.URL)
 			assert.Equal(t, tt.wantKey, entry.Key)
 			assert.Equal(t, tt.wantValue, entry.Value)
@@ -160,13 +168,20 @@ func TestExtractLocalStorage(t *testing.T) {
 
 	got, err := extractLocalStorage(dir)
 	require.NoError(t, err)
-	require.Len(t, got, 2, "VERSION and META entries should be filtered out")
+	require.Len(t, got, 4, "VERSION filtered, META kept, data kept")
 
+	metaCount := 0
 	byKey := map[string]string{}
 	for _, e := range got {
 		assert.Equal(t, "https://example.com", e.URL)
+		if e.IsMeta {
+			metaCount++
+			assert.Contains(t, e.Value, "meta data, value bytes is")
+			continue
+		}
 		byKey[e.Key] = e.Value
 	}
+	assert.Equal(t, 2, metaCount)
 	assert.Equal(t, "abc123", byKey["token"])
 	assert.Equal(t, "データ", byKey["テスト"])
 }

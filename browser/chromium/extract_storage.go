@@ -50,15 +50,23 @@ func extractLocalStorage(path string) ([]types.StorageEntry, error) {
 }
 
 // parseLocalStorageEntry classifies a LevelDB key/value pair and decodes it.
-// Returns false for VERSION and META entries (internal Chrome bookkeeping).
+// Returns false only for VERSION entries. META entries are kept with IsMeta=true.
 func parseLocalStorageEntry(key, value []byte) (types.StorageEntry, bool) {
 	switch {
 	case bytes.Equal(key, []byte(localStorageVersionKey)):
 		return types.StorageEntry{}, false
 	case bytes.HasPrefix(key, []byte(localStorageMetaAccessKey)):
-		return types.StorageEntry{}, false
+		return types.StorageEntry{
+			IsMeta: true,
+			URL:    string(bytes.TrimPrefix(key, []byte(localStorageMetaAccessKey))),
+			Value:  fmt.Sprintf("meta data, value bytes is %v", value),
+		}, true
 	case bytes.HasPrefix(key, []byte(localStorageMetaPrefix)):
-		return types.StorageEntry{}, false
+		return types.StorageEntry{
+			IsMeta: true,
+			URL:    string(bytes.TrimPrefix(key, []byte(localStorageMetaPrefix))),
+			Value:  fmt.Sprintf("meta data, value bytes is %v", value),
+		}, true
 	case len(key) > 0 && key[0] == localStorageDataPrefix:
 		return parseLocalStorageDataEntry(key[1:], value), true
 	default:

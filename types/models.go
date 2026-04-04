@@ -62,9 +62,10 @@ type CreditCardEntry struct {
 
 // StorageEntry represents a single key-value pair from local or session storage.
 type StorageEntry struct {
-	URL   string `json:"url" csv:"url"`
-	Key   string `json:"key" csv:"key"`
-	Value string `json:"value" csv:"value"`
+	IsMeta bool   `json:"is_meta" csv:"is_meta"`
+	URL    string `json:"url" csv:"url"`
+	Key    string `json:"key" csv:"key"`
+	Value  string `json:"value" csv:"value"`
 }
 
 // ExtensionEntry represents a single browser extension.

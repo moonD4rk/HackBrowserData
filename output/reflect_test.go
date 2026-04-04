@@ -59,7 +59,7 @@ func TestStructCSVHeader(t *testing.T) {
 		{"HistoryEntry", types.HistoryEntry{}, []string{"url", "title", "visit_count", "last_visit"}},
 		{"DownloadEntry", types.DownloadEntry{}, []string{"url", "target_path", "mime_type", "total_bytes", "start_time", "end_time"}},
 		{"CreditCardEntry", types.CreditCardEntry{}, []string{"name", "number", "exp_month", "exp_year", "nick_name", "address"}},
-		{"StorageEntry", types.StorageEntry{}, []string{"url", "key", "value"}},
+		{"StorageEntry", types.StorageEntry{}, []string{"is_meta", "url", "key", "value"}},
 		{"ExtensionEntry", types.ExtensionEntry{}, []string{"name", "id", "description", "version", "homepage_url", "enabled"}},
 	}
 	for _, tt := range tests {
