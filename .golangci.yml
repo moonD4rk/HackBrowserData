@@ -129,7 +129,6 @@ linters:
       rules:
         - name: indent-error-flow
         - name: unexported-return
-          disabled: true
         - name: unused-parameter
           disabled: true
     staticcheck:
