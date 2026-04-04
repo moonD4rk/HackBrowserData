@@ -4,30 +4,6 @@ import (
 	"time"
 )
 
-// Keys returns a slice of the keys of the map. based with go 1.18 generics
-func Keys[K comparable, V any](m map[K]V) []K {
-	r := make([]K, 0, len(m))
-	for k := range m {
-		r = append(r, k)
-	}
-	return r
-}
-
-// Signed is a constraint that permits any signed integer type.
-// If future releases of Go add new predeclared signed integer types,
-// this constraint will be modified to include them.
-type Signed interface {
-	~int | ~int8 | ~int16 | ~int32 | ~int64
-}
-
-func IntToBool[T Signed](a T) bool {
-	switch a {
-	case 0, -1:
-		return false
-	}
-	return true
-}
-
 func Reverse[T any](s []T) []T {
 	h := make([]T, len(s))
 	for i := 0; i < len(s); i++ {
