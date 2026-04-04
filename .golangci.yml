@@ -24,11 +24,15 @@ linters:
     - nilerr
     - bodyclose
     - durationcheck
+    - errchkjson
+    - exhaustive
+    - forcetypeassert
 
     # Code quality
     - depguard
     - dogsled
     - dupl
+    - dupword
     - errname
     - funlen
     - gocheckcompilerdirectives
@@ -38,13 +42,16 @@ linters:
     - godox
     - goprintffuncname
     - lll
+    - mirror
     - misspell
     - nakedret
+    - predeclared
     - revive
     - testifylint
     - unconvert
     - unparam
     - usestdlibvars
+    - wastedassign
     - whitespace
 
     # Complexity
@@ -65,6 +72,8 @@ linters:
               desc: Deprecated since Go 1.16. Use io and os packages instead.
             - pkg: "github.com/instana/testify"
               desc: Use github.com/stretchr/testify instead.
+    exhaustive:
+      default-signifies-exhaustive: true
     dupl:
       threshold: 100
     funlen:
