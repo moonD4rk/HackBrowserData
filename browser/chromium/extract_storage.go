@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"strings"
 	"unicode/utf16"
 
 	"github.com/syndtr/goleveldb/leveldb"
@@ -149,6 +150,13 @@ func decodeLocalStorageValue(value []byte) string {
 	return decoded
 }
 
+// extractSessionStorage reads Chromium session storage LevelDB.
+//
+// LevelDB key format:
+//
+//	namespace-<guid>-<origin> → <map_id>   (origin mapping)
+//	map-<map_id>-<key_name>  → <value>     (actual data, UTF-16 LE)
+//	next-map-id / version                  (metadata, skipped)
 func extractSessionStorage(path string) ([]types.StorageEntry, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, fmt.Errorf("leveldb path: %w", err)
@@ -159,49 +167,84 @@ func extractSessionStorage(path string) ([]types.StorageEntry, error) {
 	}
 	defer db.Close()
 
-	var entries []types.StorageEntry
+	// Pass 1: build map_id → origin lookup from namespace entries.
+	// Key: "namespace-<guid>-<origin>", Value: "<map_id>" (ASCII digits).
+	originByMapID := make(map[string]string)
 	iter := db.NewIterator(nil, nil)
-	defer iter.Release()
-
 	for iter.Next() {
-		key := iter.Key()
-		// Session storage keys use "-" as separator: "namespace-url-key"
-		parts := bytes.SplitN(key, []byte("-"), 2)
-		if len(parts) != 2 {
+		key := string(iter.Key())
+		if !strings.HasPrefix(key, "namespace-") {
 			continue
 		}
-		url, name := parseSessionStorageKey(parts[1])
-		if url == "" {
+		// Extract origin: everything after the last occurrence of "-http"
+		// since namespace GUIDs use underscores (e.g., "03b2df3a_0d95_4d55_ae57_...").
+		origin := extractNamespaceOrigin(key)
+		if origin == "" {
 			continue
 		}
-		value := decodeSessionStorageValue(iter.Value())
+		mapID := string(iter.Value())
+		originByMapID[mapID] = origin
+	}
+	iter.Release()
+
+	// Pass 2: read map entries and resolve origins.
+	var entries []types.StorageEntry
+	iter2 := db.NewIterator(nil, nil)
+	defer iter2.Release()
+
+	mapPrefix := []byte("map-")
+	for iter2.Next() {
+		key := iter2.Key()
+		if !bytes.HasPrefix(key, mapPrefix) {
+			continue
+		}
+		rest := key[len(mapPrefix):] // "<map_id>-<key_name>"
+		sep := bytes.IndexByte(rest, '-')
+		if sep < 0 {
+			continue
+		}
+		mapID := string(rest[:sep])
+		keyName := string(rest[sep+1:])
+
+		origin := originByMapID[mapID]
+		if origin == "" {
+			origin = mapID // fallback to map_id if namespace not found
+		}
+
+		value := decodeSessionStorageValue(iter2.Value())
 		entries = append(entries, types.StorageEntry{
-			URL:   url,
-			Key:   name,
+			URL:   origin,
+			Key:   keyName,
 			Value: value,
 		})
 	}
-	return entries, iter.Error()
+	return entries, iter2.Error()
 }
 
-// parseSessionStorageKey extracts url and key from session storage.
-// The format after stripping the namespace prefix is: "url\x00key" or just "url".
-func parseSessionStorageKey(b []byte) (url, name string) {
-	sep := bytes.IndexByte(b, 0)
-	if sep < 0 {
-		return string(b), ""
+// extractNamespaceOrigin extracts the origin from a namespace key.
+// Key format: "namespace-<guid_with_underscores>-<origin>"
+// The GUID uses underscores, so we find the origin by looking for "-http" or "-chrome".
+func extractNamespaceOrigin(key string) string {
+	for _, prefix := range []string{"-https://", "-http://", "-chrome://"} {
+		idx := strings.Index(key, prefix)
+		if idx >= 0 {
+			return key[idx+1:]
+		}
 	}
-	return string(b[:sep]), string(b[sep+1:])
+	return ""
 }
 
-// decodeSessionStorageValue attempts Chromium string decoding, falls back to raw string.
+// decodeSessionStorageValue decodes a session storage value.
+// Values are raw UTF-16 LE (no format byte prefix, unlike localStorage).
 func decodeSessionStorageValue(value []byte) string {
 	if len(value) == 0 {
 		return ""
 	}
-	decoded, err := decodeChromiumString(value)
-	if err != nil {
-		return string(value)
+	if len(value)%2 == 0 {
+		decoded, err := decodeUTF16LE(value)
+		if err == nil {
+			return decoded
+		}
 	}
-	return decoded
+	return string(value)
 }

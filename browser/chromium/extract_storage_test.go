@@ -197,9 +197,15 @@ func TestExtractLocalStorage(t *testing.T) {
 
 func TestExtractSessionStorage(t *testing.T) {
 	dir := createTestLevelDB(t, map[string]string{
-		// Format: "namespace-url\x00key" → value (Chromium encoded)
-		string(append([]byte("0-https://example.com\x00"), []byte("token")...)): string(testEncodeLatin1("abc123")),
-		string(append([]byte("0-https://example.com\x00"), []byte("user")...)):  string(testEncodeLatin1("alice")),
+		// Namespace entry: maps guid+origin → map_id
+		"namespace-abcd1234_5678_9abc_def0_111111111111-https://github.com/":  "100",
+		"namespace-abcd1234_5678_9abc_def0_111111111111-https://example.com/": "101",
+		// Map entries: actual data (values are raw UTF-16 LE)
+		"map-100-__darkreader__wasEnabledForHost": string(testEncodeUTF16Raw("false")),
+		"map-101-token": string(testEncodeUTF16Raw("abc123")),
+		// Metadata: should be skipped
+		"next-map-id": "200",
+		"version":     "1",
 	})
 
 	got, err := extractSessionStorage(dir)
@@ -208,11 +214,10 @@ func TestExtractSessionStorage(t *testing.T) {
 
 	byKey := map[string]string{}
 	for _, entry := range got {
-		assert.Equal(t, "https://example.com", entry.URL)
-		byKey[entry.Key] = entry.Value
+		byKey[entry.URL+"/"+entry.Key] = entry.Value
 	}
-	assert.Equal(t, "abc123", byKey["token"])
-	assert.Equal(t, "alice", byKey["user"])
+	assert.Equal(t, "false", byKey["https://github.com//__darkreader__wasEnabledForHost"])
+	assert.Equal(t, "abc123", byKey["https://example.com//token"])
 }
 
 // ---------------------------------------------------------------------------
@@ -227,6 +232,19 @@ func testEncodeUTF16(s string) []byte {
 	encoded := utf16.Encode([]rune(s))
 	result := make([]byte, 1, 1+len(encoded)*2)
 	result[0] = chromiumStringUTF16Format
+	for _, r := range encoded {
+		var raw [2]byte
+		binary.LittleEndian.PutUint16(raw[:], r)
+		result = append(result, raw[:]...)
+	}
+	return result
+}
+
+// testEncodeUTF16Raw encodes as raw UTF-16 LE without format byte prefix
+// (used by session storage values).
+func testEncodeUTF16Raw(s string) []byte {
+	encoded := utf16.Encode([]rune(s))
+	result := make([]byte, 0, len(encoded)*2)
 	for _, r := range encoded {
 		var raw [2]byte
 		binary.LittleEndian.PutUint16(raw[:], r)
