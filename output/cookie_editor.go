@@ -7,17 +7,27 @@ import (
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
-type cookieEditorFormatter struct{}
+// cookieEditorFormatter outputs cookies in the CookieEditor browser extension
+// format. Non-cookie categories fall back to standard JSON output.
+type cookieEditorFormatter struct {
+	fallback *jsonFormatter
+}
 
 func (f *cookieEditorFormatter) ext() string { return "json" }
 
 func (f *cookieEditorFormatter) format(w io.Writer, rows []row) error {
+	if len(rows) == 0 {
+		return nil
+	}
+	// aggregate() guarantees all rows in a batch share the same type;
+	// check the first row to decide the format.
+	if _, ok := rows[0].entry.(types.CookieEntry); !ok {
+		return f.fallback.format(w, rows)
+	}
+
 	entries := make([]cookieEditorEntry, 0, len(rows))
 	for _, r := range rows {
-		c, ok := r.entry.(types.CookieEntry)
-		if !ok {
-			return nil // not cookies, skip
-		}
+		c, _ := r.entry.(types.CookieEntry)
 		var expDate float64
 		if !c.ExpireAt.IsZero() {
 			expDate = float64(c.ExpireAt.Unix())

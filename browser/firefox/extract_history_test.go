@@ -40,5 +40,5 @@ func TestExtractHistories_NullFields(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, "https://null.test", got[0].URL)
-	assert.Equal(t, "", got[0].Title)
+	assert.Empty(t, got[0].Title)
 }

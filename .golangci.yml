@@ -10,7 +10,7 @@ run:
 linters:
   default: none
   enable:
-    # Default tier
+    # Default tier — must-have for any Go project
     - errcheck
     - govet
     - staticcheck
@@ -21,6 +21,9 @@ linters:
     - errorlint
     - gosec
     - sqlclosecheck
+    - nilerr
+    - bodyclose
+    - durationcheck
 
     # Code quality
     - depguard
@@ -46,9 +49,10 @@ linters:
 
     # Complexity
     - gocognit
+    - nestif
 
     # Note: copyloopvar, intrange, modernize, perfsprint require Go 1.22+
-    # They will be enabled when Go version constraint is lifted
+    # They will be enabled when Go version constraint is lifted.
 
   settings:
     depguard:
@@ -82,17 +86,15 @@ linters:
       disabled-checks:
         - dupImport
         - hugeParam
-        - rangeValCopy
-        - ifElseChain
-        - octalLiteral
+        - rangeValCopy  # keychainbreaker structs are large by design
+        - unnamedResult # crypto functions returning (key, iv) are clear without names
         - whyNoLint
-        - singleCaseSwitch
-        - exitAfterDefer
-        - commentedOutCode
     lll:
       line-length: 140
     gocognit:
       min-complexity: 30
+    nestif:
+      min-complexity: 5
     godox:
       keywords:
         - FIXME
@@ -103,17 +105,17 @@ linters:
       asserts: false
     gosec:
       excludes:
-        - G101
-        - G104
-        - G304
-        - G401
-        - G405
-        - G501
-        - G502
-        - G505
-        - G115
-        - G117
-        - G204
+        - G101 # hardcoded credentials — false positives on const names
+        - G115 # integer overflow on conversion — false positives on safe narrowing
+        - G117 # struct field matches secret pattern — false positive on Password fields
+        - G204 # exec.Command with variable — required for macOS `security` command
+        - G304 # file inclusion via variable — required for dynamic browser paths
+        - G401 # weak crypto SHA1 — required for Chromium PBKDF2 key derivation
+        - G402 # TLS MinVersion — not applicable (no TLS in this tool)
+        - G405 # weak crypto DES — required for Firefox 3DES decryption
+        - G501 # blocklisted import crypto/md5 — not used, keep for safety
+        - G502 # blocklisted import crypto/des — required for Firefox decryption
+        - G505 # blocklisted import crypto/sha1 — required for PBKDF2
     errcheck:
       check-type-assertions: true
       exclude-functions:
@@ -130,19 +132,11 @@ linters:
           disabled: true
         - name: unused-parameter
           disabled: true
-        - name: package-comments
-          disabled: true
-        - name: exported
-          disabled: true
     staticcheck:
       checks:
         - "all"
-        - "-ST1000"
-        - "-ST1003"
-        - "-ST1016"
-        - "-ST1020"
-        - "-ST1021"
-        - "-ST1022"
+        - "-ST1000" # package comment — not a public library
+        - "-ST1003" # naming convention — allow platform-specific names
 
   exclusions:
     presets:
@@ -157,7 +151,6 @@ linters:
           - funlen
           - gosec
           - errcheck
-          - testifylint
           - lll
       - source: "defer"
         linters:
@@ -165,47 +158,12 @@ linters:
       - text: "SELECT"
         linters:
           - gosec
-      # Temporary: known issues in pre-refactoring code (will be removed during refactoring)
-      - text: "result 0 .* is always nil"
-        linters:
-          - unparam
-      - text: "result 0 .* is never used"
-        linters:
-          - unparam
-      - path: "browser/firefox/firefox.go"
-        text: "field .* is unused"
-        linters:
-          - unused
-      - path: "browserdata/sessionstorage/"
-        text: "is unused"
-        linters:
-          - unused
       - path: "cmd/hack-browser-data/main.go"
         linters:
           - lll
-      # Temporary: pre-refactoring code issues (all will be rewritten)
-      - path: "browserdata/"
-        linters:
-          - dupl
-          - gochecknoinits
-          - goconst
-          - lll
-      - path: "browser/firefox/"
-        linters:
-          - gocritic
-      - path: "crypto/"
-        linters:
-          - gocritic
       - path: "crypto/keyretriever/gcoredump_darwin.go"
         linters:
           - gocognit
-      # Temporary: new v2 extract files have no callers until Phase 8 wiring
-      - path: "browser/chromium/(source|decrypt|extract_.*)\\.go"
-        linters:
-          - unused
-      - path: "browser/firefox/(source|extract_.*)\\.go"
-        linters:
-          - unused
 
 formatters:
   enable:

@@ -18,7 +18,7 @@ func newFormatter(name string) (formatter, error) {
 	case "json":
 		return &jsonFormatter{}, nil
 	case "cookie-editor":
-		return &cookieEditorFormatter{}, nil
+		return &cookieEditorFormatter{fallback: &jsonFormatter{}}, nil
 	default:
 		return nil, fmt.Errorf("unsupported format: %s", name)
 	}

@@ -29,7 +29,7 @@ func TestCompressDir(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		err := CompressDir(tempDir)
-		assert.NoError(t, err, "compressDir should not return an error")
+		require.NoError(t, err, "compressDir should not return an error")
 
 		// Check if the zip file exists
 		zipFile := filepath.Join(tempDir, filepath.Base(tempDir)+".zip")

@@ -43,7 +43,7 @@ func TestChainRetriever_AllFail(t *testing.T) {
 		&mockRetriever{err: errors.New("second failed")},
 	)
 	key, err := chain.RetrieveKey("Chrome", "")
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, key)
 	assert.Contains(t, err.Error(), "all retrievers failed")
 	assert.Contains(t, err.Error(), "first failed")
@@ -64,6 +64,6 @@ func TestChainRetriever_SkipEmptyKey(t *testing.T) {
 func TestChainRetriever_Empty(t *testing.T) {
 	chain := NewChain()
 	key, err := chain.RetrieveKey("Chrome", "")
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, key)
 }

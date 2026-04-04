@@ -34,7 +34,7 @@ func TestQuerySQLite(t *testing.T) {
 		return nil
 	})
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []string{"alpha", "beta", "gamma"}, names)
 }
 
@@ -59,7 +59,7 @@ func TestQuerySQLite_JournalOff(t *testing.T) {
 		values = append(values, v)
 		return nil
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []string{"ok"}, values)
 }
 
@@ -110,7 +110,7 @@ func TestQueryRows(t *testing.T) {
 			return u, err
 		})
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []user{{"alice", 30}, {"bob", 25}}, users)
 }
 
@@ -133,6 +133,6 @@ func TestQueryRows_Empty(t *testing.T) {
 			return v, nil
 		})
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, results)
 }

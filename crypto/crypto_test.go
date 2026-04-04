@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const baseKey = "moond4rk"
@@ -28,45 +29,45 @@ var (
 
 func TestAES128CBCEncrypt(t *testing.T) {
 	encrypted, err := AES128CBCEncrypt(aesKey, aesIV, plainText)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, true, len(encrypted) > 0)
+	require.NoError(t, err)
+	assert.NotEmpty(t, encrypted)
 	assert.Equal(t, aes128Ciphertext, fmt.Sprintf("%x", encrypted))
 }
 
 func TestAES128CBCDecrypt(t *testing.T) {
 	ciphertext, _ := hex.DecodeString(aes128Ciphertext)
 	decrypted, err := AES128CBCDecrypt(aesKey, aesIV, ciphertext)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, true, len(decrypted) > 0)
+	require.NoError(t, err)
+	assert.NotEmpty(t, decrypted)
 	assert.Equal(t, plainText, decrypted)
 }
 
 func TestDES3Encrypt(t *testing.T) {
 	encrypted, err := DES3Encrypt(des3Key, des3IV, plainText)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, true, len(encrypted) > 0)
+	require.NoError(t, err)
+	assert.NotEmpty(t, encrypted)
 	assert.Equal(t, des3Ciphertext, fmt.Sprintf("%x", encrypted))
 }
 
 func TestDES3Decrypt(t *testing.T) {
 	ciphertext, _ := hex.DecodeString(des3Ciphertext)
 	decrypted, err := DES3Decrypt(des3Key, des3IV, ciphertext)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, true, len(decrypted) > 0)
+	require.NoError(t, err)
+	assert.NotEmpty(t, decrypted)
 	assert.Equal(t, plainText, decrypted)
 }
 
 func TestAESGCMEncrypt(t *testing.T) {
 	encrypted, err := AESGCMEncrypt(aesKey, aesGCMNonce, plainText)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, true, len(encrypted) > 0)
+	require.NoError(t, err)
+	assert.NotEmpty(t, encrypted)
 	assert.Equal(t, aesGCMCiphertext, fmt.Sprintf("%x", encrypted))
 }
 
 func TestAESGCMDecrypt(t *testing.T) {
 	ciphertext, _ := hex.DecodeString(aesGCMCiphertext)
 	decrypted, err := AESGCMDecrypt(aesKey, aesGCMNonce, ciphertext)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, true, len(decrypted) > 0)
+	require.NoError(t, err)
+	assert.NotEmpty(t, decrypted)
 	assert.Equal(t, plainText, decrypted)
 }

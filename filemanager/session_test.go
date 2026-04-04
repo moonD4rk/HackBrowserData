@@ -42,7 +42,7 @@ func TestSession_Acquire_File(t *testing.T) {
 	// Acquire it
 	dst := filepath.Join(s.TempDir(), "Login Data")
 	err = s.Acquire(srcFile, dst, false)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Verify copy
 	data, err := os.ReadFile(dst)
@@ -63,7 +63,7 @@ func TestSession_Acquire_WAL(t *testing.T) {
 
 	dst := filepath.Join(s.TempDir(), "Cookies")
 	err = s.Acquire(srcFile, dst, false)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Main file copied
 	assert.FileExists(t, dst)
@@ -85,7 +85,7 @@ func TestSession_Acquire_Dir(t *testing.T) {
 
 	dst := filepath.Join(s.TempDir(), "leveldb")
 	err = s.Acquire(srcDir, dst, true)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Data file copied
 	assert.FileExists(t, filepath.Join(dst, "000001.ldb"))

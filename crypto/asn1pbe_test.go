@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -74,14 +75,14 @@ var (
 func TestNewASN1PBE(t *testing.T) {
 	for _, tc := range nssPBETestCases {
 		nssRaw, err := hex.DecodeString(tc.RawHexPBE)
-		assert.Equal(t, nil, err)
+		require.NoError(t, err)
 		pbe, err := NewASN1PBE(nssRaw)
-		assert.Equal(t, nil, err)
+		require.NoError(t, err)
 		nssPBETC, ok := pbe.(nssPBE)
-		assert.Equal(t, true, ok)
+		assert.True(t, ok)
 		assert.Equal(t, nssPBETC.Encrypted, tc.Encrypted)
 		assert.Equal(t, nssPBETC.AlgoAttr.SaltAttr.EntrySalt, tc.GlobalSalt)
-		assert.Equal(t, nssPBETC.AlgoAttr.SaltAttr.Len, 20)
+		assert.Equal(t, 20, nssPBETC.AlgoAttr.SaltAttr.Len)
 		assert.Equal(t, nssPBETC.AlgoAttr.ObjectIdentifier, tc.ObjectIdentifier)
 	}
 }
@@ -108,8 +109,8 @@ func TestNssPBE_Encrypt(t *testing.T) {
 			},
 		}
 		encrypted, err := nssPBETC.Encrypt(tc.GlobalSalt, tc.Plaintext)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, true, len(encrypted) > 0)
+		require.NoError(t, err)
+		assert.NotEmpty(t, encrypted)
 		assert.Equal(t, nssPBETC.Encrypted, encrypted)
 	}
 }
@@ -136,8 +137,8 @@ func TestNssPBE_Decrypt(t *testing.T) {
 			},
 		}
 		decrypted, err := nssPBETC.Decrypt(tc.GlobalSalt)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, true, len(decrypted) > 0)
+		require.NoError(t, err)
+		assert.NotEmpty(t, decrypted)
 		assert.Equal(t, pbePlaintext, decrypted)
 	}
 }
@@ -145,11 +146,11 @@ func TestNssPBE_Decrypt(t *testing.T) {
 func TestNewASN1PBE_MetaPBE(t *testing.T) {
 	for _, tc := range metaPBETestCases {
 		metaRaw, err := hex.DecodeString(tc.RawHexPBE)
-		assert.Equal(t, nil, err)
+		require.NoError(t, err)
 		pbe, err := NewASN1PBE(metaRaw)
-		assert.Equal(t, nil, err)
+		require.NoError(t, err)
 		metaPBETC, ok := pbe.(metaPBE)
-		assert.Equal(t, true, ok)
+		assert.True(t, ok)
 		assert.Equal(t, metaPBETC.Encrypted, tc.Encrypted)
 		assert.Equal(t, metaPBETC.AlgoAttr.Data.IVData.IV, tc.IV)
 		assert.Equal(t, metaPBETC.AlgoAttr.Data.IVData.ObjectIdentifier, objWithSHA256AndAES)
@@ -193,8 +194,8 @@ func TestMetaPBE_Encrypt(t *testing.T) {
 			Encrypted: tc.Encrypted,
 		}
 		encrypted, err := metaPBETC.Encrypt(tc.GlobalSalt, tc.Plaintext)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, true, len(encrypted) > 0)
+		require.NoError(t, err)
+		assert.NotEmpty(t, encrypted)
 		assert.Equal(t, metaPBETC.Encrypted, encrypted)
 	}
 }
@@ -236,8 +237,8 @@ func TestMetaPBE_Decrypt(t *testing.T) {
 			Encrypted: tc.Encrypted,
 		}
 		decrypted, err := metaPBETC.Decrypt(tc.GlobalSalt)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, true, len(decrypted) > 0)
+		require.NoError(t, err)
+		assert.NotEmpty(t, decrypted)
 		assert.Equal(t, pbePlaintext, decrypted)
 	}
 }
@@ -245,11 +246,11 @@ func TestMetaPBE_Decrypt(t *testing.T) {
 func TestNewASN1PBE_LoginPBE(t *testing.T) {
 	for _, tc := range loginPBETestCases {
 		loginRaw, err := hex.DecodeString(tc.RawHexPBE)
-		assert.Equal(t, nil, err)
+		require.NoError(t, err)
 		pbe, err := NewASN1PBE(loginRaw)
-		assert.Equal(t, nil, err)
+		require.NoError(t, err)
 		loginPBETC, ok := pbe.(loginPBE)
-		assert.Equal(t, true, ok)
+		assert.True(t, ok)
 		assert.Equal(t, loginPBETC.Encrypted, tc.Encrypted)
 		assert.Equal(t, loginPBETC.Data.IV, tc.IV)
 		assert.Equal(t, loginPBETC.Data.ObjectIdentifier, objWithMD5AndDESCBC)
@@ -270,8 +271,8 @@ func TestLoginPBE_Encrypt(t *testing.T) {
 			Encrypted: tc.Encrypted,
 		}
 		encrypted, err := loginPBETC.Encrypt(tc.GlobalSalt, plainText)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, true, len(encrypted) > 0)
+		require.NoError(t, err)
+		assert.NotEmpty(t, encrypted)
 		assert.Equal(t, loginPBETC.Encrypted, encrypted)
 	}
 }
@@ -290,8 +291,8 @@ func TestLoginPBE_Decrypt(t *testing.T) {
 			Encrypted: tc.Encrypted,
 		}
 		decrypted, err := loginPBETC.Decrypt(tc.GlobalSalt)
-		assert.Equal(t, nil, err)
-		assert.Equal(t, true, len(decrypted) > 0)
+		require.NoError(t, err)
+		assert.NotEmpty(t, decrypted)
 		assert.Equal(t, pbePlaintext, decrypted)
 	}
 }

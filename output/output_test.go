@@ -65,10 +65,10 @@ func TestNew(t *testing.T) {
 		t.Run(tt.format, func(t *testing.T) {
 			out, err := NewWriter(t.TempDir(), tt.format)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Nil(t, out)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.NotNil(t, out)
 			}
 		})
@@ -142,7 +142,7 @@ func TestWrite_CSV_UTF8BOM(t *testing.T) {
 
 	raw, err := os.ReadFile(filepath.Join(dir, "password.csv"))
 	require.NoError(t, err)
-	require.True(t, len(raw) >= 3)
+	require.GreaterOrEqual(t, len(raw), 3)
 	assert.Equal(t, utf8BOM, raw[:3], "CSV should start with UTF-8 BOM")
 }
 
@@ -249,7 +249,7 @@ func TestWrite_CookieEditor(t *testing.T) {
 	}, entries[0])
 }
 
-func TestWrite_CookieEditor_SkipsNonCookie(t *testing.T) {
+func TestWrite_CookieEditor_FallbackJSON(t *testing.T) {
 	dir := t.TempDir()
 	out, err := NewWriter(dir, "cookie-editor")
 	require.NoError(t, err)
@@ -258,9 +258,9 @@ func TestWrite_CookieEditor_SkipsNonCookie(t *testing.T) {
 	})
 	require.NoError(t, out.Write())
 
-	// password file should not be created (cookie-editor only exports cookies)
+	// non-cookie categories fall back to standard JSON format
 	_, err = os.Stat(filepath.Join(dir, "password.json"))
-	assert.True(t, os.IsNotExist(err))
+	assert.False(t, os.IsNotExist(err), "password.json should be created via JSON fallback")
 }
 
 // --- File creation ---

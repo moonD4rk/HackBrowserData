@@ -21,7 +21,7 @@ func mkFile(t *testing.T, parts ...string) {
 
 func TestListBrowsers(t *testing.T) {
 	list := ListBrowsers()
-	assert.True(t, len(list) > 0)
+	assert.NotEmpty(t, list)
 	assert.True(t, sort.StringsAreSorted(list))
 }
 
