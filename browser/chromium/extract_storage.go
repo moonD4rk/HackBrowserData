@@ -28,7 +28,7 @@ const maxLocalStorageValueLength = 2048
 
 func extractLocalStorage(path string) ([]types.StorageEntry, error) {
 	if _, err := os.Stat(path); err != nil {
-		return nil, fmt.Errorf("leveldb path: %w", err)
+		return nil, fmt.Errorf("leveldb path %q: %w", path, err)
 	}
 	db, err := leveldb.OpenFile(path, nil)
 	if err != nil {
@@ -159,7 +159,7 @@ func decodeLocalStorageValue(value []byte) string {
 //	next-map-id / version                  (metadata, skipped)
 func extractSessionStorage(path string) ([]types.StorageEntry, error) {
 	if _, err := os.Stat(path); err != nil {
-		return nil, fmt.Errorf("leveldb path: %w", err)
+		return nil, fmt.Errorf("leveldb path %q: %w", path, err)
 	}
 	db, err := leveldb.OpenFile(path, nil)
 	if err != nil {
@@ -176,8 +176,9 @@ func extractSessionStorage(path string) ([]types.StorageEntry, error) {
 		if !strings.HasPrefix(key, "namespace-") {
 			continue
 		}
-		// Extract origin: everything after the last occurrence of "-http"
-		// since namespace GUIDs use underscores (e.g., "03b2df3a_0d95_4d55_ae57_...").
+		// Extract origin by finding "-https://", "-http://", or "-chrome://" in the key.
+		// Namespace GUIDs use underscores (e.g., "03b2df3a_0d95_4d55_ae57_...") so
+		// there is no ambiguity with the origin separator.
 		origin := extractNamespaceOrigin(key)
 		if origin == "" {
 			continue
@@ -186,6 +187,9 @@ func extractSessionStorage(path string) ([]types.StorageEntry, error) {
 		originByMapID[mapID] = origin
 	}
 	iter.Release()
+	if err := iter.Error(); err != nil {
+		return nil, fmt.Errorf("read namespace entries: %w", err)
+	}
 
 	// Pass 2: read map entries and resolve origins.
 	var entries []types.StorageEntry

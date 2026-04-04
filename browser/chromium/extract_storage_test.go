@@ -192,7 +192,7 @@ func TestExtractLocalStorage(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// extractSessionStorage (unchanged, basic test)
+// extractSessionStorage
 // ---------------------------------------------------------------------------
 
 func TestExtractSessionStorage(t *testing.T) {
