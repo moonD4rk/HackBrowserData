@@ -29,9 +29,22 @@ const securityCmdTimeout = 30 * time.Second
 
 // GcoredumpRetriever uses CVE-2025-24204 to extract keychain secrets
 // by dumping the securityd process memory. Requires root privileges.
-type GcoredumpRetriever struct{}
+// The result is cached via sync.Once to avoid repeated memory dumps
+// when multiple profiles share the same retriever instance.
+type GcoredumpRetriever struct {
+	once sync.Once
+	key  []byte
+	err  error
+}
 
 func (r *GcoredumpRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
+	r.once.Do(func() {
+		r.key, r.err = r.retrieveKeyOnce(storage)
+	})
+	return r.key, r.err
+}
+
+func (r *GcoredumpRetriever) retrieveKeyOnce(storage string) ([]byte, error) {
 	secret, err := DecryptKeychain(storage)
 	if err != nil {
 		return nil, fmt.Errorf("gcoredump: %w", err)
@@ -86,10 +99,23 @@ func (r *KeychainPasswordRetriever) RetrieveKey(storage, _ string) ([]byte, erro
 }
 
 // SecurityCmdRetriever uses macOS `security` CLI to query Keychain.
-// This may trigger a password dialog on macOS.
-type SecurityCmdRetriever struct{}
+// This may trigger a password dialog on macOS. The result is cached
+// via sync.Once so that multiple profiles sharing the same retriever
+// instance only prompt the user once.
+type SecurityCmdRetriever struct {
+	once sync.Once
+	key  []byte
+	err  error
+}
 
 func (r *SecurityCmdRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
+	r.once.Do(func() {
+		r.key, r.err = r.retrieveKeyOnce(storage)
+	})
+	return r.key, r.err
+}
+
+func (r *SecurityCmdRetriever) retrieveKeyOnce(storage string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), securityCmdTimeout)
 	defer cancel()
 

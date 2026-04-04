@@ -15,6 +15,7 @@ import (
 type Browser struct {
 	cfg         types.BrowserConfig
 	profileDir  string                               // absolute path to profile directory
+	retriever   keyretriever.KeyRetriever            // shared across profiles of the same browser
 	sources     map[types.Category][]sourcePath      // Category → candidate paths (priority order)
 	extractors  map[types.Category]categoryExtractor // Category → custom extract function override
 	sourcePaths map[types.Category]resolvedPath      // Category → discovered absolute path
@@ -32,6 +33,11 @@ func NewBrowsers(cfg types.BrowserConfig) ([]*Browser, error) {
 		return nil, nil
 	}
 
+	// Create the key retriever once and share it across all profiles.
+	// This avoids repeated keychain password prompts on macOS, where each
+	// profile would otherwise trigger a separate `security` command dialog.
+	retriever := keyretriever.DefaultRetriever(cfg.KeychainPassword)
+
 	var browsers []*Browser
 	for _, profileDir := range profileDirs {
 		sourcePaths := resolveSourcePaths(sources, profileDir)
@@ -41,6 +47,7 @@ func NewBrowsers(cfg types.BrowserConfig) ([]*Browser, error) {
 		browsers = append(browsers, &Browser{
 			cfg:         cfg,
 			profileDir:  profileDir,
+			retriever:   retriever,
 			sources:     sources,
 			extractors:  extractors,
 			sourcePaths: sourcePaths,
@@ -126,8 +133,7 @@ func (b *Browser) getMasterKey(session *filemanager.Session) ([]byte, error) {
 		}
 	}
 
-	retriever := keyretriever.DefaultRetriever(b.cfg.KeychainPassword)
-	return retriever.RetrieveKey(b.cfg.Storage, localStateDst)
+	return b.retriever.RetrieveKey(b.cfg.Storage, localStateDst)
 }
 
 // extractCategory calls the appropriate extract function for a category.
