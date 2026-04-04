@@ -55,10 +55,10 @@ func TestStructCSVHeader(t *testing.T) {
 	}{
 		{"LoginEntry", types.LoginEntry{}, []string{"url", "username", "password", "created_at"}},
 		{"CookieEntry", types.CookieEntry{}, []string{"host", "path", "name", "value", "is_secure", "is_http_only", "has_expire", "is_persistent", "expire_at", "created_at"}},
-		{"BookmarkEntry", types.BookmarkEntry{}, []string{"name", "url", "folder", "created_at"}},
+		{"BookmarkEntry", types.BookmarkEntry{}, []string{"id", "name", "type", "url", "folder", "created_at"}},
 		{"HistoryEntry", types.HistoryEntry{}, []string{"url", "title", "visit_count", "last_visit"}},
 		{"DownloadEntry", types.DownloadEntry{}, []string{"url", "target_path", "mime_type", "total_bytes", "start_time", "end_time"}},
-		{"CreditCardEntry", types.CreditCardEntry{}, []string{"name", "number", "exp_month", "exp_year", "nick_name", "address"}},
+		{"CreditCardEntry", types.CreditCardEntry{}, []string{"guid", "name", "number", "exp_month", "exp_year", "nick_name", "address"}},
 		{"StorageEntry", types.StorageEntry{}, []string{"is_meta", "url", "key", "value"}},
 		{"ExtensionEntry", types.ExtensionEntry{}, []string{"name", "id", "description", "version", "homepage_url", "enabled"}},
 	}

@@ -31,9 +31,12 @@ func extractBookmarks(path string) ([]types.BookmarkEntry, error) {
 
 // walkBookmarks recursively traverses the bookmark tree, collecting URL entries.
 func walkBookmarks(node gjson.Result, folder string, out *[]types.BookmarkEntry) {
-	if node.Get("type").String() == "url" {
+	nodeType := node.Get("type").String()
+	if nodeType == "url" {
 		*out = append(*out, types.BookmarkEntry{
+			ID:        node.Get("id").Int(),
 			Name:      node.Get("name").String(),
+			Type:      nodeType,
 			URL:       node.Get("url").String(),
 			Folder:    folder,
 			CreatedAt: typeutil.TimeEpoch(node.Get("date_added").Int()),

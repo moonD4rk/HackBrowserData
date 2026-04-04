@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"sort"
 
+	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
@@ -31,7 +32,10 @@ func extractCookies(masterKey []byte, path string) ([]types.CookieEntry, error) 
 				return types.CookieEntry{}, err
 			}
 
-			value, _ := decryptValue(masterKey, encryptedValue)
+			value, err := decryptValue(masterKey, encryptedValue)
+			if err != nil {
+				log.Debugf("decrypt cookie %s on %s: %v", name, host, err)
+			}
 			value = stripCookieHash(value, host)
 			return types.CookieEntry{
 				Name:         name,

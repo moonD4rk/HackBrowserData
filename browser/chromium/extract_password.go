@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"sort"
 
+	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
@@ -24,7 +25,10 @@ func extractPasswordsWithQuery(masterKey []byte, path, query string) ([]types.Lo
 			if err := rows.Scan(&url, &username, &pwd, &created); err != nil {
 				return types.LoginEntry{}, err
 			}
-			password, _ := decryptValue(masterKey, pwd)
+			password, err := decryptValue(masterKey, pwd)
+			if err != nil {
+				log.Debugf("decrypt password for %s: %v", url, err)
+			}
 			return types.LoginEntry{
 				URL:       url,
 				Username:  username,

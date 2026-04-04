@@ -60,7 +60,7 @@ func extractExtensionsWithKeys(path string, keys []string) ([]types.ExtensionEnt
 			Description: manifest.Get("description").String(),
 			Version:     manifest.Get("version").String(),
 			HomepageURL: manifest.Get("homepage_url").String(),
-			Enabled:     ext.Get("state").Int() == 1,
+			Enabled:     !ext.Get("disable_reasons").Exists(),
 		})
 		return true
 	})
