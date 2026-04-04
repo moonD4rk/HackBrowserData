@@ -38,7 +38,7 @@ func TestCompressDir(t *testing.T) {
 
 	t.Run("Directory Does Not Exist", func(t *testing.T) {
 		err := CompressDir("/path/to/nonexistent/directory")
-		assert.Error(t, err, "should return an error for non-existent directory")
+		require.Error(t, err, "should return an error for non-existent directory")
 	})
 
 	t.Run("Empty Directory", func(t *testing.T) {
@@ -47,6 +47,6 @@ func TestCompressDir(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		err = CompressDir(tempDir)
-		assert.Error(t, err, "should return an error for an empty directory")
+		require.Error(t, err, "should return an error for an empty directory")
 	})
 }

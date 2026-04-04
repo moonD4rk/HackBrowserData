@@ -25,12 +25,12 @@ func TestCopyLocked_ExclusiveLock(t *testing.T) {
 
 	// Normal copy should fail
 	err := copyFile(src, filepath.Join(dir, "normal_copy.db"))
-	assert.Error(t, err, "normal copy should fail on exclusively locked file")
+	require.Error(t, err, "normal copy should fail on exclusively locked file")
 
 	// copyLocked should succeed via DuplicateHandle + FileMapping
 	lockedDst := filepath.Join(dir, "locked_copy.db")
 	err = copyLocked(src, lockedDst)
-	assert.NoError(t, err, "copyLocked should bypass exclusive lock")
+	require.NoError(t, err, "copyLocked should bypass exclusive lock")
 
 	copied, err := os.ReadFile(lockedDst)
 	require.NoError(t, err)
@@ -62,7 +62,7 @@ func TestCopyLocked_WriteThenRead(t *testing.T) {
 	// copyLocked should read the full content including appended data
 	lockedDst := filepath.Join(dir, "modified_copy.db")
 	copyErr := copyLocked(src, lockedDst)
-	assert.NoError(t, copyErr)
+	require.NoError(t, copyErr)
 
 	copied, err := os.ReadFile(lockedDst)
 	require.NoError(t, err)
@@ -86,17 +86,17 @@ func TestCopyLocked_LargeFile(t *testing.T) {
 
 	lockedDst := filepath.Join(dir, "large_copy.db")
 	err := copyLocked(src, lockedDst)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	copied, err := os.ReadFile(lockedDst)
 	require.NoError(t, err)
-	assert.Equal(t, len(data), len(copied), "file sizes should match")
+	assert.Len(t, copied, len(data), "file sizes should match")
 	assert.True(t, bytes.Equal(data, copied), "file content should match byte-for-byte")
 }
 
 func TestCopyLocked_FileNotFound(t *testing.T) {
 	err := copyLocked("/nonexistent/file.db", filepath.Join(t.TempDir(), "dst.db"))
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestAcquire_FallbackToLocked(t *testing.T) {
@@ -115,7 +115,7 @@ func TestAcquire_FallbackToLocked(t *testing.T) {
 
 	dst := filepath.Join(session.TempDir(), "cookies.db")
 	err = session.Acquire(src, dst, false)
-	assert.NoError(t, err, "Acquire should succeed via locked fallback")
+	require.NoError(t, err, "Acquire should succeed via locked fallback")
 
 	copied, err := os.ReadFile(dst)
 	require.NoError(t, err)
@@ -136,7 +136,7 @@ func TestAcquire_NormalCopyWhenNotLocked(t *testing.T) {
 
 	dst := filepath.Join(session.TempDir(), "unlocked.db")
 	err = session.Acquire(src, dst, false)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	copied, err := os.ReadFile(dst)
 	require.NoError(t, err)

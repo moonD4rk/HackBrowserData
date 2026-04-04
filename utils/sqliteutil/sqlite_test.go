@@ -67,7 +67,7 @@ func TestQuerySQLite_FileNotFound(t *testing.T) {
 	err := QuerySQLite("/nonexistent/path.db", false, "SELECT 1", func(rows *sql.Rows) error {
 		return nil
 	})
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestQuerySQLite_BadQuery(t *testing.T) {
@@ -83,7 +83,7 @@ func TestQuerySQLite_BadQuery(t *testing.T) {
 	err = QuerySQLite(dbPath, false, "SELECT nonexistent FROM t", func(rows *sql.Rows) error {
 		return nil
 	})
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestQueryRows(t *testing.T) {

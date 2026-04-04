@@ -99,5 +99,5 @@ func TestSession_Acquire_NotFound(t *testing.T) {
 
 	dst := filepath.Join(s.TempDir(), "nope")
 	err = s.Acquire("/nonexistent/file", dst, false)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
