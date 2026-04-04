@@ -52,6 +52,10 @@ func Execute() {
 				log.Errorf("pick browsers: %v", err)
 				return err
 			}
+			if len(browsers) == 0 {
+				log.Warnf("no browsers found")
+				return nil
+			}
 
 			categories := types.AllCategories
 			if !isFullExport {
