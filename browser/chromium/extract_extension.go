@@ -60,12 +60,23 @@ func extractExtensionsWithKeys(path string, keys []string) ([]types.ExtensionEnt
 			Description: manifest.Get("description").String(),
 			Version:     manifest.Get("version").String(),
 			HomepageURL: manifest.Get("homepage_url").String(),
-			Enabled:     !ext.Get("disable_reasons").Exists(),
+			Enabled:     isExtensionEnabled(ext),
 		})
 		return true
 	})
 
 	return extensions, nil
+}
+
+// isExtensionEnabled checks whether an extension is enabled.
+// Modern Chrome uses disable_reasons (array): empty [] = enabled, non-empty [1] = disabled.
+// Older Chrome uses state (int): 1 = enabled.
+func isExtensionEnabled(ext gjson.Result) bool {
+	reasons := ext.Get("disable_reasons")
+	if reasons.Exists() {
+		return reasons.IsArray() && len(reasons.Array()) == 0
+	}
+	return ext.Get("state").Int() == 1
 }
 
 // extractOperaExtensions extracts extensions from Opera's Secure Preferences,

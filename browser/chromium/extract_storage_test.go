@@ -197,8 +197,9 @@ func TestExtractLocalStorage(t *testing.T) {
 
 func TestExtractSessionStorage(t *testing.T) {
 	dir := createTestLevelDB(t, map[string]string{
-		"https://example.com-token": "abc123",
-		"https://example.com-user":  "alice",
+		// Format: "namespace-url\x00key" → value (Chromium encoded)
+		string(append([]byte("0-https://example.com\x00"), []byte("token")...)): string(testEncodeLatin1("abc123")),
+		string(append([]byte("0-https://example.com\x00"), []byte("user")...)):  string(testEncodeLatin1("alice")),
 	})
 
 	got, err := extractSessionStorage(dir)
@@ -207,6 +208,7 @@ func TestExtractSessionStorage(t *testing.T) {
 
 	byKey := map[string]string{}
 	for _, entry := range got {
+		assert.Equal(t, "https://example.com", entry.URL)
 		byKey[entry.Key] = entry.Value
 	}
 	assert.Equal(t, "abc123", byKey["token"])

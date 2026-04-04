@@ -150,12 +150,6 @@ func decodeLocalStorageValue(value []byte) string {
 }
 
 func extractSessionStorage(path string) ([]types.StorageEntry, error) {
-	return extractLevelDB(path, []byte("-"))
-}
-
-// extractLevelDB iterates over all entries in a LevelDB directory,
-// splitting each key by the separator into (url, name).
-func extractLevelDB(path string, separator []byte) ([]types.StorageEntry, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, fmt.Errorf("leveldb path: %w", err)
 	}
@@ -170,24 +164,44 @@ func extractLevelDB(path string, separator []byte) ([]types.StorageEntry, error)
 	defer iter.Release()
 
 	for iter.Next() {
-		url, name := parseStorageKey(iter.Key(), separator)
+		key := iter.Key()
+		// Session storage keys use "-" as separator: "namespace-url-key"
+		parts := bytes.SplitN(key, []byte("-"), 2)
+		if len(parts) != 2 {
+			continue
+		}
+		url, name := parseSessionStorageKey(parts[1])
 		if url == "" {
 			continue
 		}
+		value := decodeSessionStorageValue(iter.Value())
 		entries = append(entries, types.StorageEntry{
 			URL:   url,
 			Key:   name,
-			Value: string(iter.Value()),
+			Value: value,
 		})
 	}
 	return entries, iter.Error()
 }
 
-// parseStorageKey splits a LevelDB key into (url, name) by the given separator.
-func parseStorageKey(key, separator []byte) (url, name string) {
-	parts := bytes.SplitN(key, separator, 2)
-	if len(parts) != 2 {
-		return "", ""
+// parseSessionStorageKey extracts url and key from session storage.
+// The format after stripping the namespace prefix is: "url\x00key" or just "url".
+func parseSessionStorageKey(b []byte) (url, name string) {
+	sep := bytes.IndexByte(b, 0)
+	if sep < 0 {
+		return string(b), ""
 	}
-	return string(parts[0]), string(parts[1])
+	return string(b[:sep]), string(b[sep+1:])
+}
+
+// decodeSessionStorageValue attempts Chromium string decoding, falls back to raw string.
+func decodeSessionStorageValue(value []byte) string {
+	if len(value) == 0 {
+		return ""
+	}
+	decoded, err := decodeChromiumString(value)
+	if err != nil {
+		return string(value)
+	}
+	return decoded
 }
