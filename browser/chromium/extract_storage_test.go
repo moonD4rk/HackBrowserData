@@ -21,9 +21,14 @@ func TestDecodeChromiumString(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name:  "latin1",
+			name:  "latin1 ascii",
 			input: testEncodeLatin1("abc123"),
 			want:  "abc123",
+		},
+		{
+			name:  "latin1 non-ascii",
+			input: append([]byte{chromiumStringLatin1Format}, 0x63, 0x61, 0x66, 0xE9), // "café" in Latin-1
+			want:  "caf\u00e9",                                                        // U+00E9 = é
 		},
 		{
 			name:  "utf16le ascii",

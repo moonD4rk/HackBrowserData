@@ -26,8 +26,8 @@ const (
 const maxLocalStorageValueLength = 2048
 
 func extractLocalStorage(path string) ([]types.StorageEntry, error) {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, fmt.Errorf("leveldb path not found: %s", path)
+	if _, err := os.Stat(path); err != nil {
+		return nil, fmt.Errorf("leveldb path: %w", err)
 	}
 	db, err := leveldb.OpenFile(path, nil)
 	if err != nil {
@@ -50,7 +50,7 @@ func extractLocalStorage(path string) ([]types.StorageEntry, error) {
 }
 
 // parseLocalStorageEntry classifies a LevelDB key/value pair and decodes it.
-// Returns false only for VERSION entries. META entries are kept with IsMeta=true.
+// Returns false for VERSION entries and any unrecognized keys. META entries are kept with IsMeta=true.
 func parseLocalStorageEntry(key, value []byte) (types.StorageEntry, bool) {
 	switch {
 	case bytes.Equal(key, []byte(localStorageVersionKey)):
@@ -102,12 +102,22 @@ func decodeChromiumString(b []byte) (string, error) {
 	}
 	switch b[0] {
 	case chromiumStringLatin1Format:
-		return string(b[1:]), nil
+		return decodeLatin1(b[1:]), nil
 	case chromiumStringUTF16Format:
 		return decodeUTF16LE(b[1:])
 	default:
 		return "", fmt.Errorf("unknown chromium string format 0x%02x", b[0])
 	}
+}
+
+// decodeLatin1 converts ISO-8859-1 bytes to a valid UTF-8 Go string.
+// Latin-1 byte values map 1:1 to Unicode code points U+0000–U+00FF.
+func decodeLatin1(b []byte) string {
+	runes := make([]rune, len(b))
+	for i, c := range b {
+		runes[i] = rune(c)
+	}
+	return string(runes)
 }
 
 // decodeUTF16LE decodes a UTF-16 Little-Endian byte slice to a Go string.
@@ -146,8 +156,8 @@ func extractSessionStorage(path string) ([]types.StorageEntry, error) {
 // extractLevelDB iterates over all entries in a LevelDB directory,
 // splitting each key by the separator into (url, name).
 func extractLevelDB(path string, separator []byte) ([]types.StorageEntry, error) {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, fmt.Errorf("leveldb path not found: %s", path)
+	if _, err := os.Stat(path); err != nil {
+		return nil, fmt.Errorf("leveldb path: %w", err)
 	}
 	db, err := leveldb.OpenFile(path, nil)
 	if err != nil {
