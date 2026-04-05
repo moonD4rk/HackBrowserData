@@ -41,7 +41,7 @@ func (r *DPAPIRetriever) RetrieveKey(_, localStatePath string) ([]byte, error) {
 		return nil, fmt.Errorf("encrypted_key unexpected prefix: got %q, want %q", keyBytes[:len(dpapiPrefix)], dpapiPrefix)
 	}
 
-	masterKey, err := crypto.DecryptWithDPAPI(keyBytes[len(dpapiPrefix):])
+	masterKey, err := crypto.DecryptDPAPI(keyBytes[len(dpapiPrefix):])
 	if err != nil {
 		return nil, fmt.Errorf("DPAPI decrypt: %w", err)
 	}

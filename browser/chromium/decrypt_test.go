@@ -12,14 +12,12 @@ import (
 	"github.com/moond4rk/hackbrowserdata/crypto"
 )
 
-// testCBCIV is the fixed IV Chrome uses on macOS/Linux (16 space bytes).
-var testCBCIV = bytes.Repeat([]byte{0x20}, 16)
-
 func TestDecryptValue_V10(t *testing.T) {
 	plaintext := []byte("test_secret_value")
-	encrypted, err := crypto.AESCBCEncrypt(testAESKey, testCBCIV, plaintext)
+	testCBCIV := bytes.Repeat([]byte{0x20}, 16)
+	cbcEncrypted, err := crypto.AESCBCEncrypt(testAESKey, testCBCIV, plaintext)
 	require.NoError(t, err)
-	v10Ciphertext := append([]byte("v10"), encrypted...)
+	v10Ciphertext := append([]byte("v10"), cbcEncrypted...)
 
 	tests := []struct {
 		name       string
@@ -35,7 +33,7 @@ func TestDecryptValue_V10(t *testing.T) {
 		{
 			name:       "wrong key returns padding error",
 			key:        []byte("wrong_key_1234!!"),
-			wantErrMsg: "pkcs5UnPadding",
+			wantErrMsg: "invalid PKCS5 padding",
 		},
 	}
 

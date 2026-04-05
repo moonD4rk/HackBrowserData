@@ -71,3 +71,98 @@ func TestAESGCMDecrypt(t *testing.T) {
 	assert.NotEmpty(t, decrypted)
 	assert.Equal(t, plainText, decrypted)
 }
+
+// --- Bug-fix verification tests ---
+// These tests verify the fixes for known issues in the crypto primitives.
+// Tests marked with t.Skip document bugs that exist before the fix.
+
+func TestPkcs5Padding_NoMutation(t *testing.T) {
+	// pkcs5Padding should not mutate the original slice's backing array.
+	src := make([]byte, 3, 32) // len=3, cap=32 — append won't allocate
+	copy(src, "abc")
+	backup := make([]byte, cap(src))
+	copy(backup, src[:cap(src)])
+
+	padded := pkcs5Padding(src, 16)
+	assert.Len(t, padded, 16)
+	assert.Equal(t, []byte("abc"), src) // original length unchanged
+
+	// The bytes beyond len(src) in the original backing array must not be touched.
+	current := make([]byte, cap(src))
+	copy(current, src[:cap(src)])
+	assert.Equal(t, backup, current, "pkcs5Padding mutated the original slice backing array")
+}
+
+func TestPaddingZero_NoMutation(t *testing.T) {
+	src := make([]byte, 3, 32)
+	copy(src, "abc")
+	backup := make([]byte, cap(src))
+	copy(backup, src[:cap(src)])
+
+	padded := paddingZero(src, 20)
+	assert.Len(t, padded, 20)
+
+	current := make([]byte, cap(src))
+	copy(current, src[:cap(src)])
+	assert.Equal(t, backup, current, "paddingZero mutated the original slice backing array")
+}
+
+func TestAESCBCDecrypt_WrongIVLength(t *testing.T) {
+	key := bytes.Repeat([]byte("k"), 16)
+	wrongIV := []byte("short")
+	ct := make([]byte, 16)
+
+	_, err := AESCBCDecrypt(key, wrongIV, ct)
+	require.Error(t, err, "wrong IV length should return error, not panic")
+	assert.ErrorIs(t, err, errInvalidIVLength)
+}
+
+func TestAESCBCEncrypt_WrongIVLength(t *testing.T) {
+	key := bytes.Repeat([]byte("k"), 16)
+	wrongIV := []byte("short")
+
+	_, err := AESCBCEncrypt(key, wrongIV, plainText)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, errInvalidIVLength)
+}
+
+func TestDES3Decrypt_WrongIVLength(t *testing.T) {
+	key := bytes.Repeat([]byte("k"), 24)
+	wrongIV := []byte("ab") // DES needs 8-byte IV
+	ct := make([]byte, 8)
+
+	_, err := DES3Decrypt(key, wrongIV, ct)
+	require.Error(t, err, "wrong IV length should return error, not panic")
+	assert.ErrorIs(t, err, errInvalidIVLength)
+}
+
+func TestDES3Encrypt_WrongIVLength(t *testing.T) {
+	key := bytes.Repeat([]byte("k"), 24)
+	wrongIV := []byte("ab")
+
+	_, err := DES3Encrypt(key, wrongIV, plainText)
+	require.Error(t, err, "wrong IV length should return error, not panic")
+	assert.ErrorIs(t, err, errInvalidIVLength)
+}
+
+func TestAESCBCDecrypt_EmptyCiphertext(t *testing.T) {
+	key := bytes.Repeat([]byte("k"), 16)
+	iv := bytes.Repeat([]byte("i"), 16)
+
+	_, err := AESCBCDecrypt(key, iv, nil)
+	require.Error(t, err)
+
+	_, err = AESCBCDecrypt(key, iv, []byte{})
+	require.Error(t, err)
+}
+
+func TestDES3Decrypt_EmptyCiphertext(t *testing.T) {
+	key := bytes.Repeat([]byte("k"), 24)
+	iv := bytes.Repeat([]byte("i"), 8)
+
+	_, err := DES3Decrypt(key, iv, nil)
+	require.Error(t, err)
+
+	_, err = DES3Decrypt(key, iv, []byte{})
+	require.Error(t, err)
+}

@@ -2,18 +2,22 @@
 
 package crypto
 
-import "errors"
+import (
+	"bytes"
+	"crypto/aes"
+)
 
-var ErrDarwinNotSupportDPAPI = errors.New("darwin not support dpapi")
+var chromiumCBCIV = bytes.Repeat([]byte{0x20}, aes.BlockSize)
 
-func DecryptWithChromium(key, ciphertext []byte) ([]byte, error) {
-	if len(ciphertext) <= 3 {
-		return nil, ErrCiphertextLengthIsInvalid
+const minCBCDataSize = versionPrefixLen + aes.BlockSize // "v10" + one AES block = 19 bytes minimum
+
+func DecryptChromium(key, ciphertext []byte) ([]byte, error) {
+	if len(ciphertext) < minCBCDataSize {
+		return nil, errShortCiphertext
 	}
-	iv := []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
-	return AESCBCDecrypt(key, iv, ciphertext[3:])
+	return AESCBCDecrypt(key, chromiumCBCIV, ciphertext[versionPrefixLen:])
 }
 
-func DecryptWithDPAPI(_ []byte) ([]byte, error) {
-	return nil, ErrDarwinNotSupportDPAPI
+func DecryptDPAPI(_ []byte) ([]byte, error) {
+	return nil, errDPAPINotSupported
 }

@@ -9,35 +9,29 @@ import (
 )
 
 const (
-	// Assuming the nonce size is 12 bytes and the minimum encrypted data size is 3 bytes
-	minEncryptedDataSize = 15
-	nonceSize            = 12
+	gcmNonceSize   = 12                              // AES-GCM standard nonce size
+	minGCMDataSize = versionPrefixLen + gcmNonceSize // "v10" + nonce = 15 bytes minimum
 )
 
-func DecryptWithChromium(key, ciphertext []byte) ([]byte, error) {
-	if len(ciphertext) < minEncryptedDataSize {
-		return nil, ErrCiphertextLengthIsInvalid
+func DecryptChromium(key, ciphertext []byte) ([]byte, error) {
+	if len(ciphertext) < minGCMDataSize {
+		return nil, errShortCiphertext
 	}
-
-	nonce := ciphertext[3 : 3+nonceSize]
-	encryptedPassword := ciphertext[3+nonceSize:]
-
-	return AESGCMDecrypt(key, nonce, encryptedPassword)
+	nonce := ciphertext[versionPrefixLen : versionPrefixLen+gcmNonceSize]
+	payload := ciphertext[versionPrefixLen+gcmNonceSize:]
+	return AESGCMDecrypt(key, nonce, payload)
 }
 
-// DecryptWithYandex decrypts the password with AES-GCM
-func DecryptWithYandex(key, ciphertext []byte) ([]byte, error) {
-	if len(ciphertext) < minEncryptedDataSize {
-		return nil, ErrCiphertextLengthIsInvalid
+// DecryptYandex decrypts a Yandex-encrypted value.
+// TODO: Yandex uses the same AES-GCM format as Chromium for now;
+// update when Yandex-specific decryption diverges.
+func DecryptYandex(key, ciphertext []byte) ([]byte, error) {
+	if len(ciphertext) < minGCMDataSize {
+		return nil, errShortCiphertext
 	}
-	// remove Prefix 'v10'
-	// gcmBlockSize         = 16
-	// gcmTagSize           = 16
-	// gcmMinimumTagSize    = 12 // NIST SP 800-38D recommends tags with 12 or more bytes.
-	// gcmStandardNonceSize = 12
-	nonce := ciphertext[3 : 3+nonceSize]
-	encryptedPassword := ciphertext[3+nonceSize:]
-	return AESGCMDecrypt(key, nonce, encryptedPassword)
+	nonce := ciphertext[versionPrefixLen : versionPrefixLen+gcmNonceSize]
+	payload := ciphertext[versionPrefixLen+gcmNonceSize:]
+	return AESGCMDecrypt(key, nonce, payload)
 }
 
 type dataBlob struct {
@@ -61,11 +55,11 @@ func (b *dataBlob) bytes() []byte {
 	return d
 }
 
-// DecryptWithDPAPI (Data Protection Application Programming Interface)
+// DecryptDPAPI (Data Protection Application Programming Interface)
 // is a simple cryptographic application programming interface
 // available as a built-in component in Windows 2000 and
 // later versions of Microsoft Windows operating systems
-func DecryptWithDPAPI(ciphertext []byte) ([]byte, error) {
+func DecryptDPAPI(ciphertext []byte) ([]byte, error) {
 	crypt32 := syscall.NewLazyDLL("Crypt32.dll")
 	kernel32 := syscall.NewLazyDLL("Kernel32.dll")
 	unprotectDataProc := crypt32.NewProc("CryptUnprotectData")

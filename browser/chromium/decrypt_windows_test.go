@@ -15,7 +15,7 @@ import (
 )
 
 // encryptWithDPAPI encrypts data using Windows DPAPI (CryptProtectData).
-// This is the reverse of crypto.DecryptWithDPAPI, used only for testing.
+// This is the reverse of DecryptDPAPI, used only for testing.
 func encryptWithDPAPI(plaintext []byte) ([]byte, error) {
 	crypt32 := syscall.NewLazyDLL("Crypt32.dll")
 	kernel32 := syscall.NewLazyDLL("Kernel32.dll")
@@ -57,11 +57,11 @@ func TestDecryptValue_V10_Windows(t *testing.T) {
 	plaintext := []byte("test_secret_value")
 	nonce := []byte("123456789012") // 12-byte nonce
 
-	encrypted, err := crypto.AESGCMEncrypt(testAESKey, nonce, plaintext)
+	gcmEncrypted, err := crypto.AESGCMEncrypt(testAESKey, nonce, plaintext)
 	require.NoError(t, err)
 
 	// v10 format on Windows: "v10" + nonce(12) + encrypted
-	ciphertext := append([]byte("v10"), append(nonce, encrypted...)...)
+	ciphertext := append([]byte("v10"), append(nonce, gcmEncrypted...)...)
 
 	got, err := decryptValue(testAESKey, ciphertext)
 	require.NoError(t, err)

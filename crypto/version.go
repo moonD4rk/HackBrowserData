@@ -12,14 +12,17 @@ const (
 
 	// CipherDPAPI is pre-Chrome 80 raw DPAPI encryption (no version prefix).
 	CipherDPAPI CipherVersion = "dpapi"
+
+	// versionPrefixLen is the byte length of the version prefix ("v10", "v20").
+	versionPrefixLen = 3
 )
 
 // DetectVersion identifies the encryption version from a ciphertext prefix.
 func DetectVersion(ciphertext []byte) CipherVersion {
-	if len(ciphertext) < 3 {
+	if len(ciphertext) < versionPrefixLen {
 		return CipherDPAPI
 	}
-	prefix := string(ciphertext[:3])
+	prefix := string(ciphertext[:versionPrefixLen])
 	switch prefix {
 	case "v10":
 		return CipherV10
@@ -32,10 +35,10 @@ func DetectVersion(ciphertext []byte) CipherVersion {
 
 // StripPrefix removes the version prefix (e.g. "v10") from ciphertext.
 // Returns the ciphertext unchanged if no known prefix is found.
-func StripPrefix(ciphertext []byte) []byte {
+func stripPrefix(ciphertext []byte) []byte {
 	ver := DetectVersion(ciphertext)
 	if ver == CipherV10 || ver == CipherV20 {
-		return ciphertext[3:]
+		return ciphertext[versionPrefixLen:]
 	}
 	return ciphertext
 }

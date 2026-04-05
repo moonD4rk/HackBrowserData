@@ -5,7 +5,6 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/asn1"
-	"errors"
 )
 
 type ASN1PBE interface {
@@ -29,10 +28,8 @@ func NewASN1PBE(b []byte) (pbe ASN1PBE, err error) {
 	if _, err := asn1.Unmarshal(b, &login); err == nil {
 		return login, nil
 	}
-	return nil, ErrDecodeASN1Failed
+	return nil, errDecodeASN1
 }
-
-var ErrDecodeASN1Failed = errors.New("decode ASN1 data failed")
 
 // privateKeyPBE Struct
 //
@@ -190,7 +187,7 @@ func (l credentialPBE) Decrypt(globalSalt []byte) ([]byte, error) {
 		return AESCBCDecrypt(key, iv, l.Encrypted)
 	}
 
-	return nil, errors.New("unsupported IV length for credentialPBE decryption")
+	return nil, errUnsupportedIVLen
 }
 
 func (l credentialPBE) Encrypt(globalSalt, plaintext []byte) ([]byte, error) {
@@ -207,7 +204,7 @@ func (l credentialPBE) Encrypt(globalSalt, plaintext []byte) ([]byte, error) {
 		return AESCBCEncrypt(key, iv, plaintext)
 	}
 
-	return nil, errors.New("unsupported IV length for credentialPBE encryption")
+	return nil, errUnsupportedIVLen
 }
 
 func (l credentialPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {

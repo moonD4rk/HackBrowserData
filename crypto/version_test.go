@@ -27,7 +27,7 @@ func TestDetectVersion(t *testing.T) {
 	}
 }
 
-func TestStripPrefix(t *testing.T) {
+func Test_stripPrefix(t *testing.T) {
 	tests := []struct {
 		name       string
 		ciphertext []byte
@@ -41,7 +41,7 @@ func TestStripPrefix(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, StripPrefix(tt.ciphertext))
+			assert.Equal(t, tt.want, stripPrefix(tt.ciphertext))
 		})
 	}
 }

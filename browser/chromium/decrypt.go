@@ -17,12 +17,12 @@ func decryptValue(masterKey, ciphertext []byte) ([]byte, error) {
 	version := crypto.DetectVersion(ciphertext)
 	switch version {
 	case crypto.CipherV10:
-		return crypto.DecryptWithChromium(masterKey, ciphertext)
+		return crypto.DecryptChromium(masterKey, ciphertext)
 	case crypto.CipherV20:
 		// TODO: implement App-Bound Encryption (Chrome 127+)
 		return nil, fmt.Errorf("v20 App-Bound Encryption not yet supported")
 	case crypto.CipherDPAPI:
-		return crypto.DecryptWithDPAPI(ciphertext)
+		return crypto.DecryptDPAPI(ciphertext)
 	default:
 		return nil, fmt.Errorf("unsupported cipher version: %s", version)
 	}
