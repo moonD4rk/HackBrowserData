@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -72,6 +73,7 @@ func dumpCmd() *cobra.Command {
 				if err := fileutil.CompressDir(outputDir); err != nil {
 					return fmt.Errorf("compress: %w", err)
 				}
+				log.Warnf("compressed: %s/%s.zip", outputDir, filepath.Base(outputDir))
 			}
 			return nil
 		},
