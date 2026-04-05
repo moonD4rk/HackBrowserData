@@ -11,5 +11,5 @@ var (
 	errInvalidNonceLen   = errors.New("nonce length must equal GCM nonce size")
 	errUnsupportedIVLen  = errors.New("unsupported IV length")
 	errDecodeASN1        = errors.New("failed to decode ASN1 data")
-	errDPAPINotSupported = errors.New("DPAPI not supported on this platform")
+	errDPAPINotSupported = errors.New("DPAPI not supported on this platform") //nolint:unused // used on darwin/linux only
 )

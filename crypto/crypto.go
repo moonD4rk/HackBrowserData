@@ -113,7 +113,7 @@ func cbcDecrypt(block cipher.Block, iv, ciphertext []byte) ([]byte, error) {
 }
 
 // paddingZero pads src with zero bytes to the given length.
-// Always returns a new slice; never modifies src.
+// Returns src unchanged if already long enough; otherwise returns a new slice.
 func paddingZero(src []byte, length int) []byte {
 	if len(src) >= length {
 		return src
