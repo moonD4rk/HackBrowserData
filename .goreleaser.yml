@@ -31,7 +31,10 @@ archives:
   - id: "archive"
     formats:
       - tar.gz
-      - zip
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
     files:
       - README.md
       - LICENSE
