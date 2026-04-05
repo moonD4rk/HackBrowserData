@@ -11,13 +11,13 @@ import (
 )
 
 var (
-	pbeIV               = []byte("01234567") // 8 bytes
-	pbePlaintext        = []byte("Hello, World!")
-	pbeKeyCheck       = []byte{0xf8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}
-	objWithMD5AndDESCBC = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 5, 3}
-	objWithSHA256AndAES = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 1, 46}
-	objWithSHA1AndAES   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 5, 13}
-	privateKeyPBETestCases     = []struct {
+	pbeIV                  = []byte("01234567") // 8 bytes
+	pbePlaintext           = []byte("Hello, World!")
+	pbeKeyCheck            = []byte{0xf8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}
+	objWithMD5AndDESCBC    = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 5, 3}
+	objWithSHA256AndAES    = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 1, 46}
+	objWithSHA1AndAES      = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 5, 13}
+	privateKeyPBETestCases = []struct {
 		RawHexPBE        string
 		GlobalSalt       []byte
 		Encrypted        []byte

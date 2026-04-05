@@ -169,8 +169,8 @@ func (m passwordCheckPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
 //			OCTET STRING (8 byte)
 //	OCTET STRING (16 byte)
 type credentialPBE struct {
-	KeyCheck  []byte
-	Algo      struct {
+	KeyCheck []byte
+	Algo     struct {
 		asn1.ObjectIdentifier
 		IV []byte
 	}
