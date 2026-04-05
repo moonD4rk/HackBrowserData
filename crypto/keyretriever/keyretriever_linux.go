@@ -65,7 +65,7 @@ func (r *DBusRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("secret %q not found in keyring", storage)
+	return nil, fmt.Errorf("secret %q in keyring: %w", storage, errStorageNotFound)
 }
 
 // FallbackRetriever uses the hardcoded "peanuts" password when D-Bus is unavailable.

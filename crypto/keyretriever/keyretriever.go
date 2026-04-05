@@ -5,6 +5,10 @@ import (
 	"fmt"
 )
 
+// errStorageNotFound is returned when the requested browser storage
+// account is not found in the credential store (keychain, keyring, etc.).
+var errStorageNotFound = errors.New("storage not found")
+
 // KeyRetriever retrieves the master encryption key for a Chromium-based browser.
 // Each platform has different implementations:
 //   - macOS: Keychain access (security command) or gcoredump exploit

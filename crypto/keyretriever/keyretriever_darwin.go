@@ -78,7 +78,7 @@ func findStorageKey(records []keychainbreaker.GenericPassword, storage string) (
 			return darwinParams.deriveKey(rec.Password), nil
 		}
 	}
-	return nil, fmt.Errorf("storage %q not found in keychain", storage)
+	return nil, fmt.Errorf("storage %q: %w", storage, errStorageNotFound)
 }
 
 // KeychainPasswordRetriever unlocks login.keychain-db directly using the
@@ -119,7 +119,7 @@ type TerminalPasswordRetriever struct {
 
 func (r *TerminalPasswordRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
-		return nil, fmt.Errorf("terminal: stdin is not a TTY")
+		return nil, nil
 	}
 
 	r.once.Do(func() {
