@@ -19,10 +19,10 @@
 | Bookmark       |       ✅        |    ✅    |
 | History        |       ✅        |    ✅    |
 | Download       |       ✅        |    ✅    |
-| Credit Card    |       ✅        |    ❌    |
+| Credit Card    |       ✅        |    -    |
 | Extension      |       ✅        |    ✅    |
 | LocalStorage   |       ✅        |    ✅    |
-| SessionStorage |       ✅        |    ❌    |
+| SessionStorage |       ✅        |    -    |
 
 ## Supported Browsers
 
@@ -36,16 +36,16 @@
 | Edge           |    ✅    |   ✅   |   ✅   |
 | Brave          |    ✅    |   ✅   |   ✅   |
 | Opera          |    ✅    |   ✅   |   ✅   |
-| OperaGX        |    ✅    |   ✅   |       |
+| OperaGX        |    ✅    |   ✅   |   -   |
 | Vivaldi        |    ✅    |   ✅   |   ✅   |
-| Yandex         |    ✅    |   ✅   |       |
-| CocCoc         |    ✅    |   ✅   |       |
-| Arc            |         |   ✅   |       |
-| QQ             |    ✅    |       |       |
-| 360 ChromeX    |    ✅    |       |       |
-| 360 Chrome     |    ✅    |       |       |
-| DC Browser     |    ✅    |       |       |
-| Sogou Explorer |    ✅    |       |       |
+| Yandex         |    ✅    |   ✅   |   -   |
+| CocCoc         |    ✅    |   ✅   |   -   |
+| Arc            |    -    |   ✅   |   -   |
+| QQ             |    ✅    |   -   |   -   |
+| 360 ChromeX    |    ✅    |   -   |   -   |
+| 360 Chrome     |    ✅    |   -   |   -   |
+| DC Browser     |    ✅    |   -   |   -   |
+| Sogou Explorer |    ✅    |   -   |   -   |
 | Firefox        |    ✅    |   ✅   |   ✅   |
 
 ## Getting Started

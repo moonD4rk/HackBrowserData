@@ -61,7 +61,7 @@ test: add extraction tests for Firefox
 ## Code Style
 
 - **Platform code**: use build tags (`_darwin.go`, `_windows.go`, `_linux.go`)
-- **Error handling**: `fmt.Errorf("context: %w", err)` for wrapping, never `_ =` to ignore errors
+- **Error handling**: use `fmt.Errorf("context: %w", err)` for wrapping; do not ignore errors unless it is deliberate best-effort cleanup (e.g. `Close`/`Remove`)
 - **Naming**: follow Go conventions
 - **Tests**: use `t.TempDir()` for filesystem tests
 - **Architecture**: see `rfcs/` for design documents

@@ -117,7 +117,7 @@ Extract(categories)
   5. defer session.Cleanup()    → remove temp directory
 ```
 
-For details on file acquisition, see [RFC-006](006-file-acquisition-and-platform-quirks.md). For encryption details, see [RFC-002](002-chromium-data-and-encryption.md) (Chromium) and [RFC-003](003-firefox-data-and-encryption.md) (Firefox). For key retrieval, see [RFC-004](004-key-retrieval-mechanisms.md).
+For details on file acquisition, see [RFC-008](008-file-acquisition-and-platform-quirks.md). For encryption details, see [RFC-003](003-chromium-encryption.md) (Chromium) and [RFC-005](005-firefox-encryption.md) (Firefox). For key retrieval, see [RFC-006](006-key-retrieval-mechanisms.md).
 
 ### 5.1 Collect-and-Continue Pattern
 

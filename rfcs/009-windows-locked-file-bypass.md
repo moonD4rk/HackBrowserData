@@ -89,7 +89,7 @@ Once we have a duplicated handle to the locked file:
 | (includes uncommitted WAL data from Chrome)     |
 |-------------------------------------------------|
                ↓
-| os.WriteFile(destination, bytes, 0644)          |
+| os.WriteFile(destination, bytes, 0600)          |
 |-------------------------------------------------|
 ```
 
