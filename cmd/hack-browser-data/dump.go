@@ -70,7 +70,7 @@ func dumpCmd() *cobra.Command {
 
 			if compress {
 				if err := fileutil.CompressDir(outputDir); err != nil {
-					log.Errorf("compress: %v", err)
+					return fmt.Errorf("compress: %w", err)
 				}
 			}
 			return nil
@@ -91,6 +91,7 @@ func dumpCmd() *cobra.Command {
 // parseCategories converts a comma-separated string into a Category slice.
 // "all" returns all categories.
 func parseCategories(s string) ([]types.Category, error) {
+	s = strings.TrimSpace(s)
 	if strings.EqualFold(s, "all") {
 		return types.AllCategories, nil
 	}

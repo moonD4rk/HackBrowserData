@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"os"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -26,13 +25,13 @@ func listCmd() *cobra.Command {
 				return err
 			}
 			if len(browsers) == 0 {
-				fmt.Println("No browsers found.")
+				cmd.Println("No browsers found.")
 				return nil
 			}
 			if detail {
-				return printDetail(os.Stdout, browsers)
+				return printDetail(cmd.OutOrStdout(), browsers)
 			}
-			return printBasic(os.Stdout, browsers)
+			return printBasic(cmd.OutOrStdout(), browsers)
 		},
 	}
 

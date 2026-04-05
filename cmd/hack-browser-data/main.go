@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/moond4rk/hackbrowserdata/log"
 )
@@ -29,7 +30,16 @@ Github Link: https://github.com/moonD4rk/HackBrowserData`,
 	root.AddCommand(dump, listCmd(), versionCmd())
 
 	// Default to dump when no subcommand is given.
-	root.RunE = dump.RunE
+	// Copy dump flags to root so that `hack-browser-data -b chrome`
+	// works the same as `hack-browser-data dump -b chrome`.
+	root.RunE = func(cmd *cobra.Command, args []string) error {
+		return dump.RunE(dump, args)
+	}
+	dump.Flags().VisitAll(func(f *pflag.Flag) {
+		if root.Flags().Lookup(f.Name) == nil {
+			root.Flags().AddFlag(f)
+		}
+	})
 
 	return root
 }
