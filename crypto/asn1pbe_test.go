@@ -296,3 +296,57 @@ func TestCredentialPBE_Decrypt(t *testing.T) {
 		assert.Equal(t, pbePlaintext, decrypted)
 	}
 }
+
+func TestNewASN1PBE_InvalidData(t *testing.T) {
+	_, err := NewASN1PBE([]byte{0xFF, 0xFF})
+	assert.ErrorIs(t, err, errDecodeASN1)
+}
+
+func TestCredentialPBE_AES256CBC(t *testing.T) {
+	// Test the Firefox 144+ AES-256-CBC path (IV length = 16).
+	// Construct a credentialPBE with a 16-byte IV to exercise the AES branch.
+	masterKey := bytes.Repeat([]byte("k"), 32) // AES-256 key
+	iv := bytes.Repeat([]byte{0x01}, 16)       // 16-byte IV → AES-CBC path
+
+	// Encrypt plaintext to get valid ciphertext for round-trip test.
+	encrypted, err := AESCBCEncrypt(masterKey, iv, pbePlaintext)
+	require.NoError(t, err)
+
+	pbe := credentialPBE{
+		KeyCheck: pbeKeyCheck,
+		Algo: struct {
+			asn1.ObjectIdentifier
+			IV []byte
+		}{
+			ObjectIdentifier: objWithSHA256AndAES,
+			IV:               iv,
+		},
+		Encrypted: encrypted,
+	}
+
+	decrypted, err := pbe.Decrypt(masterKey)
+	require.NoError(t, err)
+	assert.Equal(t, pbePlaintext, decrypted)
+
+	// Verify encrypt round-trip
+	reEncrypted, err := pbe.Encrypt(masterKey, pbePlaintext)
+	require.NoError(t, err)
+	assert.Equal(t, encrypted, reEncrypted)
+}
+
+func TestCredentialPBE_UnsupportedIVLength(t *testing.T) {
+	pbe := credentialPBE{
+		Algo: struct {
+			asn1.ObjectIdentifier
+			IV []byte
+		}{
+			IV: []byte{1, 2, 3}, // 3-byte IV: neither 8 nor 16
+		},
+		Encrypted: []byte("data"),
+	}
+	_, err := pbe.Decrypt([]byte("key"))
+	require.ErrorIs(t, err, errUnsupportedIVLen)
+
+	_, err = pbe.Encrypt([]byte("key"), []byte("data"))
+	require.ErrorIs(t, err, errUnsupportedIVLen)
+}

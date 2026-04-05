@@ -55,6 +55,9 @@ func AESGCMEncrypt(key, nonce, plaintext []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(nonce) != aead.NonceSize() {
+		return nil, errInvalidNonceLen
+	}
 	return aead.Seal(nil, nonce, plaintext, nil), nil
 }
 
@@ -67,6 +70,9 @@ func AESGCMDecrypt(key, nonce, ciphertext []byte) ([]byte, error) {
 	aead, err := cipher.NewGCM(block)
 	if err != nil {
 		return nil, err
+	}
+	if len(nonce) != aead.NonceSize() {
+		return nil, errInvalidNonceLen
 	}
 	return aead.Open(nil, nonce, ciphertext, nil)
 }

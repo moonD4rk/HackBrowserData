@@ -156,6 +156,25 @@ func TestAESCBCDecrypt_EmptyCiphertext(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestAESGCMEncrypt_WrongNonceLength(t *testing.T) {
+	key := bytes.Repeat([]byte("k"), 16)
+	wrongNonce := []byte("short")
+
+	_, err := AESGCMEncrypt(key, wrongNonce, plainText)
+	require.Error(t, err, "wrong nonce length should return error, not panic")
+	assert.ErrorIs(t, err, errInvalidNonceLen)
+}
+
+func TestAESGCMDecrypt_WrongNonceLength(t *testing.T) {
+	key := bytes.Repeat([]byte("k"), 16)
+	wrongNonce := []byte("short")
+	ct := make([]byte, 32)
+
+	_, err := AESGCMDecrypt(key, wrongNonce, ct)
+	require.Error(t, err, "wrong nonce length should return error, not panic")
+	assert.ErrorIs(t, err, errInvalidNonceLen)
+}
+
 func TestDES3Decrypt_EmptyCiphertext(t *testing.T) {
 	key := bytes.Repeat([]byte("k"), 24)
 	iv := bytes.Repeat([]byte("i"), 8)

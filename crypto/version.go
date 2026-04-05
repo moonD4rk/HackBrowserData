@@ -33,7 +33,7 @@ func DetectVersion(ciphertext []byte) CipherVersion {
 	}
 }
 
-// StripPrefix removes the version prefix (e.g. "v10") from ciphertext.
+// stripPrefix removes the version prefix (e.g. "v10") from ciphertext.
 // Returns the ciphertext unchanged if no known prefix is found.
 func stripPrefix(ciphertext []byte) []byte {
 	ver := DetectVersion(ciphertext)
