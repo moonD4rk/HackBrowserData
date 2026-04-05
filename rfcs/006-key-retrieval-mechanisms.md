@@ -150,8 +150,8 @@ A single iteration makes PBKDF2 essentially a keyed HMAC — no real key-stretch
 
 | Browser | D-Bus Label |
 |---------|-------------|
-| Chrome / Opera | `"Chrome Safe Storage"` |
-| Chromium / Edge / Vivaldi | `"Chromium Safe Storage"` |
+| Chrome / Chrome Beta / Vivaldi | `"Chrome Safe Storage"` |
+| Chromium / Edge / Opera | `"Chromium Safe Storage"` |
 | Brave | `"Brave Safe Storage"` |
 
 ## 6. Platform Summary
