@@ -83,6 +83,7 @@ linters:
       min-len: 2
       min-occurrences: 3
       ignore-string-values:
+        - "all"
         - "csv"
         - "json"
     gocritic:

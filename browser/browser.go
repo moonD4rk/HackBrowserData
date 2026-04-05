@@ -34,22 +34,20 @@ func PickBrowsers(opts PickOptions) ([]Browser, error) {
 	return pickFromConfigs(platformBrowsers(), opts)
 }
 
-const nameAll = "all"
-
 // pickFromConfigs is the testable core of PickBrowsers.
 func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser, error) {
 	name := strings.ToLower(opts.Name)
 	if name == "" {
-		name = nameAll
+		name = "all"
 	}
 
 	var browsers []Browser
 	for _, cfg := range configs {
-		if name != nameAll && cfg.Key != name {
+		if name != "all" && cfg.Key != name {
 			continue
 		}
 
-		if opts.ProfilePath != "" && name != nameAll {
+		if opts.ProfilePath != "" && name != "all" {
 			if cfg.Kind == types.KindFirefox {
 				cfg.UserDataDir = filepath.Dir(filepath.Clean(opts.ProfilePath))
 			} else {
