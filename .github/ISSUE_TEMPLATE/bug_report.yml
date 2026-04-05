@@ -1,0 +1,96 @@
+name: Bug Report
+description: Report a bug to help us improve
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the information below.
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: OS Version
+      placeholder: "e.g. Windows 10 22H2, macOS 14.5, Ubuntu 24.04"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options:
+        - Chrome
+        - Chrome Beta
+        - Chromium
+        - Edge
+        - Brave
+        - Opera
+        - OperaGX
+        - Vivaldi
+        - Yandex
+        - CocCoc
+        - Arc
+        - QQ
+        - 360 ChromeX
+        - 360 Chrome
+        - DC Browser
+        - Sogou Explorer
+        - Firefox
+        - Other
+    validations:
+      required: false
+
+  - type: input
+    id: browser-version
+    attributes:
+      label: Browser Version
+      placeholder: "e.g. Chrome 135.0.7049.96, Firefox 144.0"
+    validations:
+      required: false
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: log-output
+    attributes:
+      label: Log Output
+      description: Run `hack-browser-data -v` and paste the output here.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs Actual Behavior
+      description: What you expected to happen and what actually happened.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have checked the [existing issues](https://github.com/moonD4rk/HackBrowserData/issues) for similar reports.
+          required: true
+        - label: I ran `hack-browser-data` with administrator/root privileges.
+          required: false

@@ -23,6 +23,16 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Check Go version constraint
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          GO_VERSION=$(grep '^go ' go.mod | awk '{print $2}')
+          if [ "$GO_VERSION" != "1.20" ]; then
+            echo "::error::go.mod directive must remain 'go 1.20' (Windows 7 support requirement)"
+            echo "::error::Current value: go $GO_VERSION"
+            exit 1
+          fi
+
       - name: Check spelling
         if: matrix.os == 'ubuntu-latest'
         uses: crate-ci/typos@master

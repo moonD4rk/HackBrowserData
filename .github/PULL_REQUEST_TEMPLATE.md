@@ -1,13 +1,13 @@
-## Proposed changes
+## Summary
 
-<!-- Describe the overall picture of your modifications to help maintainers understand the pull request. PRs are required to be associated to their related issue tickets or feature request. -->
+<!-- Describe the overall picture of your changes. Link to the related issue if applicable. -->
 
+Fixes #
 
 ## Checklist
 
-<!-- Put an "x" in the boxes that apply. You can also fill these out after creating the PR. If you're unsure about any of them, don't hesitate to ask. We're here to help! This is simply a reminder of what we are going to look for before merging your code. -->
-
-- [ ] Pull request is created against the [dev](https://github.com/moonD4rk/HackBrowserData/tree/dev) branch
-- [ ] All checks passed (lint, unit, build tests etc.) with my changes
+- [ ] Pull request targets the `main` branch
+- [ ] All CI checks pass (lint, test, build)
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] I have added necessary documentation (if appropriate)
+- [ ] go.mod directive remains `go 1.20` (do not bump)
