@@ -27,6 +27,7 @@ func TestListBrowsers(t *testing.T) {
 
 func TestPickFromConfigs_NameFilter(t *testing.T) {
 	dir := t.TempDir()
+	mkFile(t, dir, "Default", "Preferences")
 	mkFile(t, dir, "Default", "Login Data")
 	mkFile(t, dir, "Default", "History")
 
@@ -67,7 +68,7 @@ func TestPickFromConfigs_NameFilter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			browsers, err := pickFromConfigs(configs, tt.pickName, "")
+			browsers, err := pickFromConfigs(configs, PickOptions{Name: tt.pickName})
 			require.NoError(t, err)
 			assertBrowsers(t, browsers, tt.wantNames, tt.wantProfiles)
 		})
@@ -76,8 +77,10 @@ func TestPickFromConfigs_NameFilter(t *testing.T) {
 
 func TestPickFromConfigs_BrowserKind(t *testing.T) {
 	chromeDir := t.TempDir()
+	mkFile(t, chromeDir, "Default", "Preferences")
 	mkFile(t, chromeDir, "Default", "Login Data")
 	mkFile(t, chromeDir, "Default", "History")
+	mkFile(t, chromeDir, "Profile 1", "Preferences")
 	mkFile(t, chromeDir, "Profile 1", "Login Data")
 	mkFile(t, chromeDir, "Profile 1", "History")
 
@@ -86,6 +89,7 @@ func TestPickFromConfigs_BrowserKind(t *testing.T) {
 	mkFile(t, firefoxDir, "abc123.default-release", "places.sqlite")
 
 	yandexDir := t.TempDir()
+	mkFile(t, yandexDir, "Default", "Preferences")
 	mkFile(t, yandexDir, "Default", "Ya Passman Data")
 	mkFile(t, yandexDir, "Default", "History")
 
@@ -129,7 +133,7 @@ func TestPickFromConfigs_BrowserKind(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			browsers, err := pickFromConfigs(tt.configs, "all", "")
+			browsers, err := pickFromConfigs(tt.configs, PickOptions{Name: "all"})
 			require.NoError(t, err)
 			assertBrowsers(t, browsers, tt.wantNames, tt.wantProfiles)
 		})
@@ -138,8 +142,10 @@ func TestPickFromConfigs_BrowserKind(t *testing.T) {
 
 func TestPickFromConfigs_ProfilePath(t *testing.T) {
 	chromeDir := t.TempDir()
+	mkFile(t, chromeDir, "Default", "Preferences")
 	mkFile(t, chromeDir, "Default", "Login Data")
 	mkFile(t, chromeDir, "Default", "History")
+	mkFile(t, chromeDir, "Profile 1", "Preferences")
 	mkFile(t, chromeDir, "Profile 1", "Login Data")
 	mkFile(t, chromeDir, "Profile 1", "History")
 
@@ -189,7 +195,7 @@ func TestPickFromConfigs_ProfilePath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			browsers, err := pickFromConfigs(tt.configs, tt.pickName, tt.profilePath)
+			browsers, err := pickFromConfigs(tt.configs, PickOptions{Name: tt.pickName, ProfilePath: tt.profilePath})
 			require.NoError(t, err)
 			assertBrowsers(t, browsers, tt.wantNames, tt.wantProfiles)
 		})

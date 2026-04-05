@@ -45,6 +45,7 @@ func buildFixtures() {
 	fixture.chrome = filepath.Join(fixture.root, "chrome")
 	mkFile(fixture.chrome, "Local State")
 	for _, p := range []string{"Default", "Profile 1", "Profile 3"} {
+		mkFile(fixture.chrome, p, "Preferences")
 		mkFile(fixture.chrome, p, "Login Data")
 		mkFile(fixture.chrome, p, "History")
 		mkFile(fixture.chrome, p, "Bookmarks")
@@ -60,6 +61,7 @@ func buildFixtures() {
 
 	fixture.opera = filepath.Join(fixture.root, "opera")
 	mkFile(fixture.opera, "Local State")
+	mkFile(fixture.opera, "Default", "Preferences")
 	mkFile(fixture.opera, "Default", "Login Data")
 	mkFile(fixture.opera, "Default", "History")
 	mkFile(fixture.opera, "Default", "Bookmarks")
@@ -73,6 +75,7 @@ func buildFixtures() {
 
 	fixture.yandex = filepath.Join(fixture.root, "yandex")
 	mkFile(fixture.yandex, "Local State")
+	mkFile(fixture.yandex, "Default", "Preferences")
 	mkFile(fixture.yandex, "Default", "Ya Passman Data")
 	mkFile(fixture.yandex, "Default", "Ya Credit Cards")
 	mkFile(fixture.yandex, "Default", "History")
@@ -80,14 +83,17 @@ func buildFixtures() {
 	mkFile(fixture.yandex, "Default", "Bookmarks")
 
 	fixture.oldCookies = filepath.Join(fixture.root, "old-cookies")
+	mkFile(fixture.oldCookies, "Default", "Preferences")
 	mkFile(fixture.oldCookies, "Default", "History")
 	mkFile(fixture.oldCookies, "Default", "Cookies")
 
 	fixture.bothCookies = filepath.Join(fixture.root, "both-cookies")
+	mkFile(fixture.bothCookies, "Default", "Preferences")
 	mkFile(fixture.bothCookies, "Default", "Cookies")
 	mkFile(fixture.bothCookies, "Default", "Network", "Cookies")
 
 	fixture.leveldb = filepath.Join(fixture.root, "leveldb")
+	mkFile(fixture.leveldb, "Default", "Preferences")
 	mkFile(fixture.leveldb, "Default", "History")
 	mkDir(fixture.leveldb, "Default", "Local Storage", "leveldb")
 	mkFile(fixture.leveldb, "Default", "Local Storage", "leveldb", "000001.ldb")
@@ -95,6 +101,7 @@ func buildFixtures() {
 	mkFile(fixture.leveldb, "Default", "Session Storage", "000001.ldb")
 
 	fixture.leveldbOnly = filepath.Join(fixture.root, "leveldb-only")
+	mkFile(fixture.leveldbOnly, "Default", "Preferences")
 	mkDir(fixture.leveldbOnly, "Default", "Local Storage", "leveldb")
 	mkDir(fixture.leveldbOnly, "Default", "Session Storage")
 

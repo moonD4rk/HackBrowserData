@@ -16,19 +16,27 @@ import (
 type Browser interface {
 	BrowserName() string
 	ProfileName() string
+	ProfileDir() string
 	Extract(categories []types.Category) (*types.BrowserData, error)
 }
 
-// PickBrowsers returns browsers matching the given name.
-// When name is "all", all known browsers are tried.
-// profilePath overrides the default user data directory (only when targeting a specific browser).
-func PickBrowsers(name, profilePath string) ([]Browser, error) {
-	return pickFromConfigs(platformBrowsers(), name, profilePath)
+// PickOptions configures which browsers to pick.
+type PickOptions struct {
+	Name             string // browser name filter: "all"|"chrome"|"firefox"|...
+	ProfilePath      string // custom profile directory override
+	KeychainPassword string // macOS keychain password (ignored on other platforms)
+}
+
+// PickBrowsers returns browsers matching the given options.
+// When Name is "all", all known browsers are tried.
+// ProfilePath overrides the default user data directory (only when targeting a specific browser).
+func PickBrowsers(opts PickOptions) ([]Browser, error) {
+	return pickFromConfigs(platformBrowsers(), opts)
 }
 
 // pickFromConfigs is the testable core of PickBrowsers.
-func pickFromConfigs(configs []types.BrowserConfig, name, profilePath string) ([]Browser, error) {
-	name = strings.ToLower(name)
+func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser, error) {
+	name := strings.ToLower(opts.Name)
 
 	var browsers []Browser
 	for _, cfg := range configs {
@@ -36,12 +44,16 @@ func pickFromConfigs(configs []types.BrowserConfig, name, profilePath string) ([
 			continue
 		}
 
-		if profilePath != "" && name != "all" {
+		if opts.ProfilePath != "" && name != "all" {
 			if cfg.Kind == types.KindFirefox {
-				cfg.UserDataDir = filepath.Dir(filepath.Clean(profilePath))
+				cfg.UserDataDir = filepath.Dir(filepath.Clean(opts.ProfilePath))
 			} else {
-				cfg.UserDataDir = profilePath
+				cfg.UserDataDir = opts.ProfilePath
 			}
+		}
+
+		if opts.KeychainPassword != "" {
+			cfg.KeychainPassword = opts.KeychainPassword
 		}
 
 		bs, err := newBrowsers(cfg)

@@ -6,7 +6,7 @@ before:
 
 builds:
   - id: "hack-browser-data"
-    main: ./cmd/hack-browser-data/main.go
+    main: ./cmd/hack-browser-data/
     binary: hack-browser-data
     env:
       - CGO_ENABLED=0
@@ -23,11 +23,14 @@ builds:
       - -trimpath
     ldflags:
       - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
+      - -X main.buildDate={{.Date}}
 
 archives:
   - id: "archive"
-    format: zip
-    builds: ["hack-browser-data"]
+    formats:
+      - zip
     name_template: >-
       hack-browser-data-
       {{- if eq .Os "darwin" }}osx

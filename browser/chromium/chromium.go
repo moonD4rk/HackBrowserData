@@ -57,6 +57,7 @@ func NewBrowsers(cfg types.BrowserConfig) ([]*Browser, error) {
 }
 
 func (b *Browser) BrowserName() string { return b.cfg.Name }
+func (b *Browser) ProfileDir() string  { return b.profileDir }
 func (b *Browser) ProfileName() string {
 	if b.profileDir == "" {
 		return ""
@@ -173,8 +174,9 @@ func (b *Browser) extractCategory(data *types.BrowserData, cat types.Category, m
 	}
 }
 
-// discoverProfiles lists subdirectories of userDataDir that contain at least
-// one known data source. Each such directory is a browser profile.
+// discoverProfiles lists subdirectories of userDataDir that are valid
+// Chromium profile directories. A directory is considered a profile if it
+// contains a "Preferences" file, which Chromium creates for every profile.
 func discoverProfiles(userDataDir string, sources map[types.Category][]sourcePath) []string {
 	entries, err := os.ReadDir(userDataDir)
 	if err != nil {
@@ -188,16 +190,39 @@ func discoverProfiles(userDataDir string, sources map[types.Category][]sourcePat
 			continue
 		}
 		dir := filepath.Join(userDataDir, e.Name())
-		if hasAnySource(sources, dir) {
+		if isProfileDir(dir) {
 			profiles = append(profiles, dir)
 		}
 	}
 
-	// Flat layout fallback (older Opera): data files directly in userDataDir
+	// Flat layout fallback (older Opera): data files directly in userDataDir.
+	// Opera stores data alongside Local State in userDataDir itself, so check
+	// for any known source file instead of Preferences.
 	if len(profiles) == 0 && hasAnySource(sources, userDataDir) {
 		profiles = append(profiles, userDataDir)
 	}
 	return profiles
+}
+
+// profileMarkers are filenames that identify a directory as a Chromium profile.
+// Chromium creates a per-profile preferences file on first use; checking for
+// its existence filters out non-profile subdirectories (Crashpad, ShaderCache, etc.).
+//
+//   - "Preferences"    — standard Chromium and all major forks (Chrome, Edge, Brave, …)
+//   - "Preferences_02" — Tencent-based browsers (QQ Browser, Sogou Explorer)
+var profileMarkers = []string{
+	"Preferences",
+	"Preferences_02",
+}
+
+// isProfileDir reports whether dir is a valid Chromium profile directory.
+func isProfileDir(dir string) bool {
+	for _, name := range profileMarkers {
+		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 // hasAnySource checks if dir contains at least one source file or directory.
