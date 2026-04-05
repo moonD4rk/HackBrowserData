@@ -30,6 +30,7 @@ builds:
 archives:
   - id: "archive"
     formats:
+      - tar.gz
       - zip
     files:
       - README.md
@@ -61,6 +62,27 @@ changelog:
 checksum:
   name_template: "checksums-v{{ .Version }}.txt"
   algorithm: sha256
+
+brews:
+  - name: hack-browser-data
+    homepage: "https://github.com/moonD4rk/HackBrowserData"
+    description: "Extract and decrypt browser data from multiple browsers"
+    license: "MIT"
+    directory: Formula
+    skip_upload: auto
+    repository:
+      owner: moonD4rk
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    commit_author:
+      name: "github-actions[bot]"
+      email: "github-actions[bot]@users.noreply.github.com"
+    commit_msg_template: "brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    install: |
+      bin.install "hack-browser-data"
+    test: |
+      system "#{bin}/hack-browser-data", "version"
 
 release:
   prerelease: auto

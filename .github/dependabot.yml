@@ -5,13 +5,14 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
-    target-branch: dev
-#    ignore:
-#      - dependency-name: "example-package"
-#        versions: ["2.x.x"]
+    target-branch: main
+    ignore:
+      - dependency-name: "modernc.org/sqlite"
+        versions: [">=1.32.0"]  # v1.32+ requires Go 1.21, project is pinned to Go 1.20
+      - dependency-name: "golang.org/x/text"  # will be removed in upcoming refactoring
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 5
-    target-branch: dev
+    open-pull-requests-limit: 8
+    target-branch: main

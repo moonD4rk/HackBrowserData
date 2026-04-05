@@ -191,7 +191,9 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
 
 ## Contributors
 
-![](/CONTRIBUTORS.svg)
+<a href="https://github.com/moonD4rk/HackBrowserData/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=moonD4rk/HackBrowserData" />
+</a>
 
 ## Stargazers over time
 [![Star History Chart](https://api.star-history.com/svg?repos=moond4rk/hackbrowserdata&type=Date)](https://github.com/moond4rk/HackBrowserData)
