@@ -31,6 +31,9 @@ archives:
   - id: "archive"
     formats:
       - zip
+    files:
+      - README.md
+      - LICENSE
     name_template: >-
       hack-browser-data-
       {{- if eq .Os "darwin" }}osx
