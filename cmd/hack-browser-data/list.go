@@ -16,7 +16,7 @@ func listCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "Show detected browsers and profile paths",
+		Short: "List detected browsers and profiles",
 		Example: `  hack-browser-data list
   hack-browser-data list --detail`,
 		RunE: func(cmd *cobra.Command, args []string) error {

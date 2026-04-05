@@ -27,7 +27,7 @@ func dumpCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "dump",
-		Short: "Extract browser data (default command)",
+		Short: "Extract and decrypt browser data (default command)",
 		Example: `  hack-browser-data dump
   hack-browser-data dump -b chrome -c password,cookie
   hack-browser-data dump -b chrome -f json -d output

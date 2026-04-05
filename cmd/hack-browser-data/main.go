@@ -14,15 +14,21 @@ var verbose bool
 func rootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "hack-browser-data",
-		Short: "Export passwords|bookmarks|cookies|history|credit cards|downloads|localStorage|extensions from browser",
-		Long: `Export all browsing data (passwords/cookies/history/bookmarks) from browser.
-Github Link: https://github.com/moonD4rk/HackBrowserData`,
+		Short: "A CLI tool for decrypting and exporting browser data",
+		Long: `hack-browser-data extracts and decrypts browser data including passwords,
+cookies, history, bookmarks, credit cards, downloads, localStorage,
+sessionStorage, and extensions from Chromium-based browsers and Firefox
+on Windows, macOS, and Linux.
+
+GitHub: https://github.com/moonD4rk/HackBrowserData`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			if verbose {
 				log.SetVerbose()
 			}
 		},
 	}
+
+	root.CompletionOptions.HiddenDefaultCmd = true
 
 	root.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "enable debug logging")
 
