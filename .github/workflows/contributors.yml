@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - README.md
   schedule:
     - cron: '0 1 1 * *' # 1st of each month at 01:00 UTC
   workflow_dispatch:
