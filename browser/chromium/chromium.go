@@ -125,7 +125,7 @@ func (b *Browser) getMasterKey(session *filemanager.Session) ([]byte, error) {
 	var localStateDst string
 	for _, dir := range []string{filepath.Dir(b.profileDir), b.profileDir} {
 		candidate := filepath.Join(dir, "Local State")
-		if fileutil.IsFileExists(candidate) {
+		if fileutil.FileExists(candidate) {
 			localStateDst = filepath.Join(session.TempDir(), "Local State")
 			if err := session.Acquire(candidate, localStateDst, false); err != nil {
 				return nil, err

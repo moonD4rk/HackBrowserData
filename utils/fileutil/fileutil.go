@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 )
 
-// IsFileExists checks if the file exists in the provided path
-func IsFileExists(filename string) bool {
+// FileExists checks if the file exists in the provided path.
+func FileExists(filename string) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
 		return false

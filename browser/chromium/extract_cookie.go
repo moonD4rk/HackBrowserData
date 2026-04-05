@@ -9,7 +9,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
-	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
 const defaultCookieQuery = `SELECT name, encrypted_value, host_key, path,
@@ -46,8 +45,8 @@ func extractCookies(masterKey []byte, path string) ([]types.CookieEntry, error) 
 				IsHTTPOnly:   isHTTPOnly != 0,
 				HasExpire:    hasExpire != 0,
 				IsPersistent: isPersistent != 0,
-				ExpireAt:     typeutil.TimeEpoch(expireAt),
-				CreatedAt:    typeutil.TimeEpoch(createdAt),
+				ExpireAt:     timeEpoch(expireAt),
+				CreatedAt:    timeEpoch(createdAt),
 			}, nil
 		})
 	if err != nil {

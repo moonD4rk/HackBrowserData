@@ -11,22 +11,19 @@ import (
 
 var ErrCiphertextLengthIsInvalid = errors.New("ciphertext length is invalid")
 
-// AES128CBCDecrypt decrypts data using AES-CBC mode.
-// Note: Despite the function name, this supports all AES key sizes.
-// The Go standard library's aes.NewCipher automatically selects the AES variant
-// based on the key length: 16 bytes (AES-128), 24 bytes (AES-192), or 32 bytes (AES-256).
-// TODO: Rename to AESCBCDecrypt to avoid confusion about supported key lengths.
-func AES128CBCDecrypt(key, iv, ciphertext []byte) ([]byte, error) {
+// AESCBCDecrypt decrypts data using AES-CBC mode.
+// Supports all AES key sizes: 16 bytes (AES-128), 24 bytes (AES-192), or 32 bytes (AES-256).
+func AESCBCDecrypt(key, iv, ciphertext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
 	// Check ciphertext length
 	if len(ciphertext) < aes.BlockSize {
-		return nil, errors.New("AES128CBCDecrypt: ciphertext too short")
+		return nil, errors.New("AESCBCDecrypt: ciphertext too short")
 	}
 	if len(ciphertext)%aes.BlockSize != 0 {
-		return nil, errors.New("AES128CBCDecrypt: ciphertext is not a multiple of the block size")
+		return nil, errors.New("AESCBCDecrypt: ciphertext is not a multiple of the block size")
 	}
 
 	decryptedData := make([]byte, len(ciphertext))
@@ -36,20 +33,20 @@ func AES128CBCDecrypt(key, iv, ciphertext []byte) ([]byte, error) {
 	// unpad the decrypted data and handle potential padding errors
 	decryptedData, err = pkcs5UnPadding(decryptedData)
 	if err != nil {
-		return nil, fmt.Errorf("AES128CBCDecrypt: %w", err)
+		return nil, fmt.Errorf("AESCBCDecrypt: %w", err)
 	}
 
 	return decryptedData, nil
 }
 
-func AES128CBCEncrypt(key, iv, plaintext []byte) ([]byte, error) {
+func AESCBCEncrypt(key, iv, plaintext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(iv) != aes.BlockSize {
-		return nil, errors.New("AES128CBCEncrypt: iv length is invalid, must equal block size")
+		return nil, errors.New("AESCBCEncrypt: iv length is invalid, must equal block size")
 	}
 
 	plaintext = pkcs5Padding(plaintext, block.BlockSize())
@@ -94,7 +91,7 @@ func DES3Encrypt(key, iv, plaintext []byte) ([]byte, error) {
 }
 
 // AESGCMDecrypt chromium > 80 https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/sync/os_crypt_win.cc
-func AESGCMDecrypt(key, nounce, ciphertext []byte) ([]byte, error) {
+func AESGCMDecrypt(key, nonce, ciphertext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
@@ -103,7 +100,7 @@ func AESGCMDecrypt(key, nounce, ciphertext []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	origData, err := blockMode.Open(nil, nounce, ciphertext, nil)
+	origData, err := blockMode.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -7,7 +7,6 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/moond4rk/hackbrowserdata/types"
-	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
 func extractBookmarks(path string) ([]types.BookmarkEntry, error) {
@@ -39,7 +38,7 @@ func walkBookmarks(node gjson.Result, folder string, out *[]types.BookmarkEntry)
 			Type:      nodeType,
 			URL:       node.Get("url").String(),
 			Folder:    folder,
-			CreatedAt: typeutil.TimeEpoch(node.Get("date_added").Int()),
+			CreatedAt: timeEpoch(node.Get("date_added").Int()),
 		})
 	}
 

@@ -27,16 +27,16 @@ var (
 	aesGCMCiphertext = "6c49dac89992639713edab3a114c450968a08b53556872cea3919e2e9a"
 )
 
-func TestAES128CBCEncrypt(t *testing.T) {
-	encrypted, err := AES128CBCEncrypt(aesKey, aesIV, plainText)
+func TestAESCBCEncrypt(t *testing.T) {
+	encrypted, err := AESCBCEncrypt(aesKey, aesIV, plainText)
 	require.NoError(t, err)
 	assert.NotEmpty(t, encrypted)
 	assert.Equal(t, aes128Ciphertext, fmt.Sprintf("%x", encrypted))
 }
 
-func TestAES128CBCDecrypt(t *testing.T) {
+func TestAESCBCDecrypt(t *testing.T) {
 	ciphertext, _ := hex.DecodeString(aes128Ciphertext)
-	decrypted, err := AES128CBCDecrypt(aesKey, aesIV, ciphertext)
+	decrypted, err := AESCBCDecrypt(aesKey, aesIV, ciphertext)
 	require.NoError(t, err)
 	assert.NotEmpty(t, decrypted)
 	assert.Equal(t, plainText, decrypted)

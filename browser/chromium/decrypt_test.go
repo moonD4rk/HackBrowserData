@@ -17,7 +17,7 @@ var testCBCIV = bytes.Repeat([]byte{0x20}, 16)
 
 func TestDecryptValue_V10(t *testing.T) {
 	plaintext := []byte("test_secret_value")
-	encrypted, err := crypto.AES128CBCEncrypt(testAESKey, testCBCIV, plaintext)
+	encrypted, err := crypto.AESCBCEncrypt(testAESKey, testCBCIV, plaintext)
 	require.NoError(t, err)
 	v10Ciphertext := append([]byte("v10"), encrypted...)
 

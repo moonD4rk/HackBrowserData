@@ -21,8 +21,8 @@ const (
 	firefoxName    = "Firefox"
 	speed360Name   = "360 Speed"
 	speed360XName  = "360 Speed X"
-	qqBrowserName  = "QQ"
-	dcBrowserName  = "DC"
+	qqName         = "QQ"
+	dcName         = "DC"
 	sogouName      = "Sogou"
 	arcName        = "Arc"
 )

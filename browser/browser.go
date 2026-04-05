@@ -48,7 +48,7 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 		}
 
 		if opts.ProfilePath != "" && name != "all" {
-			if cfg.Kind == types.KindFirefox {
+			if cfg.Kind == types.Firefox {
 				cfg.UserDataDir = filepath.Dir(filepath.Clean(opts.ProfilePath))
 			} else {
 				cfg.UserDataDir = opts.ProfilePath
@@ -76,7 +76,7 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 // newBrowsers dispatches to the correct engine based on BrowserKind.
 func newBrowsers(cfg types.BrowserConfig) ([]Browser, error) {
 	switch cfg.Kind {
-	case types.KindChromium, types.KindChromiumYandex, types.KindChromiumOpera:
+	case types.Chromium, types.ChromiumYandex, types.ChromiumOpera:
 		bs, err := chromium.NewBrowsers(cfg)
 		if err != nil {
 			return nil, err
@@ -87,7 +87,7 @@ func newBrowsers(cfg types.BrowserConfig) ([]Browser, error) {
 		}
 		return browsers, nil
 
-	case types.KindFirefox:
+	case types.Firefox:
 		bs, err := firefox.NewBrowsers(cfg)
 		if err != nil {
 			return nil, err

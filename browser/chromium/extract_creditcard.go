@@ -14,9 +14,9 @@ const defaultCreditCardQuery = `SELECT COALESCE(guid, ''), name_on_card, expirat
 func extractCreditCards(masterKey []byte, path string) ([]types.CreditCardEntry, error) {
 	return sqliteutil.QueryRows(path, false, defaultCreditCardQuery,
 		func(rows *sql.Rows) (types.CreditCardEntry, error) {
-			var guid, name, month, year, nickName, address string
+			var guid, name, month, year, nickname, address string
 			var encNumber []byte
-			if err := rows.Scan(&guid, &name, &month, &year, &encNumber, &nickName, &address); err != nil {
+			if err := rows.Scan(&guid, &name, &month, &year, &encNumber, &nickname, &address); err != nil {
 				return types.CreditCardEntry{}, err
 			}
 			number, err := decryptValue(masterKey, encNumber)
@@ -29,7 +29,7 @@ func extractCreditCards(masterKey []byte, path string) ([]types.CreditCardEntry,
 				Number:   string(number),
 				ExpMonth: month,
 				ExpYear:  year,
-				NickName: nickName,
+				NickName: nickname,
 				Address:  address,
 			}, nil
 		})

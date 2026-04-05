@@ -7,7 +7,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
-	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
 const defaultLoginQuery = `SELECT origin_url, username_value, password_value, date_created FROM logins`
@@ -33,7 +32,7 @@ func extractPasswordsWithQuery(masterKey []byte, path, query string) ([]types.Lo
 				URL:       url,
 				Username:  username,
 				Password:  string(password),
-				CreatedAt: typeutil.TimeEpoch(created),
+				CreatedAt: timeEpoch(created),
 			}, nil
 		})
 	if err != nil {

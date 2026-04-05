@@ -11,7 +11,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/crypto"
 	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
-	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
 // decryptPBE combines base64 decode + ASN1 PBE parse + decrypt into one call.
@@ -57,7 +56,7 @@ func extractPasswords(masterKey []byte, path string) ([]types.LoginEntry, error)
 			URL:       url,
 			Username:  string(user),
 			Password:  string(pwd),
-			CreatedAt: typeutil.TimeStamp(v.Get("timeCreated").Int() / 1000),
+			CreatedAt: timestamp(v.Get("timeCreated").Int() / 1000),
 		})
 	}
 

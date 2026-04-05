@@ -52,7 +52,7 @@ func yandexSources() map[types.Category][]sourcePath {
 // sourcesForKind returns the source mapping for a browser kind.
 func sourcesForKind(kind types.BrowserKind) map[types.Category][]sourcePath {
 	switch kind {
-	case types.KindChromiumYandex:
+	case types.ChromiumYandex:
 		return yandexSources()
 	default:
 		return chromiumSources
@@ -109,9 +109,9 @@ var operaExtractors = map[types.Category]categoryExtractor{
 // nil means all categories use the default extractCategory switch logic.
 func extractorsForKind(kind types.BrowserKind) map[types.Category]categoryExtractor {
 	switch kind {
-	case types.KindChromiumYandex:
+	case types.ChromiumYandex:
 		return yandexExtractors
-	case types.KindChromiumOpera:
+	case types.ChromiumOpera:
 		return operaExtractors
 	default:
 		return nil

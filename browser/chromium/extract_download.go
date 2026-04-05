@@ -6,7 +6,6 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
-	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
 const defaultDownloadQuery = `SELECT target_path, tab_url, total_bytes, start_time, end_time,
@@ -25,8 +24,8 @@ func extractDownloads(path string) ([]types.DownloadEntry, error) {
 				TargetPath: targetPath,
 				MimeType:   mimeType,
 				TotalBytes: totalBytes,
-				StartTime:  typeutil.TimeEpoch(startTime),
-				EndTime:    typeutil.TimeEpoch(endTime),
+				StartTime:  timeEpoch(startTime),
+				EndTime:    timeEpoch(endTime),
 			}, nil
 		})
 	if err != nil {

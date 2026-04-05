@@ -74,10 +74,10 @@ func NonSensitiveCategories() []Category {
 type BrowserKind int
 
 const (
-	KindChromium       BrowserKind = iota
-	KindChromiumYandex             // Chromium variant with different file names and extract logic
-	KindChromiumOpera              // Opera: extensions in "opsettings" key, data in Roaming
-	KindFirefox
+	Chromium       BrowserKind = iota
+	ChromiumYandex             // Chromium variant with different file names and extract logic
+	ChromiumOpera              // Opera: extensions in "opsettings" key, data in Roaming
+	Firefox
 )
 
 // BrowserConfig holds the declarative configuration for a browser installation.

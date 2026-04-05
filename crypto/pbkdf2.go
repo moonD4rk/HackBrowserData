@@ -22,7 +22,7 @@ import (
 // Using a higher iteration count will increase the cost of an exhaustive
 // search but will also make derivation proportionally slower.
 // Copy from https://golang.org/x/crypto/pbkdf2
-func PBKDF2Key(password, salt []byte, iter, keyLen int, h func() hash.Hash) []byte {
+func PBKDF2Key(password, salt []byte, iterations, keyLen int, h func() hash.Hash) []byte {
 	prf := hmac.New(h, password)
 	hashLen := prf.Size()
 	numBlocks := (keyLen + hashLen - 1) / hashLen
@@ -45,7 +45,7 @@ func PBKDF2Key(password, salt []byte, iter, keyLen int, h func() hash.Hash) []by
 		t := dk[len(dk)-hashLen:]
 		copy(u, t)
 
-		for n := 2; n <= iter; n++ {
+		for n := 2; n <= iterations; n++ {
 			prf.Reset()
 			prf.Write(u)
 			u = u[:0]

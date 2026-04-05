@@ -20,7 +20,7 @@ const (
 
 	statusInfoLengthMismatch = 0xC0000004
 
-	fileMAPRead  = 0x0004
+	fileMapRead  = 0x0004
 	pageReadonly = 0x02
 	fileTypeDisk = 0x0001
 )
@@ -288,7 +288,7 @@ func readViaFileMapping(handle windows.Handle, size int) ([]byte, error) {
 	defer windows.CloseHandle(windows.Handle(mapping))
 
 	viewPtr, _, err := procMapViewOfFile.Call(
-		mapping, fileMAPRead,
+		mapping, fileMapRead,
 		0, 0, 0,
 	)
 	if viewPtr == 0 {

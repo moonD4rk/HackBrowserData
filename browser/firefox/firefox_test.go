@@ -115,7 +115,7 @@ func TestNewBrowsers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := types.BrowserConfig{Name: "Firefox", Kind: types.KindFirefox, UserDataDir: tt.dir}
+			cfg := types.BrowserConfig{Name: "Firefox", Kind: types.Firefox, UserDataDir: tt.dir}
 			browsers, err := NewBrowsers(cfg)
 			require.NoError(t, err)
 

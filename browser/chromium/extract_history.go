@@ -6,7 +6,6 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
-	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
 const defaultHistoryQuery = `SELECT url, title, visit_count, last_visit_time FROM urls`
@@ -24,7 +23,7 @@ func extractHistories(path string) ([]types.HistoryEntry, error) {
 				URL:        url,
 				Title:      title,
 				VisitCount: visitCount,
-				LastVisit:  typeutil.TimeEpoch(lastVisit),
+				LastVisit:  timeEpoch(lastVisit),
 			}, nil
 		})
 	if err != nil {

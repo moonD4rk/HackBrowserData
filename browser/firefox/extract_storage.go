@@ -7,7 +7,6 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
-	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
 const firefoxLocalStorageQuery = `SELECT originKey, key, value FROM webappsstore2`
@@ -27,6 +26,14 @@ func extractLocalStorage(path string) ([]types.StorageEntry, error) {
 		})
 }
 
+func reverseString(s string) string {
+	b := []byte(s)
+	for i, j := 0, len(b)-1; i < j; i, j = i+1, j-1 {
+		b[i], b[j] = b[j], b[i]
+	}
+	return string(b)
+}
+
 // parseOriginKey converts Firefox's reversed origin format to a URL.
 // Example: "moc.buhtig.:https:443" → "https://github.com:443"
 func parseOriginKey(originKey string) string {
@@ -34,7 +41,7 @@ func parseOriginKey(originKey string) string {
 	if len(parts) < 2 {
 		return originKey
 	}
-	host := string(typeutil.Reverse([]byte(parts[0])))
+	host := reverseString(parts[0])
 	host = strings.TrimPrefix(host, ".")
 	scheme := parts[1]
 	if len(parts) == 3 {

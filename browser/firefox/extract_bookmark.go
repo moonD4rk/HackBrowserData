@@ -6,7 +6,6 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
-	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
 const firefoxBookmarkQuery = `SELECT id, url, type, dateAdded, COALESCE(title, '')
@@ -25,7 +24,7 @@ func extractBookmarks(path string) ([]types.BookmarkEntry, error) {
 				Name:      title,
 				URL:       url,
 				Folder:    bookmarkType(bt),
-				CreatedAt: typeutil.TimeStamp(dateAdded / 1000000),
+				CreatedAt: timestamp(dateAdded / 1000000),
 			}, nil
 		})
 	if err != nil {

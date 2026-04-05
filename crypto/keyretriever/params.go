@@ -13,11 +13,11 @@ import (
 type pbkdf2Params struct {
 	salt       []byte
 	iterations int
-	keyLen     int
+	keySize    int
 	hashFunc   func() hash.Hash
 }
 
 // deriveKey derives an encryption key from a secret using PBKDF2.
 func (p pbkdf2Params) deriveKey(secret []byte) []byte {
-	return crypto.PBKDF2Key(secret, p.salt, p.iterations, p.keyLen, p.hashFunc)
+	return crypto.PBKDF2Key(secret, p.salt, p.iterations, p.keySize, p.hashFunc)
 }

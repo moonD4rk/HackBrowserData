@@ -6,7 +6,6 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
-	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
 const firefoxCookieQuery = `SELECT name, value, host, path,
@@ -34,8 +33,8 @@ func extractCookies(path string) ([]types.CookieEntry, error) {
 				IsHTTPOnly:   isHTTPOnly != 0,
 				HasExpire:    hasExpire,
 				IsPersistent: hasExpire,
-				ExpireAt:     typeutil.TimeStamp(expiry),
-				CreatedAt:    typeutil.TimeStamp(createdAt / 1000000),
+				ExpireAt:     timestamp(expiry),
+				CreatedAt:    timestamp(createdAt / 1000000),
 			}, nil
 		})
 	if err != nil {

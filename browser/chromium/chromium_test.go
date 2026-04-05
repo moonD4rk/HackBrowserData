@@ -142,7 +142,7 @@ func TestNewBrowsers(t *testing.T) {
 		{
 			name:         "chrome multi-profile",
 			dir:          fixture.chrome,
-			kind:         types.KindChromium,
+			kind:         types.Chromium,
 			wantProfiles: []string{"Default", "Profile 1", "Profile 3"},
 			wantCats: map[string][]string{
 				"Default": {"Login Data", "Cookies", "History", "Bookmarks", "Web Data", "Secure Preferences", "leveldb", "Session Storage"},
@@ -153,7 +153,7 @@ func TestNewBrowsers(t *testing.T) {
 		{
 			name:         "opera with Default",
 			dir:          fixture.opera,
-			kind:         types.KindChromium,
+			kind:         types.Chromium,
 			wantProfiles: []string{"Default"},
 			wantCats: map[string][]string{
 				"Default": {"Login Data", "History", "Bookmarks", "Cookies"},
@@ -162,7 +162,7 @@ func TestNewBrowsers(t *testing.T) {
 		{
 			name:         "opera flat layout",
 			dir:          fixture.operaFlat,
-			kind:         types.KindChromium,
+			kind:         types.Chromium,
 			wantProfiles: []string{filepath.Base(fixture.operaFlat)}, // userDataDir itself
 			wantCats: map[string][]string{
 				filepath.Base(fixture.operaFlat): {"Login Data", "History", "Cookies"},
@@ -171,7 +171,7 @@ func TestNewBrowsers(t *testing.T) {
 		{
 			name:         "yandex custom files",
 			dir:          fixture.yandex,
-			kind:         types.KindChromiumYandex,
+			kind:         types.ChromiumYandex,
 			wantProfiles: []string{"Default"},
 			wantCats: map[string][]string{
 				"Default": {"Ya Passman Data", "Ya Credit Cards", "History", "Cookies", "Bookmarks"},
@@ -180,38 +180,38 @@ func TestNewBrowsers(t *testing.T) {
 		{
 			name:         "old cookies fallback",
 			dir:          fixture.oldCookies,
-			kind:         types.KindChromium,
+			kind:         types.Chromium,
 			wantProfiles: []string{"Default"},
 		},
 		{
 			name:         "cookie priority",
 			dir:          fixture.bothCookies,
-			kind:         types.KindChromium,
+			kind:         types.Chromium,
 			wantProfiles: []string{"Default"},
 		},
 		{
 			name:         "leveldb directories",
 			dir:          fixture.leveldb,
-			kind:         types.KindChromium,
+			kind:         types.Chromium,
 			wantProfiles: []string{"Default"},
 			wantDirs:     []types.Category{types.LocalStorage, types.SessionStorage},
 		},
 		{
 			name:         "leveldb only",
 			dir:          fixture.leveldbOnly,
-			kind:         types.KindChromium,
+			kind:         types.Chromium,
 			wantProfiles: []string{"Default"},
 			wantDirs:     []types.Category{types.LocalStorage, types.SessionStorage},
 		},
 		{
 			name: "empty dir",
 			dir:  fixture.empty,
-			kind: types.KindChromium,
+			kind: types.Chromium,
 		},
 		{
 			name: "nonexistent dir",
 			dir:  "/nonexistent/path",
-			kind: types.KindChromium,
+			kind: types.Chromium,
 		},
 	}
 
@@ -321,8 +321,8 @@ func TestSharedSourceFile(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestSourcesForKind(t *testing.T) {
-	chromium := sourcesForKind(types.KindChromium)
-	yandex := sourcesForKind(types.KindChromiumYandex)
+	chromium := sourcesForKind(types.Chromium)
+	yandex := sourcesForKind(types.ChromiumYandex)
 
 	assert.Equal(t, "Login Data", chromium[types.Password][0].rel)
 	assert.Equal(t, "Ya Passman Data", yandex[types.Password][0].rel)
@@ -331,13 +331,13 @@ func TestSourcesForKind(t *testing.T) {
 }
 
 func TestExtractorsForKind(t *testing.T) {
-	assert.Nil(t, extractorsForKind(types.KindChromium))
+	assert.Nil(t, extractorsForKind(types.Chromium))
 
-	yandexExt := extractorsForKind(types.KindChromiumYandex)
+	yandexExt := extractorsForKind(types.ChromiumYandex)
 	require.NotNil(t, yandexExt)
 	assert.Contains(t, yandexExt, types.Password)
 
-	operaExt := extractorsForKind(types.KindChromiumOpera)
+	operaExt := extractorsForKind(types.ChromiumOpera)
 	require.NotNil(t, operaExt)
 	assert.Contains(t, operaExt, types.Extension)
 }
@@ -425,7 +425,7 @@ func TestLocalStatePath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			browsers, err := NewBrowsers(types.BrowserConfig{Name: "Test", Kind: types.KindChromium, UserDataDir: tt.dir})
+			browsers, err := NewBrowsers(types.BrowserConfig{Name: "Test", Kind: types.Chromium, UserDataDir: tt.dir})
 			require.NoError(t, err)
 			require.NotEmpty(t, browsers)
 

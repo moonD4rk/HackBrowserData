@@ -32,8 +32,8 @@ func TestPickFromConfigs_NameFilter(t *testing.T) {
 	mkFile(t, dir, "Default", "History")
 
 	configs := []types.BrowserConfig{
-		{Key: "chrome", Name: "Chrome", Kind: types.KindChromium, UserDataDir: dir},
-		{Key: "edge", Name: "Edge", Kind: types.KindChromium, UserDataDir: dir},
+		{Key: "chrome", Name: "Chrome", Kind: types.Chromium, UserDataDir: dir},
+		{Key: "edge", Name: "Edge", Kind: types.Chromium, UserDataDir: dir},
 	}
 
 	tests := []struct {
@@ -102,7 +102,7 @@ func TestPickFromConfigs_BrowserKind(t *testing.T) {
 		{
 			name: "chromium multi-profile",
 			configs: []types.BrowserConfig{
-				{Key: "chrome", Name: "Chrome", Kind: types.KindChromium, UserDataDir: chromeDir},
+				{Key: "chrome", Name: "Chrome", Kind: types.Chromium, UserDataDir: chromeDir},
 			},
 			wantNames:    []string{"Chrome", "Chrome"},
 			wantProfiles: []string{"Default", "Profile 1"},
@@ -110,7 +110,7 @@ func TestPickFromConfigs_BrowserKind(t *testing.T) {
 		{
 			name: "firefox random dir",
 			configs: []types.BrowserConfig{
-				{Key: "firefox", Name: "Firefox", Kind: types.KindFirefox, UserDataDir: firefoxDir},
+				{Key: "firefox", Name: "Firefox", Kind: types.Firefox, UserDataDir: firefoxDir},
 			},
 			wantNames:    []string{"Firefox"},
 			wantProfiles: []string{"abc123.default-release"},
@@ -118,7 +118,7 @@ func TestPickFromConfigs_BrowserKind(t *testing.T) {
 		{
 			name: "yandex variant",
 			configs: []types.BrowserConfig{
-				{Key: "yandex", Name: "Yandex", Kind: types.KindChromiumYandex, UserDataDir: yandexDir},
+				{Key: "yandex", Name: "Yandex", Kind: types.ChromiumYandex, UserDataDir: yandexDir},
 			},
 			wantNames:    []string{"Yandex"},
 			wantProfiles: []string{"Default"},
@@ -126,7 +126,7 @@ func TestPickFromConfigs_BrowserKind(t *testing.T) {
 		{
 			name: "nonexistent dir",
 			configs: []types.BrowserConfig{
-				{Key: "chrome", Name: "Chrome", Kind: types.KindChromium, UserDataDir: "/nonexistent"},
+				{Key: "chrome", Name: "Chrome", Kind: types.Chromium, UserDataDir: "/nonexistent"},
 			},
 		},
 	}
@@ -164,7 +164,7 @@ func TestPickFromConfigs_ProfilePath(t *testing.T) {
 		{
 			name: "chromium uses path directly",
 			configs: []types.BrowserConfig{
-				{Key: "chrome", Name: "Chrome", Kind: types.KindChromium, UserDataDir: "/wrong"},
+				{Key: "chrome", Name: "Chrome", Kind: types.Chromium, UserDataDir: "/wrong"},
 			},
 			pickName:     "chrome",
 			profilePath:  filepath.Join(chromeDir, "Default"),
@@ -174,7 +174,7 @@ func TestPickFromConfigs_ProfilePath(t *testing.T) {
 		{
 			name: "firefox uses parent dir",
 			configs: []types.BrowserConfig{
-				{Key: "firefox", Name: "Firefox", Kind: types.KindFirefox, UserDataDir: "/wrong"},
+				{Key: "firefox", Name: "Firefox", Kind: types.Firefox, UserDataDir: "/wrong"},
 			},
 			pickName:     "firefox",
 			profilePath:  filepath.Join(firefoxDir, "abc123.default-release"),
@@ -184,7 +184,7 @@ func TestPickFromConfigs_ProfilePath(t *testing.T) {
 		{
 			name: "ignored when name is all",
 			configs: []types.BrowserConfig{
-				{Key: "chrome", Name: "Chrome", Kind: types.KindChromium, UserDataDir: chromeDir},
+				{Key: "chrome", Name: "Chrome", Kind: types.Chromium, UserDataDir: chromeDir},
 			},
 			pickName:     "all",
 			profilePath:  "/some/override",

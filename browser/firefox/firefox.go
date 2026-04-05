@@ -106,7 +106,7 @@ func (b *Browser) acquireFiles(session *filemanager.Session, categories []types.
 // is validated by attempting to decrypt an actual login entry.
 func (b *Browser) getMasterKey(session *filemanager.Session, tempPaths map[types.Category]string) ([]byte, error) {
 	key4Src := filepath.Join(b.profileDir, "key4.db")
-	if !fileutil.IsFileExists(key4Src) {
+	if !fileutil.FileExists(key4Src) {
 		return nil, nil
 	}
 	key4Dst := filepath.Join(session.TempDir(), "key4.db")

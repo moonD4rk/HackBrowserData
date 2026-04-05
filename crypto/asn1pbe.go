@@ -16,9 +16,9 @@ type ASN1PBE interface {
 
 func NewASN1PBE(b []byte) (pbe ASN1PBE, err error) {
 	var (
-		nss   nssPBE
-		meta  metaPBE
-		login loginPBE
+		nss   privateKeyPBE
+		meta  passwordCheckPBE
+		login credentialPBE
 	)
 	if _, err := asn1.Unmarshal(b, &nss); err == nil {
 		return nss, nil
@@ -34,7 +34,7 @@ func NewASN1PBE(b []byte) (pbe ASN1PBE, err error) {
 
 var ErrDecodeASN1Failed = errors.New("decode ASN1 data failed")
 
-// nssPBE Struct
+// privateKeyPBE Struct
 //
 //	SEQUENCE (2 elem)
 //		OBJECT IDENTIFIER
@@ -42,25 +42,25 @@ var ErrDecodeASN1Failed = errors.New("decode ASN1 data failed")
 //			OCTET STRING (20 byte)
 //			INTEGER 1
 //	OCTET STRING (16 byte)
-type nssPBE struct {
+type privateKeyPBE struct {
 	AlgoAttr struct {
 		asn1.ObjectIdentifier
 		SaltAttr struct {
 			EntrySalt []byte
-			Len       int
+			KeyLen    int
 		}
 	}
 	Encrypted []byte
 }
 
 // Decrypt decrypts the encrypted password with the global salt.
-func (n nssPBE) Decrypt(globalSalt []byte) ([]byte, error) {
+func (n privateKeyPBE) Decrypt(globalSalt []byte) ([]byte, error) {
 	key, iv := n.deriveKeyAndIV(globalSalt)
 
 	return DES3Decrypt(key, iv, n.Encrypted)
 }
 
-func (n nssPBE) Encrypt(globalSalt, plaintext []byte) ([]byte, error) {
+func (n privateKeyPBE) Encrypt(globalSalt, plaintext []byte) ([]byte, error) {
 	key, iv := n.deriveKeyAndIV(globalSalt)
 
 	return DES3Encrypt(key, iv, plaintext)
@@ -68,7 +68,7 @@ func (n nssPBE) Encrypt(globalSalt, plaintext []byte) ([]byte, error) {
 
 // deriveKeyAndIV derives the key and initialization vector (IV)
 // from the global salt and entry salt.
-func (n nssPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
+func (n privateKeyPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
 	salt := n.AlgoAttr.SaltAttr.EntrySalt
 	hashPrefix := sha1.Sum(globalSalt)
 	compositeHash := sha1.Sum(append(hashPrefix[:], salt...))
@@ -107,17 +107,17 @@ func (n nssPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
 //	      	OBJECT IDENTIFIER
 //	      	OCTET STRING (14 byte)
 //	OCTET STRING (16 byte)
-type metaPBE struct {
+type passwordCheckPBE struct {
 	AlgoAttr  algoAttr
 	Encrypted []byte
 }
 
 type algoAttr struct {
 	asn1.ObjectIdentifier
-	Data struct {
-		Data struct {
+	KDFParams struct {
+		PBKDF2 struct {
 			asn1.ObjectIdentifier
-			SlatAttr slatAttr
+			SaltAttr saltAttr
 		}
 		IVData ivAttr
 	}
@@ -128,7 +128,7 @@ type ivAttr struct {
 	IV []byte
 }
 
-type slatAttr struct {
+type saltAttr struct {
 	EntrySalt      []byte
 	IterationCount int
 	KeySize        int
@@ -137,47 +137,47 @@ type slatAttr struct {
 	}
 }
 
-func (m metaPBE) Decrypt(globalSalt []byte) ([]byte, error) {
+func (m passwordCheckPBE) Decrypt(globalSalt []byte) ([]byte, error) {
 	key, iv := m.deriveKeyAndIV(globalSalt)
 
-	return AES128CBCDecrypt(key, iv, m.Encrypted)
+	return AESCBCDecrypt(key, iv, m.Encrypted)
 }
 
-func (m metaPBE) Encrypt(globalSalt, plaintext []byte) ([]byte, error) {
+func (m passwordCheckPBE) Encrypt(globalSalt, plaintext []byte) ([]byte, error) {
 	key, iv := m.deriveKeyAndIV(globalSalt)
 
-	return AES128CBCEncrypt(key, iv, plaintext)
+	return AESCBCEncrypt(key, iv, plaintext)
 }
 
-func (m metaPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
+func (m passwordCheckPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
 	password := sha1.Sum(globalSalt)
 
-	salt := m.AlgoAttr.Data.Data.SlatAttr.EntrySalt
-	iter := m.AlgoAttr.Data.Data.SlatAttr.IterationCount
-	keyLen := m.AlgoAttr.Data.Data.SlatAttr.KeySize
+	salt := m.AlgoAttr.KDFParams.PBKDF2.SaltAttr.EntrySalt
+	iter := m.AlgoAttr.KDFParams.PBKDF2.SaltAttr.IterationCount
+	keyLen := m.AlgoAttr.KDFParams.PBKDF2.SaltAttr.KeySize
 
 	key := PBKDF2Key(password[:], salt, iter, keyLen, sha256.New)
-	iv := append([]byte{4, 14}, m.AlgoAttr.Data.IVData.IV...)
+	iv := append([]byte{4, 14}, m.AlgoAttr.KDFParams.IVData.IV...)
 	return key, iv
 }
 
-// loginPBE Struct
+// credentialPBE Struct
 //
 //	OCTET STRING (16 byte)
 //	SEQUENCE (2 elem)
 //			OBJECT IDENTIFIER
 //			OCTET STRING (8 byte)
 //	OCTET STRING (16 byte)
-type loginPBE struct {
-	CipherText []byte
-	Data       struct {
+type credentialPBE struct {
+	KeyCheck  []byte
+	Algo      struct {
 		asn1.ObjectIdentifier
 		IV []byte
 	}
 	Encrypted []byte
 }
 
-func (l loginPBE) Decrypt(globalSalt []byte) ([]byte, error) {
+func (l credentialPBE) Decrypt(globalSalt []byte) ([]byte, error) {
 	key, iv := l.deriveKeyAndIV(globalSalt)
 	// The encryption algorithm can be reliably inferred from IV length:
 	// - 8 bytes  : 3DES-CBC (legacy Firefox versions)
@@ -187,14 +187,13 @@ func (l loginPBE) Decrypt(globalSalt []byte) ([]byte, error) {
 		return DES3Decrypt(key[:24], iv, l.Encrypted)
 	} else if len(iv) == 16 {
 		// Firefox 144+ uses 32-byte keys (AES-256-CBC)
-		// Note: AES128CBCDecrypt is a misnomer - it actually supports all AES key lengths
-		return AES128CBCDecrypt(key, iv, l.Encrypted)
+		return AESCBCDecrypt(key, iv, l.Encrypted)
 	}
 
-	return nil, errors.New("unsupported IV length for loginPBE decryption")
+	return nil, errors.New("unsupported IV length for credentialPBE decryption")
 }
 
-func (l loginPBE) Encrypt(globalSalt, plaintext []byte) ([]byte, error) {
+func (l credentialPBE) Encrypt(globalSalt, plaintext []byte) ([]byte, error) {
 	key, iv := l.deriveKeyAndIV(globalSalt)
 	// The encryption algorithm can be reliably inferred from IV length:
 	// - 8 bytes  : 3DES-CBC (legacy Firefox versions)
@@ -205,13 +204,12 @@ func (l loginPBE) Encrypt(globalSalt, plaintext []byte) ([]byte, error) {
 		return DES3Encrypt(key[:24], iv, plaintext)
 	} else if len(iv) == 16 {
 		// Firefox 144+ uses 32-byte keys (AES-256-CBC)
-		// Note: AES128CBCDecrypt is a misnomer - it actually supports all AES key lengths
-		return AES128CBCEncrypt(key, iv, plaintext)
+		return AESCBCEncrypt(key, iv, plaintext)
 	}
 
-	return nil, errors.New("unsupported IV length for loginPBE encryption")
+	return nil, errors.New("unsupported IV length for credentialPBE encryption")
 }
 
-func (l loginPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
-	return globalSalt, l.Data.IV
+func (l credentialPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
+	return globalSalt, l.Algo.IV
 }

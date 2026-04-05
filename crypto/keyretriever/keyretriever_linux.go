@@ -14,7 +14,7 @@ import (
 var linuxParams = pbkdf2Params{
 	salt:       []byte("saltysalt"),
 	iterations: 1,
-	keyLen:     16,
+	keySize:    16,
 	hashFunc:   sha1.New,
 }
 

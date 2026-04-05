@@ -69,7 +69,7 @@ type addressRange struct {
 // DecryptKeychain extracts the browser storage password from login.keychain-db
 // by dumping securityd memory and scanning for the keychain master key.
 // Requires root privileges.
-func DecryptKeychain(storagename string) (string, error) {
+func DecryptKeychain(storageName string) (string, error) {
 	if os.Geteuid() != 0 {
 		return "", errors.New("requires root privileges")
 	}
@@ -124,13 +124,13 @@ func DecryptKeychain(storagename string) (string, error) {
 			continue
 		}
 		for _, rec := range records {
-			if rec.Account == storagename {
+			if rec.Account == storageName {
 				return string(rec.Password), nil
 			}
 		}
 	}
 
-	return "", fmt.Errorf("tried %d candidates, none matched storage %q", len(candidates), storagename)
+	return "", fmt.Errorf("tried %d candidates, none matched storage %q", len(candidates), storageName)
 }
 
 // scanMasterKeyCandidates scans the core dump for 24-byte master key candidates.

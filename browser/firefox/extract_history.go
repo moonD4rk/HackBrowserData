@@ -6,7 +6,6 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
-	"github.com/moond4rk/hackbrowserdata/utils/typeutil"
 )
 
 const firefoxHistoryQuery = `SELECT url, COALESCE(last_visit_date, 0),
@@ -25,7 +24,7 @@ func extractHistories(path string) ([]types.HistoryEntry, error) {
 				URL:        url,
 				Title:      title,
 				VisitCount: visitCount,
-				LastVisit:  typeutil.TimeStamp(lastVisit / 1000000),
+				LastVisit:  timestamp(lastVisit / 1000000),
 			}, nil
 		})
 	if err != nil {
