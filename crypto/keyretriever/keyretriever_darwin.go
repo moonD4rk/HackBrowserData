@@ -78,7 +78,7 @@ func findStorageKey(records []keychainbreaker.GenericPassword, storage string) (
 			return darwinParams.deriveKey(rec.Password), nil
 		}
 	}
-	return nil, fmt.Errorf("storage %q: %w", storage, errStorageNotFound)
+	return nil, fmt.Errorf("%q: %w", storage, errStorageNotFound)
 }
 
 // KeychainPasswordRetriever unlocks login.keychain-db directly using the

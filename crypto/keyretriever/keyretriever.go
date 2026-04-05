@@ -7,7 +7,8 @@ import (
 
 // errStorageNotFound is returned when the requested browser storage
 // account is not found in the credential store (keychain, keyring, etc.).
-var errStorageNotFound = errors.New("storage not found")
+// Only used on darwin and linux; Windows uses DPAPI which has no storage lookup.
+var errStorageNotFound = errors.New("not found in credential store") //nolint:unused
 
 // KeyRetriever retrieves the master encryption key for a Chromium-based browser.
 // Each platform has different implementations:
