@@ -58,6 +58,7 @@ func dumpCmd() *cobra.Command {
 			}
 
 			for _, b := range browsers {
+				log.Infof("Extracting %s/%s...", b.BrowserName(), b.ProfileName())
 				data, extractErr := b.Extract(categories)
 				if extractErr != nil {
 					log.Errorf("extract %s/%s: %v", b.BrowserName(), b.ProfileName(), extractErr)
@@ -73,7 +74,7 @@ func dumpCmd() *cobra.Command {
 				if err := fileutil.CompressDir(outputDir); err != nil {
 					return fmt.Errorf("compress: %w", err)
 				}
-				log.Warnf("compressed: %s/%s.zip", outputDir, filepath.Base(outputDir))
+				log.Infof("Compressed: %s/%s.zip", outputDir, filepath.Base(outputDir))
 			}
 			return nil
 		},

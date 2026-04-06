@@ -37,6 +37,8 @@ func extractPasswords(masterKey []byte, path string) ([]types.LoginEntry, error)
 	}
 
 	var logins []types.LoginEntry
+	var decryptFails int
+	var lastErr error
 	for _, v := range gjson.GetBytes(data, "logins").Array() {
 		url := v.Get("formSubmitURL").String()
 		if url == "" {
@@ -45,11 +47,13 @@ func extractPasswords(masterKey []byte, path string) ([]types.LoginEntry, error)
 
 		user, err := decryptPBE(v.Get("encryptedUsername").String(), masterKey)
 		if err != nil {
-			log.Debugf("decrypt firefox username for %s: %v", url, err)
+			decryptFails++
+			lastErr = err
 		}
 		pwd, err := decryptPBE(v.Get("encryptedPassword").String(), masterKey)
 		if err != nil {
-			log.Debugf("decrypt firefox password for %s: %v", url, err)
+			decryptFails++
+			lastErr = err
 		}
 
 		logins = append(logins, types.LoginEntry{
@@ -58,6 +62,9 @@ func extractPasswords(masterKey []byte, path string) ([]types.LoginEntry, error)
 			Password:  string(pwd),
 			CreatedAt: timestamp(v.Get("timeCreated").Int() / 1000),
 		})
+	}
+	if decryptFails > 0 {
+		log.Debugf("decrypt firefox passwords: %d failed: %v", decryptFails, lastErr)
 	}
 
 	sort.Slice(logins, func(i, j int) bool {

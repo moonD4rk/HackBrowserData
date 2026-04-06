@@ -46,7 +46,7 @@ go mod verify
 
 - **Platform code**: use build tags (`_darwin.go`, `_windows.go`, `_linux.go`)
 - **Error handling**: `fmt.Errorf("context: %w", err)` for wrapping, never `_ =` to ignore errors
-- **Logging**: `log.Debugf` for record-level issues, `log.Warnf` for user-visible warnings. Extract methods should return errors, not log them.
+- **Logging**: `log.Debugf` for record-level diagnostics, `log.Infof` for user-facing progress/status, `log.Warnf` for unexpected conditions. Extract methods should return errors, not log them.
 - **Naming**: follow Go conventions — `Config` not `BrowserConfig`, `Extract` not `BrowsingData`
 - **Tests**: use `t.TempDir()` for filesystem tests, `go-sqlmock` for database tests
 - **Architecture**: see `rfcs/` for design documents

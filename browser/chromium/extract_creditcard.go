@@ -12,7 +12,9 @@ const defaultCreditCardQuery = `SELECT COALESCE(guid, ''), name_on_card, expirat
 	card_number_encrypted, COALESCE(nickname, ''), COALESCE(billing_address_id, '') FROM credit_cards`
 
 func extractCreditCards(masterKey []byte, path string) ([]types.CreditCardEntry, error) {
-	return sqliteutil.QueryRows(path, false, defaultCreditCardQuery,
+	var decryptFails int
+	var lastErr error
+	cards, err := sqliteutil.QueryRows(path, false, defaultCreditCardQuery,
 		func(rows *sql.Rows) (types.CreditCardEntry, error) {
 			var guid, name, month, year, nickname, address string
 			var encNumber []byte
@@ -21,7 +23,8 @@ func extractCreditCards(masterKey []byte, path string) ([]types.CreditCardEntry,
 			}
 			number, err := decryptValue(masterKey, encNumber)
 			if err != nil {
-				log.Debugf("decrypt credit card for %s: %v", name, err)
+				decryptFails++
+				lastErr = err
 			}
 			return types.CreditCardEntry{
 				GUID:     guid,
@@ -33,4 +36,11 @@ func extractCreditCards(masterKey []byte, path string) ([]types.CreditCardEntry,
 				Address:  address,
 			}, nil
 		})
+	if err != nil {
+		return nil, err
+	}
+	if decryptFails > 0 {
+		log.Debugf("decrypt credit cards: %d failed: %v", decryptFails, lastErr)
+	}
+	return cards, nil
 }

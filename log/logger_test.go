@@ -6,19 +6,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	level2 "github.com/moond4rk/hackbrowserdata/log/level"
-)
-
-const (
-	pattern = `^\[hack\-browser\-data] \w+\.go:\d+:`
 )
 
 type baseTestCase struct {
 	description   string
 	message       string
 	suffix        string
-	level         level2.Level
+	level         Level
 	wantedPattern string
 }
 
@@ -38,14 +32,30 @@ var baseTestCases = []baseTestCase{
 func TestLoggerDebug(t *testing.T) {
 	for _, tc := range baseTestCases {
 		tc := tc
-		tc.level = level2.DebugLevel
+		tc.level = DebugLevel
 		message := tc.message + tc.suffix
-		tc.wantedPattern = fmt.Sprintf("%s %s: %s\n$", pattern, tc.level, tc.message)
+		tc.wantedPattern = fmt.Sprintf(`^\[DBG\] \w+\.go:\d+: %s\n$`, tc.message)
 		t.Run(tc.description, func(t *testing.T) {
 			var buf bytes.Buffer
 			logger := NewLogger(newBase(&buf))
-			logger.SetLevel(level2.DebugLevel)
+			logger.SetLevel(DebugLevel)
 			logger.Debug(message)
+			got := buf.String()
+			assert.Regexp(t, tc.wantedPattern, got)
+		})
+	}
+}
+
+func TestLoggerInfo(t *testing.T) {
+	for _, tc := range baseTestCases {
+		tc := tc
+		tc.level = InfoLevel
+		message := tc.message + tc.suffix
+		tc.wantedPattern = fmt.Sprintf(`^\[INF\] %s\n$`, tc.message)
+		t.Run(tc.description, func(t *testing.T) {
+			var buf bytes.Buffer
+			logger := NewLogger(newBase(&buf))
+			logger.Info(message)
 			got := buf.String()
 			assert.Regexp(t, tc.wantedPattern, got)
 		})
@@ -55,9 +65,9 @@ func TestLoggerDebug(t *testing.T) {
 func TestLoggerWarn(t *testing.T) {
 	for _, tc := range baseTestCases {
 		tc := tc
-		tc.level = level2.WarnLevel
+		tc.level = WarnLevel
 		message := tc.message + tc.suffix
-		tc.wantedPattern = fmt.Sprintf("%s %s: %s\n$", pattern, tc.level, tc.message)
+		tc.wantedPattern = fmt.Sprintf(`^\[WRN\] %s\n$`, tc.message)
 		t.Run(tc.description, func(t *testing.T) {
 			var buf bytes.Buffer
 			logger := NewLogger(newBase(&buf))
@@ -71,9 +81,9 @@ func TestLoggerWarn(t *testing.T) {
 func TestLoggerError(t *testing.T) {
 	for _, tc := range baseTestCases {
 		tc := tc
-		tc.level = level2.ErrorLevel
+		tc.level = ErrorLevel
 		message := tc.message + tc.suffix
-		tc.wantedPattern = fmt.Sprintf("%s %s: %s\n$", pattern, tc.level, tc.message)
+		tc.wantedPattern = fmt.Sprintf(`^\[ERR\] %s\n$`, tc.message)
 		t.Run(tc.description, func(t *testing.T) {
 			var buf bytes.Buffer
 			logger := NewLogger(newBase(&buf))
@@ -90,9 +100,9 @@ func TestLoggerFatal(t *testing.T) {
 
 	for _, tc := range baseTestCases {
 		tc := tc
-		tc.level = level2.FatalLevel
+		tc.level = FatalLevel
 		message := tc.message + tc.suffix
-		tc.wantedPattern = fmt.Sprintf("%s %s: %s\n$", pattern, tc.level, tc.message)
+		tc.wantedPattern = fmt.Sprintf(`^\[FTL\] %s\n$`, tc.message)
 		t.Run(tc.description, func(t *testing.T) {
 			var buf bytes.Buffer
 			exitCalled := false
@@ -115,23 +125,23 @@ type formatTestCase struct {
 	description   string
 	format        string
 	args          []interface{}
-	level         level2.Level
+	level         Level
 	wantedPattern string
 }
 
 var formatTestCases = []formatTestCase{
 	{
-		description: "message with format prefix",
+		description: "message with string format",
 		format:      "hello, %s!",
 		args:        []any{"Hacker"},
 	},
 	{
-		description: "message with format prefix",
+		description: "message with int format",
 		format:      "hello, %d,%d,%d!",
 		args:        []any{1, 2, 3},
 	},
 	{
-		description: "message with format prefix",
+		description: "message with mixed format",
 		format:      "hello, %s,%d,%d!",
 		args:        []any{"Hacker", 2, 3},
 	},
@@ -140,14 +150,30 @@ var formatTestCases = []formatTestCase{
 func TestLoggerDebugf(t *testing.T) {
 	for _, tc := range formatTestCases {
 		tc := tc
-		tc.level = level2.DebugLevel
+		tc.level = DebugLevel
 		message := fmt.Sprintf(tc.format, tc.args...)
-		tc.wantedPattern = fmt.Sprintf("%s %s: %s\n$", pattern, tc.level, message)
+		tc.wantedPattern = fmt.Sprintf(`^\[DBG\] \w+\.go:\d+: %s\n$`, message)
 		t.Run(tc.description, func(t *testing.T) {
 			var buf bytes.Buffer
 			logger := NewLogger(newBase(&buf))
-			logger.SetLevel(level2.DebugLevel)
+			logger.SetLevel(DebugLevel)
 			logger.Debugf(tc.format, tc.args...)
+			got := buf.String()
+			assert.Regexp(t, tc.wantedPattern, got)
+		})
+	}
+}
+
+func TestLoggerInfof(t *testing.T) {
+	for _, tc := range formatTestCases {
+		tc := tc
+		tc.level = InfoLevel
+		message := fmt.Sprintf(tc.format, tc.args...)
+		tc.wantedPattern = fmt.Sprintf(`^\[INF\] %s\n$`, message)
+		t.Run(tc.description, func(t *testing.T) {
+			var buf bytes.Buffer
+			logger := NewLogger(newBase(&buf))
+			logger.Infof(tc.format, tc.args...)
 			got := buf.String()
 			assert.Regexp(t, tc.wantedPattern, got)
 		})
@@ -157,9 +183,9 @@ func TestLoggerDebugf(t *testing.T) {
 func TestLoggerWarnf(t *testing.T) {
 	for _, tc := range formatTestCases {
 		tc := tc
-		tc.level = level2.WarnLevel
+		tc.level = WarnLevel
 		message := fmt.Sprintf(tc.format, tc.args...)
-		tc.wantedPattern = fmt.Sprintf("%s %s: %s\n$", pattern, tc.level, message)
+		tc.wantedPattern = fmt.Sprintf(`^\[WRN\] %s\n$`, message)
 		t.Run(tc.description, func(t *testing.T) {
 			var buf bytes.Buffer
 			logger := NewLogger(newBase(&buf))
@@ -173,9 +199,9 @@ func TestLoggerWarnf(t *testing.T) {
 func TestLoggerErrorf(t *testing.T) {
 	for _, tc := range formatTestCases {
 		tc := tc
-		tc.level = level2.ErrorLevel
+		tc.level = ErrorLevel
 		message := fmt.Sprintf(tc.format, tc.args...)
-		tc.wantedPattern = fmt.Sprintf("%s %s: %s\n$", pattern, tc.level, message)
+		tc.wantedPattern = fmt.Sprintf(`^\[ERR\] %s\n$`, message)
 		t.Run(tc.description, func(t *testing.T) {
 			var buf bytes.Buffer
 			logger := NewLogger(newBase(&buf))
@@ -191,9 +217,9 @@ func TestLoggerFatalf(t *testing.T) {
 	defer func() { osExit = originalOsExit }()
 	for _, tc := range formatTestCases {
 		tc := tc
-		tc.level = level2.FatalLevel
+		tc.level = FatalLevel
 		message := fmt.Sprintf(tc.format, tc.args...)
-		tc.wantedPattern = fmt.Sprintf("%s %s: %s\n$", pattern, tc.level, message)
+		tc.wantedPattern = fmt.Sprintf(`^\[FTL\] %s\n$`, message)
 		t.Run(tc.description, func(t *testing.T) {
 			var buf bytes.Buffer
 			exitCalled := false
@@ -213,19 +239,17 @@ func TestLoggerFatalf(t *testing.T) {
 }
 
 func TestLoggerWithLowerLevels(t *testing.T) {
-	// Logger should not log messages at a level
-	// lower than the specified level.
-	levels := []level2.Level{level2.DebugLevel, level2.WarnLevel, level2.ErrorLevel, level2.FatalLevel}
+	levels := []Level{DebugLevel, InfoLevel, WarnLevel, ErrorLevel, FatalLevel}
 	ops := []struct {
-		op       string
-		level    level2.Level
-		logFunc  func(*Logger)
-		expected bool
+		op      string
+		level   Level
+		logFunc func(*Logger)
 	}{
-		{"Debug", level2.DebugLevel, func(l *Logger) { l.Debug("hello") }, false},
-		{"Warn", level2.WarnLevel, func(l *Logger) { l.Warn("hello") }, false},
-		{"Error", level2.ErrorLevel, func(l *Logger) { l.Error("hello") }, false},
-		{"Fatal", level2.FatalLevel, func(l *Logger) { l.Fatal("hello") }, false},
+		{"Debug", DebugLevel, func(l *Logger) { l.Debug("hello") }},
+		{"Info", InfoLevel, func(l *Logger) { l.Info("hello") }},
+		{"Warn", WarnLevel, func(l *Logger) { l.Warn("hello") }},
+		{"Error", ErrorLevel, func(l *Logger) { l.Error("hello") }},
+		{"Fatal", FatalLevel, func(l *Logger) { l.Fatal("hello") }},
 	}
 
 	for _, setLevel := range levels {
@@ -236,23 +260,64 @@ func TestLoggerWithLowerLevels(t *testing.T) {
 
 			expectedOutput := op.level >= setLevel
 			exitCalled := false
-			exitCode := 0
 			osExit = func(code int) {
 				exitCalled = true
-				exitCode = code
 			}
 			op.logFunc(logger)
 
 			output := buf.String()
 			if expectedOutput {
-				assert.NotEmpty(t, output)
+				assert.NotEmpty(t, output, "setLevel=%s op=%s should produce output", setLevel, op.op)
 			} else {
-				assert.Empty(t, output)
+				assert.Empty(t, output, "setLevel=%s op=%s should be suppressed", setLevel, op.op)
 			}
-			if op.op == "Fatal" {
-				assert.True(t, exitCalled)
-				assert.Equal(t, 1, exitCode)
+			if op.op == "Fatal" && expectedOutput {
+				assert.True(t, exitCalled, "Fatal should call osExit")
 			}
 		}
 	}
+}
+
+func TestDefaultLevelIsInfo(t *testing.T) {
+	var buf bytes.Buffer
+	logger := NewLogger(newBase(&buf))
+
+	// Debug should be suppressed at default level (InfoLevel).
+	logger.Debug("debug msg")
+	assert.Empty(t, buf.String(), "Debug should be suppressed at default InfoLevel")
+
+	// Info should be visible at default level.
+	logger.Info("info msg")
+	assert.Contains(t, buf.String(), "info msg")
+}
+
+func TestDebugIncludesFileLine(t *testing.T) {
+	var buf bytes.Buffer
+	logger := NewLogger(newBase(&buf))
+	logger.SetLevel(DebugLevel)
+	logger.Debug("test location")
+	got := buf.String()
+	assert.Regexp(t, `^\[DBG\] logger_test\.go:\d+: test location\n$`, got)
+}
+
+func TestInfoHasLabel(t *testing.T) {
+	var buf bytes.Buffer
+	logger := NewLogger(newBase(&buf))
+	logger.Info("clean message")
+	assert.Equal(t, "[INF] clean message\n", buf.String())
+}
+
+func TestMultilineMessageIndented(t *testing.T) {
+	var buf bytes.Buffer
+	logger := NewLogger(newBase(&buf))
+	logger.Warn("line1\nline2\nline3")
+	got := buf.String()
+	assert.Equal(t, "[WRN] line1\n      line2\n      line3\n", got)
+}
+
+func TestNoColorInBuffer(t *testing.T) {
+	// bytes.Buffer is not a terminal, so colors should be disabled.
+	var buf bytes.Buffer
+	base := newBase(&buf)
+	assert.False(t, base.color, "color should be false for non-terminal writer")
 }

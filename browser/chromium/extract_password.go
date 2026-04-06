@@ -16,6 +16,8 @@ func extractPasswords(masterKey []byte, path string) ([]types.LoginEntry, error)
 }
 
 func extractPasswordsWithQuery(masterKey []byte, path, query string) ([]types.LoginEntry, error) {
+	var decryptFails int
+	var lastErr error
 	logins, err := sqliteutil.QueryRows(path, false, query,
 		func(rows *sql.Rows) (types.LoginEntry, error) {
 			var url, username string
@@ -26,7 +28,8 @@ func extractPasswordsWithQuery(masterKey []byte, path, query string) ([]types.Lo
 			}
 			password, err := decryptValue(masterKey, pwd)
 			if err != nil {
-				log.Debugf("decrypt password for %s: %v", url, err)
+				decryptFails++
+				lastErr = err
 			}
 			return types.LoginEntry{
 				URL:       url,
@@ -37,6 +40,9 @@ func extractPasswordsWithQuery(masterKey []byte, path, query string) ([]types.Lo
 		})
 	if err != nil {
 		return nil, err
+	}
+	if decryptFails > 0 {
+		log.Debugf("decrypt passwords: %d failed: %v", decryptFails, lastErr)
 	}
 
 	sort.Slice(logins, func(i, j int) bool {

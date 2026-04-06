@@ -16,6 +16,8 @@ const defaultCookieQuery = `SELECT name, encrypted_value, host_key, path,
 	has_expires, is_persistent FROM cookies`
 
 func extractCookies(masterKey []byte, path string) ([]types.CookieEntry, error) {
+	var decryptFails int
+	var lastErr error
 	cookies, err := sqliteutil.QueryRows(path, false, defaultCookieQuery,
 		func(rows *sql.Rows) (types.CookieEntry, error) {
 			var (
@@ -33,7 +35,8 @@ func extractCookies(masterKey []byte, path string) ([]types.CookieEntry, error) 
 
 			value, err := decryptValue(masterKey, encryptedValue)
 			if err != nil {
-				log.Debugf("decrypt cookie %s on %s: %v", name, host, err)
+				decryptFails++
+				lastErr = err
 			}
 			value = stripCookieHash(value, host)
 			return types.CookieEntry{
@@ -51,6 +54,9 @@ func extractCookies(masterKey []byte, path string) ([]types.CookieEntry, error) 
 		})
 	if err != nil {
 		return nil, err
+	}
+	if decryptFails > 0 {
+		log.Debugf("decrypt cookies: %d failed: %v", decryptFails, lastErr)
 	}
 
 	sort.Slice(cookies, func(i, j int) bool {

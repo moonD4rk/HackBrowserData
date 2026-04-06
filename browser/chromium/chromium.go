@@ -187,7 +187,6 @@ func (b *Browser) extractCategory(data *types.BrowserData, cat types.Category, m
 func discoverProfiles(userDataDir string, sources map[types.Category][]sourcePath) []string {
 	entries, err := os.ReadDir(userDataDir)
 	if err != nil {
-		log.Debugf("read user data dir %s: %v", userDataDir, err)
 		return nil
 	}
 

@@ -60,9 +60,18 @@ func (o *Writer) Write() error {
 	if err := os.MkdirAll(o.dir, 0o750); err != nil {
 		return fmt.Errorf("create output dir: %w", err)
 	}
-	for _, cs := range o.aggregate() {
+	agg := o.aggregate()
+	for _, cs := range agg {
 		if err := o.writeFile(cs.name, cs.rows); err != nil {
 			return err
+		}
+	}
+	if len(agg) > 0 {
+		log.Infof("")
+		log.Infof("Exported to %s/", o.dir)
+		for _, cs := range agg {
+			filename := fmt.Sprintf("%s.%s", cs.name, o.formatter.ext())
+			log.Infof("  %-24s %d entries", filename, len(cs.rows))
 		}
 	}
 	return nil
@@ -155,6 +164,5 @@ func (o *Writer) writeFile(category string, rows []row) (err error) {
 	if _, err := f.Write(buf.Bytes()); err != nil {
 		return fmt.Errorf("write %s: %w", filename, err)
 	}
-	log.Warnf("export: %s", path)
 	return nil
 }

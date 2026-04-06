@@ -1,44 +1,52 @@
 package log
 
-import (
-	"github.com/moond4rk/hackbrowserdata/log/level"
-)
+import "fmt"
 
 // defaultLogger is the default logger used by the package-level functions.
 var defaultLogger = NewLogger(nil)
 
 func SetVerbose() {
-	defaultLogger.SetLevel(level.DebugLevel)
+	defaultLogger.SetLevel(DebugLevel)
 }
 
 func Debug(args ...any) {
-	defaultLogger.Debug(args...)
+	defaultLogger.logMsg(DebugLevel, fmt.Sprint(args...))
 }
 
 func Debugf(format string, args ...any) {
-	defaultLogger.Debugf(format, args...)
+	defaultLogger.logMsg(DebugLevel, fmt.Sprintf(format, args...))
+}
+
+func Info(args ...any) {
+	defaultLogger.logMsg(InfoLevel, fmt.Sprint(args...))
+}
+
+func Infof(format string, args ...any) {
+	defaultLogger.logMsg(InfoLevel, fmt.Sprintf(format, args...))
 }
 
 func Warn(args ...any) {
-	defaultLogger.Warn(args...)
+	defaultLogger.logMsg(WarnLevel, fmt.Sprint(args...))
 }
 
 func Warnf(format string, args ...any) {
-	defaultLogger.Warnf(format, args...)
+	defaultLogger.logMsg(WarnLevel, fmt.Sprintf(format, args...))
 }
 
 func Error(args ...any) {
-	defaultLogger.Error(args...)
+	defaultLogger.logMsg(ErrorLevel, fmt.Sprint(args...))
 }
 
 func Errorf(format string, args ...any) {
-	defaultLogger.Errorf(format, args...)
+	defaultLogger.logMsg(ErrorLevel, fmt.Sprintf(format, args...))
 }
 
 func Fatal(args ...any) {
-	defaultLogger.Fatal(args...)
+	defaultLogger.logMsg(FatalLevel, fmt.Sprint(args...))
+	osExit(1)
 }
 
 func Fatalf(format string, args ...any) {
-	defaultLogger.Fatalf(format, args...)
+	defaultLogger.logMsg(FatalLevel, fmt.Sprintf(format, args...))
+	osExit(1)
 }
