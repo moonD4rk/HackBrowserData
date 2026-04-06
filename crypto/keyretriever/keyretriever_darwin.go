@@ -130,7 +130,8 @@ func (r *TerminalPasswordRetriever) RetrieveKey(storage, _ string) ([]byte, erro
 		}
 		r.records, r.err = loadKeychainRecords(string(pwd))
 		if r.err != nil {
-			log.Warnf("keychain unlock failed: %v, falling back to security command", r.err)
+			log.Warnf("incorrect password, falling back to security command")
+			log.Debugf("keychain unlock detail: %v", r.err)
 		}
 	})
 	if r.err != nil {
