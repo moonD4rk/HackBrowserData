@@ -526,7 +526,8 @@ func TestGetMasterKey(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantKey, key)
 
-			mock := tt.retriever.(*mockRetriever)
+			mock, ok := tt.retriever.(*mockRetriever)
+			require.True(t, ok)
 			assert.True(t, mock.called)
 			assert.Equal(t, tt.wantStorage, mock.storage)
 			if tt.wantLocalState {
@@ -589,7 +590,8 @@ func TestExtract(t *testing.T) {
 			assert.Equal(t, "Example", result.Histories[0].Title)
 
 			if tt.wantRetriever {
-				mock := tt.retriever.(*mockRetriever)
+				mock, ok := tt.retriever.(*mockRetriever)
+				require.True(t, ok)
 				assert.True(t, mock.called)
 			}
 		})
