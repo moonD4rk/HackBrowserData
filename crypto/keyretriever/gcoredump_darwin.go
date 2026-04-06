@@ -66,17 +66,17 @@ type addressRange struct {
 	end   uint64
 }
 
-// DecryptKeychain extracts the browser storage password from login.keychain-db
+// DecryptKeychainRecords extracts all generic password records from login.keychain-db
 // by dumping securityd memory and scanning for the keychain master key.
 // Requires root privileges.
-func DecryptKeychain(storageName string) (string, error) {
+func DecryptKeychainRecords() ([]keychainbreaker.GenericPassword, error) {
 	if os.Geteuid() != 0 {
-		return "", errors.New("requires root privileges")
+		return nil, errors.New("requires root privileges")
 	}
 
 	pid, err := findProcessByName("securityd", true)
 	if err != nil {
-		return "", fmt.Errorf("failed to find securityd pid: %w", err)
+		return nil, fmt.Errorf("failed to find securityd pid: %w", err)
 	}
 
 	// gcore appends ".PID" to the -o prefix, e.g. prefix.123
@@ -86,27 +86,27 @@ func DecryptKeychain(storageName string) (string, error) {
 
 	cmd := exec.Command("gcore", "-d", "-s", "-v", "-o", corePrefix, strconv.Itoa(pid))
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to dump securityd memory: %w", err)
+		return nil, fmt.Errorf("failed to dump securityd memory: %w", err)
 	}
 
 	// vmmap identifies MALLOC_SMALL heap regions where securityd stores keys
 	regions, err := findMallocSmallRegions(pid)
 	if err != nil {
-		return "", fmt.Errorf("failed to find malloc small regions: %w", err)
+		return nil, fmt.Errorf("failed to find malloc small regions: %w", err)
 	}
 
 	candidates, err := scanMasterKeyCandidates(corePath, regions)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if len(candidates) == 0 {
-		return "", fmt.Errorf("no master key candidates found in securityd memory")
+		return nil, fmt.Errorf("no master key candidates found in securityd memory")
 	}
 
 	// read keychain file once, reuse buffer for each candidate
 	keychainBuf, err := os.ReadFile(loginKeychainPath)
 	if err != nil {
-		return "", fmt.Errorf("read keychain: %w", err)
+		return nil, fmt.Errorf("read keychain: %w", err)
 	}
 
 	// try each candidate key against the keychain
@@ -123,14 +123,12 @@ func DecryptKeychain(storageName string) (string, error) {
 		if err != nil {
 			continue
 		}
-		for _, rec := range records {
-			if rec.Account == storageName {
-				return string(rec.Password), nil
-			}
+		if len(records) > 0 {
+			return records, nil
 		}
 	}
 
-	return "", fmt.Errorf("tried %d candidates, none matched storage %q", len(candidates), storageName)
+	return nil, fmt.Errorf("tried %d candidates, none unlocked keychain", len(candidates))
 }
 
 // scanMasterKeyCandidates scans the core dump for 24-byte master key candidates.

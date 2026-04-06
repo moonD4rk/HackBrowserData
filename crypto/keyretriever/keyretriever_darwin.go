@@ -31,30 +31,26 @@ const securityCmdTimeout = 30 * time.Second
 
 // GcoredumpRetriever uses CVE-2025-24204 to extract keychain secrets
 // by dumping the securityd process memory. Requires root privileges.
-// The result is cached via sync.Once to avoid repeated memory dumps
-// when multiple profiles share the same retriever instance.
+// All keychain records are cached via sync.Once so the memory dump
+// happens only once, even when shared across multiple browsers.
 type GcoredumpRetriever struct {
-	once sync.Once
-	key  []byte
-	err  error
+	once    sync.Once
+	records []keychainbreaker.GenericPassword
+	err     error
 }
 
 func (r *GcoredumpRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
 	r.once.Do(func() {
-		r.key, r.err = r.retrieveKeyOnce(storage)
+		r.records, r.err = DecryptKeychainRecords()
+		if r.err != nil {
+			r.err = fmt.Errorf("gcoredump: %w", r.err)
+		}
 	})
-	return r.key, r.err
-}
+	if r.err != nil {
+		return nil, r.err
+	}
 
-func (r *GcoredumpRetriever) retrieveKeyOnce(storage string) ([]byte, error) {
-	secret, err := DecryptKeychain(storage)
-	if err != nil {
-		return nil, fmt.Errorf("gcoredump: %w", err)
-	}
-	if secret == "" {
-		return nil, fmt.Errorf("gcoredump: empty secret for %s", storage)
-	}
-	return darwinParams.deriveKey([]byte(secret)), nil
+	return findStorageKey(r.records, storage)
 }
 
 // loadKeychainRecords opens login.keychain-db and unlocks it with the given
@@ -123,7 +119,7 @@ func (r *TerminalPasswordRetriever) RetrieveKey(storage, _ string) ([]byte, erro
 	}
 
 	r.once.Do(func() {
-		fmt.Fprintf(os.Stderr, "Enter macOS login password for %s: ", storage)
+		fmt.Fprint(os.Stderr, "Enter macOS login password: ")
 		pwd, err := term.ReadPassword(int(os.Stdin.Fd()))
 		fmt.Fprintln(os.Stderr)
 		if err != nil {
@@ -140,20 +136,32 @@ func (r *TerminalPasswordRetriever) RetrieveKey(storage, _ string) ([]byte, erro
 }
 
 // SecurityCmdRetriever uses macOS `security` CLI to query Keychain.
-// This may trigger a password dialog on macOS. The result is cached
-// via sync.Once so that multiple profiles sharing the same retriever
-// instance only prompt the user once.
+// This may trigger a password dialog on macOS. Results are cached
+// per storage name so each browser's key is fetched only once.
 type SecurityCmdRetriever struct {
-	once sync.Once
-	key  []byte
-	err  error
+	mu    sync.Mutex
+	cache map[string]securityResult
+}
+
+type securityResult struct {
+	key []byte
+	err error
 }
 
 func (r *SecurityCmdRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
-	r.once.Do(func() {
-		r.key, r.err = r.retrieveKeyOnce(storage)
-	})
-	return r.key, r.err
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.cache == nil {
+		r.cache = make(map[string]securityResult)
+	}
+	if res, ok := r.cache[storage]; ok {
+		return res.key, res.err
+	}
+
+	key, err := r.retrieveKeyOnce(storage)
+	r.cache[storage] = securityResult{key: key, err: err}
+	return key, err
 }
 
 func (r *SecurityCmdRetriever) retrieveKeyOnce(storage string) ([]byte, error) {

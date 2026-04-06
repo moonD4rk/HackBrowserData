@@ -16,16 +16,16 @@ import (
 type Browser struct {
 	cfg         types.BrowserConfig
 	profileDir  string                               // absolute path to profile directory
-	retriever   keyretriever.KeyRetriever            // shared across profiles of the same browser
+	retriever   keyretriever.KeyRetriever            // shared across all Chromium browsers
 	sources     map[types.Category][]sourcePath      // Category → candidate paths (priority order)
 	extractors  map[types.Category]categoryExtractor // Category → custom extract function override
 	sourcePaths map[types.Category]resolvedPath      // Category → discovered absolute path
 }
 
 // NewBrowsers discovers Chromium profiles under cfg.UserDataDir and returns
-// one Browser per profile. Uses ReadDir to find profile directories,
-// then Stat to check which data sources exist in each profile.
-func NewBrowsers(cfg types.BrowserConfig) ([]*Browser, error) {
+// one Browser per profile. The retriever is shared across all browsers to
+// avoid repeated keychain password prompts on macOS.
+func NewBrowsers(cfg types.BrowserConfig, retriever keyretriever.KeyRetriever) ([]*Browser, error) {
 	sources := sourcesForKind(cfg.Kind)
 	extractors := extractorsForKind(cfg.Kind)
 
@@ -33,11 +33,6 @@ func NewBrowsers(cfg types.BrowserConfig) ([]*Browser, error) {
 	if len(profileDirs) == 0 {
 		return nil, nil
 	}
-
-	// Create the key retriever once and share it across all profiles.
-	// This avoids repeated keychain password prompts on macOS, where each
-	// profile would otherwise trigger a separate `security` command dialog.
-	retriever := keyretriever.DefaultRetriever(cfg.KeychainPassword)
 
 	var browsers []*Browser
 	for _, profileDir := range profileDirs {

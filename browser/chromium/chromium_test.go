@@ -218,7 +218,7 @@ func TestNewBrowsers(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := types.BrowserConfig{Name: "Test", Kind: tt.kind, UserDataDir: tt.dir}
-			browsers, err := NewBrowsers(cfg)
+			browsers, err := NewBrowsers(cfg, nil)
 			require.NoError(t, err)
 
 			if len(tt.wantProfiles) == 0 {
@@ -425,7 +425,7 @@ func TestLocalStatePath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			browsers, err := NewBrowsers(types.BrowserConfig{Name: "Test", Kind: types.Chromium, UserDataDir: tt.dir})
+			browsers, err := NewBrowsers(types.BrowserConfig{Name: "Test", Kind: types.Chromium, UserDataDir: tt.dir}, nil)
 			require.NoError(t, err)
 			require.NotEmpty(t, browsers)
 

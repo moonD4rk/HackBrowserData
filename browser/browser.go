@@ -8,6 +8,7 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/browser/chromium"
 	"github.com/moond4rk/hackbrowserdata/browser/firefox"
+	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
 	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
@@ -41,6 +42,11 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 		name = "all"
 	}
 
+	// Create a single key retriever shared across all Chromium browsers.
+	// On macOS this avoids repeated password prompts; on other platforms
+	// it's harmless (DPAPI reads Local State per-profile, D-Bus is stateless).
+	retriever := keyretriever.DefaultRetriever(opts.KeychainPassword)
+
 	var browsers []Browser
 	for _, cfg := range configs {
 		if name != "all" && cfg.Key != name {
@@ -55,11 +61,7 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 			}
 		}
 
-		if opts.KeychainPassword != "" {
-			cfg.KeychainPassword = opts.KeychainPassword
-		}
-
-		bs, err := newBrowsers(cfg)
+		bs, err := newBrowsers(cfg, retriever)
 		if err != nil {
 			log.Errorf("browser %s: %v", cfg.Name, err)
 			continue
@@ -74,10 +76,10 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 }
 
 // newBrowsers dispatches to the correct engine based on BrowserKind.
-func newBrowsers(cfg types.BrowserConfig) ([]Browser, error) {
+func newBrowsers(cfg types.BrowserConfig, retriever keyretriever.KeyRetriever) ([]Browser, error) {
 	switch cfg.Kind {
 	case types.Chromium, types.ChromiumYandex, types.ChromiumOpera:
-		bs, err := chromium.NewBrowsers(cfg)
+		bs, err := chromium.NewBrowsers(cfg, retriever)
 		if err != nil {
 			return nil, err
 		}
