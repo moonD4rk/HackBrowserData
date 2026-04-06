@@ -82,12 +82,11 @@ const (
 
 // BrowserConfig holds the declarative configuration for a browser installation.
 type BrowserConfig struct {
-	Key              string      // lookup key: "chrome", "edge", "firefox"
-	Name             string      // display name: "Chrome", "Edge", "Firefox"
-	Kind             BrowserKind // engine type
-	Storage          string      // keychain/GNOME label (macOS/Linux); unused on Windows
-	KeychainPassword string      // macOS login password for KeychainPasswordRetriever; ignored on Windows/Linux
-	UserDataDir      string      // base browser directory
+	Key         string      // lookup key: "chrome", "edge", "firefox"
+	Name        string      // display name: "Chrome", "Edge", "Firefox"
+	Kind        BrowserKind // engine type
+	Storage     string      // keychain/GNOME label (macOS/Linux); unused on Windows
+	UserDataDir string      // base browser directory
 }
 
 // BrowserData holds all extracted browser data with typed slices.

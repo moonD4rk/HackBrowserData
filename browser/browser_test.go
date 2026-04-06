@@ -202,6 +202,75 @@ func TestPickFromConfigs_ProfilePath(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// newBrowsers dispatcher
+// ---------------------------------------------------------------------------
+
+func TestNewBrowsersDispatch(t *testing.T) {
+	chromiumDir := t.TempDir()
+	mkFile(t, chromiumDir, "Default", "Preferences")
+	mkFile(t, chromiumDir, "Default", "History")
+
+	firefoxDir := t.TempDir()
+	mkFile(t, firefoxDir, "abc.default", "places.sqlite")
+
+	emptyDir := t.TempDir()
+
+	tests := []struct {
+		name        string
+		cfg         types.BrowserConfig
+		wantLen     int
+		wantName    string
+		wantProfile string
+		wantErr     string
+	}{
+		{
+			name:        "chromium dispatch",
+			cfg:         types.BrowserConfig{Key: "chrome", Name: "Chrome", Kind: types.Chromium, UserDataDir: chromiumDir},
+			wantLen:     1,
+			wantName:    "Chrome",
+			wantProfile: "Default",
+		},
+		{
+			name:        "firefox dispatch",
+			cfg:         types.BrowserConfig{Key: "firefox", Name: "Firefox", Kind: types.Firefox, UserDataDir: firefoxDir},
+			wantLen:     1,
+			wantName:    "Firefox",
+			wantProfile: "abc.default",
+		},
+		{
+			name:    "unknown kind returns error",
+			cfg:     types.BrowserConfig{Key: "unknown", Name: "Unknown", Kind: types.BrowserKind(99)},
+			wantErr: "unknown browser kind",
+		},
+		{
+			name: "empty dir returns empty",
+			cfg:  types.BrowserConfig{Key: "chrome", Name: "Chrome", Kind: types.Chromium, UserDataDir: emptyDir},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			found, err := newBrowsers(tt.cfg)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Len(t, found, tt.wantLen)
+			if tt.wantLen > 0 {
+				assert.Equal(t, tt.wantName, found[0].BrowserName())
+				assert.Equal(t, tt.wantProfile, found[0].ProfileName())
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 // assertBrowsers verifies browser names and profiles match expectations (order-independent).
 func assertBrowsers(t *testing.T, browsers []Browser, wantNames, wantProfiles []string) {
 	t.Helper()

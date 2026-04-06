@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
 	"github.com/moond4rk/hackbrowserdata/filemanager"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
@@ -218,7 +219,7 @@ func TestNewBrowsers(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := types.BrowserConfig{Name: "Test", Kind: tt.kind, UserDataDir: tt.dir}
-			browsers, err := NewBrowsers(cfg, nil)
+			browsers, err := NewBrowsers(cfg)
 			require.NoError(t, err)
 
 			if len(tt.wantProfiles) == 0 {
@@ -425,7 +426,7 @@ func TestLocalStatePath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			browsers, err := NewBrowsers(types.BrowserConfig{Name: "Test", Kind: types.Chromium, UserDataDir: tt.dir}, nil)
+			browsers, err := NewBrowsers(types.BrowserConfig{Name: "Test", Kind: types.Chromium, UserDataDir: tt.dir})
 			require.NoError(t, err)
 			require.NotEmpty(t, browsers)
 
@@ -437,4 +438,171 @@ func TestLocalStatePath(t *testing.T) {
 			}
 		})
 	}
+}
+
+// ---------------------------------------------------------------------------
+// getMasterKey
+// ---------------------------------------------------------------------------
+
+// mockRetriever records the arguments passed to RetrieveKey.
+type mockRetriever struct {
+	storage    string
+	localState string
+	key        []byte
+	err        error
+	called     bool
+}
+
+func (m *mockRetriever) RetrieveKey(storage, localStatePath string) ([]byte, error) {
+	m.called = true
+	m.storage = storage
+	m.localState = localStatePath
+	return m.key, m.err
+}
+
+func TestGetMasterKey(t *testing.T) {
+	// Profile directory without Local State file.
+	dirNoLocalState := t.TempDir()
+	mkFile(dirNoLocalState, "Default", "Preferences")
+	mkFile(dirNoLocalState, "Default", "History")
+
+	tests := []struct {
+		name           string
+		dir            string
+		storage        string
+		retriever      keyretriever.KeyRetriever // nil → don't call SetRetriever
+		wantKey        []byte
+		wantErr        string
+		wantStorage    string
+		wantLocalState bool // whether localStatePath passed to retriever is non-empty
+	}{
+		{
+			name:    "nil retriever returns error",
+			dir:     fixture.chrome,
+			wantErr: "key retriever not set",
+		},
+		{
+			name:           "with Local State passes path to retriever",
+			dir:            fixture.chrome,
+			storage:        "Chrome",
+			retriever:      &mockRetriever{key: []byte("fake-master-key")},
+			wantKey:        []byte("fake-master-key"),
+			wantStorage:    "Chrome",
+			wantLocalState: true,
+		},
+		{
+			name:        "without Local State passes empty path",
+			dir:         dirNoLocalState,
+			storage:     "Chromium",
+			retriever:   &mockRetriever{key: []byte("derived-key")},
+			wantKey:     []byte("derived-key"),
+			wantStorage: "Chromium",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			browsers, err := NewBrowsers(types.BrowserConfig{
+				Name: "Test", Kind: types.Chromium, UserDataDir: tt.dir, Storage: tt.storage,
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, browsers)
+
+			b := browsers[0]
+			if tt.retriever != nil {
+				b.SetRetriever(tt.retriever)
+			}
+
+			session, err := filemanager.NewSession()
+			require.NoError(t, err)
+			defer session.Cleanup()
+
+			key, err := b.getMasterKey(session)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantKey, key)
+
+			mock := tt.retriever.(*mockRetriever)
+			assert.True(t, mock.called)
+			assert.Equal(t, tt.wantStorage, mock.storage)
+			if tt.wantLocalState {
+				assert.NotEmpty(t, mock.localState)
+			} else {
+				assert.Empty(t, mock.localState)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Extract
+// ---------------------------------------------------------------------------
+
+func TestExtract(t *testing.T) {
+	// Shared fixture: profile with a real History database.
+	dir := t.TempDir()
+	mkFile(dir, "Default", "Preferences")
+
+	historyDB := createTestDB(t, "History", urlsSchema,
+		insertURL("https://example.com", "Example", 5, 13350000000000000),
+	)
+	profileDir := filepath.Join(dir, "Default")
+	data, err := os.ReadFile(historyDB)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(profileDir, "History"), data, 0o644))
+
+	tests := []struct {
+		name          string
+		retriever     keyretriever.KeyRetriever // nil → don't call SetRetriever
+		wantRetriever bool                      // whether retriever should be called
+	}{
+		{
+			name: "without retriever extracts unencrypted data",
+		},
+		{
+			name:          "with mock retriever",
+			retriever:     &mockRetriever{key: []byte("test-key-16bytes")},
+			wantRetriever: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			browsers, err := NewBrowsers(types.BrowserConfig{
+				Name: "Test", Kind: types.Chromium, UserDataDir: dir, Storage: "Chrome",
+			})
+			require.NoError(t, err)
+			require.Len(t, browsers, 1)
+
+			if tt.retriever != nil {
+				browsers[0].SetRetriever(tt.retriever)
+			}
+
+			result, err := browsers[0].Extract([]types.Category{types.History})
+			require.NoError(t, err)
+			require.NotNil(t, result)
+			require.Len(t, result.Histories, 1)
+			assert.Equal(t, "Example", result.Histories[0].Title)
+
+			if tt.wantRetriever {
+				mock := tt.retriever.(*mockRetriever)
+				assert.True(t, mock.called)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SetRetriever: verify *Browser satisfies the interface used by
+// browser.pickFromConfigs for post-construction retriever injection.
+// ---------------------------------------------------------------------------
+
+func TestSetRetriever_SatisfiesInterface(t *testing.T) {
+	var _ interface {
+		SetRetriever(keyretriever.KeyRetriever)
+	} = (*Browser)(nil)
 }
