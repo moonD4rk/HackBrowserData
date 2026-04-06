@@ -16,6 +16,8 @@ import (
 
 	"github.com/moond4rk/keychainbreaker"
 	"golang.org/x/term"
+
+	"github.com/moond4rk/hackbrowserdata/log"
 )
 
 // https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157
@@ -127,6 +129,9 @@ func (r *TerminalPasswordRetriever) RetrieveKey(storage, _ string) ([]byte, erro
 			return
 		}
 		r.records, r.err = loadKeychainRecords(string(pwd))
+		if r.err != nil {
+			log.Warnf("keychain unlock failed: %v, falling back to security command", r.err)
+		}
 	})
 	if r.err != nil {
 		return nil, r.err
