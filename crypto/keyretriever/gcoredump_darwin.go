@@ -97,7 +97,7 @@ func DecryptKeychainRecords() ([]keychainbreaker.GenericPassword, error) {
 
 	candidates, err := scanMasterKeyCandidates(corePath, regions)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("scan master key candidates: %w", err)
 	}
 	if len(candidates) == 0 {
 		return nil, fmt.Errorf("no master key candidates found in securityd memory")

@@ -117,7 +117,7 @@ type TerminalPasswordRetriever struct {
 
 func (r *TerminalPasswordRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
-		return nil, nil
+		return nil, fmt.Errorf("terminal: stdin is not a TTY")
 	}
 
 	r.once.Do(func() {
@@ -130,7 +130,7 @@ func (r *TerminalPasswordRetriever) RetrieveKey(storage, _ string) ([]byte, erro
 		}
 		r.records, r.err = loadKeychainRecords(string(pwd))
 		if r.err != nil {
-			log.Warnf("incorrect password, falling back to security command")
+			log.Warnf("keychain unlock failed with provided password")
 			log.Debugf("keychain unlock detail: %v", r.err)
 		}
 	})
@@ -158,9 +158,6 @@ func (r *SecurityCmdRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if r.cache == nil {
-		r.cache = make(map[string]securityResult)
-	}
 	if res, ok := r.cache[storage]; ok {
 		return res.key, res.err
 	}
@@ -212,7 +209,7 @@ func DefaultRetriever(keychainPassword string) KeyRetriever {
 	}
 	retrievers = append(retrievers,
 		&TerminalPasswordRetriever{},
-		&SecurityCmdRetriever{},
+		&SecurityCmdRetriever{cache: make(map[string]securityResult)},
 	)
 	return NewChain(retrievers...)
 }
