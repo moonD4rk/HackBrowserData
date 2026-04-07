@@ -9,8 +9,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-
-	"golang.org/x/term"
 )
 
 // NewLogger creates and returns a new instance of Logger.
@@ -107,27 +105,8 @@ type Base interface {
 	Log(callerSkip int, lvl Level, msg string)
 }
 
-// ANSI color escape sequences.
-const (
-	colorReset   = "\033[0m"
-	colorRed     = "\033[31m"
-	colorYellow  = "\033[33m"
-	colorBlue    = "\033[34m"
-	colorMagenta = "\033[35m"
-	colorBoldRed = "\033[1;31m"
-)
-
-// levelColor maps each log level to its ANSI color.
-var levelColor = map[Level]string{
-	DebugLevel: colorMagenta,
-	InfoLevel:  colorBlue,
-	WarnLevel:  colorYellow,
-	ErrorLevel: colorRed,
-	FatalLevel: colorBoldRed,
-}
-
 // baseLogger writes formatted log messages to an io.Writer.
-// Output format (example with colors disabled):
+// Output format:
 //
 //	[DBG] file.go:42: message
 //	[INF] message
@@ -135,34 +114,12 @@ var levelColor = map[Level]string{
 //	[ERR] message
 //	[FTL] message
 type baseLogger struct {
-	out   io.Writer
-	mu    sync.Mutex
-	color bool
+	out io.Writer
+	mu  sync.Mutex
 }
 
 func newBase(out io.Writer) *baseLogger {
-	return &baseLogger{out: out, color: isColorTerminal(out)}
-}
-
-// isColorTerminal reports whether out is a terminal that supports ANSI colors.
-func isColorTerminal(out io.Writer) bool {
-	if os.Getenv("NO_COLOR") != "" {
-		return false
-	}
-	f, ok := out.(*os.File)
-	if !ok {
-		return false
-	}
-	if !term.IsTerminal(int(f.Fd())) {
-		return false
-	}
-	// On Windows, only enable colors if running inside a modern terminal
-	// (Windows Terminal sets WT_SESSION, mintty/ConEmu/Cygwin set TERM).
-	// Plain cmd.exe on Windows 7/8 does not support ANSI escape codes.
-	if runtime.GOOS == "windows" {
-		return os.Getenv("WT_SESSION") != "" || os.Getenv("TERM") != ""
-	}
-	return true
+	return &baseLogger{out: out}
 }
 
 var osExit = os.Exit
@@ -197,11 +154,7 @@ func (l *baseLogger) Log(callerSkip int, lvl Level, msg string) {
 	l.mu.Unlock()
 }
 
-// formatLabel returns the bracketed level label, optionally with ANSI color.
+// formatLabel returns the bracketed level label, e.g. "[DBG]".
 func (l *baseLogger) formatLabel(lvl Level) string {
-	tag := lvl.String() // e.g. "DBG", "INF"
-	if l.color {
-		return levelColor[lvl] + "[" + tag + "]" + colorReset
-	}
-	return "[" + tag + "]"
+	return "[" + lvl.String() + "]"
 }

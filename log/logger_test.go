@@ -314,10 +314,3 @@ func TestMultilineMessageIndented(t *testing.T) {
 	got := buf.String()
 	assert.Equal(t, "[WRN] line1\n      line2\n      line3\n", got)
 }
-
-func TestNoColorInBuffer(t *testing.T) {
-	// bytes.Buffer is not a terminal, so colors should be disabled.
-	var buf bytes.Buffer
-	base := newBase(&buf)
-	assert.False(t, base.color, "color should be false for non-terminal writer")
-}
