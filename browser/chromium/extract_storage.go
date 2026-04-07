@@ -253,11 +253,9 @@ func countLocalStorage(path string) (int, error) {
 	defer iter.Release()
 
 	for iter.Next() {
-		key := iter.Key()
-		if bytes.Equal(key, []byte(localStorageVersionKey)) {
-			continue
+		if _, ok := parseLocalStorageEntry(iter.Key(), iter.Value()); ok {
+			count++
 		}
-		count++
 	}
 	return count, iter.Error()
 }
