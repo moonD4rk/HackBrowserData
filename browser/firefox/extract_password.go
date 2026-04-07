@@ -64,7 +64,7 @@ func extractPasswords(masterKey []byte, path string) ([]types.LoginEntry, error)
 		})
 	}
 	if decryptFails > 0 {
-		log.Debugf("decrypt firefox passwords: %d failed: %v", decryptFails, lastErr)
+		log.Debugf("decrypt firefox login fields: %d failed: %v", decryptFails, lastErr)
 	}
 
 	sort.Slice(logins, func(i, j int) bool {

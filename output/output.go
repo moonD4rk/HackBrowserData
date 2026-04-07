@@ -67,7 +67,7 @@ func (o *Writer) Write() error {
 		}
 	}
 	if len(agg) > 0 {
-		log.Infof("")
+		fmt.Fprintln(os.Stderr)
 		log.Infof("Exported to %s/", o.dir)
 		for _, cs := range agg {
 			filename := fmt.Sprintf("%s.%s", cs.name, o.formatter.ext())

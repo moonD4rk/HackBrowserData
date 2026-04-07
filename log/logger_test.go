@@ -239,6 +239,9 @@ func TestLoggerFatalf(t *testing.T) {
 }
 
 func TestLoggerWithLowerLevels(t *testing.T) {
+	originalOsExit := osExit
+	defer func() { osExit = originalOsExit }()
+
 	levels := []Level{DebugLevel, InfoLevel, WarnLevel, ErrorLevel, FatalLevel}
 	ops := []struct {
 		op      string
