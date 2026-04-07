@@ -19,6 +19,7 @@ type Browser interface {
 	ProfileName() string
 	ProfileDir() string
 	Extract(categories []types.Category) (*types.BrowserData, error)
+	CountEntries(categories []types.Category) (map[types.Category]int, error)
 }
 
 // PickOptions configures which browsers to pick.

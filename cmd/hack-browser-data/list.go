@@ -58,40 +58,12 @@ func printDetail(out io.Writer, browsers []browser.Browser) error {
 	fmt.Fprintln(w)
 
 	for _, b := range browsers {
-		data, _ := b.Extract(types.AllCategories)
+		counts, _ := b.CountEntries(types.AllCategories)
 		fmt.Fprintf(w, "%s\t%s", b.BrowserName(), b.ProfileName())
 		for _, c := range types.AllCategories {
-			fmt.Fprintf(w, "\t%d", countEntries(data, c))
+			fmt.Fprintf(w, "\t%d", counts[c])
 		}
 		fmt.Fprintln(w)
 	}
 	return w.Flush()
-}
-
-func countEntries(data *types.BrowserData, c types.Category) int {
-	if data == nil {
-		return 0
-	}
-	switch c {
-	case types.Password:
-		return len(data.Passwords)
-	case types.Cookie:
-		return len(data.Cookies)
-	case types.Bookmark:
-		return len(data.Bookmarks)
-	case types.History:
-		return len(data.Histories)
-	case types.Download:
-		return len(data.Downloads)
-	case types.CreditCard:
-		return len(data.CreditCards)
-	case types.Extension:
-		return len(data.Extensions)
-	case types.LocalStorage:
-		return len(data.LocalStorage)
-	case types.SessionStorage:
-		return len(data.SessionStorage)
-	default:
-		return 0
-	}
 }

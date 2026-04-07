@@ -8,8 +8,11 @@ import (
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
-const defaultCreditCardQuery = `SELECT COALESCE(guid, ''), name_on_card, expiration_month, expiration_year,
-	card_number_encrypted, COALESCE(nickname, ''), COALESCE(billing_address_id, '') FROM credit_cards`
+const (
+	defaultCreditCardQuery = `SELECT COALESCE(guid, ''), name_on_card, expiration_month, expiration_year,
+		card_number_encrypted, COALESCE(nickname, ''), COALESCE(billing_address_id, '') FROM credit_cards`
+	countCreditCardQuery = `SELECT COUNT(*) FROM credit_cards`
+)
 
 func extractCreditCards(masterKey []byte, path string) ([]types.CreditCardEntry, error) {
 	var decryptFails int
@@ -43,4 +46,8 @@ func extractCreditCards(masterKey []byte, path string) ([]types.CreditCardEntry,
 		log.Debugf("decrypt credit cards: %d failed: %v", decryptFails, lastErr)
 	}
 	return cards, nil
+}
+
+func countCreditCards(path string) (int, error) {
+	return sqliteutil.CountRows(path, false, countCreditCardQuery)
 }

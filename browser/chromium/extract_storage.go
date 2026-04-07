@@ -238,6 +238,55 @@ func extractNamespaceOrigin(key string) string {
 	return ""
 }
 
+func countLocalStorage(path string) (int, error) {
+	if _, err := os.Stat(path); err != nil {
+		return 0, err
+	}
+	db, err := leveldb.OpenFile(path, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer db.Close()
+
+	var count int
+	iter := db.NewIterator(nil, nil)
+	defer iter.Release()
+
+	for iter.Next() {
+		key := iter.Key()
+		if bytes.Equal(key, []byte(localStorageVersionKey)) {
+			continue
+		}
+		count++
+	}
+	return count, iter.Error()
+}
+
+func countSessionStorage(path string) (int, error) {
+	if _, err := os.Stat(path); err != nil {
+		return 0, err
+	}
+	db, err := leveldb.OpenFile(path, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer db.Close()
+
+	var count int
+	iter := db.NewIterator(nil, nil)
+	defer iter.Release()
+
+	mapPrefix := []byte("map-")
+	for iter.Next() {
+		if bytes.HasPrefix(iter.Key(), mapPrefix) {
+			if sep := bytes.IndexByte(iter.Key()[len(mapPrefix):], '-'); sep >= 0 {
+				count++
+			}
+		}
+	}
+	return count, iter.Error()
+}
+
 // decodeSessionStorageValue decodes a session storage value.
 // Values are raw UTF-16 LE (no format byte prefix, unlike localStorage).
 func decodeSessionStorageValue(value []byte) string {

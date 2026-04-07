@@ -85,3 +85,45 @@ func isExtensionEnabled(ext gjson.Result) bool {
 func extractOperaExtensions(path string) ([]types.ExtensionEntry, error) {
 	return extractExtensionsWithKeys(path, []string{"extensions.opsettings"})
 }
+
+func countExtensions(path string) (int, error) {
+	return countExtensionsWithKeys(path, defaultExtensionKeys)
+}
+
+func countOperaExtensions(path string) (int, error) {
+	return countExtensionsWithKeys(path, []string{"extensions.opsettings"})
+}
+
+// countExtensionsWithKeys counts non-system extensions without building
+// full ExtensionEntry structs. Mirrors the filtering logic in extractExtensionsWithKeys.
+func countExtensionsWithKeys(path string, keys []string) (int, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0, err
+	}
+
+	var settings gjson.Result
+	for _, key := range keys {
+		settings = gjson.GetBytes(data, key)
+		if settings.Exists() {
+			break
+		}
+	}
+	if !settings.Exists() {
+		return 0, nil
+	}
+
+	var count int
+	settings.ForEach(func(_, ext gjson.Result) bool {
+		location := ext.Get("location").Int()
+		if location == 5 || location == 10 {
+			return true
+		}
+		if !ext.Get("manifest").Exists() {
+			return true
+		}
+		count++
+		return true
+	})
+	return count, nil
+}

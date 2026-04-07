@@ -162,14 +162,31 @@ func TestParseLocalStorageEntry(t *testing.T) {
 // extractLocalStorage (integration with LevelDB)
 // ---------------------------------------------------------------------------
 
-func TestExtractLocalStorage(t *testing.T) {
-	dir := createTestLevelDB(t, map[string]string{
+func setupLocalStorageLevelDB(t *testing.T) string {
+	t.Helper()
+	return createTestLevelDB(t, map[string]string{
 		localStorageVersionKey:                                                           "1",
 		localStorageMetaPrefix + "https://example.com":                                   string([]byte{0x08, 0x96, 0x01}),
 		localStorageMetaAccessKey + "https://example.com":                                string([]byte{0x10, 0x20}),
 		string(append([]byte("_https://example.com\x00"), testEncodeLatin1("token")...)): string(testEncodeLatin1("abc123")),
 		string(append([]byte("_https://example.com\x00"), testEncodeUTF16("テスト")...)):    string(testEncodeUTF16("データ")),
 	})
+}
+
+func setupSessionStorageLevelDB(t *testing.T) string {
+	t.Helper()
+	return createTestLevelDB(t, map[string]string{
+		"namespace-abcd1234_5678_9abc_def0_111111111111-https://github.com/":  "100",
+		"namespace-abcd1234_5678_9abc_def0_111111111111-https://example.com/": "101",
+		"map-100-__darkreader__wasEnabledForHost":                             string(testEncodeUTF16Raw("false")),
+		"map-101-token": string(testEncodeUTF16Raw("abc123")),
+		"next-map-id":   "200",
+		"version":       "1",
+	})
+}
+
+func TestExtractLocalStorage(t *testing.T) {
+	dir := setupLocalStorageLevelDB(t)
 
 	got, err := extractLocalStorage(dir)
 	require.NoError(t, err)
@@ -196,17 +213,7 @@ func TestExtractLocalStorage(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestExtractSessionStorage(t *testing.T) {
-	dir := createTestLevelDB(t, map[string]string{
-		// Namespace entry: maps guid+origin → map_id
-		"namespace-abcd1234_5678_9abc_def0_111111111111-https://github.com/":  "100",
-		"namespace-abcd1234_5678_9abc_def0_111111111111-https://example.com/": "101",
-		// Map entries: actual data (values are raw UTF-16 LE)
-		"map-100-__darkreader__wasEnabledForHost": string(testEncodeUTF16Raw("false")),
-		"map-101-token": string(testEncodeUTF16Raw("abc123")),
-		// Metadata: should be skipped
-		"next-map-id": "200",
-		"version":     "1",
-	})
+	dir := setupSessionStorageLevelDB(t)
 
 	got, err := extractSessionStorage(dir)
 	require.NoError(t, err)
@@ -218,6 +225,41 @@ func TestExtractSessionStorage(t *testing.T) {
 	}
 	assert.Equal(t, "false", byKey["https://github.com//__darkreader__wasEnabledForHost"])
 	assert.Equal(t, "abc123", byKey["https://example.com//token"])
+}
+
+// ---------------------------------------------------------------------------
+// countLocalStorage
+// ---------------------------------------------------------------------------
+
+func TestCountLocalStorage(t *testing.T) {
+	dir := setupLocalStorageLevelDB(t)
+
+	count, err := countLocalStorage(dir)
+	require.NoError(t, err)
+	assert.Equal(t, 4, count) // VERSION filtered, 2 META + 2 data entries kept
+}
+
+// ---------------------------------------------------------------------------
+// countSessionStorage
+// ---------------------------------------------------------------------------
+
+func TestCountSessionStorage(t *testing.T) {
+	dir := setupSessionStorageLevelDB(t)
+
+	count, err := countSessionStorage(dir)
+	require.NoError(t, err)
+	assert.Equal(t, 2, count) // only map- entries with key separator
+}
+
+func TestCountSessionStorage_Empty(t *testing.T) {
+	dir := createTestLevelDB(t, map[string]string{
+		"next-map-id": "1",
+		"version":     "1",
+	})
+
+	count, err := countSessionStorage(dir)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count)
 }
 
 // ---------------------------------------------------------------------------

@@ -8,8 +8,12 @@ import (
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
-const firefoxBookmarkQuery = `SELECT id, url, type, dateAdded, COALESCE(title, '')
-	FROM (SELECT * FROM moz_bookmarks INNER JOIN moz_places ON moz_bookmarks.fk=moz_places.id)`
+const (
+	firefoxBookmarkQuery = `SELECT id, url, type, dateAdded, COALESCE(title, '')
+		FROM (SELECT * FROM moz_bookmarks INNER JOIN moz_places ON moz_bookmarks.fk=moz_places.id)`
+	firefoxCountBookmarkQuery = `SELECT COUNT(*) FROM moz_bookmarks
+		INNER JOIN moz_places ON moz_bookmarks.fk=moz_places.id`
+)
 
 func extractBookmarks(path string) ([]types.BookmarkEntry, error) {
 	bookmarks, err := sqliteutil.QueryRows(path, true, firefoxBookmarkQuery,
@@ -44,4 +48,8 @@ func bookmarkType(bt int64) string {
 	default:
 		return "folder"
 	}
+}
+
+func countBookmarks(path string) (int, error) {
+	return sqliteutil.CountRows(path, true, firefoxCountBookmarkQuery)
 }

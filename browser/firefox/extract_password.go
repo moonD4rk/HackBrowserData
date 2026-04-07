@@ -13,6 +13,14 @@ import (
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
+func countPasswords(path string) (int, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0, err
+	}
+	return len(gjson.GetBytes(data, "logins").Array()), nil
+}
+
 // decryptPBE combines base64 decode + ASN1 PBE parse + decrypt into one call.
 func decryptPBE(encoded string, masterKey []byte) ([]byte, error) {
 	raw, err := base64.StdEncoding.DecodeString(encoded)

@@ -11,9 +11,15 @@ import (
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
-const firefoxDownloadQuery = `SELECT place_id, GROUP_CONCAT(content), url, dateAdded
-	FROM (SELECT * FROM moz_annos INNER JOIN moz_places ON moz_annos.place_id=moz_places.id)
-	t GROUP BY place_id`
+const (
+	firefoxDownloadQuery = `SELECT place_id, GROUP_CONCAT(content), url, dateAdded
+		FROM (SELECT * FROM moz_annos INNER JOIN moz_places ON moz_annos.place_id=moz_places.id)
+		t GROUP BY place_id`
+	firefoxCountDownloadQuery = `SELECT COUNT(*) FROM
+		(SELECT place_id FROM moz_annos
+			INNER JOIN moz_places ON moz_annos.place_id=moz_places.id
+		GROUP BY place_id)`
+)
 
 func extractDownloads(path string) ([]types.DownloadEntry, error) {
 	downloads, err := sqliteutil.QueryRows(path, true, firefoxDownloadQuery,
@@ -51,4 +57,8 @@ func extractDownloads(path string) ([]types.DownloadEntry, error) {
 		return downloads[i].StartTime.After(downloads[j].StartTime)
 	})
 	return downloads, nil
+}
+
+func countDownloads(path string) (int, error) {
+	return sqliteutil.CountRows(path, true, firefoxCountDownloadQuery)
 }

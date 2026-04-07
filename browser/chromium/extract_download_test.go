@@ -7,11 +7,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExtractDownloads(t *testing.T) {
-	path := createTestDB(t, "History", downloadsSchema,
+func setupDownloadDB(t *testing.T) string {
+	t.Helper()
+	return createTestDB(t, "History", downloadsSchema,
 		insertDownload("/tmp/old.zip", "https://old.com/file.zip", "application/zip", 1024, 13340000000000000, 13340000100000000),
 		insertDownload("/tmp/new.pdf", "https://new.com/doc.pdf", "application/pdf", 2048, 13360000000000000, 13360000200000000),
 	)
+}
+
+func TestExtractDownloads(t *testing.T) {
+	path := setupDownloadDB(t)
 
 	got, err := extractDownloads(path)
 	require.NoError(t, err)
@@ -28,4 +33,20 @@ func TestExtractDownloads(t *testing.T) {
 	assert.False(t, got[0].StartTime.IsZero())
 	assert.False(t, got[0].EndTime.IsZero())
 	assert.True(t, got[0].StartTime.Before(got[0].EndTime))
+}
+
+func TestCountDownloads(t *testing.T) {
+	path := setupDownloadDB(t)
+
+	count, err := countDownloads(path)
+	require.NoError(t, err)
+	assert.Equal(t, 2, count)
+}
+
+func TestCountDownloads_Empty(t *testing.T) {
+	path := createTestDB(t, "History", downloadsSchema)
+
+	count, err := countDownloads(path)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count)
 }

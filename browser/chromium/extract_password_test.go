@@ -7,11 +7,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExtractPasswords(t *testing.T) {
-	path := createTestDB(t, "Login Data", loginsSchema,
+func setupLoginDB(t *testing.T) string {
+	t.Helper()
+	return createTestDB(t, "Login Data", loginsSchema,
 		insertLogin("https://old.com", "https://old.com/login", "alice", "", 13340000000000000),
 		insertLogin("https://new.com", "https://new.com/login", "bob", "", 13360000000000000),
 	)
+}
+
+func TestExtractPasswords(t *testing.T) {
+	path := setupLoginDB(t)
 
 	got, err := extractPasswords(nil, path)
 	require.NoError(t, err)
@@ -26,6 +31,22 @@ func TestExtractPasswords(t *testing.T) {
 	assert.False(t, got[0].CreatedAt.IsZero())
 	// Password is empty because masterKey is nil (decrypt returns empty)
 	assert.Empty(t, got[0].Password)
+}
+
+func TestCountPasswords(t *testing.T) {
+	path := setupLoginDB(t)
+
+	count, err := countPasswords(path)
+	require.NoError(t, err)
+	assert.Equal(t, 2, count)
+}
+
+func TestCountPasswords_Empty(t *testing.T) {
+	path := createTestDB(t, "Login Data", loginsSchema)
+
+	count, err := countPasswords(path)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count)
 }
 
 func TestExtractYandexPasswords(t *testing.T) {

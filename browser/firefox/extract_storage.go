@@ -9,7 +9,10 @@ import (
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
-const firefoxLocalStorageQuery = `SELECT originKey, key, value FROM webappsstore2`
+const (
+	firefoxLocalStorageQuery      = `SELECT originKey, key, value FROM webappsstore2`
+	firefoxCountLocalStorageQuery = `SELECT COUNT(*) FROM webappsstore2`
+)
 
 func extractLocalStorage(path string) ([]types.StorageEntry, error) {
 	return sqliteutil.QueryRows(path, true, firefoxLocalStorageQuery,
@@ -24,6 +27,10 @@ func extractLocalStorage(path string) ([]types.StorageEntry, error) {
 				Value: value,
 			}, nil
 		})
+}
+
+func countLocalStorage(path string) (int, error) {
+	return sqliteutil.CountRows(path, true, firefoxCountLocalStorageQuery)
 }
 
 func reverseString(s string) string {

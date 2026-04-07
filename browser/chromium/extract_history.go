@@ -8,7 +8,10 @@ import (
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
-const defaultHistoryQuery = `SELECT url, title, visit_count, last_visit_time FROM urls`
+const (
+	defaultHistoryQuery = `SELECT url, title, visit_count, last_visit_time FROM urls`
+	countHistoryQuery   = `SELECT COUNT(*) FROM urls`
+)
 
 func extractHistories(path string) ([]types.HistoryEntry, error) {
 	histories, err := sqliteutil.QueryRows(path, false, defaultHistoryQuery,
@@ -34,4 +37,8 @@ func extractHistories(path string) ([]types.HistoryEntry, error) {
 		return histories[i].VisitCount > histories[j].VisitCount
 	})
 	return histories, nil
+}
+
+func countHistories(path string) (int, error) {
+	return sqliteutil.CountRows(path, false, countHistoryQuery)
 }

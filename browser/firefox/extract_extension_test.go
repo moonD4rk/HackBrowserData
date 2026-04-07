@@ -7,8 +7,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExtractExtensions(t *testing.T) {
-	path := createTestJSON(t, "extensions.json", `{
+func setupMozExtensionJSON(t *testing.T) string {
+	t.Helper()
+	return createTestJSON(t, "extensions.json", `{
 		"addons": [
 			{
 				"id": "ublock@gorhill.org",
@@ -38,6 +39,10 @@ func TestExtractExtensions(t *testing.T) {
 			}
 		]
 	}`)
+}
+
+func TestExtractExtensions(t *testing.T) {
+	path := setupMozExtensionJSON(t)
 
 	got, err := extractExtensions(path)
 	require.NoError(t, err)
@@ -52,6 +57,22 @@ func TestExtractExtensions(t *testing.T) {
 	assert.True(t, ids["ublock@gorhill.org"])
 	assert.True(t, ids["bitwarden@bitwarden.com"])
 	assert.False(t, ids["system@mozilla.org"])
+}
+
+func TestCountExtensions(t *testing.T) {
+	path := setupMozExtensionJSON(t)
+
+	count, err := countExtensions(path)
+	require.NoError(t, err)
+	assert.Equal(t, 2, count) // system addon filtered out
+}
+
+func TestCountExtensions_Empty(t *testing.T) {
+	path := createTestJSON(t, "extensions.json", `{"addons": []}`)
+
+	count, err := countExtensions(path)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count)
 }
 
 func TestExtractExtensions_EmptyAddons(t *testing.T) {

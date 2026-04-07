@@ -1,6 +1,23 @@
 package sqliteutil
 
-import "database/sql"
+import (
+	"database/sql"
+	"fmt"
+)
+
+// CountRows runs a scalar count query (e.g. SELECT COUNT(*) FROM ...) and
+// returns the integer result. It reuses the same database-open logic as
+// QuerySQLite (file existence check, optional journal_mode=off).
+func CountRows(dbPath string, journalOff bool, query string) (int, error) {
+	var count int
+	err := QuerySQLite(dbPath, journalOff, query, func(rows *sql.Rows) error {
+		return rows.Scan(&count)
+	})
+	if err != nil {
+		return 0, fmt.Errorf("count rows: %w", err)
+	}
+	return count, nil
+}
 
 // QueryRows is a generic helper (Go 1.18+) that wraps QuerySQLite and collects
 // results into a typed slice. Each extract method only needs to provide the

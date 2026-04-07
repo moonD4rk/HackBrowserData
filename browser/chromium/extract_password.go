@@ -9,7 +9,10 @@ import (
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
-const defaultLoginQuery = `SELECT origin_url, username_value, password_value, date_created FROM logins`
+const (
+	defaultLoginQuery = `SELECT origin_url, username_value, password_value, date_created FROM logins`
+	countLoginQuery   = `SELECT COUNT(*) FROM logins`
+)
 
 func extractPasswords(masterKey []byte, path string) ([]types.LoginEntry, error) {
 	return extractPasswordsWithQuery(masterKey, path, defaultLoginQuery)
@@ -56,4 +59,8 @@ func extractPasswordsWithQuery(masterKey []byte, path, query string) ([]types.Lo
 func extractYandexPasswords(masterKey []byte, path string) ([]types.LoginEntry, error) {
 	const yandexLoginQuery = `SELECT action_url, username_value, password_value, date_created FROM logins`
 	return extractPasswordsWithQuery(masterKey, path, yandexLoginQuery)
+}
+
+func countPasswords(path string) (int, error) {
+	return sqliteutil.CountRows(path, false, countLoginQuery)
 }

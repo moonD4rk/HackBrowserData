@@ -7,12 +7,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExtractLocalStorage(t *testing.T) {
-	path := createTestDB(t, "webappsstore.sqlite", []string{webappsstore2Schema},
+func setupWebappsDB(t *testing.T) string {
+	t.Helper()
+	return createTestDB(t, "webappsstore.sqlite", []string{webappsstore2Schema},
 		insertWebappsstore("moc.buhtig.:https:443", "theme", "dark"),
 		insertWebappsstore("moc.buhtig.:https:443", "lang", "en"),
 		insertWebappsstore("moc.elpmaxe.:http:8080", "token", "abc123"),
 	)
+}
+
+func TestExtractLocalStorage(t *testing.T) {
+	path := setupWebappsDB(t)
 
 	got, err := extractLocalStorage(path)
 	require.NoError(t, err)
@@ -26,6 +31,22 @@ func TestExtractLocalStorage(t *testing.T) {
 	assert.Equal(t, "dark", byKey["https://github.com:443/theme"])
 	assert.Equal(t, "en", byKey["https://github.com:443/lang"])
 	assert.Equal(t, "abc123", byKey["http://example.com:8080/token"])
+}
+
+func TestCountLocalStorage(t *testing.T) {
+	path := setupWebappsDB(t)
+
+	count, err := countLocalStorage(path)
+	require.NoError(t, err)
+	assert.Equal(t, 3, count)
+}
+
+func TestCountLocalStorage_Empty(t *testing.T) {
+	path := createTestDB(t, "webappsstore.sqlite", []string{webappsstore2Schema})
+
+	count, err := countLocalStorage(path)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count)
 }
 
 func TestParseOriginKey(t *testing.T) {

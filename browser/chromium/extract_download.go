@@ -8,8 +8,11 @@ import (
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
-const defaultDownloadQuery = `SELECT target_path, tab_url, total_bytes, start_time, end_time,
-	mime_type FROM downloads`
+const (
+	defaultDownloadQuery = `SELECT target_path, tab_url, total_bytes, start_time, end_time,
+		mime_type FROM downloads`
+	countDownloadQuery = `SELECT COUNT(*) FROM downloads`
+)
 
 func extractDownloads(path string) ([]types.DownloadEntry, error) {
 	downloads, err := sqliteutil.QueryRows(path, false, defaultDownloadQuery,
@@ -36,4 +39,8 @@ func extractDownloads(path string) ([]types.DownloadEntry, error) {
 		return downloads[i].StartTime.After(downloads[j].StartTime)
 	})
 	return downloads, nil
+}
+
+func countDownloads(path string) (int, error) {
+	return sqliteutil.CountRows(path, false, countDownloadQuery)
 }

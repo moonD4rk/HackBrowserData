@@ -34,3 +34,18 @@ func extractExtensions(path string) ([]types.ExtensionEntry, error) {
 
 	return extensions, nil
 }
+
+func countExtensions(path string) (int, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0, err
+	}
+
+	var count int
+	for _, v := range gjson.GetBytes(data, "addons").Array() {
+		if v.Get("location").String() == "app-profile" {
+			count++
+		}
+	}
+	return count, nil
+}

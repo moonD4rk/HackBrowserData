@@ -83,6 +83,57 @@ func (b *Browser) Extract(categories []types.Category) (*types.BrowserData, erro
 	return data, nil
 }
 
+// CountEntries copies browser files to a temp directory and counts entries
+// per category without decryption. Much faster than Extract for display-only
+// use cases like "list --detail".
+func (b *Browser) CountEntries(categories []types.Category) (map[types.Category]int, error) {
+	session, err := filemanager.NewSession()
+	if err != nil {
+		return nil, err
+	}
+	defer session.Cleanup()
+
+	tempPaths := b.acquireFiles(session, categories)
+
+	counts := make(map[types.Category]int)
+	for _, cat := range categories {
+		path, ok := tempPaths[cat]
+		if !ok {
+			continue
+		}
+		counts[cat] = b.countCategory(cat, path)
+	}
+	return counts, nil
+}
+
+// countCategory calls the appropriate count function for a category.
+func (b *Browser) countCategory(cat types.Category, path string) int {
+	var count int
+	var err error
+	switch cat {
+	case types.Password:
+		count, err = countPasswords(path)
+	case types.Cookie:
+		count, err = countCookies(path)
+	case types.History:
+		count, err = countHistories(path)
+	case types.Download:
+		count, err = countDownloads(path)
+	case types.Bookmark:
+		count, err = countBookmarks(path)
+	case types.Extension:
+		count, err = countExtensions(path)
+	case types.LocalStorage:
+		count, err = countLocalStorage(path)
+	case types.CreditCard, types.SessionStorage:
+		// Firefox does not support CreditCard or SessionStorage.
+	}
+	if err != nil {
+		log.Debugf("count %s for %s: %v", cat, b.BrowserName()+"/"+b.ProfileName(), err)
+	}
+	return count
+}
+
 // acquireFiles copies source files to the session temp directory.
 func (b *Browser) acquireFiles(session *filemanager.Session, categories []types.Category) map[types.Category]string {
 	tempPaths := make(map[types.Category]string)

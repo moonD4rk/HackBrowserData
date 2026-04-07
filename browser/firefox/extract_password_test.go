@@ -53,6 +53,29 @@ func TestExtractPasswords(t *testing.T) {
 	assert.False(t, got[0].CreatedAt.IsZero())
 }
 
+func TestCountPasswords(t *testing.T) {
+	json := `{
+		"logins": [
+			{"hostname": "https://a.com", "encryptedUsername": "", "encryptedPassword": "", "timeCreated": 1000},
+			{"hostname": "https://b.com", "encryptedUsername": "", "encryptedPassword": "", "timeCreated": 2000},
+			{"hostname": "https://c.com", "encryptedUsername": "", "encryptedPassword": "", "timeCreated": 3000}
+		]
+	}`
+	path := createTestJSON(t, "logins.json", json)
+
+	count, err := countPasswords(path)
+	require.NoError(t, err)
+	assert.Equal(t, 3, count)
+}
+
+func TestCountPasswords_Empty(t *testing.T) {
+	path := createTestJSON(t, "logins.json", `{"logins": []}`)
+
+	count, err := countPasswords(path)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count)
+}
+
 func TestExtractPasswords_FormSubmitURLFallback(t *testing.T) {
 	encB64 := loginPBEBase64(t)
 

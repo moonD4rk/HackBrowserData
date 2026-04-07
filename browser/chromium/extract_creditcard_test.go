@@ -7,11 +7,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExtractCreditCards(t *testing.T) {
-	path := createTestDB(t, "Web Data", creditCardsSchema,
+func setupCreditCardDB(t *testing.T) string {
+	t.Helper()
+	return createTestDB(t, "Web Data", creditCardsSchema,
 		insertCreditCard("John Doe", 12, 2025, "", "Johnny", "addr-1"),
 		insertCreditCard("Jane Smith", 6, 2027, "", "", ""),
 	)
+}
+
+func TestExtractCreditCards(t *testing.T) {
+	path := setupCreditCardDB(t)
 
 	got, err := extractCreditCards(nil, path)
 	require.NoError(t, err)
@@ -27,4 +32,20 @@ func TestExtractCreditCards(t *testing.T) {
 	assert.Equal(t, "Jane Smith", got[1].Name)
 	assert.Equal(t, "6", got[1].ExpMonth)
 	assert.Equal(t, "2027", got[1].ExpYear)
+}
+
+func TestCountCreditCards(t *testing.T) {
+	path := setupCreditCardDB(t)
+
+	count, err := countCreditCards(path)
+	require.NoError(t, err)
+	assert.Equal(t, 2, count)
+}
+
+func TestCountCreditCards_Empty(t *testing.T) {
+	path := createTestDB(t, "Web Data", creditCardsSchema)
+
+	count, err := countCreditCards(path)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count)
 }

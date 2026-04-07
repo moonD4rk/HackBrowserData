@@ -7,11 +7,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExtractCookies(t *testing.T) {
-	path := createTestDB(t, "cookies.sqlite", []string{mozCookiesSchema},
+func setupMozCookieDB(t *testing.T) string {
+	t.Helper()
+	return createTestDB(t, "cookies.sqlite", []string{mozCookiesSchema},
 		insertMozCookie("session", "abc123", ".example.com", "/", 1700000000000000, 1800000000, 1, 1),
 		insertMozCookie("token", "xyz789", ".new.com", "/api", 1710000000000000, 1810000000, 1, 0),
 	)
+}
+
+func TestExtractCookies(t *testing.T) {
+	path := setupMozCookieDB(t)
 
 	got, err := extractCookies(path)
 	require.NoError(t, err)
@@ -32,4 +37,20 @@ func TestExtractCookies(t *testing.T) {
 
 	assert.Equal(t, "abc123", got[1].Value)
 	assert.True(t, got[1].IsHTTPOnly)
+}
+
+func TestCountCookies(t *testing.T) {
+	path := setupMozCookieDB(t)
+
+	count, err := countCookies(path)
+	require.NoError(t, err)
+	assert.Equal(t, 2, count)
+}
+
+func TestCountCookies_Empty(t *testing.T) {
+	path := createTestDB(t, "cookies.sqlite", []string{mozCookiesSchema})
+
+	count, err := countCookies(path)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count)
 }

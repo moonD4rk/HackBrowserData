@@ -11,9 +11,12 @@ import (
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
-const defaultCookieQuery = `SELECT name, encrypted_value, host_key, path,
-	creation_utc, expires_utc, is_secure, is_httponly,
-	has_expires, is_persistent FROM cookies`
+const (
+	defaultCookieQuery = `SELECT name, encrypted_value, host_key, path,
+		creation_utc, expires_utc, is_secure, is_httponly,
+		has_expires, is_persistent FROM cookies`
+	countCookieQuery = `SELECT COUNT(*) FROM cookies`
+)
 
 func extractCookies(masterKey []byte, path string) ([]types.CookieEntry, error) {
 	var decryptFails int
@@ -63,6 +66,10 @@ func extractCookies(masterKey []byte, path string) ([]types.CookieEntry, error) 
 		return cookies[i].CreatedAt.After(cookies[j].CreatedAt)
 	})
 	return cookies, nil
+}
+
+func countCookies(path string) (int, error) {
+	return sqliteutil.CountRows(path, false, countCookieQuery)
 }
 
 // stripCookieHash removes the SHA256(host_key) prefix from a decrypted cookie value.

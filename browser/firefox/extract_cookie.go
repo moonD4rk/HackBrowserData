@@ -8,8 +8,11 @@ import (
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
-const firefoxCookieQuery = `SELECT name, value, host, path,
-	creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
+const (
+	firefoxCookieQuery = `SELECT name, value, host, path,
+		creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
+	firefoxCountCookieQuery = `SELECT COUNT(*) FROM moz_cookies`
+)
 
 func extractCookies(path string) ([]types.CookieEntry, error) {
 	cookies, err := sqliteutil.QueryRows(path, true, firefoxCookieQuery,
@@ -45,4 +48,8 @@ func extractCookies(path string) ([]types.CookieEntry, error) {
 		return cookies[i].CreatedAt.After(cookies[j].CreatedAt)
 	})
 	return cookies, nil
+}
+
+func countCookies(path string) (int, error) {
+	return sqliteutil.CountRows(path, true, firefoxCountCookieQuery)
 }

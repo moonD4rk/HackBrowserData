@@ -8,8 +8,11 @@ import (
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
-const firefoxHistoryQuery = `SELECT url, COALESCE(last_visit_date, 0),
-	COALESCE(title, ''), visit_count FROM moz_places`
+const (
+	firefoxHistoryQuery = `SELECT url, COALESCE(last_visit_date, 0),
+		COALESCE(title, ''), visit_count FROM moz_places`
+	firefoxCountHistoryQuery = `SELECT COUNT(*) FROM moz_places`
+)
 
 func extractHistories(path string) ([]types.HistoryEntry, error) {
 	histories, err := sqliteutil.QueryRows(path, true, firefoxHistoryQuery,
@@ -35,4 +38,8 @@ func extractHistories(path string) ([]types.HistoryEntry, error) {
 		return histories[i].VisitCount < histories[j].VisitCount
 	})
 	return histories, nil
+}
+
+func countHistories(path string) (int, error) {
+	return sqliteutil.CountRows(path, true, firefoxCountHistoryQuery)
 }
