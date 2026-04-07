@@ -544,17 +544,9 @@ func TestGetMasterKey(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestExtract(t *testing.T) {
-	// Shared fixture: profile with a real History database.
 	dir := t.TempDir()
 	mkFile(dir, "Default", "Preferences")
-
-	historyDB := createTestDB(t, "History", urlsSchema,
-		insertURL("https://example.com", "Example", 5, 13350000000000000),
-	)
-	profileDir := filepath.Join(dir, "Default")
-	data, err := os.ReadFile(historyDB)
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(profileDir, "History"), data, 0o644))
+	installFile(t, filepath.Join(dir, "Default"), setupHistoryDB(t), "History")
 
 	tests := []struct {
 		name          string
@@ -586,7 +578,8 @@ func TestExtract(t *testing.T) {
 			result, err := browsers[0].Extract([]types.Category{types.History})
 			require.NoError(t, err)
 			require.NotNil(t, result)
-			require.Len(t, result.Histories, 1)
+			require.Len(t, result.Histories, 3)
+			// setupHistoryDB: Example(200) > GitHub(100) > Go Dev(50)
 			assert.Equal(t, "Example", result.Histories[0].Title)
 
 			if tt.wantRetriever {
@@ -596,6 +589,87 @@ func TestExtract(t *testing.T) {
 			}
 		})
 	}
+}
+
+// ---------------------------------------------------------------------------
+// CountEntries
+// ---------------------------------------------------------------------------
+
+func TestCountEntries(t *testing.T) {
+	dir := t.TempDir()
+	mkFile(dir, "Default", "Preferences")
+	installFile(t, filepath.Join(dir, "Default"), setupHistoryDB(t), "History")
+
+	browsers, err := NewBrowsers(types.BrowserConfig{
+		Name: "Test", Kind: types.Chromium, UserDataDir: dir,
+	})
+	require.NoError(t, err)
+	require.Len(t, browsers, 1)
+
+	// No retriever set — CountEntries should still work (no decryption needed).
+	counts, err := browsers[0].CountEntries([]types.Category{types.History, types.Download})
+	require.NoError(t, err)
+
+	assert.Equal(t, 3, counts[types.History])
+	// Download uses a different table in the same file; since we only
+	// created the urls table (not downloads), the count query will fail
+	// gracefully and return 0.
+	assert.Equal(t, 0, counts[types.Download])
+}
+
+func TestCountEntries_NoRetrieverNeeded(t *testing.T) {
+	dir := t.TempDir()
+	mkFile(dir, "Default", "Preferences")
+	// Login Data normally needs master key to extract, but CountEntries skips decryption.
+	installFile(t, filepath.Join(dir, "Default"), setupLoginDB(t), "Login Data")
+
+	browsers, err := NewBrowsers(types.BrowserConfig{
+		Name: "Test", Kind: types.Chromium, UserDataDir: dir,
+	})
+	require.NoError(t, err)
+	require.Len(t, browsers, 1)
+
+	// No retriever set — CountEntries succeeds without master key.
+	counts, err := browsers[0].CountEntries([]types.Category{types.Password})
+	require.NoError(t, err)
+	assert.Equal(t, 2, counts[types.Password])
+}
+
+func TestCountCategory(t *testing.T) {
+	t.Run("History", func(t *testing.T) {
+		path := setupHistoryDB(t)
+		b := &Browser{cfg: types.BrowserConfig{Kind: types.Chromium}}
+		assert.Equal(t, 3, b.countCategory(types.History, path))
+	})
+
+	t.Run("Cookie", func(t *testing.T) {
+		path := setupCookieDB(t)
+		b := &Browser{cfg: types.BrowserConfig{Kind: types.Chromium}}
+		assert.Equal(t, 2, b.countCategory(types.Cookie, path))
+	})
+
+	t.Run("Bookmark", func(t *testing.T) {
+		path := setupBookmarkJSON(t)
+		b := &Browser{cfg: types.BrowserConfig{Kind: types.Chromium}}
+		assert.Equal(t, 3, b.countCategory(types.Bookmark, path))
+	})
+
+	t.Run("Extension_Opera", func(t *testing.T) {
+		path := createTestJSON(t, "Secure Preferences", `{
+			"extensions": {
+				"opsettings": {
+					"ext1": {"location": 1, "manifest": {"name": "Ext", "version": "1.0"}}
+				}
+			}
+		}`)
+		b := &Browser{cfg: types.BrowserConfig{Kind: types.ChromiumOpera}}
+		assert.Equal(t, 1, b.countCategory(types.Extension, path))
+	})
+
+	t.Run("FileNotFound", func(t *testing.T) {
+		b := &Browser{cfg: types.BrowserConfig{Kind: types.Chromium}}
+		assert.Equal(t, 0, b.countCategory(types.History, "/nonexistent/path"))
+	})
 }
 
 // ---------------------------------------------------------------------------

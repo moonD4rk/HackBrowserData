@@ -176,6 +176,64 @@ func TestResolveSourcePaths_Partial(t *testing.T) {
 	assert.NotContains(t, resolved, types.Extension)
 }
 
+// ---------------------------------------------------------------------------
+// CountEntries
+// ---------------------------------------------------------------------------
+
+func TestCountEntries(t *testing.T) {
+	dir := t.TempDir()
+	profileDir := filepath.Join(dir, "test-profile")
+	mkDir(profileDir)
+	installFile(t, profileDir, setupMozHistoryDB(t), "places.sqlite")
+
+	browsers, err := NewBrowsers(types.BrowserConfig{
+		Name: "Firefox", Kind: types.Firefox, UserDataDir: dir,
+	})
+	require.NoError(t, err)
+	require.Len(t, browsers, 1)
+
+	// CountEntries works without master key.
+	counts, err := browsers[0].CountEntries([]types.Category{types.History})
+	require.NoError(t, err)
+	assert.Equal(t, 3, counts[types.History])
+}
+
+func TestCountCategory(t *testing.T) {
+	t.Run("History", func(t *testing.T) {
+		path := setupMozHistoryDB(t)
+		b := &Browser{}
+		assert.Equal(t, 3, b.countCategory(types.History, path))
+	})
+
+	t.Run("Cookie", func(t *testing.T) {
+		path := setupMozCookieDB(t)
+		b := &Browser{}
+		assert.Equal(t, 2, b.countCategory(types.Cookie, path))
+	})
+
+	t.Run("Bookmark", func(t *testing.T) {
+		path := setupMozBookmarkDB(t)
+		b := &Browser{}
+		assert.Equal(t, 2, b.countCategory(types.Bookmark, path))
+	})
+
+	t.Run("Extension", func(t *testing.T) {
+		path := setupMozExtensionJSON(t)
+		b := &Browser{}
+		assert.Equal(t, 2, b.countCategory(types.Extension, path))
+	})
+
+	t.Run("UnsupportedCategory", func(t *testing.T) {
+		b := &Browser{}
+		assert.Equal(t, 0, b.countCategory(types.CreditCard, "unused"))
+		assert.Equal(t, 0, b.countCategory(types.SessionStorage, "unused"))
+	})
+}
+
+// ---------------------------------------------------------------------------
+// extractCategory
+// ---------------------------------------------------------------------------
+
 // TestExtractCategory verifies that the switch dispatch works for each category.
 func TestExtractCategory(t *testing.T) {
 	t.Run("History", func(t *testing.T) {

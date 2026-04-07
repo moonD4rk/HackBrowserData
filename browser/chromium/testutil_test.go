@@ -196,6 +196,16 @@ func insertCreditCard(name string, month, year int, encNumberHex, nickName, addr
 // Test fixture builders
 // ---------------------------------------------------------------------------
 
+// installFile copies a test fixture file into a profile directory.
+// This bridges per-category setup functions (which return standalone paths)
+// and browser-level integration tests (which need files inside a profile).
+func installFile(t *testing.T, profileDir, srcPath, dstName string) {
+	t.Helper()
+	data, err := os.ReadFile(srcPath)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(profileDir, dstName), data, 0o644))
+}
+
 // createTestDB creates a SQLite database with the given schema and insert statements.
 func createTestDB(t *testing.T, name, schema string, inserts ...string) string {
 	t.Helper()

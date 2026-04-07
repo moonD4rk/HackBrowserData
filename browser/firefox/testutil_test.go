@@ -141,6 +141,14 @@ func insertWebappsstore(originKey, key, value string) string {
 // Test fixture builders
 // ---------------------------------------------------------------------------
 
+// installFile copies a test fixture file into a profile directory.
+func installFile(t *testing.T, profileDir, srcPath, dstName string) {
+	t.Helper()
+	data, err := os.ReadFile(srcPath)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(profileDir, dstName), data, 0o644))
+}
+
 func createTestDB(t *testing.T, name string, schemas []string, inserts ...string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), name)
