@@ -86,6 +86,79 @@ func TestQuerySQLite_BadQuery(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestCountRows(t *testing.T) {
+	tests := []struct {
+		name       string
+		schema     string
+		inserts    string
+		journalOff bool
+		query      string
+		wantCount  int
+		wantErr    bool
+	}{
+		{
+			name:      "count rows",
+			schema:    "CREATE TABLE items (id INTEGER, name TEXT)",
+			inserts:   "INSERT INTO items VALUES (1, 'alpha'), (2, 'beta'), (3, 'gamma')",
+			query:     "SELECT COUNT(*) FROM items",
+			wantCount: 3,
+		},
+		{
+			name:      "empty table",
+			schema:    "CREATE TABLE t (v TEXT)",
+			query:     "SELECT COUNT(*) FROM t",
+			wantCount: 0,
+		},
+		{
+			name:       "journal off",
+			schema:     "CREATE TABLE t (v TEXT)",
+			inserts:    "INSERT INTO t VALUES ('a'), ('b')",
+			journalOff: true,
+			query:      "SELECT COUNT(*) FROM t",
+			wantCount:  2,
+		},
+		{
+			name:    "file not found",
+			query:   "SELECT COUNT(*) FROM t",
+			wantErr: true,
+		},
+		{
+			name:    "bad query",
+			schema:  "CREATE TABLE t (v TEXT)",
+			query:   "SELECT COUNT(*) FROM nonexistent",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var dbPath string
+			if tt.schema != "" {
+				dbPath = filepath.Join(t.TempDir(), "test.db")
+				db, err := sql.Open("sqlite", dbPath)
+				require.NoError(t, err)
+				_, err = db.Exec(tt.schema)
+				require.NoError(t, err)
+				if tt.inserts != "" {
+					_, err = db.Exec(tt.inserts)
+					require.NoError(t, err)
+				}
+				require.NoError(t, db.Close())
+			} else {
+				dbPath = "/nonexistent/path.db"
+			}
+
+			count, err := CountRows(dbPath, tt.journalOff, tt.query)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantCount, count)
+		})
+	}
+}
+
 func TestQueryRows(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "test.db")
