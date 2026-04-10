@@ -50,6 +50,8 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 	// it's harmless (DPAPI reads Local State per-profile, D-Bus is stateless).
 	retriever := keyretriever.DefaultRetriever(opts.KeychainPassword)
 
+	configs = resolveGlobs(configs)
+
 	var browsers []Browser
 	for _, cfg := range configs {
 		if name != "all" && cfg.Key != name {
@@ -92,6 +94,34 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 // without coupling the Browser interface to Chromium-specific concerns.
 type retrieverSetter interface {
 	SetRetriever(keyretriever.KeyRetriever)
+}
+
+// resolveGlobs expands glob patterns in browser configs' UserDataDir.
+// This supports MSIX/UWP browsers on Windows whose package directories
+// contain a dynamic publisher hash suffix (e.g., "TheBrowserCompany.Arc_*").
+//
+// For literal paths (no glob metacharacters), Glob returns the path itself
+// when it exists, so the config passes through unchanged. When a path does
+// not exist and contains no metacharacters, Glob returns nil and the
+// original config is preserved — the main loop handles "not found" as usual.
+//
+// When a glob matches multiple directories, the config is duplicated so
+// each resolved path is treated as a separate browser data directory.
+func resolveGlobs(configs []types.BrowserConfig) []types.BrowserConfig {
+	var out []types.BrowserConfig
+	for _, cfg := range configs {
+		matches, _ := filepath.Glob(cfg.UserDataDir)
+		if len(matches) == 0 {
+			out = append(out, cfg)
+			continue
+		}
+		for _, dir := range matches {
+			c := cfg
+			c.UserDataDir = dir
+			out = append(out, c)
+		}
+	}
+	return out
 }
 
 // newBrowsers dispatches to the correct engine based on BrowserKind

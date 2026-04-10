@@ -25,4 +25,5 @@ const (
 	dcName         = "DC"
 	sogouName      = "Sogou"
 	arcName        = "Arc"
+	duckduckgoName = "DuckDuckGo"
 )

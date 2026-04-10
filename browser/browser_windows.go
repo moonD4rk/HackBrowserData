@@ -99,6 +99,18 @@ func platformBrowsers() []types.BrowserConfig {
 			UserDataDir: homeDir + "/AppData/Local/Sogou/SogouExplorer/User Data",
 		},
 		{
+			Key:         "arc",
+			Name:        arcName,
+			Kind:        types.Chromium,
+			UserDataDir: homeDir + "/AppData/Local/Packages/TheBrowserCompany.Arc_*/LocalCache/Local/Arc/User Data",
+		},
+		{
+			Key:         "duckduckgo",
+			Name:        duckduckgoName,
+			Kind:        types.Chromium,
+			UserDataDir: homeDir + "/AppData/Local/Packages/DuckDuckGo.DesktopBrowser_*/LocalState/EBWebView",
+		},
+		{
 			Key:         "firefox",
 			Name:        firefoxName,
 			Kind:        types.Firefox,
