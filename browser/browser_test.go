@@ -25,10 +25,6 @@ func TestListBrowsers(t *testing.T) {
 	assert.True(t, sort.StringsAreSorted(list))
 }
 
-// ---------------------------------------------------------------------------
-// pickFromConfigs
-// ---------------------------------------------------------------------------
-
 type pickTest struct {
 	name         string
 	configs      []types.BrowserConfig
@@ -242,10 +238,6 @@ func TestPickFromConfigs(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// resolveGlobs
-// ---------------------------------------------------------------------------
-
 func TestResolveGlobs(t *testing.T) {
 	// Create directories for glob matching:
 	//   base/
@@ -349,10 +341,6 @@ func TestResolveGlobs(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// newBrowsers dispatcher
-// ---------------------------------------------------------------------------
-
 func TestNewBrowsersDispatch(t *testing.T) {
 	chromiumDir := t.TempDir()
 	mkFile(t, chromiumDir, "Default", "Preferences")
@@ -413,10 +401,6 @@ func TestNewBrowsersDispatch(t *testing.T) {
 		})
 	}
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 // assertBrowsers verifies browser names and profiles match expectations (order-independent).
 func assertBrowsers(t *testing.T, browsers []Browser, wantNames, wantProfiles []string) {
