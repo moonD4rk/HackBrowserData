@@ -133,9 +133,17 @@ func TestCountCategory(t *testing.T) {
 		assert.Equal(t, 1, b.countCategory(types.History, path))
 	})
 
+	t.Run("Cookie", func(t *testing.T) {
+		path := buildTestBinaryCookies(t, []testCookie{
+			{domain: ".example.com", name: "a", path: "/", value: "1", expires: 800000000.0, creation: 700000000.0},
+			{domain: ".go.dev", name: "b", path: "/", value: "2", expires: 800000000.0, creation: 700000000.0},
+		})
+		b := &Browser{}
+		assert.Equal(t, 2, b.countCategory(types.Cookie, path))
+	})
+
 	t.Run("UnsupportedCategory", func(t *testing.T) {
 		b := &Browser{}
-		assert.Equal(t, 0, b.countCategory(types.Cookie, "unused"))
 		assert.Equal(t, 0, b.countCategory(types.CreditCard, "unused"))
 		assert.Equal(t, 0, b.countCategory(types.SessionStorage, "unused"))
 	})
@@ -160,12 +168,28 @@ func TestExtractCategory(t *testing.T) {
 		assert.Equal(t, 1, data.Histories[1].VisitCount)
 	})
 
+	t.Run("Cookie", func(t *testing.T) {
+		path := buildTestBinaryCookies(t, []testCookie{
+			{
+				domain: ".example.com", name: "session", path: "/", value: "abc",
+				secure: true, httpOnly: true, expires: 800000000.0, creation: 700000000.0,
+			},
+		})
+		b := &Browser{}
+		data := &types.BrowserData{}
+		b.extractCategory(data, types.Cookie, path)
+
+		require.Len(t, data.Cookies, 1)
+		assert.Equal(t, ".example.com", data.Cookies[0].Host)
+		assert.Equal(t, "session", data.Cookies[0].Name)
+		assert.True(t, data.Cookies[0].IsSecure)
+		assert.True(t, data.Cookies[0].IsHTTPOnly)
+	})
+
 	t.Run("UnsupportedCategory", func(t *testing.T) {
 		b := &Browser{}
 		data := &types.BrowserData{}
-		b.extractCategory(data, types.Cookie, "unused")
 		b.extractCategory(data, types.CreditCard, "unused")
-		assert.Empty(t, data.Cookies)
 		assert.Empty(t, data.CreditCards)
 	})
 }

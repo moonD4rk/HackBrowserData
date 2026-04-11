@@ -21,6 +21,8 @@ github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
+github.com/moond4rk/binarycookies v1.0.2 h1:moXSHYOj/V4Z1vEsEjHjdNML+4JcflOpxx53sHio0cA=
+github.com/moond4rk/binarycookies v1.0.2/go.mod h1:iAJr8L7ZgzTKaZhzEZmzjuOFnAoIHaqHFzvn58h1b7c=
 github.com/moond4rk/keychainbreaker v0.2.5 h1:1f2qmgpt1sl+mXA8DTW9nnVhzo4oGO08bnkXu70DL04=
 github.com/moond4rk/keychainbreaker v0.2.5/go.mod h1:VVx2VXwL2EGhuU2WBD67w66JCKKqLFXGJg91y3FY4f0=
 github.com/ncruces/go-strftime v0.1.9 h1:bY0MQC28UADQmHmaF5dgpLmImcShSi2kHU9XLdhx/f4=
