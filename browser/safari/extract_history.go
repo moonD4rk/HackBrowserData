@@ -9,13 +9,16 @@ import (
 )
 
 const (
-	// safariHistoryQuery joins history_items with history_visits to get
-	// the latest visit per URL. GROUP BY deduplicates multiple visits.
+	// safariHistoryQuery joins each history item to its latest visit so
+	// title and visit_time come from the same history_visits row.
 	safariHistoryQuery = `SELECT hi.url, COALESCE(hv.title, ''), hi.visit_count,
-		COALESCE(MAX(hv.visit_time), 0)
+		COALESCE(hv.visit_time, 0)
 		FROM history_items hi
-		LEFT JOIN history_visits hv ON hi.id = hv.history_item
-		GROUP BY hi.id`
+		LEFT JOIN history_visits hv ON hv.id = (
+			SELECT hv2.id FROM history_visits hv2
+			WHERE hv2.history_item = hi.id
+			ORDER BY hv2.visit_time DESC LIMIT 1
+		)`
 
 	safariCountHistoryQuery = `SELECT COUNT(*) FROM history_items`
 )
