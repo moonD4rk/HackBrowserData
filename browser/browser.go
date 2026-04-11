@@ -80,9 +80,13 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 
 		// Inject the shared key retriever into browsers that need it.
 		// Chromium browsers implement retrieverSetter; Firefox does not.
+		// Safari receives the keychain password directly for InternetPassword extraction.
 		for _, b := range found {
 			if setter, ok := b.(retrieverSetter); ok {
 				setter.SetRetriever(retriever)
+			}
+			if setter, ok := b.(keychainPasswordSetter); ok {
+				setter.SetKeychainPassword(opts.KeychainPassword)
 			}
 		}
 		browsers = append(browsers, found...)
@@ -95,6 +99,12 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 // without coupling the Browser interface to Chromium-specific concerns.
 type retrieverSetter interface {
 	SetRetriever(keyretriever.KeyRetriever)
+}
+
+// keychainPasswordSetter is implemented by browsers that extract credentials
+// directly from the macOS Keychain (e.g. Safari InternetPassword entries).
+type keychainPasswordSetter interface {
+	SetKeychainPassword(string)
 }
 
 // resolveGlobs expands glob patterns in browser configs' UserDataDir.

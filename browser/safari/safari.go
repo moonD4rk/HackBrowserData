@@ -14,10 +14,17 @@ import (
 // Safari has a single flat data directory (no profile subdirectories)
 // and stores most data unencrypted (passwords live in macOS Keychain).
 type Browser struct {
-	cfg         types.BrowserConfig
-	dataDir     string                          // absolute path to ~/Library/Safari
-	sources     map[types.Category][]sourcePath // Category → candidate paths
-	sourcePaths map[types.Category]resolvedPath // Category → discovered absolute path
+	cfg              types.BrowserConfig
+	dataDir          string                          // absolute path to ~/Library/Safari
+	keychainPassword string                          // macOS login password for Keychain unlock
+	sources          map[types.Category][]sourcePath // Category → candidate paths
+	sourcePaths      map[types.Category]resolvedPath // Category → discovered absolute path
+}
+
+// SetKeychainPassword sets the macOS login password used to unlock
+// the Keychain for Safari password extraction.
+func (b *Browser) SetKeychainPassword(password string) {
+	b.keychainPassword = password
 }
 
 // NewBrowsers checks whether Safari data exists at cfg.UserDataDir and returns
@@ -53,6 +60,11 @@ func (b *Browser) Extract(categories []types.Category) (*types.BrowserData, erro
 
 	data := &types.BrowserData{}
 	for _, cat := range categories {
+		// Password is stored in macOS Keychain, not in a file.
+		if cat == types.Password {
+			b.extractCategory(data, cat, "")
+			continue
+		}
 		path, ok := tempPaths[cat]
 		if !ok {
 			continue
@@ -75,6 +87,10 @@ func (b *Browser) CountEntries(categories []types.Category) (map[types.Category]
 
 	counts := make(map[types.Category]int)
 	for _, cat := range categories {
+		if cat == types.Password {
+			counts[cat] = b.countCategory(cat, "")
+			continue
+		}
 		path, ok := tempPaths[cat]
 		if !ok {
 			continue
@@ -106,6 +122,8 @@ func (b *Browser) acquireFiles(session *filemanager.Session, categories []types.
 func (b *Browser) extractCategory(data *types.BrowserData, cat types.Category, path string) {
 	var err error
 	switch cat {
+	case types.Password:
+		data.Passwords, err = extractPasswords(b.keychainPassword)
 	case types.History:
 		data.Histories, err = extractHistories(path)
 	case types.Cookie:
@@ -127,6 +145,8 @@ func (b *Browser) countCategory(cat types.Category, path string) int {
 	var count int
 	var err error
 	switch cat {
+	case types.Password:
+		count, err = countPasswords(b.keychainPassword)
 	case types.History:
 		count, err = countHistories(path)
 	case types.Cookie:
