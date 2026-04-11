@@ -120,12 +120,12 @@ func TestExtractCookies(t *testing.T) {
 		{
 			domain: ".example.com", name: "session", path: "/", value: "abc123",
 			secure: true, httpOnly: true,
-			expires: 800000000.0, creation: 700000000.0,
+			expires: 2000000000.0, creation: 700000000.0,
 		},
 		{
 			domain: ".go.dev", name: "lang", path: "/", value: "en",
 			secure: false, httpOnly: false,
-			expires: 800000000.0, creation: 750000000.0,
+			expires: 2000000000.0, creation: 750000000.0,
 		},
 	})
 
@@ -150,9 +150,9 @@ func TestExtractCookies(t *testing.T) {
 
 func TestCountCookies(t *testing.T) {
 	path := buildTestBinaryCookies(t, []testCookie{
-		{domain: ".a.com", name: "a", path: "/", value: "1", expires: 800000000.0, creation: 700000000.0},
-		{domain: ".b.com", name: "b", path: "/", value: "2", expires: 800000000.0, creation: 700000000.0},
-		{domain: ".c.com", name: "c", path: "/", value: "3", expires: 800000000.0, creation: 700000000.0},
+		{domain: ".a.com", name: "a", path: "/", value: "1", expires: 2000000000.0, creation: 700000000.0},
+		{domain: ".b.com", name: "b", path: "/", value: "2", expires: 2000000000.0, creation: 700000000.0},
+		{domain: ".c.com", name: "c", path: "/", value: "3", expires: 2000000000.0, creation: 700000000.0},
 	})
 
 	count, err := countCookies(path)

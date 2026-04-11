@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"sort"
-	"time"
 
 	"github.com/moond4rk/binarycookies"
 
@@ -20,7 +19,7 @@ func extractCookies(path string) ([]types.CookieEntry, error) {
 	var cookies []types.CookieEntry
 	for _, page := range pages {
 		for _, c := range page.Cookies {
-			hasExpire := c.Expires.After(time.Now())
+			hasExpire := !c.Expires.IsZero()
 			cookies = append(cookies, types.CookieEntry{
 				Host:         string(c.Domain),
 				Path:         string(c.Path),

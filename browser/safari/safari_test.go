@@ -135,8 +135,8 @@ func TestCountCategory(t *testing.T) {
 
 	t.Run("Cookie", func(t *testing.T) {
 		path := buildTestBinaryCookies(t, []testCookie{
-			{domain: ".example.com", name: "a", path: "/", value: "1", expires: 800000000.0, creation: 700000000.0},
-			{domain: ".go.dev", name: "b", path: "/", value: "2", expires: 800000000.0, creation: 700000000.0},
+			{domain: ".example.com", name: "a", path: "/", value: "1", expires: 2000000000.0, creation: 700000000.0},
+			{domain: ".go.dev", name: "b", path: "/", value: "2", expires: 2000000000.0, creation: 700000000.0},
 		})
 		b := &Browser{}
 		assert.Equal(t, 2, b.countCategory(types.Cookie, path))
@@ -172,7 +172,7 @@ func TestExtractCategory(t *testing.T) {
 		path := buildTestBinaryCookies(t, []testCookie{
 			{
 				domain: ".example.com", name: "session", path: "/", value: "abc",
-				secure: true, httpOnly: true, expires: 800000000.0, creation: 700000000.0,
+				secure: true, httpOnly: true, expires: 2000000000.0, creation: 700000000.0,
 			},
 		})
 		b := &Browser{}
