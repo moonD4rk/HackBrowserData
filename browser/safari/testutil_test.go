@@ -66,7 +66,7 @@ func insertHistoryVisit(id, historyItem int, visitTime float64, title string) st
 // Test fixture builders
 // ---------------------------------------------------------------------------
 
-func createTestDB(t *testing.T, name string, schemas []string, inserts ...string) string {
+func createTestDB(t *testing.T, name string, schemas []string, inserts ...string) string { //nolint:unparam // name will vary when future data types are added
 	t.Helper()
 	path := filepath.Join(t.TempDir(), name)
 	db, err := sql.Open("sqlite", path)
