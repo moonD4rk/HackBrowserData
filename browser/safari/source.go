@@ -19,7 +19,9 @@ func file(rel string) sourcePath { return sourcePath{rel: filepath.FromSlash(rel
 // Each category maps to one or more candidate paths tried in priority order;
 // the first existing path wins.
 var safariSources = map[types.Category][]sourcePath{
-	types.History: {file("History.db")},
+	types.History:  {file("History.db")},
+	types.Bookmark: {file("Bookmarks.plist")},
+	types.Download: {file("Downloads.plist")},
 	types.Cookie: {
 		// macOS 14+ (containerized Safari)
 		file("../Containers/com.apple.Safari/Data/Library/Cookies/Cookies.binarycookies"),

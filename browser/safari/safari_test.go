@@ -142,6 +142,28 @@ func TestCountCategory(t *testing.T) {
 		assert.Equal(t, 2, b.countCategory(types.Cookie, path))
 	})
 
+	t.Run("Bookmark", func(t *testing.T) {
+		path := buildTestBookmarksPlist(t, safariBookmark{
+			Type: bookmarkTypeList,
+			Children: []safariBookmark{
+				{Type: bookmarkTypeLeaf, URLString: "https://a.com", URIDictionary: uriDictionary{Title: "A"}},
+				{Type: bookmarkTypeLeaf, URLString: "https://b.com", URIDictionary: uriDictionary{Title: "B"}},
+			},
+		})
+		b := &Browser{}
+		assert.Equal(t, 2, b.countCategory(types.Bookmark, path))
+	})
+
+	t.Run("Download", func(t *testing.T) {
+		path := buildTestDownloadsPlist(t, safariDownloads{
+			DownloadHistory: []safariDownloadEntry{
+				{URL: "https://example.com/file.zip", Path: "/tmp/file.zip", TotalBytes: 100},
+			},
+		})
+		b := &Browser{}
+		assert.Equal(t, 1, b.countCategory(types.Download, path))
+	})
+
 	t.Run("UnsupportedCategory", func(t *testing.T) {
 		b := &Browser{}
 		assert.Equal(t, 0, b.countCategory(types.CreditCard, "unused"))
@@ -184,6 +206,37 @@ func TestExtractCategory(t *testing.T) {
 		assert.Equal(t, "session", data.Cookies[0].Name)
 		assert.True(t, data.Cookies[0].IsSecure)
 		assert.True(t, data.Cookies[0].IsHTTPOnly)
+	})
+
+	t.Run("Bookmark", func(t *testing.T) {
+		path := buildTestBookmarksPlist(t, safariBookmark{
+			Type: bookmarkTypeList,
+			Children: []safariBookmark{
+				{Type: bookmarkTypeLeaf, URLString: "https://github.com", URIDictionary: uriDictionary{Title: "GitHub"}},
+			},
+		})
+		b := &Browser{}
+		data := &types.BrowserData{}
+		b.extractCategory(data, types.Bookmark, path)
+
+		require.Len(t, data.Bookmarks, 1)
+		assert.Equal(t, "GitHub", data.Bookmarks[0].Name)
+		assert.Equal(t, "https://github.com", data.Bookmarks[0].URL)
+	})
+
+	t.Run("Download", func(t *testing.T) {
+		path := buildTestDownloadsPlist(t, safariDownloads{
+			DownloadHistory: []safariDownloadEntry{
+				{URL: "https://example.com/file.zip", Path: "/tmp/file.zip", TotalBytes: 1024},
+			},
+		})
+		b := &Browser{}
+		data := &types.BrowserData{}
+		b.extractCategory(data, types.Download, path)
+
+		require.Len(t, data.Downloads, 1)
+		assert.Equal(t, "https://example.com/file.zip", data.Downloads[0].URL)
+		assert.Equal(t, int64(1024), data.Downloads[0].TotalBytes)
 	})
 
 	t.Run("UnsupportedCategory", func(t *testing.T) {

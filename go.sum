@@ -25,6 +25,8 @@ github.com/moond4rk/binarycookies v1.0.2 h1:moXSHYOj/V4Z1vEsEjHjdNML+4JcflOpxx53
 github.com/moond4rk/binarycookies v1.0.2/go.mod h1:iAJr8L7ZgzTKaZhzEZmzjuOFnAoIHaqHFzvn58h1b7c=
 github.com/moond4rk/keychainbreaker v0.2.5 h1:1f2qmgpt1sl+mXA8DTW9nnVhzo4oGO08bnkXu70DL04=
 github.com/moond4rk/keychainbreaker v0.2.5/go.mod h1:VVx2VXwL2EGhuU2WBD67w66JCKKqLFXGJg91y3FY4f0=
+github.com/moond4rk/plist v1.2.0 h1:gmIP7R96ZZzvE823NMQTscNERVrPVJWLoPFHd4QWdEk=
+github.com/moond4rk/plist v1.2.0/go.mod h1:/1FduRi9JULFEUYcXvW88vOwHgOiEH+YNtvtmdh6GOs=
 github.com/ncruces/go-strftime v0.1.9 h1:bY0MQC28UADQmHmaF5dgpLmImcShSi2kHU9XLdhx/f4=
 github.com/ncruces/go-strftime v0.1.9/go.mod h1:Fwc5htZGVVkseilnfgOVb9mKy6w1naJmn9CehxcKcls=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=

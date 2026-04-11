@@ -110,6 +110,10 @@ func (b *Browser) extractCategory(data *types.BrowserData, cat types.Category, p
 		data.Histories, err = extractHistories(path)
 	case types.Cookie:
 		data.Cookies, err = extractCookies(path)
+	case types.Bookmark:
+		data.Bookmarks, err = extractBookmarks(path)
+	case types.Download:
+		data.Downloads, err = extractDownloads(path)
 	default:
 		return
 	}
@@ -127,6 +131,10 @@ func (b *Browser) countCategory(cat types.Category, path string) int {
 		count, err = countHistories(path)
 	case types.Cookie:
 		count, err = countCookies(path)
+	case types.Bookmark:
+		count, err = countBookmarks(path)
+	case types.Download:
+		count, err = countDownloads(path)
 	default:
 		// Unsupported categories silently return 0.
 	}
