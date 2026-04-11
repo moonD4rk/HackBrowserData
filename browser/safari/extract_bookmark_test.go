@@ -120,6 +120,40 @@ func TestExtractBookmarks_SkipsEmptyURL(t *testing.T) {
 	assert.Equal(t, "Valid", bookmarks[0].Name)
 }
 
+func TestExtractBookmarks_NestedFolders(t *testing.T) {
+	root := safariBookmark{
+		Type: bookmarkTypeList,
+		Children: []safariBookmark{
+			{
+				Type:  bookmarkTypeList,
+				Title: "Work",
+				Children: []safariBookmark{
+					{
+						Type:  bookmarkTypeList,
+						Title: "Projects",
+						Children: []safariBookmark{
+							{Type: bookmarkTypeLeaf, URLString: "https://deep.com", URIDictionary: uriDictionary{Title: "Deep"}},
+						},
+					},
+					{Type: bookmarkTypeLeaf, URLString: "https://shallow.com", URIDictionary: uriDictionary{Title: "Shallow"}},
+				},
+			},
+		},
+	}
+
+	path := buildTestBookmarksPlist(t, root)
+	bookmarks, err := extractBookmarks(path)
+	require.NoError(t, err)
+	require.Len(t, bookmarks, 2)
+
+	// Nested leaf gets the immediate parent folder name
+	assert.Equal(t, "Deep", bookmarks[0].Name)
+	assert.Equal(t, "Projects", bookmarks[0].Folder)
+
+	assert.Equal(t, "Shallow", bookmarks[1].Name)
+	assert.Equal(t, "Work", bookmarks[1].Folder)
+}
+
 func TestCountBookmarks(t *testing.T) {
 	root := safariBookmark{
 		Type: bookmarkTypeList,
