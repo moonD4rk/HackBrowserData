@@ -91,5 +91,11 @@ func platformBrowsers() []types.BrowserConfig {
 			Kind:        types.Firefox,
 			UserDataDir: homeDir + "/Library/Application Support/Firefox/Profiles",
 		},
+		{
+			Key:         "safari",
+			Name:        safariName,
+			Kind:        types.Safari,
+			UserDataDir: homeDir + "/Library/Safari",
+		},
 	}
 }

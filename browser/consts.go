@@ -26,4 +26,5 @@ const (
 	sogouName      = "Sogou"
 	arcName        = "Arc"
 	duckduckgoName = "DuckDuckGo"
+	safariName     = "Safari"
 )

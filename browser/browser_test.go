@@ -349,6 +349,9 @@ func TestNewBrowsersDispatch(t *testing.T) {
 	firefoxDir := t.TempDir()
 	mkFile(t, firefoxDir, "abc.default", "places.sqlite")
 
+	safariDir := t.TempDir()
+	mkFile(t, safariDir, "History.db")
+
 	emptyDir := t.TempDir()
 
 	tests := []struct {
@@ -372,6 +375,13 @@ func TestNewBrowsersDispatch(t *testing.T) {
 			wantLen:     1,
 			wantName:    "Firefox",
 			wantProfile: "abc.default",
+		},
+		{
+			name:        "safari dispatch",
+			cfg:         types.BrowserConfig{Key: "safari", Name: "Safari", Kind: types.Safari, UserDataDir: safariDir},
+			wantLen:     1,
+			wantName:    "Safari",
+			wantProfile: "default",
 		},
 		{
 			name:    "unknown kind returns error",

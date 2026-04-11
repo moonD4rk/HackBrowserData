@@ -8,6 +8,7 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/browser/chromium"
 	"github.com/moond4rk/hackbrowserdata/browser/firefox"
+	"github.com/moond4rk/hackbrowserdata/browser/safari"
 	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
 	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
@@ -141,6 +142,17 @@ func newBrowsers(cfg types.BrowserConfig) ([]Browser, error) {
 
 	case types.Firefox:
 		found, err := firefox.NewBrowsers(cfg)
+		if err != nil {
+			return nil, err
+		}
+		result := make([]Browser, len(found))
+		for i, b := range found {
+			result[i] = b
+		}
+		return result, nil
+
+	case types.Safari:
+		found, err := safari.NewBrowsers(cfg)
 		if err != nil {
 			return nil, err
 		}
