@@ -46,10 +46,14 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 		name = "all"
 	}
 
+	// Resolve keychain password once for all browsers that need it.
+	// On macOS, if no password is provided via CLI flag, prompt interactively.
+	keychainPassword := resolveKeychainPassword(opts.KeychainPassword)
+
 	// Create a single key retriever shared across all Chromium browsers.
 	// On macOS this avoids repeated password prompts; on other platforms
 	// it's harmless (DPAPI reads Local State per-profile, D-Bus is stateless).
-	retriever := keyretriever.DefaultRetriever(opts.KeychainPassword)
+	retriever := keyretriever.DefaultRetriever(keychainPassword)
 
 	configs = resolveGlobs(configs)
 
@@ -86,7 +90,7 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 				setter.SetRetriever(retriever)
 			}
 			if setter, ok := b.(keychainPasswordSetter); ok {
-				setter.SetKeychainPassword(opts.KeychainPassword)
+				setter.SetKeychainPassword(keychainPassword)
 			}
 		}
 		browsers = append(browsers, found...)

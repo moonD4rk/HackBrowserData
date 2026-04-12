@@ -6,6 +6,8 @@ import (
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
+func resolveKeychainPassword(flagPassword string) string { return flagPassword }
+
 func platformBrowsers() []types.BrowserConfig {
 	return []types.BrowserConfig{
 		{

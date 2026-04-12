@@ -3,8 +3,51 @@
 package browser
 
 import (
+	"fmt"
+	"os"
+
+	"github.com/moond4rk/keychainbreaker"
+	"golang.org/x/term"
+
+	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
+
+// resolveKeychainPassword returns the keychain password for macOS.
+// If not provided via CLI flag, it prompts interactively when stdin is a TTY.
+// After obtaining the password, it verifies against keychainbreaker and warns
+// early if decryption will fail (e.g. on newer macOS versions).
+func resolveKeychainPassword(flagPassword string) string {
+	password := flagPassword
+	if password == "" {
+		if !term.IsTerminal(int(os.Stdin.Fd())) {
+			return ""
+		}
+		fmt.Fprint(os.Stderr, "Enter macOS login password: ")
+		pwd, err := term.ReadPassword(int(os.Stdin.Fd()))
+		fmt.Fprintln(os.Stderr)
+		if err != nil {
+			log.Debugf("read password: %v", err)
+			return ""
+		}
+		password = string(pwd)
+	}
+
+	// Verify early: try to unlock keychain with keychainbreaker.
+	// If it fails, Chromium can still fall back to SecurityCmdRetriever,
+	// but Safari passwords will be empty (metadata only).
+	if password != "" {
+		kc, err := keychainbreaker.Open()
+		if err != nil {
+			log.Warnf("keychain open failed: %v", err)
+		} else if err := kc.TryUnlock(keychainbreaker.WithPassword(password)); err != nil {
+			log.Warnf("keychain unlock failed with provided password")
+			log.Debugf("keychain unlock detail: %v", err)
+		}
+	}
+
+	return password
+}
 
 func platformBrowsers() []types.BrowserConfig {
 	return []types.BrowserConfig{

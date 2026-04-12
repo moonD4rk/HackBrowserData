@@ -205,10 +205,14 @@ func DefaultRetriever(keychainPassword string) KeyRetriever {
 		&GcoredumpRetriever{},
 	}
 	if keychainPassword != "" {
+		// Password was provided (via CLI flag or interactive prompt at startup).
+		// No need for TerminalPasswordRetriever — avoid duplicate prompts.
 		retrievers = append(retrievers, &KeychainPasswordRetriever{Password: keychainPassword})
+	} else {
+		// No password provided — allow interactive prompt as fallback.
+		retrievers = append(retrievers, &TerminalPasswordRetriever{})
 	}
 	retrievers = append(retrievers,
-		&TerminalPasswordRetriever{},
 		&SecurityCmdRetriever{cache: make(map[string]securityResult)},
 	)
 	return NewChain(retrievers...)

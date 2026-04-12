@@ -3,6 +3,7 @@ package safari
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/moond4rk/keychainbreaker"
 
@@ -51,15 +52,9 @@ func getInternetPasswords(keychainPassword string) ([]keychainbreaker.InternetPa
 	}
 
 	if keychainPassword != "" {
-		if err := kc.Unlock(keychainbreaker.WithPassword(keychainPassword)); err != nil {
-			log.Warnf("unlock keychain: %v", err)
-			return nil, fmt.Errorf("unlock keychain: %w", err)
-		}
-	} else {
-		// Try unlock without password; may fail but TryUnlock won't block.
-		if err := kc.TryUnlock(); err != nil {
-			log.Debugf("keychain unlock without password: %v", err)
-			return nil, fmt.Errorf("keychain password required for Safari passwords: %w", err)
+		if err := kc.TryUnlock(keychainbreaker.WithPassword(keychainPassword)); err != nil {
+			log.Warnf("Safari passwords will be exported as metadata only (without plaintext passwords)")
+			log.Debugf("keychain unlock detail: %v", err)
 		}
 	}
 
@@ -76,54 +71,22 @@ func buildURL(protocol, server string, port uint32, path string) string {
 		return ""
 	}
 
-	scheme := protocolToScheme(protocol)
+	// Convert macOS Keychain FourCC protocol code to URL scheme.
+	// Only "htps" needs special mapping; others just need space trimming.
+	scheme := strings.TrimRight(protocol, " ")
+	if scheme == "" || scheme == "htps" {
+		scheme = "https"
+	}
+
 	url := scheme + "://" + server
-	if port > 0 && !isDefaultPort(scheme, port) {
+
+	defaultPorts := map[string]uint32{"https": 443, "http": 80, "ftp": 21}
+	if port > 0 && port != defaultPorts[scheme] {
 		url += fmt.Sprintf(":%d", port)
 	}
+
 	if path != "" && path != "/" {
 		url += path
 	}
 	return url
-}
-
-const (
-	schemeHTTPS = "https"
-	schemeHTTP  = "http"
-)
-
-// protocolToScheme converts a macOS Keychain protocol FourCC code to a URL scheme.
-func protocolToScheme(protocol string) string {
-	switch protocol {
-	case "htps":
-		return schemeHTTPS
-	case "http":
-		return schemeHTTP
-	case "ftps":
-		return "ftps"
-	case "ftp ":
-		return "ftp"
-	case "smb ":
-		return "smb"
-	case "afp ":
-		return "afp"
-	default:
-		if protocol != "" {
-			return protocol
-		}
-		return schemeHTTPS
-	}
-}
-
-func isDefaultPort(scheme string, port uint32) bool {
-	switch scheme {
-	case schemeHTTPS:
-		return port == 443
-	case schemeHTTP:
-		return port == 80
-	case "ftp":
-		return port == 21
-	default:
-		return false
-	}
 }

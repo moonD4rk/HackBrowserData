@@ -82,7 +82,7 @@ func dumpCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&browserName, "browser", "b", "all", "target browser: all|"+browser.Names())
 	cmd.Flags().StringVarP(&category, "category", "c", "all", "data categories (comma-separated): all|"+categoryNames())
-	cmd.Flags().StringVarP(&outputFormat, "format", "f", "csv", "output format: csv|json|cookie-editor")
+	cmd.Flags().StringVarP(&outputFormat, "format", "f", "json", "output format: csv|json|cookie-editor")
 	cmd.Flags().StringVarP(&outputDir, "dir", "d", "results", "output directory")
 	cmd.Flags().StringVarP(&profilePath, "profile-path", "p", "", "custom profile dir path, get with chrome://version")
 	cmd.Flags().StringVar(&keychainPw, "keychain-pw", "", "macOS keychain password")

@@ -86,6 +86,8 @@ linters:
         - "all"
         - "csv"
         - "json"
+        - "https"
+        - "http"
     gocritic:
       enabled-tags:
         - diagnostic

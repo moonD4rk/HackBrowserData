@@ -89,14 +89,3 @@ func TestBuildURL(t *testing.T) {
 		})
 	}
 }
-
-func TestProtocolToScheme(t *testing.T) {
-	assert.Equal(t, "https", protocolToScheme("htps"))
-	assert.Equal(t, "http", protocolToScheme("http"))
-	assert.Equal(t, "ftp", protocolToScheme("ftp "))
-	assert.Equal(t, "ftps", protocolToScheme("ftps"))
-	assert.Equal(t, "smb", protocolToScheme("smb "))
-	assert.Equal(t, "afp", protocolToScheme("afp "))
-	assert.Equal(t, "https", protocolToScheme(""))
-	assert.Equal(t, "ldap", protocolToScheme("ldap"))
-}
