@@ -31,31 +31,42 @@ type PickOptions struct {
 	KeychainPassword string // macOS only — see browser_darwin.go
 }
 
-// PickBrowsers returns browsers matching the given options. The returned
-// browsers are discovered but not yet ready for Extract — call PrepareExtract
-// before invoking b.Extract on any of them. List-style commands (e.g. `list`,
-// `list --detail`) can use the result directly without that extra step,
-// avoiding an unnecessary macOS Keychain password prompt on darwin.
+// PickBrowsers returns browsers that are fully wired up for Extract: the
+// key retriever chain and (on macOS) the Keychain password are already
+// injected, so the caller can call b.Extract directly. This is the entry
+// point for extraction workflows like `dump`.
 //
-// When Name is "all", all known browsers are tried. ProfilePath overrides the
-// default user data directory (only when targeting a specific browser).
+// On macOS this may trigger an interactive prompt for the login password
+// when the target set includes a Chromium variant or Safari. Commands that
+// only need metadata (name, profile path, per-category counts) should use
+// DiscoverBrowsers instead to skip injection — and thereby the prompt.
+//
+// When Name is "all", all known browsers are tried. ProfilePath overrides
+// the default user data directory (only when targeting a specific browser).
 func PickBrowsers(opts PickOptions) ([]Browser, error) {
-	return pickFromConfigs(platformBrowsers(), opts)
-}
-
-// PrepareExtract wires platform-specific decryption dependencies (the key
-// retriever chain on every platform; the macOS Keychain password on darwin)
-// into each Browser so subsequent b.Extract calls can decrypt protected data.
-//
-// Discovery commands that only display browser metadata (name, profile path,
-// per-category counts) must NOT call this — calling it on darwin would
-// trigger a Keychain password prompt that those commands have no use for.
-// CountEntries works without injection because it only reads source files.
-func PrepareExtract(browsers []Browser, opts PickOptions) {
+	browsers, err := pickFromConfigs(platformBrowsers(), opts)
+	if err != nil {
+		return nil, err
+	}
 	inject := newPlatformInjector(opts)
 	for _, b := range browsers {
 		inject(b)
 	}
+	return browsers, nil
+}
+
+// DiscoverBrowsers returns browsers for metadata-only workflows — listing,
+// profile paths, per-category counts. Decryption dependencies are NOT
+// injected, so calling b.Extract on the returned browsers will not
+// successfully decrypt protected data (passwords, cookies, credit cards).
+// CountEntries, BrowserName, ProfileName, and ProfileDir all work
+// correctly without injection.
+//
+// Unlike PickBrowsers, DiscoverBrowsers never prompts for the macOS
+// Keychain password, making it the correct choice for `list`-style
+// commands that have no use for the credential.
+func DiscoverBrowsers(opts PickOptions) ([]Browser, error) {
+	return pickFromConfigs(platformBrowsers(), opts)
 }
 
 // pickFromConfigs is the testable core of PickBrowsers: it filters the

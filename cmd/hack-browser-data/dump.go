@@ -34,12 +34,11 @@ func dumpCmd() *cobra.Command {
   hack-browser-data dump -f cookie-editor
   hack-browser-data dump --zip`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			opts := browser.PickOptions{
+			browsers, err := browser.PickBrowsers(browser.PickOptions{
 				Name:             browserName,
 				ProfilePath:      profilePath,
 				KeychainPassword: keychainPw,
-			}
-			browsers, err := browser.PickBrowsers(opts)
+			})
 			if err != nil {
 				return err
 			}
@@ -47,7 +46,6 @@ func dumpCmd() *cobra.Command {
 				log.Warnf("no browsers found")
 				return nil
 			}
-			browser.PrepareExtract(browsers, opts)
 
 			categories, err := parseCategories(category)
 			if err != nil {

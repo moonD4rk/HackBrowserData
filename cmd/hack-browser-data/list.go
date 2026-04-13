@@ -20,7 +20,7 @@ func listCmd() *cobra.Command {
 		Example: `  hack-browser-data list
   hack-browser-data list --detail`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			browsers, err := browser.PickBrowsers(browser.PickOptions{Name: "all"})
+			browsers, err := browser.DiscoverBrowsers(browser.PickOptions{Name: "all"})
 			if err != nil {
 				return err
 			}

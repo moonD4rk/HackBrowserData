@@ -77,31 +77,37 @@ See `types/category.go` for the authoritative enum definition.
 
 `BrowserConfig` is the declarative, platform-specific browser definition containing: Key (CLI matching), Name (display), Kind (engine), Storage (keychain label), UserDataDir (data path).
 
-### 4.3 PickBrowsers() Flow
+### 4.3 Browser Selection Flow
+
+There are two entry points, one for extraction and one for discovery:
 
 ```
-PickBrowsers(opts)                  // discovery only — no decryption setup
-  → platformBrowsers()              // build-tagged: returns []BrowserConfig for this OS
-  → pickFromConfigs(configs, opts)   // filter by name, override profile path
-      → newBrowsers(cfg)             // dispatch by Kind to chromium/firefox/safari.NewBrowsers
-          → discoverProfiles()       // scan for profile subdirectories
-          → resolveSourcePaths()     // stat each candidate path, first match wins
+PickBrowsers(opts)                    // used by `dump` — ready to Extract
+  → pickFromConfigs(configs, opts)     // shared discovery core
+      → platformBrowsers()             // build-tagged list for this OS
+      → filter by name / profile path
+      → newBrowsers(cfg)                // dispatch to chromium/firefox/safari.NewBrowsers
+          → discoverProfiles()          // scan profile subdirectories
+          → resolveSourcePaths()        // stat candidates, first match wins
+  → newPlatformInjector(opts)          // build-tagged: returns a func(Browser)
+      → for each browser:               // closure captures retriever + keychain pw lazily
+          inject(b)                     // type-assert retrieverSetter / keychainPasswordSetter
 
-PrepareExtract(browsers, opts)      // optional, only required before b.Extract
-  → newPlatformInjector(opts)        // build-tagged: returns a func(Browser)
-      → for each browser:            // closure captures retriever + keychain pw lazily
-          inject(b)                  // type-assert retrieverSetter / keychainPasswordSetter
+DiscoverBrowsers(opts)                 // used by `list` / `list --detail`
+  → pickFromConfigs(configs, opts)     // same shared discovery core, NO injection
 ```
 
-Discovery and decryption setup are intentionally split. `dump` calls both
-(`PickBrowsers` then `PrepareExtract`); `list` and `list --detail` call only
-`PickBrowsers`. The split means `list` never triggers a macOS Keychain
-password prompt — it has no use for the credential and shouldn't pay for it.
+`PickBrowsers` does discovery + decryption setup in one call; the returned
+browsers are ready for `b.Extract`. `DiscoverBrowsers` skips injection
+entirely, so list-style commands never trigger the macOS Keychain password
+prompt — they have no use for the credential. Both entry points share the
+same `pickFromConfigs` core, so filtering/profile-path/glob semantics stay
+consistent.
 
 Key design decisions:
 
-- **One KeyRetriever chain per process** — built lazily inside `newPlatformInjector` (called from `PrepareExtract`) and reused across every Chromium browser and every profile to prevent repeated keychain prompts on macOS.
-- **Discovery is decoupled from injection** — `pickFromConfigs` does not touch `newPlatformInjector` so list/discovery commands never prompt for a password.
+- **One KeyRetriever chain per process** — built lazily inside `newPlatformInjector` and reused across every Chromium browser and every profile to prevent repeated keychain prompts on macOS.
+- **Discovery is decoupled from injection** — `pickFromConfigs` is injection-free; `DiscoverBrowsers` stops after it, `PickBrowsers` continues into injection.
 - **Profile discovery differs by engine**: Chromium looks for `Preferences` files in subdirectories; Firefox accepts any subdirectory containing known source files.
 - **Flat layout fallback** — Opera-style browsers that store data directly in UserDataDir (no profile subdirectories) are handled by falling back to the base directory.
 
