@@ -16,7 +16,8 @@ func decryptValue(masterKey, ciphertext []byte) ([]byte, error) {
 
 	version := crypto.DetectVersion(ciphertext)
 	switch version {
-	case crypto.CipherV10:
+	case crypto.CipherV10, crypto.CipherV11:
+		// v11 is Linux-only and shares v10's AES-CBC path; only the key source differs.
 		return crypto.DecryptChromium(masterKey, ciphertext)
 	case crypto.CipherV20:
 		// TODO: implement App-Bound Encryption (Chrome 127+)

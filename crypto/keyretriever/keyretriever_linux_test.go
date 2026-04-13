@@ -34,6 +34,19 @@ func TestFallbackRetriever(t *testing.T) {
 	assert.Equal(t, key, key2, "fallback key should be the same for any storage")
 }
 
+// TestFallbackRetriever_MatchesChromiumKV10Key pins FallbackRetriever's
+// output to Chromium's kV10Key reference bytes in os_crypt_linux.cc.
+func TestFallbackRetriever_MatchesChromiumKV10Key(t *testing.T) {
+	want := []byte{
+		0xfd, 0x62, 0x1f, 0xe5, 0xa2, 0xb4, 0x02, 0x53,
+		0x9d, 0xfa, 0x14, 0x7c, 0xa9, 0x27, 0x27, 0x78,
+	}
+	r := &FallbackRetriever{}
+	key, err := r.RetrieveKey("", "")
+	require.NoError(t, err)
+	assert.Equal(t, want, key)
+}
+
 func TestDefaultRetriever_Linux(t *testing.T) {
 	r := DefaultRetriever()
 	chain, ok := r.(*ChainRetriever)

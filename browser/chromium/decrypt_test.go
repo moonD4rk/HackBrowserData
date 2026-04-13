@@ -52,6 +52,18 @@ func TestDecryptValue_V10(t *testing.T) {
 	}
 }
 
+func TestDecryptValue_V11(t *testing.T) {
+	plaintext := []byte("test_secret_value")
+	testCBCIV := bytes.Repeat([]byte{0x20}, 16)
+	cbcEncrypted, err := crypto.AESCBCEncrypt(testAESKey, testCBCIV, plaintext)
+	require.NoError(t, err)
+	v11Ciphertext := append([]byte("v11"), cbcEncrypted...)
+
+	got, err := decryptValue(testAESKey, v11Ciphertext)
+	require.NoError(t, err)
+	assert.Equal(t, plaintext, got)
+}
+
 func TestDecryptValue_V20(t *testing.T) {
 	// v20 App-Bound Encryption is not yet implemented.
 	// TODO: add successful decryption cases when implemented.

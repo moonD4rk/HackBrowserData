@@ -7,6 +7,10 @@ const (
 	// CipherV10 is Chrome 80+ encryption (AES-GCM on Windows, AES-CBC on macOS/Linux).
 	CipherV10 CipherVersion = "v10"
 
+	// CipherV11 is the Linux-only AES-CBC variant where the key comes from
+	// libsecret / kwallet. Same algorithm as CipherV10; only the key source differs.
+	CipherV11 CipherVersion = "v11"
+
 	// CipherV20 is Chrome 127+ App-Bound Encryption.
 	CipherV20 CipherVersion = "v20"
 
@@ -26,6 +30,8 @@ func DetectVersion(ciphertext []byte) CipherVersion {
 	switch prefix {
 	case "v10":
 		return CipherV10
+	case "v11":
+		return CipherV11
 	case "v20":
 		return CipherV20
 	default:
@@ -37,7 +43,7 @@ func DetectVersion(ciphertext []byte) CipherVersion {
 // Returns the ciphertext unchanged if no known prefix is found.
 func stripPrefix(ciphertext []byte) []byte {
 	ver := DetectVersion(ciphertext)
-	if ver == CipherV10 || ver == CipherV20 {
+	if ver == CipherV10 || ver == CipherV11 || ver == CipherV20 {
 		return ciphertext[versionPrefixLen:]
 	}
 	return ciphertext

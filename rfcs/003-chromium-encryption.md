@@ -17,6 +17,7 @@ Every encrypted value begins with a 3-byte prefix that identifies the cipher ver
 | Prefix | Version | Meaning |
 |--------|---------|---------|
 | `v10` | CipherV10 | Chrome 80+ standard encryption (AES-GCM on Windows, AES-CBC on macOS/Linux) |
+| `v11` | CipherV11 | Linux-only: AES-CBC variant where the key comes from libsecret / kwallet. Same algorithm and parameters as `v10` — only the key source differs |
 | `v20` | CipherV20 | Chrome 127+ App-Bound Encryption |
 | (none) | CipherDPAPI | Pre-Chrome 80 raw DPAPI encryption (Windows only, no prefix) |
 
@@ -69,9 +70,12 @@ With the master key, each encrypted value is decrypted as AES-256-GCM:
 
 ## 5. Linux Encryption
 
-Chromium on Linux retrieves a per-browser secret from D-Bus Secret Service (GNOME Keyring or KDE Wallet). The label matches the browser's storage name (e.g. "Chrome Safe Storage", "Chromium Safe Storage"). If D-Bus is unavailable, the hardcoded fallback password `peanuts` is used.
+Chromium on Linux has two obfuscation prefixes that share the same AES-128-CBC algorithm and PBKDF2 parameters — only the key source differs:
 
-The master key is derived via PBKDF2 with different parameters than macOS:
+- **`v10`** — the PBKDF2 password is the hardcoded string `peanuts`. Chromium writes this prefix when no keyring backend is available (headless sessions, `--password-store=basic`, LXQt, etc.).
+- **`v11`** — the PBKDF2 password is a random string read from D-Bus Secret Service (GNOME Keyring or KDE Wallet). The libsecret/kwallet item label matches the browser's storage name (e.g. "Chrome Safe Storage", "Brave Safe Storage"). Chromium writes this prefix whenever a keyring backend is available at encrypt time. On first run, Chromium generates and stores the random password automatically.
+
+Both prefixes are derived through the same PBKDF2 parameters:
 
 | Parameter | Value |
 |-----------|-------|
@@ -80,7 +84,11 @@ The master key is derived via PBKDF2 with different parameters than macOS:
 | Iterations | 1 |
 | Key length | 16 bytes (AES-128) |
 
-Decryption uses the same AES-128-CBC scheme as macOS (fixed IV of 16 space bytes, PKCS5 padding).
+Decryption uses AES-128-CBC with a fixed IV of 16 space bytes (`0x20`) and PKCS5 padding — identical to macOS except for the PBKDF2 iteration count.
+
+**Mixed v10/v11 in the same profile.** Because Chromium selects the prefix at encrypt time, a single profile may contain both versions if the keyring backend availability changed between sessions. Chromium decrypts each record independently by inspecting its prefix.
+
+**kEmptyKey legacy retry.** Chromium's `DecryptString` retries any failed v10/v11 decryption with a second key, `kEmptyKey = PBKDF2("", "saltysalt", 1, 16, sha1)`. This exists to recover data corrupted by a KWallet initialization race in Chrome ~89 (see `crbug.com/40055416`), where some records were written with this zero-derived key. Chromium never uses `kEmptyKey` for encryption — it is decrypt-only. HackBrowserData mirrors this retry for parity.
 
 ## 6. v20 App-Bound Encryption (Chrome 127+)
 
@@ -105,7 +113,7 @@ The high-level decryption path for any encrypted Chromium value:
 
 1. **Detect version** -- inspect the first 3 bytes of the ciphertext
 2. **Route by version**:
-   - `v10` -- strip prefix, call platform-specific decryption (AES-CBC on macOS/Linux, AES-GCM on Windows)
+   - `v10` / `v11` -- strip prefix, call platform-specific decryption (AES-CBC on macOS/Linux, AES-GCM on Windows). On Linux, a failed decryption retries once with `kEmptyKey` to recover legacy crbug.com/40055416 data
    - `v20` -- not yet supported, return error
    - DPAPI (no prefix) -- call Windows `CryptUnprotectData` directly (Windows only; returns error on other platforms)
 3. **Return plaintext** -- the decrypted bytes are interpreted as a UTF-8 string
