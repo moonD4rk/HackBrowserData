@@ -110,35 +110,43 @@ func platformBrowsers() []types.BrowserConfig {
 
 // resolveKeychainPassword returns the keychain password for macOS.
 // If not provided via CLI flag, it prompts interactively when stdin is a TTY.
-// After obtaining the password, it verifies against keychainbreaker and warns
-// early if decryption will fail (e.g. on newer macOS versions).
+// After obtaining the password, it verifies against keychainbreaker; on any
+// failure it returns "" so downstream code enters "no password" mode rather
+// than propagating a known-bad credential.
 func resolveKeychainPassword(flagPassword string) string {
 	password := flagPassword
 	if password == "" {
 		if !term.IsTerminal(int(os.Stdin.Fd())) {
+			log.Warnf("macOS login password not provided and stdin is not a TTY; keychain-protected data will be exported as metadata only")
 			return ""
 		}
 		fmt.Fprint(os.Stderr, "Enter macOS login password: ")
 		pwd, err := term.ReadPassword(int(os.Stdin.Fd()))
 		fmt.Fprintln(os.Stderr)
 		if err != nil {
-			log.Debugf("read password: %v", err)
+			log.Warnf("failed to read macOS login password: %v", err)
 			return ""
 		}
 		password = string(pwd)
 	}
 
-	// Verify early: try to unlock keychain with keychainbreaker.
-	// If it fails, Chromium can still fall back to SecurityCmdRetriever,
-	// but Safari passwords will be empty (metadata only).
-	if password != "" {
-		kc, err := keychainbreaker.Open()
-		if err != nil {
-			log.Warnf("keychain open failed: %v", err)
-		} else if err := kc.TryUnlock(keychainbreaker.WithPassword(password)); err != nil {
-			log.Warnf("keychain unlock failed with provided password")
-			log.Debugf("keychain unlock detail: %v", err)
-		}
+	if password == "" {
+		return ""
+	}
+
+	// Verify early: try to unlock keychain with keychainbreaker. On failure
+	// return "" so KeychainPasswordRetriever and Safari both skip the credential
+	// and rely on their respective fallback paths (SecurityCmdRetriever for
+	// Chromium, metadata-only export for Safari).
+	kc, err := keychainbreaker.Open()
+	if err != nil {
+		log.Warnf("keychain open failed: %v", err)
+		return ""
+	}
+	if err := kc.TryUnlock(keychainbreaker.WithPassword(password)); err != nil {
+		log.Warnf("keychain unlock failed with provided password; keychain-protected data will be exported as metadata only")
+		log.Debugf("keychain unlock detail: %v", err)
+		return ""
 	}
 
 	return password
@@ -152,15 +160,34 @@ type keychainPasswordSetter interface {
 
 // newPlatformInjector returns a closure that injects the Chromium master-key
 // retriever and the Safari Keychain password into each Browser.
+//
+// Resolution is lazy: the keychain password prompt and retriever construction
+// are deferred until the first Browser that actually needs them passes through
+// the closure. Browsers that satisfy neither setter interface (e.g. Firefox)
+// short-circuit without ever touching the keychain, so `-b firefox` on macOS
+// no longer triggers a password prompt.
 func newPlatformInjector(opts PickOptions) func(Browser) {
-	password := resolveKeychainPassword(opts.KeychainPassword)
-	retriever := keyretriever.DefaultRetriever(password)
+	var (
+		password  string
+		retriever keyretriever.KeyRetriever
+		resolved  bool
+	)
 	return func(b Browser) {
-		if s, ok := b.(retrieverSetter); ok {
-			s.SetRetriever(retriever)
+		rs, needsRetriever := b.(retrieverSetter)
+		kps, needsKeychainPassword := b.(keychainPasswordSetter)
+		if !needsRetriever && !needsKeychainPassword {
+			return
 		}
-		if s, ok := b.(keychainPasswordSetter); ok {
-			s.SetKeychainPassword(password)
+		if !resolved {
+			password = resolveKeychainPassword(opts.KeychainPassword)
+			retriever = keyretriever.DefaultRetriever(password)
+			resolved = true
+		}
+		if needsRetriever {
+			rs.SetRetriever(retriever)
+		}
+		if needsKeychainPassword {
+			kps.SetKeychainPassword(password)
 		}
 	}
 }
