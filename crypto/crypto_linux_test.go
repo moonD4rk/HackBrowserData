@@ -34,7 +34,7 @@ func TestDecryptChromium_EmptyKeyFallback(t *testing.T) {
 }
 
 func TestDecryptChromium_ShortCiphertext(t *testing.T) {
-	key := bytes.Repeat([]byte{0x00}, 16)
+	key := make([]byte, 16)
 	_, err := DecryptChromium(key, []byte("v11short"))
 	require.ErrorIs(t, err, errShortCiphertext)
 }
