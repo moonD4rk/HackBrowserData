@@ -80,17 +80,28 @@ See `types/category.go` for the authoritative enum definition.
 ### 4.3 PickBrowsers() Flow
 
 ```
-PickBrowsers(opts)
+PickBrowsers(opts)                  // discovery only — no decryption setup
   → platformBrowsers()              // build-tagged: returns []BrowserConfig for this OS
-  → pickFromConfigs(configs, opts)   // filter by name, wire each Browser via newPlatformInjector
+  → pickFromConfigs(configs, opts)   // filter by name, override profile path
       → newBrowsers(cfg)             // dispatch by Kind to chromium/firefox/safari.NewBrowsers
           → discoverProfiles()       // scan for profile subdirectories
           → resolveSourcePaths()     // stat each candidate path, first match wins
+
+PrepareExtract(browsers, opts)      // optional, only required before b.Extract
+  → newPlatformInjector(opts)        // build-tagged: returns a func(Browser)
+      → for each browser:            // closure captures retriever + keychain pw lazily
+          inject(b)                  // type-assert retrieverSetter / keychainPasswordSetter
 ```
+
+Discovery and decryption setup are intentionally split. `dump` calls both
+(`PickBrowsers` then `PrepareExtract`); `list` and `list --detail` call only
+`PickBrowsers`. The split means `list` never triggers a macOS Keychain
+password prompt — it has no use for the credential and shouldn't pay for it.
 
 Key design decisions:
 
-- **One KeyRetriever chain per process** — built once inside `newPlatformInjector` and reused across every Chromium browser and every profile to prevent repeated keychain prompts on macOS.
+- **One KeyRetriever chain per process** — built lazily inside `newPlatformInjector` (called from `PrepareExtract`) and reused across every Chromium browser and every profile to prevent repeated keychain prompts on macOS.
+- **Discovery is decoupled from injection** — `pickFromConfigs` does not touch `newPlatformInjector` so list/discovery commands never prompt for a password.
 - **Profile discovery differs by engine**: Chromium looks for `Preferences` files in subdirectories; Firefox accepts any subdirectory containing known source files.
 - **Flat layout fallback** — Opera-style browsers that store data directly in UserDataDir (no profile subdirectories) are handled by falling back to the base directory.
 

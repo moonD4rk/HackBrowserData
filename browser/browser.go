@@ -31,22 +31,43 @@ type PickOptions struct {
 	KeychainPassword string // macOS only — see browser_darwin.go
 }
 
-// PickBrowsers returns browsers matching the given options.
-// When Name is "all", all known browsers are tried.
-// ProfilePath overrides the default user data directory (only when targeting a specific browser).
+// PickBrowsers returns browsers matching the given options. The returned
+// browsers are discovered but not yet ready for Extract — call PrepareExtract
+// before invoking b.Extract on any of them. List-style commands (e.g. `list`,
+// `list --detail`) can use the result directly without that extra step,
+// avoiding an unnecessary macOS Keychain password prompt on darwin.
+//
+// When Name is "all", all known browsers are tried. ProfilePath overrides the
+// default user data directory (only when targeting a specific browser).
 func PickBrowsers(opts PickOptions) ([]Browser, error) {
 	return pickFromConfigs(platformBrowsers(), opts)
 }
 
-// pickFromConfigs is the testable core of PickBrowsers: it discovers
-// installed profiles and wires each Browser up via newPlatformInjector.
+// PrepareExtract wires platform-specific decryption dependencies (the key
+// retriever chain on every platform; the macOS Keychain password on darwin)
+// into each Browser so subsequent b.Extract calls can decrypt protected data.
+//
+// Discovery commands that only display browser metadata (name, profile path,
+// per-category counts) must NOT call this — calling it on darwin would
+// trigger a Keychain password prompt that those commands have no use for.
+// CountEntries works without injection because it only reads source files.
+func PrepareExtract(browsers []Browser, opts PickOptions) {
+	inject := newPlatformInjector(opts)
+	for _, b := range browsers {
+		inject(b)
+	}
+}
+
+// pickFromConfigs is the testable core of PickBrowsers: it filters the
+// platform browser list and discovers installed profiles for each match.
+// Dependency injection (key retrievers, keychain credentials) is intentionally
+// NOT done here — see PrepareExtract.
 func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser, error) {
 	name := strings.ToLower(opts.Name)
 	if name == "" {
 		name = "all"
 	}
 
-	inject := newPlatformInjector(opts)
 	configs = resolveGlobs(configs)
 
 	var browsers []Browser
@@ -74,9 +95,6 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 			continue
 		}
 
-		for _, b := range found {
-			inject(b)
-		}
 		browsers = append(browsers, found...)
 	}
 	return browsers, nil
