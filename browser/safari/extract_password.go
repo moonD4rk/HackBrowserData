@@ -48,17 +48,25 @@ func countPasswords(keychainPassword string) (int, error) {
 // getInternetPasswords reads InternetPassword records directly from the
 // macOS login keychain. See rfcs/006-key-retrieval-mechanisms.md §7 for why
 // Safari owns this path instead of routing through crypto/keyretriever.
+//
+// TryUnlock is always invoked — with the user-supplied password when one is
+// available, otherwise with no options — to enable keychainbreaker's partial
+// extraction mode. With a valid password we get fully decrypted entries; with
+// empty or wrong password we still get metadata records (URL, account,
+// timestamps) and PlainPassword left blank, which Safari can export as
+// metadata-only output instead of failing with ErrLocked.
 func getInternetPasswords(keychainPassword string) ([]keychainbreaker.InternetPassword, error) {
 	kc, err := keychainbreaker.Open()
 	if err != nil {
 		return nil, fmt.Errorf("open keychain: %w", err)
 	}
 
+	var unlockOpts []keychainbreaker.UnlockOption
 	if keychainPassword != "" {
-		if err := kc.TryUnlock(keychainbreaker.WithPassword(keychainPassword)); err != nil {
-			log.Warnf("Safari passwords will be exported as metadata only (without plaintext passwords)")
-			log.Debugf("keychain unlock detail: %v", err)
-		}
+		unlockOpts = append(unlockOpts, keychainbreaker.WithPassword(keychainPassword))
+	}
+	if err := kc.TryUnlock(unlockOpts...); err != nil {
+		log.Debugf("keychain unlock detail: %v", err)
 	}
 
 	passwords, err := kc.InternetPasswords()

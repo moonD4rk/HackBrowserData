@@ -112,7 +112,9 @@ func platformBrowsers() []types.BrowserConfig {
 // If not provided via CLI flag, it prompts interactively when stdin is a TTY.
 // After obtaining the password, it verifies against keychainbreaker; on any
 // failure it returns "" so downstream code enters "no password" mode rather
-// than propagating a known-bad credential.
+// than propagating a known-bad credential. Safari then exports
+// keychain-protected entries as metadata-only via keychainbreaker's partial
+// extraction mode; Chromium falls back to SecurityCmdRetriever.
 func resolveKeychainPassword(flagPassword string) string {
 	password := flagPassword
 	if password == "" {
@@ -124,13 +126,14 @@ func resolveKeychainPassword(flagPassword string) string {
 		pwd, err := term.ReadPassword(int(os.Stdin.Fd()))
 		fmt.Fprintln(os.Stderr)
 		if err != nil {
-			log.Warnf("failed to read macOS login password: %v", err)
+			log.Warnf("failed to read macOS login password: %v; keychain-protected data will be exported as metadata only", err)
 			return ""
 		}
 		password = string(pwd)
 	}
 
 	if password == "" {
+		log.Warnf("no macOS login password entered; keychain-protected data will be exported as metadata only")
 		return ""
 	}
 
@@ -140,7 +143,7 @@ func resolveKeychainPassword(flagPassword string) string {
 	// Chromium, metadata-only export for Safari).
 	kc, err := keychainbreaker.Open()
 	if err != nil {
-		log.Warnf("keychain open failed: %v", err)
+		log.Warnf("keychain open failed: %v; keychain-protected data will be exported as metadata only", err)
 		return ""
 	}
 	if err := kc.TryUnlock(keychainbreaker.WithPassword(password)); err != nil {
