@@ -8,16 +8,12 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/moond4rk/keychainbreaker"
-	"golang.org/x/term"
-
-	"github.com/moond4rk/hackbrowserdata/log"
 )
 
 // https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157
@@ -106,41 +102,6 @@ func (r *KeychainPasswordRetriever) RetrieveKey(storage, _ string) ([]byte, erro
 	return findStorageKey(r.records, storage)
 }
 
-// TerminalPasswordRetriever prompts for the keychain password interactively
-// via the terminal using golang.org/x/term (with echo disabled).
-// Automatically skipped when stdin is not a TTY.
-type TerminalPasswordRetriever struct {
-	once    sync.Once
-	records []keychainbreaker.GenericPassword
-	err     error
-}
-
-func (r *TerminalPasswordRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
-	if !term.IsTerminal(int(os.Stdin.Fd())) {
-		return nil, fmt.Errorf("terminal: stdin is not a TTY")
-	}
-
-	r.once.Do(func() {
-		fmt.Fprint(os.Stderr, "Enter macOS login password: ")
-		pwd, err := term.ReadPassword(int(os.Stdin.Fd()))
-		fmt.Fprintln(os.Stderr)
-		if err != nil {
-			r.err = fmt.Errorf("terminal: read password: %w", err)
-			return
-		}
-		r.records, r.err = loadKeychainRecords(string(pwd))
-		if r.err != nil {
-			log.Warnf("keychain unlock failed with provided password")
-			log.Debugf("keychain unlock detail: %v", r.err)
-		}
-	})
-	if r.err != nil {
-		return nil, r.err
-	}
-
-	return findStorageKey(r.records, storage)
-}
-
 // SecurityCmdRetriever uses macOS `security` CLI to query Keychain.
 // This may trigger a password dialog on macOS. Results are cached
 // per storage name so each browser's key is fetched only once.
@@ -194,26 +155,16 @@ func (r *SecurityCmdRetriever) retrieveKeyOnce(storage string) ([]byte, error) {
 	return darwinParams.deriveKey(secret), nil
 }
 
-// DefaultRetriever returns the macOS retriever chain.
-// The chain tries each method in order until one succeeds:
-//  1. GcoredumpRetriever — CVE-2025-24204 exploit (root only, non-interactive)
-//  2. KeychainPasswordRetriever — direct unlock with --keychain-pw flag
-//  3. TerminalPasswordRetriever — interactive password prompt via terminal
-//  4. SecurityCmdRetriever — security CLI fallback (may trigger system dialog)
+// DefaultRetriever returns the macOS retriever chain, tried in order:
+//
+//  1. GcoredumpRetriever       — CVE-2025-24204 exploit (root only)
+//  2. KeychainPasswordRetriever — direct unlock, skipped when password is empty
+//  3. SecurityCmdRetriever      — `security` CLI fallback (may trigger a dialog)
 func DefaultRetriever(keychainPassword string) KeyRetriever {
-	retrievers := []KeyRetriever{
-		&GcoredumpRetriever{},
-	}
+	retrievers := []KeyRetriever{&GcoredumpRetriever{}}
 	if keychainPassword != "" {
-		// Password was provided (via CLI flag or interactive prompt at startup).
-		// No need for TerminalPasswordRetriever — avoid duplicate prompts.
 		retrievers = append(retrievers, &KeychainPasswordRetriever{Password: keychainPassword})
-	} else {
-		// No password provided — allow interactive prompt as fallback.
-		retrievers = append(retrievers, &TerminalPasswordRetriever{})
 	}
-	retrievers = append(retrievers,
-		&SecurityCmdRetriever{cache: make(map[string]securityResult)},
-	)
+	retrievers = append(retrievers, &SecurityCmdRetriever{cache: make(map[string]securityResult)})
 	return NewChain(retrievers...)
 }

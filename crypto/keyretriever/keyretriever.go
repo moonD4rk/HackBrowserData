@@ -1,3 +1,12 @@
+// Package keyretriever owns the master-key acquisition chain shared by all
+// Chromium variants (Chrome, Edge, Brave, Arc, Opera, Vivaldi, Yandex, …).
+// The chain is built once per process and reused for every profile.
+//
+// Firefox and Safari do not route through this package — Firefox derives
+// its own keys from key4.db via NSS PBE, and Safari reads InternetPassword
+// records directly from login.keychain-db. Each browser package owns its
+// own credential-acquisition strategy; see rfcs/006-key-retrieval-mechanisms.md
+// §7 for the rationale.
 package keyretriever
 
 import (

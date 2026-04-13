@@ -14,7 +14,8 @@ import (
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
-// Browser is the interface that both chromium.Browser and firefox.Browser implement.
+// Browser is the interface implemented by every engine package —
+// chromium.Browser, firefox.Browser, and safari.Browser.
 type Browser interface {
 	BrowserName() string
 	ProfileName() string
@@ -27,7 +28,7 @@ type Browser interface {
 type PickOptions struct {
 	Name             string // browser name filter: "all"|"chrome"|"firefox"|...
 	ProfilePath      string // custom profile directory override
-	KeychainPassword string // macOS keychain password (ignored on other platforms)
+	KeychainPassword string // macOS only — see browser_darwin.go
 }
 
 // PickBrowsers returns browsers matching the given options.
@@ -37,24 +38,15 @@ func PickBrowsers(opts PickOptions) ([]Browser, error) {
 	return pickFromConfigs(platformBrowsers(), opts)
 }
 
-// pickFromConfigs is the testable core of PickBrowsers. It iterates over
-// platform browser configs, discovers installed profiles, and injects a
-// shared key retriever into Chromium browsers for decryption.
+// pickFromConfigs is the testable core of PickBrowsers: it discovers
+// installed profiles and wires each Browser up via newPlatformInjector.
 func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser, error) {
 	name := strings.ToLower(opts.Name)
 	if name == "" {
 		name = "all"
 	}
 
-	// Resolve keychain password once for all browsers that need it.
-	// On macOS, if no password is provided via CLI flag, prompt interactively.
-	keychainPassword := resolveKeychainPassword(opts.KeychainPassword)
-
-	// Create a single key retriever shared across all Chromium browsers.
-	// On macOS this avoids repeated password prompts; on other platforms
-	// it's harmless (DPAPI reads Local State per-profile, D-Bus is stateless).
-	retriever := keyretriever.DefaultRetriever(keychainPassword)
-
+	inject := newPlatformInjector(opts)
 	configs = resolveGlobs(configs)
 
 	var browsers []Browser
@@ -82,33 +74,19 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 			continue
 		}
 
-		// Inject the shared key retriever into browsers that need it.
-		// Chromium browsers implement retrieverSetter; Firefox does not.
-		// Safari receives the keychain password directly for InternetPassword extraction.
 		for _, b := range found {
-			if setter, ok := b.(retrieverSetter); ok {
-				setter.SetRetriever(retriever)
-			}
-			if setter, ok := b.(keychainPasswordSetter); ok {
-				setter.SetKeychainPassword(keychainPassword)
-			}
+			inject(b)
 		}
 		browsers = append(browsers, found...)
 	}
 	return browsers, nil
 }
 
-// retrieverSetter is implemented by browsers that need an external key retriever.
-// This allows pickFromConfigs to inject the shared retriever after construction
-// without coupling the Browser interface to Chromium-specific concerns.
+// retrieverSetter is an optional capability interface. Chromium variants
+// implement it to receive a master-key retriever chain; Firefox and Safari
+// do not.
 type retrieverSetter interface {
 	SetRetriever(keyretriever.KeyRetriever)
-}
-
-// keychainPasswordSetter is implemented by browsers that extract credentials
-// directly from the macOS Keychain (e.g. Safari InternetPassword entries).
-type keychainPasswordSetter interface {
-	SetKeychainPassword(string)
 }
 
 // resolveGlobs expands glob patterns in browser configs' UserDataDir.

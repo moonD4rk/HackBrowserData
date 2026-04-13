@@ -29,7 +29,7 @@ The return value is the **ready-to-use decryption key** — either the raw AES k
 
 `ChainRetriever` wraps multiple retrievers and tries them in order. The first successful result wins. If all fail, errors from every retriever are combined into a single error.
 
-**Caching**: the retriever is created once per browser and shared across all profiles. macOS retrievers use `sync.Once` internally, so multi-profile browsers only trigger one keychain prompt or memory dump.
+**Caching**: the retriever chain is created once per process inside `newPlatformInjector` (see `browser/browser_{darwin,linux,windows}.go`) and shared across every Chromium browser and every profile. macOS retrievers additionally use `sync.Once` internally, so multi-profile browsers only trigger one keychain prompt or memory dump.
 
 ## 3. macOS Key Retrieval
 
@@ -69,17 +69,9 @@ All macOS strategies produce a raw password string from the keychain. This is de
 
 ### 3.4 Storage Labels
 
-| Browser | Keychain Account |
-|---------|-----------------|
-| Chrome / Chrome Beta | `"Chrome"` |
-| Edge | `"Microsoft Edge"` |
-| Chromium | `"Chromium"` |
-| Opera / OperaGX | `"Opera"` |
-| Vivaldi | `"Vivaldi"` |
-| Brave | `"Brave"` |
-| Yandex | `"Yandex"` |
-| Arc | `"Arc"` |
-| CocCoc | `"CocCoc"` |
+Each browser identifies its Keychain entry with a short account string — typically the browser's base name (`"Chrome"`, `"Brave"`, `"Arc"`). Edge uses `"Microsoft Edge"`. Related variants share labels rather than defining their own: Chrome Beta aliases onto `"Chrome"`, Opera GX aliases onto `"Opera"`.
+
+The authoritative mapping lives in the `Storage` field of each entry in `platformBrowsers()` (`browser/browser_darwin.go`).
 
 ## 4. Windows Key Retrieval
 
@@ -148,11 +140,9 @@ A single iteration makes PBKDF2 essentially a keyed HMAC — no real key-stretch
 
 ### 5.4 Storage Labels
 
-| Browser | D-Bus Label |
-|---------|-------------|
-| Chrome / Chrome Beta / Vivaldi | `"Chrome Safe Storage"` |
-| Chromium / Edge / Opera | `"Chromium Safe Storage"` |
-| Brave | `"Brave Safe Storage"` |
+Linux D-Bus labels follow a `"<name> Safe Storage"` convention, but many browsers alias onto a small shared set rather than defining their own. The three distinct labels are `"Chrome Safe Storage"`, `"Chromium Safe Storage"`, and `"Brave Safe Storage"` — everything else maps onto one of these.
+
+The authoritative mapping lives in the `Storage` field of each entry in `platformBrowsers()` (`browser/browser_linux.go`).
 
 ## 6. Platform Summary
 
@@ -163,6 +153,51 @@ A single iteration makes PBKDF2 essentially a keyed HMAC — no real key-stretch
 | Linux | DBus → Fallback | 1 iteration | AES-128 |
 
 \* Only included when `--keychain-pw` is provided.
+
+## 7. Safari Credential Extraction
+
+Safari is **not** a consumer of the `KeyRetriever` interface. It has its own credential-extraction path in `browser/safari/extract_password.go`, which uses [keychainbreaker](https://github.com/moond4rk/keychainbreaker) directly to list `InternetPassword` records from `login.keychain-db`.
+
+This is a deliberate architectural choice, not an oversight. The following sections explain why.
+
+### 7.1 Why Safari Does Not Share the Chromium Chain
+
+| Aspect | Chromium chain | Safari direct access |
+|---|---|---|
+| Output | A 16-byte AES-128 key | A list of `InternetPassword` records |
+| Use case | Decrypt Login Data DB | Records *are* the credentials |
+| Number of consumers | 10+ Chromium variants | 1 (Safari only) |
+| Failure mode | Hard fail (no key → cannot decrypt) | Soft fail (degrade to metadata-only) |
+| Caching benefit | High (multi-profile, multi-browser) | None (single browser, single call) |
+
+Forcing Safari through the `KeyRetriever` interface would require returning a different type than `[]byte`, contradicting the interface's documented purpose as the *master-key* abstraction. Forcing it through a parallel "InternetPassword chain" would be over-engineering for a single consumer that has no fallback strategies worth chaining.
+
+Note the "failure mode" row in particular: Chromium *must* have a master key or extraction fails entirely, so it needs a chain of escalating strategies. Safari can degrade gracefully — if the keychain cannot be unlocked, metadata-only export (URLs and usernames, no plaintext passwords) is still useful output, so a single "try keychainbreaker, warn on failure" is sufficient.
+
+### 7.2 The General Rule
+
+> **Each browser package owns its own credential-acquisition strategy. `crypto/keyretriever` exists only to share retrieval logic across the Chromium variant family. New browser implementations should follow Safari's and Firefox's example — own your credential code.**
+
+Evidence the rule is already in force:
+
+- **Firefox** (`browser/firefox/firefox.go`) does not import `keyretriever` or `keychainbreaker`. It derives keys from `key4.db` via internal NSS PBE. See RFC-005.
+- **Safari** (`browser/safari/extract_password.go`) uses `keychainbreaker` directly for `InternetPassword` records.
+- **Chromium variants** all go through `crypto/keyretriever` because they share exactly one chain and benefit from the shared `sync.Once` caching.
+
+Future contributors adding a new macOS browser that reads credentials from the Keychain should add their access logic to that browser's package, not extend `keyretriever`. Only extend `keyretriever` if the new browser is a Chromium variant that fits the existing master-key chain.
+
+### 7.3 Where the `--keychain-pw` Password Goes
+
+The macOS login password is resolved once at startup by `browser/browser_darwin.go::resolveKeychainPassword`, then delivered to both consumers from within a single platform-specific closure, `newPlatformInjector` (defined per platform in `browser/browser_{darwin,linux,windows}.go`). The closure captures both the retriever chain and the raw password, and applies whichever capability interface each Browser happens to satisfy:
+
+| Consumer | Capability interface | Defined in | Payload |
+|---|---|---|---|
+| Chromium browsers | `retrieverSetter` | `browser/browser.go` | `keyretriever.KeyRetriever` chain |
+| Safari | `keychainPasswordSetter` | `browser/browser_darwin.go` | raw `string` |
+
+The two setters are **intentionally not unified**. They carry different abstractions — one hands the browser a pre-assembled retrieval chain, the other hands the browser a credential token to unlock its own access path. Unifying them would create a leaky polymorphic interface with no real shared semantics. Note that `keychainPasswordSetter` is defined in the darwin-only file because Safari (its only implementer) is darwin-only.
+
+`resolveKeychainPassword` additionally performs an early `TryUnlock` against `keychainbreaker` before the chain is built, so a bad password surfaces as a startup warning rather than a mid-extraction failure. The small cost of opening the keychain twice (once for validation, once inside `KeychainPasswordRetriever`) buys meaningful UX.
 
 ## References
 

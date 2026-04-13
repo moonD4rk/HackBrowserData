@@ -35,7 +35,7 @@ func TestFallbackRetriever(t *testing.T) {
 }
 
 func TestDefaultRetriever_Linux(t *testing.T) {
-	r := DefaultRetriever("")
+	r := DefaultRetriever()
 	chain, ok := r.(*ChainRetriever)
 	require.True(t, ok, "DefaultRetriever should return a *ChainRetriever")
 

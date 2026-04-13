@@ -3,10 +3,9 @@
 package browser
 
 import (
+	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
-
-func resolveKeychainPassword(flagPassword string) string { return flagPassword }
 
 func platformBrowsers() []types.BrowserConfig {
 	return []types.BrowserConfig{
@@ -65,5 +64,16 @@ func platformBrowsers() []types.BrowserConfig {
 			Kind:        types.Firefox,
 			UserDataDir: homeDir + "/.mozilla/firefox",
 		},
+	}
+}
+
+// newPlatformInjector returns a closure that injects the Chromium master-key
+// retriever chain into each Browser.
+func newPlatformInjector(_ PickOptions) func(Browser) {
+	retriever := keyretriever.DefaultRetriever()
+	return func(b Browser) {
+		if s, ok := b.(retrieverSetter); ok {
+			s.SetRetriever(retriever)
+		}
 	}
 }

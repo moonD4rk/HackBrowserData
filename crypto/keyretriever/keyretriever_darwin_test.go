@@ -39,13 +39,3 @@ func TestKeychainPasswordRetriever_EmptyPassword(t *testing.T) {
 	assert.Nil(t, key)
 	assert.Contains(t, err.Error(), "keychain password not provided")
 }
-
-func TestTerminalPasswordRetriever_NonTTY(t *testing.T) {
-	// In CI/test environments, stdin is not a TTY.
-	// The retriever should return an error so the chain can log it and continue.
-	r := &TerminalPasswordRetriever{}
-	key, err := r.RetrieveKey("Chrome", "")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "stdin is not a TTY")
-	assert.Nil(t, key)
-}
