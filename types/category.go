@@ -86,7 +86,7 @@ type BrowserConfig struct {
 	Key         string      // lookup key: "chrome", "edge", "firefox"
 	Name        string      // display name: "Chrome", "Edge", "Firefox"
 	Kind        BrowserKind // engine type
-	Storage     string      // keychain/GNOME label (macOS/Linux); unused on Windows
+	Storage     string      // macOS/Linux: keychain/GNOME label. Windows: ABE browser key (triggers reflective injection when populated).
 	UserDataDir string      // base browser directory
 }
 

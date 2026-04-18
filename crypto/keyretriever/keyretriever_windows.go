@@ -48,7 +48,6 @@ func (r *DPAPIRetriever) RetrieveKey(_, localStatePath string) ([]byte, error) {
 	return masterKey, nil
 }
 
-// DefaultRetriever returns the Windows retriever (DPAPI only).
 func DefaultRetriever() KeyRetriever {
-	return &DPAPIRetriever{}
+	return NewChain(&ABERetriever{}, &DPAPIRetriever{})
 }
