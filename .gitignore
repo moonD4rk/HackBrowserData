@@ -11,6 +11,14 @@
 !go.mod
 !go.sum
 
+# === Native (C) source for embedded ABE payload ===
+# Only source files are tracked; compiled binaries (*.bin) are
+# intentionally ignored and rebuilt by CI via `make payload`.
+!*.c
+!*.h
+!Makefile
+!Makefile.frag
+
 # === Project root config ===
 !.gitattributes
 !.gitignore
