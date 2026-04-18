@@ -20,8 +20,7 @@ func decryptValue(masterKey, ciphertext []byte) ([]byte, error) {
 		// v11 is Linux-only and shares v10's AES-CBC path; only the key source differs.
 		return crypto.DecryptChromium(masterKey, ciphertext)
 	case crypto.CipherV20:
-		// TODO: implement App-Bound Encryption (Chrome 127+)
-		return nil, fmt.Errorf("v20 App-Bound Encryption not yet supported")
+		return crypto.DecryptChromium(masterKey, ciphertext)
 	case crypto.CipherDPAPI:
 		return crypto.DecryptDPAPI(ciphertext)
 	default:

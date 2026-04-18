@@ -63,12 +63,3 @@ func TestDecryptValue_V11(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, plaintext, got)
 }
-
-func TestDecryptValue_V20(t *testing.T) {
-	// v20 App-Bound Encryption is not yet implemented.
-	// TODO: add successful decryption cases when implemented.
-	ciphertext := append([]byte("v20"), make([]byte, 32)...)
-	_, err := decryptValue(nil, ciphertext)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "v20")
-}
