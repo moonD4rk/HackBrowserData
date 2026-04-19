@@ -141,6 +141,9 @@ func validateAndLocateLoader(payload []byte) (uint32, error) {
 // Adding other flags (--disable-extensions, --disable-gpu, ...) has destabilized Brave in the past
 // (payload dies inside DllMain with marker=0x0b); both switches here are upstream-official and safe.
 func buildIsolatedCommandLine(exePath, udd string) string {
+	// %q would Go-escape backslashes (C:\foo → C:\\foo); Windows CommandLineToArgvW then keeps them
+	// as literal double backslashes in argv. Raw literal quotes match Windows command-line rules.
+	//nolint:gocritic // sprintfQuotedString: %q is wrong for Windows command-line escaping, see above.
 	return fmt.Sprintf(`"%s" --user-data-dir="%s" --no-startup-window`, exePath, udd)
 }
 
