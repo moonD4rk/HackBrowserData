@@ -97,6 +97,7 @@ static extract_result extract_key_inner(const BrowserComIds *ids)
     BYTE encKey[ENV_ENC_MAX];
     DWORD encKeyLen = ENV_ENC_MAX;
     if (!Base64DecodeStack(envEnc, encKey, &encKeyLen) || encKeyLen == 0) {
+        SecureZeroMemory(encKey, ENV_ENC_MAX);
         SecureZeroMemory(envEnc, ENV_ENC_MAX);
         r.errCode = ABE_ERR_BASE64;
         return r;

@@ -49,9 +49,14 @@ ABE_LAYOUT_GO  = $(ABE_LAYOUT_PKG)/layout.go
 
 .PHONY: gen-layout gen-layout-verify
 
+# Split into two stages so a cgo failure doesn't silently produce an empty
+# layout.go via `gofmt` on empty stdin. Write cgo output to a temp file first;
+# only if that step succeeds do we format and publish.
 gen-layout:
 	cd $(ABE_LAYOUT_PKG) && \
-	  CC="$(ZIG) cc" $(GO) tool cgo -godefs layout_gen.go | gofmt > layout.go && \
+	  CC="$(ZIG) cc" $(GO) tool cgo -godefs layout_gen.go > layout.go.tmp && \
+	  gofmt layout.go.tmp > layout.go && \
+	  rm -f layout.go.tmp && \
 	  rm -rf _obj
 
 gen-layout-verify: gen-layout

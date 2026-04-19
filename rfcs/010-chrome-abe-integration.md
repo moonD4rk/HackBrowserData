@@ -58,7 +58,7 @@ browser/chromium.Extract()
 **Stage 2 — Payload preparation** (still our process)
 
 1. Read the embedded payload via `//go:embed abe_extractor_amd64.bin` (~75 KB).
-2. Patch 5 × `uintptr` function pointers into the payload's DOS stub (see §3.4).
+2. Patch 5 × `uintptr` function pointers into the payload's DOS stub (see §4.4).
 3. Look up `Bootstrap`'s **raw file offset** (not RVA) via `debug/pe`.
 
 **Stage 3 — Spawn + inject** (still our process, target is newly spawned)
@@ -76,9 +76,9 @@ CreateRemoteThread(target, remoteBase + bootstrapFileOffset)
 The hijacked thread runs `Bootstrap` (C), our self-written reflective DLL loader. On return it calls the payload's `DllMain`:
 
 ```
-Bootstrap                     → see §3.1 (7 helpers + orchestrator)
+Bootstrap                     → see §4.1 (7 helpers + orchestrator)
   ↓ calls DllMain(DLL_PROCESS_ATTACH, imageBase)
-DoExtractKey                  → see §3.2
+DoExtractKey                  → see §4.2
   CoCreateInstance(CLSID, IID_v2 | fallback IID_v1)
   CoSetProxyBlanket(PKT_PRIVACY + IMPERSONATE)
   vtbl[slot]->DecryptData(bstrEnc)
@@ -94,7 +94,7 @@ DoExtractKey                  → see §3.2
 2. `ReadProcessMemory` for the 12-byte diagnostic header, then 32-byte key when `status == ready`.
 3. `TerminateProcess(browser)` — the target was a throwaway from the start.
 
-The returned key flows back up to `crypto.DecryptChromiumV20` (cross-platform AES-256-GCM; see §4.3) and then to the usual cookie/password extraction pipeline.
+The returned key flows back up to `crypto.DecryptChromiumV20` (cross-platform AES-256-GCM; see §5.3) and then to the usual cookie/password extraction pipeline.
 
 ## 4. C payload — `crypto/windows/abe_native/`
 
@@ -109,7 +109,7 @@ Structure after refactor: **one ~30-line orchestrator + seven single-purpose sta
 | Helper | Responsibility |
 |---|---|
 | `locate_own_image_base` | Backward-scan from `__builtin_return_address(0)` for MZ/PE magic (must stay `noinline`) |
-| `read_preresolved_imports` | Read 5 function pointers the Go injector patched into DOS stub (§3.4) |
+| `read_preresolved_imports` | Read 5 function pointers the Go injector patched into DOS stub (§4.4) |
 | `allocate_and_copy_image` | `VirtualAlloc(SizeOfImage, RW)` + copy headers/sections |
 | `apply_base_relocations` | Walk `IMAGE_DIRECTORY_ENTRY_BASERELOC`, fix `IMAGE_REL_BASED_DIR64` |
 | `link_iat` | Resolve each imported DLL + fill IAT via pre-resolved `LoadLibraryA` / `GetProcAddress` |
@@ -153,7 +153,7 @@ Static table mapping `exe_basename → { CLSID, IID_v1, IID_v2, kind }`. `kind` 
 
 Current coverage: Chrome Stable/Beta, Brave, Edge, Avast Secure Browser, CocCoc. Source file `crypto/windows/abe_native/com_iid.c` is the authoritative list — see §10 for how to add a new fork.
 
-### 3.4 Pre-resolved imports (non-obvious design)
+### 4.4 Pre-resolved imports (non-obvious design)
 
 The original plan had `Bootstrap` walk the PEB's `InMemoryOrderModuleList` to find kernel32 / ntdll and resolve `LoadLibraryA` etc. via export-table parsing. It worked in test processes but **crashed reproducibly in Chrome 147's broker process** — `resolve_export` returned NULL for every LDR entry. Root cause was never fully pinpointed (Chrome-specific process state + Windows 10 LDR layout interaction).
 

