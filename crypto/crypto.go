@@ -45,6 +45,27 @@ func DES3Decrypt(key, iv, ciphertext []byte) ([]byte, error) {
 	return cbcDecrypt(block, iv, ciphertext)
 }
 
+// gcmNonceSize is the AES-GCM standard nonce size used by Chromium's v10/v20
+// cipher formats. Cross-platform because the v20 ciphertext layout is the
+// same regardless of host OS (only Windows currently produces v20).
+const gcmNonceSize = 12
+
+// DecryptChromiumV20 decrypts a Chromium v20 (App-Bound Encryption) ciphertext.
+// Format: "v20" prefix (3B) + nonce (12B) + AES-GCM(payload + 16B tag).
+//
+// Cross-platform: v20 is only produced by Chrome on Windows today, but the
+// decryption math is platform-neutral. Keeping it here rather than in
+// crypto_windows.go ensures the routing in browser/chromium/decrypt.go stays
+// testable on Linux/macOS CI.
+func DecryptChromiumV20(key, ciphertext []byte) ([]byte, error) {
+	if len(ciphertext) < versionPrefixLen+gcmNonceSize {
+		return nil, errShortCiphertext
+	}
+	nonce := ciphertext[versionPrefixLen : versionPrefixLen+gcmNonceSize]
+	payload := ciphertext[versionPrefixLen+gcmNonceSize:]
+	return AESGCMDecrypt(key, nonce, payload)
+}
+
 // AESGCMEncrypt encrypts data using AES-GCM mode.
 func AESGCMEncrypt(key, nonce, plaintext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)

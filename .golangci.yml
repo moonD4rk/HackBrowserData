@@ -122,6 +122,7 @@ linters:
         - G117 # struct field matches secret pattern — false positive on Password fields
         - G204 # exec.Command with variable — required for macOS `security` command
         - G304 # file inclusion via variable — required for dynamic browser paths
+        - G703 # path traversal via taint analysis — same false-positive class as G304 (gosec 2.22+ / golangci-lint 2.11+)
         - G401 # weak crypto SHA1 — required for Chromium PBKDF2 key derivation
         - G402 # TLS MinVersion — not applicable (no TLS in this tool)
         - G405 # weak crypto DES — required for Firefox 3DES decryption

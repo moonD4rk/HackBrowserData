@@ -8,10 +8,8 @@ import (
 	"unsafe"
 )
 
-const (
-	gcmNonceSize   = 12                              // AES-GCM standard nonce size
-	minGCMDataSize = versionPrefixLen + gcmNonceSize // "v10" + nonce = 15 bytes minimum
-)
+// gcmNonceSize is defined in crypto.go (cross-platform).
+const minGCMDataSize = versionPrefixLen + gcmNonceSize // "v10" + nonce = 15 bytes minimum
 
 func DecryptChromium(key, ciphertext []byte) ([]byte, error) {
 	if len(ciphertext) < minGCMDataSize {

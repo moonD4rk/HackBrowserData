@@ -20,7 +20,9 @@ func decryptValue(masterKey, ciphertext []byte) ([]byte, error) {
 		// v11 is Linux-only and shares v10's AES-CBC path; only the key source differs.
 		return crypto.DecryptChromium(masterKey, ciphertext)
 	case crypto.CipherV20:
-		return crypto.DecryptChromium(masterKey, ciphertext)
+		// v20 is cross-platform AES-GCM; routed through a dedicated function so
+		// Linux/macOS CI can exercise the same decryption path as Windows.
+		return crypto.DecryptChromiumV20(masterKey, ciphertext)
 	case crypto.CipherDPAPI:
 		return crypto.DecryptDPAPI(ciphertext)
 	default:

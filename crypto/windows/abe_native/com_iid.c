@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: Apache-2.0
 #include "com_iid.h"
 
 // CLSID / IID values migrated from HackBrowserData-injector-old's
