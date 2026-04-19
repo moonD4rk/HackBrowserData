@@ -12,7 +12,7 @@ import (
 //go:embed abe_extractor_amd64.bin
 var abePayloadAmd64 []byte
 
-func getPayloadForArch(arch string) ([]byte, error) {
+func ABEPayload(arch string) ([]byte, error) {
 	switch arch {
 	case "amd64":
 		if len(abePayloadAmd64) == 0 {

@@ -36,11 +36,6 @@ func (r *ABERetriever) RetrieveKey(storage, localStatePath string) ([]byte, erro
 		return nil, err
 	}
 
-	if cliKey := crypto.GetABEMasterKey(); len(cliKey) > 0 {
-		log.Debugf("abe: using --abe-key for %s", browserKey)
-		return cliKey, nil
-	}
-
 	payload, err := crypto.ABEPayload("amd64")
 	if err != nil {
 		return nil, fmt.Errorf("abe: %w", err)
@@ -63,7 +58,7 @@ func (r *ABERetriever) RetrieveKey(storage, localStatePath string) ([]byte, erro
 	if len(key) != 32 {
 		return nil, fmt.Errorf("abe: unexpected key length %d (want 32)", len(key))
 	}
-	log.Debugf("abe: retrieved %s master key via reflective injection", browserKey)
+	log.Infof("abe: retrieved %s master key via reflective injection", browserKey)
 	return key, nil
 }
 

@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/moond4rk/hackbrowserdata/browser"
-	"github.com/moond4rk/hackbrowserdata/crypto"
 	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/output"
 	"github.com/moond4rk/hackbrowserdata/types"
@@ -23,7 +22,6 @@ func dumpCmd() *cobra.Command {
 		outputDir    string
 		profilePath  string
 		keychainPw   string
-		abeKey       string
 		compress     bool
 	)
 
@@ -36,12 +34,6 @@ func dumpCmd() *cobra.Command {
   hack-browser-data dump -f cookie-editor
   hack-browser-data dump --zip`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if abeKey != "" {
-				if err := crypto.SetABEMasterKeyFromHex(abeKey); err != nil {
-					return fmt.Errorf("--abe-key: %w", err)
-				}
-			}
-
 			browsers, err := browser.PickBrowsers(browser.PickOptions{
 				Name:             browserName,
 				ProfilePath:      profilePath,
@@ -94,9 +86,6 @@ func dumpCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&outputDir, "dir", "d", "results", "output directory")
 	cmd.Flags().StringVarP(&profilePath, "profile-path", "p", "", "custom profile dir path, get with chrome://version")
 	cmd.Flags().StringVar(&keychainPw, "keychain-pw", "", "macOS keychain password")
-	cmd.Flags().StringVarP(&abeKey, "abe-key", "k", "",
-		"Windows only: pre-decrypted Chrome ABE master key (64 hex chars / 32 bytes). "+
-			"When set, skips the in-process elevation_service injection.")
 	cmd.Flags().BoolVar(&compress, "zip", false, "compress output to zip")
 
 	return cmd
