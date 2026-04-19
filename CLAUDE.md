@@ -42,9 +42,24 @@ go mod tidy
 go mod verify
 ```
 
+## Chrome ABE Payload (Windows only)
+
+Chrome 127+ cookies (v20) decrypt via a C payload reflectively injected into `chrome.exe`. Sources in `crypto/windows/abe_native/`; design in [RFC-010](rfcs/010-chrome-abe-integration.md).
+
+```bash
+make payload         # build the DLL (needs zig: brew install zig)
+make build-windows   # cross-compile hack-browser-data.exe with payload embedded
+make gen-layout      # regenerate Go layout constants from bootstrap_layout.h
+make payload-clean   # rm crypto/*.bin
+```
+
+- Default `go build` links a stub that errors at runtime when ABE is needed — contributors not touching Windows ABE need no zig.
+- `-tags abe_embed` embeds the payload via `//go:embed` (see `crypto/abe_embed_windows.go` / `crypto/abe_stub_windows.go`).
+
 ## Code Conventions
 
 - **Platform code**: use build tags (`_darwin.go`, `_windows.go`, `_linux.go`)
+- **C payload**: all sources in `crypto/windows/abe_native/` are first-party (no vendored C). See RFC-010 §9.2 for why Stephen Fewer's reflective loader was rejected.
 - **Error handling**: `fmt.Errorf("context: %w", err)` for wrapping, never `_ =` to ignore errors
 - **Logging**: `log.Debugf` for record-level diagnostics, `log.Infof` for user-facing progress/status, `log.Warnf` for unexpected conditions. Extract methods should return errors, not log them.
 - **Naming**: follow Go conventions — `Config` not `BrowserConfig`, `Extract` not `BrowsingData`
