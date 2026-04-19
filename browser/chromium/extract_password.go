@@ -45,7 +45,7 @@ func extractPasswordsWithQuery(masterKey []byte, path, query string) ([]types.Lo
 		return nil, err
 	}
 	if decryptFails > 0 {
-		log.Debugf("decrypt passwords: %d failed: %v", decryptFails, lastErr)
+		log.Warnf("passwords: total=%d decrypt_failed=%d last_err=%v", len(logins), decryptFails, lastErr)
 	}
 
 	sort.Slice(logins, func(i, j int) bool {
@@ -54,8 +54,8 @@ func extractPasswordsWithQuery(masterKey []byte, path, query string) ([]types.Lo
 	return logins, nil
 }
 
-// extractYandexPasswords extracts passwords from Yandex's Ya Passman Data,
-// which stores the URL in action_url instead of origin_url.
+// extractYandexPasswords extracts passwords from Yandex's Ya Passman Data, which stores the URL in
+// action_url instead of origin_url.
 func extractYandexPasswords(masterKey []byte, path string) ([]types.LoginEntry, error) {
 	const yandexLoginQuery = `SELECT action_url, username_value, password_value, date_created FROM logins`
 	return extractPasswordsWithQuery(masterKey, path, yandexLoginQuery)

@@ -6,9 +6,8 @@ import (
 	"github.com/moond4rk/hackbrowserdata/crypto"
 )
 
-// decryptValue decrypts a Chromium-encrypted value using the master key.
-// It detects the cipher version from the ciphertext prefix and routes
-// to the appropriate decryption function.
+// decryptValue decrypts a Chromium-encrypted value using the master key. It detects the cipher version
+// from the ciphertext prefix and routes to the appropriate decryption function.
 func decryptValue(masterKey, ciphertext []byte) ([]byte, error) {
 	if len(ciphertext) == 0 {
 		return nil, nil
@@ -20,8 +19,8 @@ func decryptValue(masterKey, ciphertext []byte) ([]byte, error) {
 		// v11 is Linux-only and shares v10's AES-CBC path; only the key source differs.
 		return crypto.DecryptChromium(masterKey, ciphertext)
 	case crypto.CipherV20:
-		// v20 is cross-platform AES-GCM; routed through a dedicated function so
-		// Linux/macOS CI can exercise the same decryption path as Windows.
+		// v20 is cross-platform AES-GCM; routed through a dedicated function so Linux/macOS CI can
+		// exercise the same decryption path as Windows.
 		return crypto.DecryptChromiumV20(masterKey, ciphertext)
 	case crypto.CipherDPAPI:
 		return crypto.DecryptDPAPI(ciphertext)

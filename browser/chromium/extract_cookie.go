@@ -59,7 +59,7 @@ func extractCookies(masterKey []byte, path string) ([]types.CookieEntry, error) 
 		return nil, err
 	}
 	if decryptFails > 0 {
-		log.Debugf("decrypt cookies: %d failed: %v", decryptFails, lastErr)
+		log.Warnf("cookies: total=%d decrypt_failed=%d last_err=%v", len(cookies), decryptFails, lastErr)
 	}
 
 	sort.Slice(cookies, func(i, j int) bool {
@@ -72,11 +72,10 @@ func countCookies(path string) (int, error) {
 	return sqliteutil.CountRows(path, false, countCookieQuery)
 }
 
-// stripCookieHash removes the SHA256(host_key) prefix from a decrypted cookie value.
-// Chrome 130+ (Cookie DB schema version 24) prepends SHA256(domain) to the cookie
-// value before encryption to prevent cross-domain cookie replay attacks.
-// If the first 32 bytes don't match SHA256(hostKey), the value is returned unchanged,
-// which handles both older Chrome versions and tampered data.
+// stripCookieHash removes the SHA256(host_key) prefix from a decrypted cookie value. Chrome 130+
+// (Cookie DB schema version 24) prepends SHA256(domain) to the cookie value before encryption to
+// prevent cross-domain cookie replay attacks. If the first 32 bytes don't match SHA256(hostKey), the
+// value is returned unchanged, which handles both older Chrome versions and tampered data.
 func stripCookieHash(value []byte, hostKey string) []byte {
 	if len(value) < sha256.Size {
 		return value

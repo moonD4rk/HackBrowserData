@@ -63,6 +63,7 @@ make payload-clean   # rm crypto/*.bin
 - **Error handling**: `fmt.Errorf("context: %w", err)` for wrapping, never `_ =` to ignore errors
 - **Logging**: `log.Debugf` for record-level diagnostics, `log.Infof` for user-facing progress/status, `log.Warnf` for unexpected conditions. Extract methods should return errors, not log them.
 - **Naming**: follow Go conventions — `Config` not `BrowserConfig`, `Extract` not `BrowsingData`
+- **Comment width**: wrap comments at 120 columns (matches `.golangci.yml` `lll.line-length`)
 - **Tests**: use `t.TempDir()` for filesystem tests, `go-sqlmock` for database tests
 - **Architecture**: see `rfcs/` for design documents
 
