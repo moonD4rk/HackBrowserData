@@ -196,7 +196,7 @@ Go consumes the same constants via **`go tool cgo -godefs`** (a development-time
 `keyretriever.DefaultRetriever()` returns `ChainRetriever [ABERetriever, DPAPIRetriever]` on Windows. `ABERetriever.RetrieveKey`:
 
 1. Reads `Local State` → extracts `os_crypt.app_bound_encrypted_key` → strips `APPB` prefix. Missing field → `errNoABEKey`, chain falls through to DPAPI.
-2. Resolves browser executable via `utils/browserutil/path_windows.go` (registry App Paths → hardcoded fallback).
+2. Resolves browser executable via `utils/winutil/browser_path_windows.go` (registry App Paths → hardcoded fallback).
 3. Base64-encodes the encrypted blob and passes it as `HBD_ABE_ENC_B64` env var.
 4. `Reflective.Inject(exePath, payload, env)` runs the full flow in §3.
 5. Returns the 32-byte key on success, or a formatted diagnostic error.
@@ -299,7 +299,7 @@ Three steps. Detail (dump scripts, CLSID discovery) lives in private maintainer 
 2. **Mine IIDs from TypeLib** — the interface IIDs live in the TypeLib resource of `<InstallDir>\Application\<version>\elevation_service.exe`. PowerShell + `ITypeLib.GetTypeInfo` enumerates them. Map `IElevator<Vendor>` → v1 IID, `IElevator2<Vendor>` → v2 IID (absent for older vendors).
 3. **Determine vtable slot** — count `IElevator` methods in the TypeLib. Chrome-family has 3 methods (slot 5). Edge prepends 3 placeholders (slot 8). Avast extends the interface further (slot 13).
 
-Edit `crypto/windows/abe_native/com_iid.c` (add the entry), `browser/browser_windows.go` (set `Storage: "<key>"` for the new `BrowserConfig`), optionally `utils/browserutil/path_windows.go` (for non-standard install paths), then `make payload-clean && make build-windows` and redeploy.
+Edit `crypto/windows/abe_native/com_iid.c` (add the entry), `utils/winutil/browser_meta_windows.go` (add a matching `winutil.Entry` with the right `ABEKind` and install-path fallbacks), `browser/browser_windows.go` (set `Storage: "<key>"` for the new `BrowserConfig`), then `make payload-clean && make build-windows` and redeploy.
 
 ## 12. Known issues & future work
 

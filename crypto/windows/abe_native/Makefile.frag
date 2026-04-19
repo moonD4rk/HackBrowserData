@@ -3,7 +3,7 @@ ABE_ARCH   ?= amd64
 ABE_TARGET ?= x86_64-windows-gnu
 
 ABE_SRC_DIR = crypto/windows/abe_native
-ABE_BIN_DIR = crypto
+ABE_BIN_DIR = crypto/windows/payload
 ABE_BIN     = $(ABE_BIN_DIR)/abe_extractor_$(ABE_ARCH).bin
 
 ABE_CFLAGS = -shared -s -O2 \
@@ -38,7 +38,7 @@ payload-verify: $(ABE_BIN)
 	fi
 
 payload-clean:
-	rm -f $(ABE_BIN_DIR)/abe_extractor_*.bin
+	rm -f $(ABE_BIN_DIR)/abe_extractor_*.bin $(ABE_BIN_DIR)/abe_extractor*.lib
 
 # Scratch-layout codegen. The C header bootstrap_layout.h is the single
 # source of truth; the Go constants in crypto/windows/abe_native/bootstrap

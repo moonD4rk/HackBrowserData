@@ -3,9 +3,7 @@
 package crypto
 
 import (
-	"fmt"
-	"syscall"
-	"unsafe"
+	"github.com/moond4rk/hackbrowserdata/utils/winapi"
 )
 
 // gcmNonceSize is defined in crypto.go (cross-platform).
@@ -32,47 +30,10 @@ func DecryptYandex(key, ciphertext []byte) ([]byte, error) {
 	return AESGCMDecrypt(key, nonce, payload)
 }
 
-type dataBlob struct {
-	cbData uint32
-	pbData *byte
-}
-
-func newBlob(d []byte) *dataBlob {
-	if len(d) == 0 {
-		return &dataBlob{}
-	}
-	return &dataBlob{
-		pbData: &d[0],
-		cbData: uint32(len(d)),
-	}
-}
-
-func (b *dataBlob) bytes() []byte {
-	d := make([]byte, b.cbData)
-	copy(d, (*[1 << 30]byte)(unsafe.Pointer(b.pbData))[:])
-	return d
-}
-
-// DecryptDPAPI (Data Protection Application Programming Interface)
-// is a simple cryptographic application programming interface
-// available as a built-in component in Windows 2000 and
-// later versions of Microsoft Windows operating systems
+// DecryptDPAPI decrypts a DPAPI-protected blob using the current user's
+// master key. The actual Win32 call (and its DATA_BLOB / LocalFree dance)
+// lives in utils/winapi so every package that needs a syscall handle
+// shares a single declaration instead of re-opening Crypt32.dll per call.
 func DecryptDPAPI(ciphertext []byte) ([]byte, error) {
-	crypt32 := syscall.NewLazyDLL("Crypt32.dll")
-	kernel32 := syscall.NewLazyDLL("Kernel32.dll")
-	unprotectDataProc := crypt32.NewProc("CryptUnprotectData")
-	localFreeProc := kernel32.NewProc("LocalFree")
-
-	var outBlob dataBlob
-	r, _, err := unprotectDataProc.Call(
-		uintptr(unsafe.Pointer(newBlob(ciphertext))),
-		0, 0, 0, 0, 0,
-		uintptr(unsafe.Pointer(&outBlob)),
-	)
-	if r == 0 {
-		return nil, fmt.Errorf("CryptUnprotectData failed with error %w", err)
-	}
-
-	defer localFreeProc.Call(uintptr(unsafe.Pointer(outBlob.pbData)))
-	return outBlob.bytes(), nil
+	return winapi.DecryptDPAPI(ciphertext)
 }
