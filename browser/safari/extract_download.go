@@ -9,20 +9,23 @@ import (
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
-// safariDownloads mirrors the plist structure of Safari's Downloads.plist.
 type safariDownloads struct {
 	DownloadHistory []safariDownloadEntry `plist:"DownloadHistory"`
 }
 
 type safariDownloadEntry struct {
-	URL                string  `plist:"DownloadEntryURL"`
-	Path               string  `plist:"DownloadEntryPath"`
-	TotalBytes         float64 `plist:"DownloadEntryProgressTotalToLoad"`
-	RemoveWhenDone     bool    `plist:"DownloadEntryRemoveWhenDoneKey"`
-	DownloadIdentifier string  `plist:"DownloadEntryIdentifier"`
+	URL                string `plist:"DownloadEntryURL"`
+	Path               string `plist:"DownloadEntryPath"`
+	TotalBytes         int64  `plist:"DownloadEntryProgressTotalToLoad"`
+	ProfileUUID        string `plist:"DownloadEntryProfileUUIDStringKey"`
+	RemoveWhenDone     bool   `plist:"DownloadEntryRemoveWhenDoneKey"`
+	DownloadIdentifier string `plist:"DownloadEntryIdentifier"`
 }
 
-func extractDownloads(path string) ([]types.DownloadEntry, error) {
+// extractDownloads reads Downloads.plist (shared across Safari profiles) and returns only the entries
+// owned by ownerUUID — either "DefaultProfile" or a named profile's uppercase UUID. Entries written by
+// older Safari (no ProfileUUID field) are attributed to the default profile.
+func extractDownloads(path, ownerUUID string) ([]types.DownloadEntry, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("open downloads: %w", err)
@@ -36,19 +39,30 @@ func extractDownloads(path string) ([]types.DownloadEntry, error) {
 
 	var downloads []types.DownloadEntry
 	for _, d := range dl.DownloadHistory {
+		if !ownsDownload(d.ProfileUUID, ownerUUID) {
+			continue
+		}
 		downloads = append(downloads, types.DownloadEntry{
 			URL:        d.URL,
 			TargetPath: d.Path,
-			TotalBytes: int64(d.TotalBytes),
+			TotalBytes: d.TotalBytes,
 		})
 	}
 	return downloads, nil
 }
 
-func countDownloads(path string) (int, error) {
-	downloads, err := extractDownloads(path)
+func countDownloads(path, ownerUUID string) (int, error) {
+	downloads, err := extractDownloads(path, ownerUUID)
 	if err != nil {
 		return 0, err
 	}
 	return len(downloads), nil
+}
+
+// ownsDownload treats empty ProfileUUID as DefaultProfile for backward compat with pre-profile Safari.
+func ownsDownload(entryUUID, ownerUUID string) bool {
+	if entryUUID == "" {
+		entryUUID = defaultProfileSentinel
+	}
+	return entryUUID == ownerUUID
 }

@@ -19,7 +19,7 @@ func mkFile(t *testing.T, parts ...string) {
 }
 
 // ---------------------------------------------------------------------------
-// NewBrowsers
+// NewBrowsers — backward-compat (single flat profile)
 // ---------------------------------------------------------------------------
 
 func TestNewBrowsers(t *testing.T) {
@@ -73,6 +73,56 @@ func TestNewBrowsers(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// NewBrowsers — multi-profile (macOS 14+ named profiles)
+// ---------------------------------------------------------------------------
+
+func TestNewBrowsers_MultiProfile(t *testing.T) {
+	const uuid = "5604E6F5-02ED-4E40-8249-63DE7BC986C8"
+
+	// Build a pretend ~/Library that mirrors a macOS 14+ layout.
+	library := t.TempDir()
+	legacyHome := filepath.Join(library, "Safari")
+	container := filepath.Join(library, "Containers", "com.apple.Safari", "Data", "Library")
+
+	// Default profile data in legacyHome.
+	mkFile(t, legacyHome, "History.db")
+	mkFile(t, legacyHome, "Bookmarks.plist")
+
+	// Named profile data under the container.
+	mkFile(t, container, "Safari", "Profiles", uuid, "History.db")
+
+	// SafariTabs.db registering the named profile with a human-readable title.
+	writeSafariTabsDB(t, filepath.Join(container, safariTabsDBRelPath), []tabRow{
+		{uuid: "DefaultProfile", title: ""},
+		{uuid: uuid, title: "work"},
+	})
+
+	cfg := types.BrowserConfig{Name: "Safari", Kind: types.Safari, UserDataDir: legacyHome}
+	browsers, err := NewBrowsers(cfg)
+	require.NoError(t, err)
+	require.Len(t, browsers, 2)
+
+	names := []string{browsers[0].ProfileName(), browsers[1].ProfileName()}
+	assert.Contains(t, names, "default")
+	assert.Contains(t, names, "work")
+
+	for _, b := range browsers {
+		switch b.ProfileName() {
+		case "default":
+			assert.Equal(t, legacyHome, b.ProfileDir())
+			assert.Contains(t, b.sourcePaths, types.History)
+			assert.Equal(t, filepath.Join(legacyHome, "History.db"), b.sourcePaths[types.History].absPath)
+		case "work":
+			assert.Equal(t, filepath.Join(container, "Safari", "Profiles", uuid), b.ProfileDir())
+			assert.Contains(t, b.sourcePaths, types.History)
+			assert.Equal(t,
+				filepath.Join(container, "Safari", "Profiles", uuid, "History.db"),
+				b.sourcePaths[types.History].absPath)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
 // resolveSourcePaths
 // ---------------------------------------------------------------------------
 
@@ -80,15 +130,16 @@ func TestResolveSourcePaths(t *testing.T) {
 	dir := t.TempDir()
 	mkFile(t, dir, "History.db")
 
-	resolved := resolveSourcePaths(safariSources, dir)
+	sources := buildSources(profileContext{legacyHome: dir})
+	resolved := resolveSourcePaths(sources)
 	assert.Contains(t, resolved, types.History)
 	assert.Equal(t, filepath.Join(dir, "History.db"), resolved[types.History].absPath)
 	assert.False(t, resolved[types.History].isDir)
 }
 
 func TestResolveSourcePaths_Empty(t *testing.T) {
-	resolved := resolveSourcePaths(safariSources, t.TempDir())
-	assert.Empty(t, resolved)
+	sources := buildSources(profileContext{legacyHome: t.TempDir()})
+	assert.Empty(t, resolveSourcePaths(sources))
 }
 
 // ---------------------------------------------------------------------------

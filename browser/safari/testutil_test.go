@@ -3,6 +3,7 @@ package safari
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -82,4 +83,39 @@ func createTestDB(t *testing.T, name string, schemas []string, inserts ...string
 		require.NoError(t, err)
 	}
 	return path
+}
+
+// ---------------------------------------------------------------------------
+// SafariTabs.db fixtures
+// ---------------------------------------------------------------------------
+
+// tabRow describes one profile entry to stamp into the fake SafariTabs.db.
+type tabRow struct {
+	uuid  string
+	title string
+}
+
+// writeSafariTabsDB creates a minimal SafariTabs.db at path containing only
+// the bookmarks columns discoverSafariProfiles reads. Every row gets
+// subtype=2 (profile record) so the production query picks it up.
+func writeSafariTabsDB(t *testing.T, path string, rows []tabRow) {
+	t.Helper()
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+
+	db, err := sql.Open("sqlite", path)
+	require.NoError(t, err)
+	defer db.Close()
+
+	_, err = db.Exec(`CREATE TABLE bookmarks (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		external_uuid TEXT,
+		title TEXT,
+		subtype INTEGER DEFAULT 0
+	)`)
+	require.NoError(t, err)
+
+	for _, r := range rows {
+		_, err = db.Exec(`INSERT INTO bookmarks (external_uuid, title, subtype) VALUES (?, ?, 2)`, r.uuid, r.title)
+		require.NoError(t, err)
+	}
 }
