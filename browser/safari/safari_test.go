@@ -130,7 +130,7 @@ func TestResolveSourcePaths(t *testing.T) {
 	dir := t.TempDir()
 	mkFile(t, dir, "History.db")
 
-	sources := buildSources(profileContext{legacyHome: dir})
+	sources := buildSources(profileContext{legacyHome: dir, container: deriveContainerRoot(dir)})
 	resolved := resolveSourcePaths(sources)
 	assert.Contains(t, resolved, types.History)
 	assert.Equal(t, filepath.Join(dir, "History.db"), resolved[types.History].absPath)
@@ -138,7 +138,8 @@ func TestResolveSourcePaths(t *testing.T) {
 }
 
 func TestResolveSourcePaths_Empty(t *testing.T) {
-	sources := buildSources(profileContext{legacyHome: t.TempDir()})
+	dir := t.TempDir()
+	sources := buildSources(profileContext{legacyHome: dir, container: deriveContainerRoot(dir)})
 	assert.Empty(t, resolveSourcePaths(sources))
 }
 

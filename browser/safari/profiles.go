@@ -116,6 +116,9 @@ func readNamedProfilesFromDB(container string) ([]profileContext, error) {
 		}
 		out = append(out, newNamedProfile(externalUUID.String, title.String))
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate SafariTabs.db rows: %w", err)
+	}
 	return out, nil
 }
 

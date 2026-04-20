@@ -41,7 +41,9 @@ func defaultSources(p profileContext) map[types.Category][]sourcePath {
 	}
 }
 
-// namedSources omits shared categories (Bookmark, Download) — those are attributed to the default profile.
+// namedSources omits Bookmark (shared plist with no per-entry profile tag, so attributed to default).
+// Download is included because Downloads.plist carries DownloadEntryProfileUUIDStringKey per entry;
+// extractDownloads filters by owner UUID so default and named profiles each see their own downloads.
 //
 // LocalStorage slot for a follow-up PR:
 //
