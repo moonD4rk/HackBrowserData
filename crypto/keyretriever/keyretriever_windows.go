@@ -48,6 +48,14 @@ func (r *DPAPIRetriever) RetrieveKey(_, localStatePath string) ([]byte, error) {
 	return masterKey, nil
 }
 
-func DefaultRetriever() KeyRetriever {
-	return NewChain(&ABERetriever{}, &DPAPIRetriever{})
+// DefaultRetrievers returns the Windows Retrievers: DPAPI for v10 (Chrome's os_crypt.encrypted_key)
+// and ABE for v20 (Chrome 127+ os_crypt.app_bound_encrypted_key retrieved via reflective injection
+// into the browser's elevation service). Both run independently — a single Chrome profile upgraded
+// from pre-v127 carries mixed v10+v20 ciphertexts, and both tiers must be attempted to decrypt the
+// full profile (see issue #578).
+func DefaultRetrievers() Retrievers {
+	return Retrievers{
+		V10: &DPAPIRetriever{},
+		V20: &ABERetriever{},
+	}
 }

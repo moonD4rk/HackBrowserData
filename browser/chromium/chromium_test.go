@@ -362,7 +362,7 @@ func TestExtractCategory_CustomExtractor(t *testing.T) {
 	}
 
 	data := &types.BrowserData{}
-	b.extractCategory(data, types.Extension, nil, "unused-path")
+	b.extractCategory(data, types.Extension, keyretriever.MasterKeys{}, "unused-path")
 
 	assert.True(t, called, "custom extractor should be called")
 	require.Len(t, data.Extensions, 1)
@@ -381,7 +381,7 @@ func TestExtractCategory_DefaultFallback(t *testing.T) {
 	}
 
 	data := &types.BrowserData{}
-	b.extractCategory(data, types.History, nil, path)
+	b.extractCategory(data, types.History, keyretriever.MasterKeys{}, path)
 
 	require.Len(t, data.Histories, 1)
 	assert.Equal(t, "Example", data.Histories[0].Title)
@@ -441,7 +441,7 @@ func TestLocalStatePath(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// getMasterKey
+// getMasterKeys
 // ---------------------------------------------------------------------------
 
 // mockRetriever records the arguments passed to RetrieveKey.
@@ -460,7 +460,10 @@ func (m *mockRetriever) RetrieveKey(storage, localStatePath string) ([]byte, err
 	return m.key, m.err
 }
 
-func TestGetMasterKey(t *testing.T) {
+func TestGetMasterKeys(t *testing.T) {
+	// getMasterKeys routes through keyretriever.NewMasterKeys on every platform — the V10 mock
+	// wired via SetKeyRetrievers(Retrievers{V10: mock}) is consulted cross-platform.
+
 	// Profile directory without Local State file.
 	dirNoLocalState := t.TempDir()
 	mkFile(dirNoLocalState, "Default", "Preferences")
@@ -470,23 +473,21 @@ func TestGetMasterKey(t *testing.T) {
 		name           string
 		dir            string
 		storage        string
-		retriever      keyretriever.KeyRetriever // nil → don't call SetRetriever
-		wantKey        []byte
-		wantErr        string
+		retriever      keyretriever.KeyRetriever // nil → don't call SetKeyRetrievers
+		wantV10        []byte
 		wantStorage    string
 		wantLocalState bool // whether localStatePath passed to retriever is non-empty
 	}{
 		{
-			name:    "nil retriever returns error",
-			dir:     fixture.chrome,
-			wantErr: "key retriever not set",
+			name: "nil retriever yields empty keys",
+			dir:  fixture.chrome,
 		},
 		{
 			name:           "with Local State passes path to retriever",
 			dir:            fixture.chrome,
 			storage:        "Chrome",
 			retriever:      &mockRetriever{key: []byte("fake-master-key")},
-			wantKey:        []byte("fake-master-key"),
+			wantV10:        []byte("fake-master-key"),
 			wantStorage:    "Chrome",
 			wantLocalState: true,
 		},
@@ -495,7 +496,7 @@ func TestGetMasterKey(t *testing.T) {
 			dir:         dirNoLocalState,
 			storage:     "Chromium",
 			retriever:   &mockRetriever{key: []byte("derived-key")},
-			wantKey:     []byte("derived-key"),
+			wantV10:     []byte("derived-key"),
 			wantStorage: "Chromium",
 		},
 	}
@@ -510,22 +511,21 @@ func TestGetMasterKey(t *testing.T) {
 
 			b := browsers[0]
 			if tt.retriever != nil {
-				b.SetRetriever(tt.retriever)
+				b.SetKeyRetrievers(keyretriever.Retrievers{V10: tt.retriever})
 			}
 
 			session, err := filemanager.NewSession()
 			require.NoError(t, err)
 			defer session.Cleanup()
 
-			key, err := b.getMasterKey(session)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.wantErr)
+			keys := b.getMasterKeys(session)
+			assert.Equal(t, tt.wantV10, keys.V10)
+			assert.Nil(t, keys.V11, "V11 stays nil when no v11 retriever is wired")
+			assert.Nil(t, keys.V20, "V20 stays nil when no v20 retriever is wired")
+
+			if tt.retriever == nil {
 				return
 			}
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantKey, key)
-
 			mock, ok := tt.retriever.(*mockRetriever)
 			require.True(t, ok)
 			assert.True(t, mock.called)
@@ -536,6 +536,43 @@ func TestGetMasterKey(t *testing.T) {
 				assert.Empty(t, mock.localState)
 			}
 		})
+	}
+}
+
+// TestGetMasterKeys_AllTiersInvoked is the mixed-tier regression test at the getMasterKeys layer.
+// Before the refactor a Windows-only bypass meant only one tier's retriever was consulted, so a
+// profile mixing prefixes silently lost the un-retrieved tier. After the refactor every
+// configured tier must be called exactly once and its key must land in the matching MasterKeys
+// slot. This catches any future "bypass keyretriever for a faster path" regression and covers the
+// analogous Linux v10/v11 case — no platform silently drops a tier any more.
+func TestGetMasterKeys_AllTiersInvoked(t *testing.T) {
+	v10mock := &mockRetriever{key: []byte("fake-v10-key")}
+	v11mock := &mockRetriever{key: []byte("fake-v11-key")}
+	v20mock := &mockRetriever{key: []byte("fake-v20-key")}
+
+	browsers, err := NewBrowsers(types.BrowserConfig{
+		Name: "Test", Kind: types.Chromium, UserDataDir: fixture.chrome, Storage: "Chrome",
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, browsers)
+
+	b := browsers[0]
+	b.SetKeyRetrievers(keyretriever.Retrievers{V10: v10mock, V11: v11mock, V20: v20mock})
+
+	session, err := filemanager.NewSession()
+	require.NoError(t, err)
+	defer session.Cleanup()
+
+	keys := b.getMasterKeys(session)
+	assert.Equal(t, []byte("fake-v10-key"), keys.V10, "V10 slot must be populated")
+	assert.Equal(t, []byte("fake-v11-key"), keys.V11, "V11 slot must be populated")
+	assert.Equal(t, []byte("fake-v20-key"), keys.V20, "V20 slot must be populated")
+	assert.True(t, v10mock.called, "V10 retriever must be called — no silent bypass")
+	assert.True(t, v11mock.called, "V11 retriever must be called — no silent bypass")
+	assert.True(t, v20mock.called, "V20 retriever must be called — no silent bypass")
+	for _, m := range []*mockRetriever{v10mock, v11mock, v20mock} {
+		assert.Equal(t, "Chrome", m.storage)
+		assert.NotEmpty(t, m.localState, "Local State path must be passed to every retriever")
 	}
 }
 
@@ -572,7 +609,7 @@ func TestExtract(t *testing.T) {
 			require.Len(t, browsers, 1)
 
 			if tt.retriever != nil {
-				browsers[0].SetRetriever(tt.retriever)
+				browsers[0].SetKeyRetrievers(keyretriever.Retrievers{V10: tt.retriever})
 			}
 
 			result, err := browsers[0].Extract([]types.Category{types.History})
@@ -673,12 +710,12 @@ func TestCountCategory(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// SetRetriever: verify *Browser satisfies the interface used by
+// SetKeyRetrievers: verify *Browser satisfies the interface used by
 // browser.pickFromConfigs for post-construction retriever injection.
 // ---------------------------------------------------------------------------
 
-func TestSetRetriever_SatisfiesInterface(t *testing.T) {
+func TestSetKeyRetrievers_SatisfiesInterface(t *testing.T) {
 	var _ interface {
-		SetRetriever(keyretriever.KeyRetriever)
+		SetKeyRetrievers(keyretriever.Retrievers)
 	} = (*Browser)(nil)
 }

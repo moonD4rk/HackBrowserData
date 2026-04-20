@@ -68,19 +68,30 @@ func (r *DBusRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
 	return nil, fmt.Errorf("%q: %w", storage, errStorageNotFound)
 }
 
-// FallbackRetriever uses the hardcoded "peanuts" password when D-Bus is unavailable.
-// https://source.chromium.org/chromium/chromium/src/+/main:components/os_crypt/os_crypt_linux.cc;l=100
-type FallbackRetriever struct{}
+// PosixRetriever produces Chromium's kV10Key by applying PBKDF2 to the hardcoded password
+// "peanuts". Matches Chromium's upstream PosixKeyProvider (components/os_crypt/async/browser/
+// posix_key_provider.cc): a deterministic 16-byte AES-128 key used to encrypt ciphertexts with
+// the "v10" prefix when no keyring is available (headless servers, Docker, CI).
+type PosixRetriever struct{}
 
-func (r *FallbackRetriever) RetrieveKey(_, _ string) ([]byte, error) {
+func (r *PosixRetriever) RetrieveKey(_, _ string) ([]byte, error) {
 	return linuxParams.deriveKey([]byte("peanuts")), nil
 }
 
-// DefaultRetriever returns the Linux retriever chain:
-// D-Bus Secret Service first, then "peanuts" fallback.
-func DefaultRetriever() KeyRetriever {
-	return NewChain(
-		&DBusRetriever{},
-		&FallbackRetriever{},
-	)
+// DefaultRetrievers returns the Linux Retrievers, one per cipher tier. Chromium on Linux emits
+// distinct prefixes for distinct key sources:
+//
+//   - v10 prefix → PBKDF2("peanuts") — Chromium's kV10Key, emitted when no keyring is available
+//     (headless servers, Docker, CI).
+//   - v11 prefix → PBKDF2(keyring secret) — Chromium's kV11Key, emitted when D-Bus Secret
+//     Service (GNOME Keyring / KWallet) is reachable.
+//
+// A profile can carry both prefixes if the host moved between keyring-equipped and headless
+// sessions, so both tiers run independently with per-tier logging rather than a first-success
+// chain.
+func DefaultRetrievers() Retrievers {
+	return Retrievers{
+		V10: &PosixRetriever{},
+		V11: &DBusRetriever{},
+	}
 }

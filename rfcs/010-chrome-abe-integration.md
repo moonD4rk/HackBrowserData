@@ -191,9 +191,9 @@ Go consumes the same constants via **`go tool cgo -godefs`** (a development-time
 
 **Why `cgo -godefs` rather than runtime `import "C"`**: we only need constants shared, not FFI to C functions. Runtime CGO would force the whole project into `CGO_ENABLED=1`, losing the "non-Windows contributor needs no C toolchain" guarantee. `cgo -godefs` bakes the values into a pure-Go file that commits to git; the project stays `CGO_ENABLED=0`.
 
-### 5.3 Retriever chain & v20 routing
+### 5.3 Retriever wiring & v20 routing
 
-`keyretriever.DefaultRetriever()` returns `ChainRetriever [ABERetriever, DPAPIRetriever]` on Windows. `ABERetriever.RetrieveKey`:
+`keyretriever.DefaultRetrievers()` on Windows returns a `Retrievers` struct with `V10 = &DPAPIRetriever{}` and `V20 = &ABERetriever{}`. The two tiers are wired independently — not in a ChainRetriever — because a single Chrome profile upgraded from pre-127 can carry mixed v10+v20 ciphertexts, and both keys must be available for `decryptValue` to route each ciphertext to its matching tier (see [RFC-006](006-key-retrieval-mechanisms.md) §4.4 and issue #578). `ABERetriever.RetrieveKey`:
 
 1. Reads `Local State` → extracts `os_crypt.app_bound_encrypted_key` → strips `APPB` prefix. Missing field → `errNoABEKey`, chain falls through to DPAPI.
 2. Resolves browser executable via `utils/winutil/browser_path_windows.go` (registry App Paths → hardcoded fallback).
@@ -325,5 +325,5 @@ Edit `crypto/windows/abe_native/com_iid.c` (add the entry), `utils/winutil/brows
 | RFC | Relation |
 |---|---|
 | [RFC-003 Chromium Encryption](003-chromium-encryption.md) | v10/v11/v20 cipher format reference; v20 now implemented on Windows per this RFC |
-| [RFC-006 Key Retrieval](006-key-retrieval-mechanisms.md) | `ChainRetriever` taxonomy; Windows now uses `[ABERetriever, DPAPIRetriever]` |
+| [RFC-006 Key Retrieval](006-key-retrieval-mechanisms.md) | `keyretriever.Retrievers` taxonomy; Windows populates V10 (DPAPI) + V20 (ABE) as independent tier slots |
 | [RFC-009 Windows Locked Files](009-windows-locked-file-bypass.md) | Sibling Windows-specific workaround (handle duplication for locked DBs) |

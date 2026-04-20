@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
 )
 
 func setupCreditCardDB(t *testing.T) string {
@@ -18,7 +20,7 @@ func setupCreditCardDB(t *testing.T) string {
 func TestExtractCreditCards(t *testing.T) {
 	path := setupCreditCardDB(t)
 
-	got, err := extractCreditCards(nil, path)
+	got, err := extractCreditCards(keyretriever.MasterKeys{}, path)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 

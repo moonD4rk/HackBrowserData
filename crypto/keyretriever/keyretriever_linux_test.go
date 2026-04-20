@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestFallbackRetriever(t *testing.T) {
-	r := &FallbackRetriever{}
+func TestPosixRetriever(t *testing.T) {
+	r := &PosixRetriever{}
 
 	key, err := r.RetrieveKey("Chrome", "")
 	require.NoError(t, err)
@@ -27,32 +27,40 @@ func TestFallbackRetriever(t *testing.T) {
 	}
 	assert.False(t, allZero, "derived key should not be all zeros")
 
-	// "peanuts" is a fixed fallback password, so the result should be
-	// the same regardless of storage name or number of calls.
+	// "peanuts" is a hardcoded password, so the result should be the same regardless of storage
+	// name or number of calls.
 	key2, err := r.RetrieveKey("Brave", "")
 	require.NoError(t, err)
-	assert.Equal(t, key, key2, "fallback key should be the same for any storage")
+	assert.Equal(t, key, key2, "kV10Key should be constant across any storage label")
 }
 
-// TestFallbackRetriever_MatchesChromiumKV10Key pins FallbackRetriever's
-// output to Chromium's kV10Key reference bytes in os_crypt_linux.cc.
-func TestFallbackRetriever_MatchesChromiumKV10Key(t *testing.T) {
+// TestPosixRetriever_MatchesChromiumKV10Key pins PosixRetriever's output to Chromium's kV10Key
+// reference bytes (PBKDF2-HMAC-SHA1 of "peanuts" with "saltysalt", 1 iteration, 16 bytes).
+func TestPosixRetriever_MatchesChromiumKV10Key(t *testing.T) {
 	want := []byte{
 		0xfd, 0x62, 0x1f, 0xe5, 0xa2, 0xb4, 0x02, 0x53,
 		0x9d, 0xfa, 0x14, 0x7c, 0xa9, 0x27, 0x27, 0x78,
 	}
-	r := &FallbackRetriever{}
+	r := &PosixRetriever{}
 	key, err := r.RetrieveKey("", "")
 	require.NoError(t, err)
 	assert.Equal(t, want, key)
 }
 
-func TestDefaultRetriever_Linux(t *testing.T) {
-	r := DefaultRetriever()
-	chain, ok := r.(*ChainRetriever)
-	require.True(t, ok, "DefaultRetriever should return a *ChainRetriever")
+func TestDefaultRetrievers_Linux(t *testing.T) {
+	r := DefaultRetrievers()
 
-	assert.Len(t, chain.retrievers, 2, "chain should have 2 retrievers")
-	assert.IsType(t, &DBusRetriever{}, chain.retrievers[0], "first retriever should be DBusRetriever")
-	assert.IsType(t, &FallbackRetriever{}, chain.retrievers[1], "second retriever should be FallbackRetriever")
+	// V10 slot: peanuts-derived kV10Key — PosixRetriever.
+	assert.IsType(t, &PosixRetriever{}, r.V10, "V10 slot should hold PosixRetriever (peanuts kV10Key)")
+
+	// V11 slot: D-Bus keyring kV11Key — DBusRetriever.
+	assert.IsType(t, &DBusRetriever{}, r.V11, "V11 slot should hold DBusRetriever (keyring kV11Key)")
+
+	// V20 slot: ABE is Windows-only, nil on Linux.
+	assert.Nil(t, r.V20, "V20 slot must stay nil on Linux")
+
+	// Smoke: both populated slots must actually retrieve (PosixRetriever always succeeds; DBus may
+	// fail in test env, which is fine — we only want to confirm the wiring, not real keys).
+	require.NotNil(t, r.V10)
+	require.NotNil(t, r.V11)
 }

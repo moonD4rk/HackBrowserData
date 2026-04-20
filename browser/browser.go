@@ -111,11 +111,11 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 	return browsers, nil
 }
 
-// retrieverSetter is an optional capability interface. Chromium variants
-// implement it to receive a master-key retriever chain; Firefox and Safari
-// do not.
-type retrieverSetter interface {
-	SetRetriever(keyretriever.KeyRetriever)
+// keyRetrieversSetter is an optional capability interface. Chromium variants implement it to
+// receive the per-tier master-key retrievers (V10 / V11 / V20) as a single Retrievers struct;
+// Firefox and Safari do not.
+type keyRetrieversSetter interface {
+	SetKeyRetrievers(keyretriever.Retrievers)
 }
 
 // resolveGlobs expands glob patterns in browser configs' UserDataDir.

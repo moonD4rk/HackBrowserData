@@ -3,7 +3,7 @@ package chromium
 import (
 	"database/sql"
 
-	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
@@ -14,9 +14,7 @@ const (
 	countCreditCardQuery = `SELECT COUNT(*) FROM credit_cards`
 )
 
-func extractCreditCards(masterKey []byte, path string) ([]types.CreditCardEntry, error) {
-	var decryptFails int
-	var lastErr error
+func extractCreditCards(keys keyretriever.MasterKeys, path string) ([]types.CreditCardEntry, error) {
 	cards, err := sqliteutil.QueryRows(path, false, defaultCreditCardQuery,
 		func(rows *sql.Rows) (types.CreditCardEntry, error) {
 			var guid, name, month, year, nickname, address string
@@ -24,11 +22,7 @@ func extractCreditCards(masterKey []byte, path string) ([]types.CreditCardEntry,
 			if err := rows.Scan(&guid, &name, &month, &year, &encNumber, &nickname, &address); err != nil {
 				return types.CreditCardEntry{}, err
 			}
-			number, err := decryptValue(masterKey, encNumber)
-			if err != nil {
-				decryptFails++
-				lastErr = err
-			}
+			number, _ := decryptValue(keys, encNumber)
 			return types.CreditCardEntry{
 				GUID:     guid,
 				Name:     name,
@@ -41,9 +35,6 @@ func extractCreditCards(masterKey []byte, path string) ([]types.CreditCardEntry,
 		})
 	if err != nil {
 		return nil, err
-	}
-	if decryptFails > 0 {
-		log.Debugf("decrypt credit cards: %d failed: %v", decryptFails, lastErr)
 	}
 	return cards, nil
 }

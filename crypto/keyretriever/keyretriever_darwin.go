@@ -155,16 +155,18 @@ func (r *SecurityCmdRetriever) retrieveKeyOnce(storage string) ([]byte, error) {
 	return darwinParams.deriveKey(secret), nil
 }
 
-// DefaultRetriever returns the macOS retriever chain, tried in order:
+// DefaultRetrievers returns the macOS Retrievers. macOS has only a V10 tier (v11 and v20 cipher
+// prefixes are not used by Chromium on this platform), populated by a within-tier first-success
+// chain tried in order:
 //
 //  1. GcoredumpRetriever       — CVE-2025-24204 exploit (root only)
 //  2. KeychainPasswordRetriever — direct unlock, skipped when password is empty
 //  3. SecurityCmdRetriever      — `security` CLI fallback (may trigger a dialog)
-func DefaultRetriever(keychainPassword string) KeyRetriever {
-	retrievers := []KeyRetriever{&GcoredumpRetriever{}}
+func DefaultRetrievers(keychainPassword string) Retrievers {
+	chain := []KeyRetriever{&GcoredumpRetriever{}}
 	if keychainPassword != "" {
-		retrievers = append(retrievers, &KeychainPasswordRetriever{Password: keychainPassword})
+		chain = append(chain, &KeychainPasswordRetriever{Password: keychainPassword})
 	}
-	retrievers = append(retrievers, &SecurityCmdRetriever{cache: make(map[string]securityResult)})
-	return NewChain(retrievers...)
+	chain = append(chain, &SecurityCmdRetriever{cache: make(map[string]securityResult)})
+	return Retrievers{V10: NewChain(chain...)}
 }

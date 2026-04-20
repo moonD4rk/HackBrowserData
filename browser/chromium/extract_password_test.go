@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
 )
 
 func setupLoginDB(t *testing.T) string {
@@ -18,7 +20,7 @@ func setupLoginDB(t *testing.T) string {
 func TestExtractPasswords(t *testing.T) {
 	path := setupLoginDB(t)
 
-	got, err := extractPasswords(nil, path)
+	got, err := extractPasswords(keyretriever.MasterKeys{}, path)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -54,7 +56,7 @@ func TestExtractYandexPasswords(t *testing.T) {
 		insertLogin("https://origin.yandex.ru", "https://action.yandex.ru/submit", "user", "", 13350000000000000),
 	)
 
-	got, err := extractYandexPasswords(nil, path)
+	got, err := extractYandexPasswords(keyretriever.MasterKeys{}, path)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, "https://action.yandex.ru/submit", got[0].URL) // action_url, not origin_url

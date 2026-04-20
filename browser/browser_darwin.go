@@ -171,23 +171,23 @@ type keychainPasswordSetter interface {
 // no longer triggers a password prompt.
 func newPlatformInjector(opts PickOptions) func(Browser) {
 	var (
-		password  string
-		retriever keyretriever.KeyRetriever
-		resolved  bool
+		password   string
+		retrievers keyretriever.Retrievers
+		resolved   bool
 	)
 	return func(b Browser) {
-		rs, needsRetriever := b.(retrieverSetter)
+		rs, needsRetrievers := b.(keyRetrieversSetter)
 		kps, needsKeychainPassword := b.(keychainPasswordSetter)
-		if !needsRetriever && !needsKeychainPassword {
+		if !needsRetrievers && !needsKeychainPassword {
 			return
 		}
 		if !resolved {
 			password = resolveKeychainPassword(opts.KeychainPassword)
-			retriever = keyretriever.DefaultRetriever(password)
+			retrievers = keyretriever.DefaultRetrievers(password)
 			resolved = true
 		}
-		if needsRetriever {
-			rs.SetRetriever(retriever)
+		if needsRetrievers {
+			rs.SetKeyRetrievers(retrievers)
 		}
 		if needsKeychainPassword {
 			kps.SetKeychainPassword(password)

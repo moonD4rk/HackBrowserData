@@ -14,6 +14,12 @@ const (
 	// CipherV20 is Chrome 127+ App-Bound Encryption.
 	CipherV20 CipherVersion = "v20"
 
+	// CipherV12 is Chromium's SecretPortalKeyProvider (Flatpak / xdg-desktop-portal) tier —
+	// HKDF-SHA256 + AES-256-GCM with a secret retrieved via org.freedesktop.portal.Desktop.
+	// Recognized by DetectVersion so decryptValue can emit a known-gap error rather than a
+	// generic "unsupported cipher version" message; not yet implemented.
+	CipherV12 CipherVersion = "v12"
+
 	// CipherDPAPI is pre-Chrome 80 raw DPAPI encryption (no version prefix).
 	CipherDPAPI CipherVersion = "dpapi"
 
@@ -32,6 +38,8 @@ func DetectVersion(ciphertext []byte) CipherVersion {
 		return CipherV10
 	case "v11":
 		return CipherV11
+	case "v12":
+		return CipherV12
 	case "v20":
 		return CipherV20
 	default:
@@ -43,7 +51,7 @@ func DetectVersion(ciphertext []byte) CipherVersion {
 // Returns the ciphertext unchanged if no known prefix is found.
 func stripPrefix(ciphertext []byte) []byte {
 	ver := DetectVersion(ciphertext)
-	if ver == CipherV10 || ver == CipherV11 || ver == CipherV20 {
+	if ver == CipherV10 || ver == CipherV11 || ver == CipherV12 || ver == CipherV20 {
 		return ciphertext[versionPrefixLen:]
 	}
 	return ciphertext
