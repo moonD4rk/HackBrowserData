@@ -42,8 +42,9 @@ type Retrievers struct {
 //
 // The returned error, when non-nil, is an errors.Join of per-tier failures formatted as
 // "<tier>: <err>" (e.g. "v10: dpapi decrypt: ..."). Callers are expected to log it at whatever
-// severity fits their context — this function itself never logs, so the keyretriever package
-// stays pure and reusable across different consumers.
+// severity fits their context — this function itself never logs, leaving logging policy to its
+// callers. Other pieces of the keyretriever package (e.g. ChainRetriever) may still log on their
+// own failures; the "no-logging" guarantee is scoped to NewMasterKeys.
 func NewMasterKeys(r Retrievers, storage, localStatePath string) (MasterKeys, error) {
 	var keys MasterKeys
 	var errs []error
