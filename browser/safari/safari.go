@@ -71,6 +71,14 @@ func (b *Browser) Extract(categories []types.Category) (*types.BrowserData, erro
 			}
 			continue
 		}
+		// Extension plists (AppExtensions + WebExtensions) live directly in the container
+		// and are read in-place; attribute to default only until per-profile layouts are verified.
+		if cat == types.Extension {
+			if b.profile.isDefault() {
+				b.extractCategory(data, cat, "")
+			}
+			continue
+		}
 		path, ok := tempPaths[cat]
 		if !ok {
 			continue
@@ -92,6 +100,12 @@ func (b *Browser) CountEntries(categories []types.Category) (map[types.Category]
 	counts := make(map[types.Category]int)
 	for _, cat := range categories {
 		if cat == types.Password {
+			if b.profile.isDefault() {
+				counts[cat] = b.countCategory(cat, "")
+			}
+			continue
+		}
+		if cat == types.Extension {
 			if b.profile.isDefault() {
 				counts[cat] = b.countCategory(cat, "")
 			}
@@ -138,6 +152,8 @@ func (b *Browser) extractCategory(data *types.BrowserData, cat types.Category, p
 		data.Downloads, err = extractDownloads(path, b.profile.downloadOwnerUUID())
 	case types.LocalStorage:
 		data.LocalStorage, err = extractLocalStorage(path)
+	case types.Extension:
+		data.Extensions, err = extractExtensions(b.profile.container)
 	default:
 		return
 	}
@@ -162,6 +178,8 @@ func (b *Browser) countCategory(cat types.Category, path string) int {
 		count, err = countDownloads(path, b.profile.downloadOwnerUUID())
 	case types.LocalStorage:
 		count, err = countLocalStorage(path)
+	case types.Extension:
+		count, err = countExtensions(b.profile.container)
 	default:
 		// Unsupported categories silently return 0.
 	}
