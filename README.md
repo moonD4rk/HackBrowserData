@@ -33,7 +33,7 @@
 | Browser        | Windows | macOS | Linux |
 |:---------------|:-------:|:-----:|:-----:|
 | Chrome         |   ✅²   |   ✅   |   ✅   |
-| Chrome Beta    |    ✅    |   ✅   |   ✅   |
+| Chrome Beta    |   ✅²   |   ✅   |   ✅   |
 | Chromium       |    ✅    |   ✅   |   ✅   |
 | Edge           |   ✅²   |   ✅   |   ✅   |
 | Brave          |   ✅²   |   ✅   |   ✅   |
@@ -52,9 +52,9 @@
 | Firefox        |    ✅    |   ✅   |   ✅   |
 | Safari¹        |    -    |   ✅   |   -   |
 
-> ¹ Safari requires Full Disk Access; macOS will prompt on first run — grant it to allow extraction.
+> ¹ Safari requires Full Disk Access; enable it in System Settings → Privacy & Security → Full Disk Access if extraction returns empty results.
 >
-> ² On Windows, decrypting Chromium 127+ cookies (Chrome / Edge / Brave / CocCoc) requires the App-Bound Encryption payload built via `make build-windows` — see [Building from source](#building-from-source) below.
+> ² On Windows, decrypting Chromium 127+ cookies (Chrome / Chrome Beta / Edge / Brave / CocCoc) requires the App-Bound Encryption payload built via `make build-windows` — see [Building from source](#building-from-source) below.
 
 ## Getting Started
 
@@ -86,7 +86,7 @@ GOOS=linux GOARCH=amd64 go build ./cmd/hack-browser-data/
 
 #### Windows build with App-Bound Encryption (optional)
 
-Chrome / Edge / Brave / CocCoc 127+ protect cookies with App-Bound Encryption. Decrypting those cookies requires a small C payload — [Zig](https://ziglang.org/) (0.13+) is the recommended C toolchain (the Makefile calls `zig cc`), though a Windows-targeting `gcc` such as MinGW-w64 also works.
+Chrome / Chrome Beta / Edge / Brave / CocCoc 127+ protect cookies with App-Bound Encryption. Decrypting those cookies requires a small C payload — [Zig](https://ziglang.org/) (0.13+) is the recommended C toolchain (the Makefile calls `zig cc`). MinGW-w64 `gcc` can also build the sources manually if you bypass `make payload`.
 
 ```bash
 # 1. Install Zig
