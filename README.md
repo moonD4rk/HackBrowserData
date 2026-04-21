@@ -97,7 +97,7 @@ scoop install zig                # Windows (scoop)
 # 2. Build the payload (outputs crypto/windows/payload/abe_extractor_amd64.bin)
 make payload
 
-# 3. Cross-compile the Windows executable with the payload embedded
+# 3. Build hack-browser-data.exe with the ABE payload embedded
 make build-windows
 ```
 
