@@ -230,6 +230,34 @@ func splitTestOriginURL(u string) (scheme, host string, port uint16) {
 	return scheme, rest, 0
 }
 
+// writeLocalStorageDB creates a minimal localstorage.sqlite3 at path with ItemTable populated
+// from items. When addNullKey is true, a NULL-key row is inserted first to exercise the
+// skip-NULL-key logic in readLocalStorageFile / countLocalStorageFile. This is a direct-DB
+// variant of buildTestLocalStorageDir — use it when the test targets one DB, not the full
+// Origins nesting.
+func writeLocalStorageDB(t *testing.T, path string, items []testLocalStorageItem, addNullKey bool) {
+	t.Helper()
+	db, err := sql.Open("sqlite", path)
+	require.NoError(t, err)
+	_, err = db.Exec(`CREATE TABLE ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB NOT NULL ON CONFLICT FAIL)`)
+	require.NoError(t, err)
+	if addNullKey {
+		_, err = db.Exec(
+			`INSERT INTO ItemTable (key, value) VALUES (NULL, ?)`,
+			encodeUTF16LE("null-key-sentinel"),
+		)
+		require.NoError(t, err)
+	}
+	for _, item := range items {
+		_, err = db.Exec(
+			`INSERT INTO ItemTable (key, value) VALUES (?, ?)`,
+			item.Key, encodeUTF16LE(item.Value),
+		)
+		require.NoError(t, err)
+	}
+	require.NoError(t, db.Close())
+}
+
 // encodeUTF16LE is the inverse of extract_storage.go's decodeUTF16LE — it mirrors
 // the WebKit encoding so test fixtures round-trip through the extractor.
 func encodeUTF16LE(s string) []byte {

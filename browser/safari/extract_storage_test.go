@@ -1,6 +1,7 @@
 package safari
 
 import (
+	"database/sql"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	_ "modernc.org/sqlite"
 )
 
 // ---------------------------------------------------------------------------
@@ -33,6 +35,26 @@ func TestReadOriginBlock_NonDefaultPort(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint16(8443), top.port)
 	assert.Equal(t, "https://example.com:8443", formatOriginURL(top))
+}
+
+func TestReadOriginBlock_Latin1HighByte(t *testing.T) {
+	// WebKit stores scheme/host records with encoding byte 0x01 = Latin-1. Verify high-byte
+	// bytes decode as Latin-1 (é = 0xE9) rather than being passed through as invalid UTF-8.
+	data := []byte{
+		0x04, 0x00, 0x00, 0x00, 0x01, 'h', 't', 't', 'p', // scheme "http"
+		0x04, 0x00, 0x00, 0x00, 0x01, 'c', 'a', 'f', 0xe9, // host "café" (Latin-1)
+		0x00, // port default
+	}
+	ep, _, err := readOriginBlock(data, 0)
+	require.NoError(t, err)
+	assert.Equal(t, "http", ep.scheme)
+	assert.Equal(t, "café", ep.host)
+}
+
+func TestDecodeLatin1(t *testing.T) {
+	assert.Equal(t, "café", decodeLatin1([]byte{'c', 'a', 'f', 0xe9}))
+	assert.Equal(t, "hello", decodeLatin1([]byte("hello")))
+	assert.Empty(t, decodeLatin1(nil))
 }
 
 func TestReadOriginFile_FramePreferred(t *testing.T) {
@@ -249,4 +271,47 @@ func TestCountLocalStorage_DirMissing(t *testing.T) {
 	count, err := countLocalStorage(filepath.Join(t.TempDir(), "nope"))
 	require.Error(t, err)
 	assert.Equal(t, 0, count)
+}
+
+// ---------------------------------------------------------------------------
+// NULL-key handling — readLocalStorageFile / countLocalStorageFile both skip NULL keys,
+// keeping count and extract in sync.
+// ---------------------------------------------------------------------------
+
+func TestReadLocalStorageFile_SkipsNullKey(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "ls.sqlite3")
+	writeLocalStorageDB(t, dbPath, []testLocalStorageItem{
+		{Key: "real", Value: "keeper"},
+	}, true /*addNullKey*/)
+
+	items, err := readLocalStorageFile(dbPath)
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+	assert.Equal(t, "real", items[0].key)
+	assert.Equal(t, "keeper", items[0].value)
+}
+
+func TestCountLocalStorageFile_SkipsNullKey(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "ls.sqlite3")
+	writeLocalStorageDB(t, dbPath, []testLocalStorageItem{
+		{Key: "k1", Value: "v1"},
+		{Key: "k2", Value: "v2"},
+	}, true /*addNullKey*/)
+
+	count, err := countLocalStorageFile(dbPath)
+	require.NoError(t, err)
+	assert.Equal(t, 2, count, "NULL keys are excluded from count to match extract's skip rule")
+}
+
+func TestCountLocalStorageFile_MissingTable(t *testing.T) {
+	// Real Safari has origin dirs with LocalStorage/localstorage.sqlite3 but no ItemTable yet
+	// (seen during live verification). countLocalStorageFile must surface the error so the
+	// caller can log-and-skip rather than counting 0 silently.
+	dbPath := filepath.Join(t.TempDir(), "empty.sqlite3")
+	db, err := sql.Open("sqlite", dbPath)
+	require.NoError(t, err)
+	require.NoError(t, db.Close())
+
+	_, err = countLocalStorageFile(dbPath)
+	require.Error(t, err)
 }

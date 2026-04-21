@@ -82,12 +82,43 @@ func extractLocalStorage(root string) ([]types.StorageEntry, error) {
 	return entries, nil
 }
 
+// countLocalStorage sums ItemTable row counts across every origin DB under root without
+// parsing origin files or decoding values — CountEntries callers only need the total, not the
+// URLs or plaintext. COUNT(key) naturally excludes NULL keys, matching the same skip rule
+// applied by readLocalStorageFile, so count and extract stay in sync.
 func countLocalStorage(root string) (int, error) {
-	entries, err := extractLocalStorage(root)
+	dirs, err := findOriginDataDirs(root)
 	if err != nil {
 		return 0, err
 	}
-	return len(entries), nil
+	total := 0
+	for _, od := range dirs {
+		dbPath := filepath.Join(od, webkitLocalStorageSubdir, webkitLocalStorageDB)
+		n, err := countLocalStorageFile(dbPath)
+		if err != nil {
+			log.Debugf("safari localstorage: count %s: %v", dbPath, err)
+			continue
+		}
+		total += n
+	}
+	return total, nil
+}
+
+func countLocalStorageFile(path string) (int, error) {
+	dsn := "file:" + path + "?mode=ro&immutable=1"
+	db, err := sql.Open("sqlite", dsn)
+	if err != nil {
+		return 0, fmt.Errorf("open %s: %w", path, err)
+	}
+	defer db.Close()
+	if err := db.Ping(); err != nil {
+		return 0, fmt.Errorf("ping %s: %w", path, err)
+	}
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(key) FROM ItemTable`).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count ItemTable: %w", err)
+	}
+	return count, nil
 }
 
 // findOriginDataDirs returns <root>/<h1>/<h2>/ paths that contain both an "origin" file and
@@ -206,12 +237,22 @@ func readOriginString(data []byte, pos int) (string, int, error) {
 	pos += length
 	switch enc {
 	case originEncASCII:
-		return string(chunk), pos, nil
+		return decodeLatin1(chunk), pos, nil
 	case originEncUTF16:
 		return decodeUTF16LE(chunk), pos, nil
 	default:
-		return string(chunk), pos, nil
+		return decodeLatin1(chunk), pos, nil
 	}
+}
+
+// decodeLatin1 converts ISO-8859-1 bytes to a valid UTF-8 Go string. Latin-1 byte values map
+// 1:1 to Unicode code points U+0000–U+00FF. Mirrors the helper in chromium/extract_storage.go.
+func decodeLatin1(b []byte) string {
+	runes := make([]rune, len(b))
+	for i, c := range b {
+		runes[i] = rune(c)
+	}
+	return string(runes)
 }
 
 func formatOriginURL(ep originEndpoint) string {
@@ -251,6 +292,13 @@ func readLocalStorageFile(path string) ([]localStorageItem, error) {
 		var value []byte
 		if err := rows.Scan(&key, &value); err != nil {
 			log.Debugf("safari localstorage: scan row in %s: %v", path, err)
+			continue
+		}
+		if !key.Valid {
+			// NULL keys would collide with legitimate empty-string keys in the output and are
+			// not meaningful localStorage entries. The UNIQUE constraint in ItemTable still
+			// permits multiple NULL rows in SQLite, so we filter them here.
+			log.Debugf("safari localstorage: skip row with NULL key in %s", path)
 			continue
 		}
 		items = append(items, localStorageItem{
