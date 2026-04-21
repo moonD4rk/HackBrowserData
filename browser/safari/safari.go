@@ -136,6 +136,8 @@ func (b *Browser) extractCategory(data *types.BrowserData, cat types.Category, p
 		data.Bookmarks, err = extractBookmarks(path)
 	case types.Download:
 		data.Downloads, err = extractDownloads(path, b.profile.downloadOwnerUUID())
+	case types.LocalStorage:
+		data.LocalStorage, err = extractLocalStorage(path)
 	default:
 		return
 	}
@@ -158,6 +160,8 @@ func (b *Browser) countCategory(cat types.Category, path string) int {
 		count, err = countBookmarks(path)
 	case types.Download:
 		count, err = countDownloads(path, b.profile.downloadOwnerUUID())
+	case types.LocalStorage:
+		count, err = countLocalStorage(path)
 	default:
 		// Unsupported categories silently return 0.
 	}

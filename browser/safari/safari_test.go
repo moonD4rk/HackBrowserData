@@ -3,6 +3,7 @@ package safari
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -78,6 +79,7 @@ func TestNewBrowsers(t *testing.T) {
 
 func TestNewBrowsers_MultiProfile(t *testing.T) {
 	const uuid = "5604E6F5-02ED-4E40-8249-63DE7BC986C8"
+	uuidLower := strings.ToLower(uuid)
 
 	// Build a pretend ~/Library that mirrors a macOS 14+ layout.
 	library := t.TempDir()
@@ -90,6 +92,11 @@ func TestNewBrowsers_MultiProfile(t *testing.T) {
 
 	// Named profile data under the container.
 	mkFile(t, container, "Safari", "Profiles", uuid, "History.db")
+
+	// Named profile's Origins directory (Safari 17+ nested localStorage root) — must exist
+	// for resolveSourcePaths to register it.
+	namedOriginsDir := filepath.Join(container, "WebKit", "WebsiteDataStore", uuidLower, "Origins")
+	require.NoError(t, os.MkdirAll(namedOriginsDir, 0o755))
 
 	// SafariTabs.db registering the named profile with a human-readable title.
 	writeSafariTabsDB(t, filepath.Join(container, safariTabsDBRelPath), []tabRow{
@@ -112,12 +119,18 @@ func TestNewBrowsers_MultiProfile(t *testing.T) {
 			assert.Equal(t, legacyHome, b.ProfileDir())
 			assert.Contains(t, b.sourcePaths, types.History)
 			assert.Equal(t, filepath.Join(legacyHome, "History.db"), b.sourcePaths[types.History].absPath)
+			// Default profile's LocalStorage root (WebsiteData/Default) isn't created in this fixture,
+			// so it won't resolve — which is the point: resolveSourcePaths only registers paths that exist.
+			assert.NotContains(t, b.sourcePaths, types.LocalStorage)
 		case "work":
 			assert.Equal(t, filepath.Join(container, "Safari", "Profiles", uuid), b.ProfileDir())
 			assert.Contains(t, b.sourcePaths, types.History)
 			assert.Equal(t,
 				filepath.Join(container, "Safari", "Profiles", uuid, "History.db"),
 				b.sourcePaths[types.History].absPath)
+			require.Contains(t, b.sourcePaths, types.LocalStorage)
+			assert.Equal(t, namedOriginsDir, b.sourcePaths[types.LocalStorage].absPath)
+			assert.True(t, b.sourcePaths[types.LocalStorage].isDir)
 		}
 	}
 }
@@ -216,6 +229,15 @@ func TestCountCategory(t *testing.T) {
 		assert.Equal(t, 1, b.countCategory(types.Download, path))
 	})
 
+	t.Run("LocalStorage", func(t *testing.T) {
+		dir := buildTestLocalStorageDir(t, map[string][]testLocalStorageItem{
+			"https://example.com": {{Key: "k1", Value: "v1"}, {Key: "k2", Value: "v2"}},
+			"https://go.dev":      {{Key: "theme", Value: "dark"}},
+		})
+		b := &Browser{}
+		assert.Equal(t, 3, b.countCategory(types.LocalStorage, dir))
+	})
+
 	t.Run("UnsupportedCategory", func(t *testing.T) {
 		b := &Browser{}
 		assert.Equal(t, 0, b.countCategory(types.CreditCard, "unused"))
@@ -289,6 +311,20 @@ func TestExtractCategory(t *testing.T) {
 		require.Len(t, data.Downloads, 1)
 		assert.Equal(t, "https://example.com/file.zip", data.Downloads[0].URL)
 		assert.Equal(t, int64(1024), data.Downloads[0].TotalBytes)
+	})
+
+	t.Run("LocalStorage", func(t *testing.T) {
+		dir := buildTestLocalStorageDir(t, map[string][]testLocalStorageItem{
+			"https://github.com": {{Key: "theme", Value: "dark"}},
+		})
+		b := &Browser{}
+		data := &types.BrowserData{}
+		b.extractCategory(data, types.LocalStorage, dir)
+
+		require.Len(t, data.LocalStorage, 1)
+		assert.Equal(t, "https://github.com", data.LocalStorage[0].URL)
+		assert.Equal(t, "theme", data.LocalStorage[0].Key)
+		assert.Equal(t, "dark", data.LocalStorage[0].Value)
 	})
 
 	t.Run("UnsupportedCategory", func(t *testing.T) {
