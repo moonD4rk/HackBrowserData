@@ -239,7 +239,9 @@ The only encrypted category is passwords. Because they are not stored in Safari'
 
 - **macOS-only**. There is no Safari on Windows or Linux.
 - **Full Disk Access (TCC)** is required to read the sandboxed container. Without it, cookies / history / downloads / localStorage reads fail silently with permission errors at stat or open time. Legacy paths under `~/Library/Safari/` sometimes remain readable without FDA, but are mostly empty on modern systems.
-- **Live-file safety**: `SafariTabs.db`, `History.db`, and `localstorage.sqlite3` can be written to by a running Safari instance. All live SQL reads use `?mode=ro&immutable=1`, which disables WAL replay and locking — the extractor sees a consistent snapshot of the main DB as of read time. Uncommitted WAL content is intentionally not replayed to avoid race-induced corruption.
+- **Live-file safety** follows a live-vs-temp split:
+  - **Live reads** (`SafariTabs.db` during profile discovery in `profiles.go`) use `?mode=ro&immutable=1`, which disables WAL replay and locking so the extractor cannot disturb a running Safari — it sees a consistent snapshot of the main DB as of read time, at the cost of missing any pending WAL content.
+  - **Temp-copy reads** (`History.db`, `localstorage.sqlite3`, etc. via `filemanager.Session.Acquire`) use `?mode=ro` only. `Session.Acquire` copies the `-wal` / `-shm` sidecars alongside the main DB, so SQLite can replay uncommitted transactions on the copy — surfacing entries Safari has written to WAL but not yet checkpointed. Any `-shm` writes SQLite performs during replay land on the ephemeral copy and are deleted with the session.
 - **Multi-profile availability**: requires Safari 17 (macOS 14 Sonoma) or newer. Older Safari versions have only the default profile; discovery degrades cleanly via the ReadDir fallback described in §2.1.
 - **File acquisition**: all per-profile files are copied into a `filemanager.Session` temp directory before extraction, except the discovery-time `SafariTabs.db` read which opens the live file directly. See [RFC-008](008-file-acquisition-and-platform-quirks.md) for the general pattern.
 

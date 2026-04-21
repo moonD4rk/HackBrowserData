@@ -303,6 +303,24 @@ func TestCountLocalStorageFile_SkipsNullKey(t *testing.T) {
 	assert.Equal(t, 2, count, "NULL keys are excluded from count to match extract's skip rule")
 }
 
+func TestReadLocalStorageFile_ReturnsRowsInKeyOrder(t *testing.T) {
+	// Rows are inserted in reverse alphabetical order; ORDER BY key, rowid in the extractor
+	// query must surface them ascending so exports are deterministic across runs.
+	dbPath := filepath.Join(t.TempDir(), "ls.sqlite3")
+	writeLocalStorageDB(t, dbPath, []testLocalStorageItem{
+		{Key: "zebra", Value: "z"},
+		{Key: "mango", Value: "m"},
+		{Key: "apple", Value: "a"},
+	}, false /*addNullKey*/)
+
+	items, err := readLocalStorageFile(dbPath)
+	require.NoError(t, err)
+	require.Len(t, items, 3)
+	assert.Equal(t, "apple", items[0].key)
+	assert.Equal(t, "mango", items[1].key)
+	assert.Equal(t, "zebra", items[2].key)
+}
+
 func TestCountLocalStorageFile_MissingTable(t *testing.T) {
 	// Real Safari has origin dirs with LocalStorage/localstorage.sqlite3 but no ItemTable yet
 	// (seen during live verification). countLocalStorageFile must surface the error so the

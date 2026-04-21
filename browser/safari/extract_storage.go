@@ -105,7 +105,11 @@ func countLocalStorage(root string) (int, error) {
 }
 
 func countLocalStorageFile(path string) (int, error) {
-	dsn := "file:" + path + "?mode=ro&immutable=1"
+	// mode=ro (no immutable) so SQLite replays the copied -wal sidecar — this surfaces entries
+	// Safari has committed to WAL but not yet checkpointed to the main DB. Writes SQLite might
+	// make to the temp-copy's -shm during replay are harmless; the Session cleanup removes
+	// everything. Live-file reads (profiles.go) still use immutable=1 to stay off the real WAL.
+	dsn := "file:" + path + "?mode=ro"
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return 0, fmt.Errorf("open %s: %w", path, err)
@@ -127,7 +131,7 @@ func countLocalStorageFile(path string) (int, error) {
 func findOriginDataDirs(root string) ([]string, error) {
 	topEntries, err := os.ReadDir(root)
 	if err != nil {
-		return nil, fmt.Errorf("read origins root: %w", err)
+		return nil, fmt.Errorf("read origins root %s: %w", root, err)
 	}
 	var out []string
 	for _, top := range topEntries {
@@ -172,7 +176,7 @@ type originEndpoint struct {
 func readOriginFile(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("read origin file %s: %w", path, err)
 	}
 	top, pos, terr := readOriginBlock(data, 0)
 	if terr != nil {
@@ -269,8 +273,10 @@ type localStorageItem struct {
 }
 
 func readLocalStorageFile(path string) ([]localStorageItem, error) {
-	// Read-only + immutable so we don't disturb a live WAL (same pattern as profiles.go).
-	dsn := "file:" + path + "?mode=ro&immutable=1"
+	// mode=ro (no immutable) — see countLocalStorageFile for the WAL-replay rationale; the same
+	// live-vs-temp split applies here. ORDER BY key, rowid makes exports byte-for-byte stable
+	// across runs and SQLite versions.
+	dsn := "file:" + path + "?mode=ro"
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open %s: %w", path, err)
@@ -280,7 +286,7 @@ func readLocalStorageFile(path string) ([]localStorageItem, error) {
 		return nil, fmt.Errorf("ping %s: %w", path, err)
 	}
 
-	rows, err := db.Query(`SELECT key, value FROM ItemTable`)
+	rows, err := db.Query(`SELECT key, value FROM ItemTable ORDER BY key, rowid`)
 	if err != nil {
 		return nil, fmt.Errorf("query ItemTable: %w", err)
 	}
