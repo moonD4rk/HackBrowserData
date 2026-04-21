@@ -6,59 +6,61 @@
 
 [![Lint](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml) [![Build](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml) [![Release](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml) [![Tests](https://github.com/moonD4rk/HackBrowserData/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/test.yml) [![codecov](https://codecov.io/gh/moonD4rk/HackBrowserData/branch/main/graph/badge.svg?token=KWJCN38657)](https://codecov.io/gh/moonD4rk/HackBrowserData)
 
-`HackBrowserData` is a command-line tool for decrypting and exporting browser data (passwords, history, cookies, bookmarks, credit cards, download history, localStorage, sessionStorage and extensions) from the browser. It supports the most popular browsers on the market and runs on Windows, macOS and Linux.
+`HackBrowserData` is a command-line tool for decrypting and exporting browser data (passwords, history, cookies, bookmarks, credit cards, download history, localStorage, sessionStorage and extensions) from the browser. It supports the most popular Chromium-based browsers and Firefox on Windows, macOS and Linux, plus Safari on macOS.
 
 > Disclaimer: This tool is only intended for security research. Users are responsible for all legal and related liabilities resulting from the use of this tool. The original author does not assume any legal responsibility.
 
 ## Supported Data Categories
 
-| Category       | Chromium-based | Firefox |
-|:---------------|:--------------:|:-------:|
-| Password       |       ✅        |    ✅    |
-| Cookie         |       ✅        |    ✅    |
-| Bookmark       |       ✅        |    ✅    |
-| History        |       ✅        |    ✅    |
-| Download       |       ✅        |    ✅    |
-| Credit Card    |       ✅        |    -    |
-| Extension      |       ✅        |    ✅    |
-| LocalStorage   |       ✅        |    ✅    |
-| SessionStorage |       ✅        |    -    |
+| Category       | Chromium-based | Firefox | Safari |
+|:---------------|:--------------:|:-------:|:------:|
+| Password       |       ✅        |    ✅    |   ✅    |
+| Cookie         |       ✅        |    ✅    |   ✅    |
+| Bookmark       |       ✅        |    ✅    |   ✅    |
+| History        |       ✅        |    ✅    |   ✅    |
+| Download       |       ✅        |    ✅    |   ✅    |
+| Credit Card    |       ✅        |    -    |   -    |
+| Extension      |       ✅        |    ✅    |   ✅    |
+| LocalStorage   |       ✅        |    ✅    |   ✅    |
+| SessionStorage |       ✅        |    -    |   -    |
 
 ## Supported Browsers
 
 > On macOS, some Chromium-based browsers **require a current user password** to decrypt.
+>
+> Password decryption may fail on macOS 26.4 or later.
 
 | Browser        | Windows | macOS | Linux |
 |:---------------|:-------:|:-----:|:-----:|
-| Chrome         |    ✅    |   ✅   |   ✅   |
+| Chrome         |   ✅²   |   ✅   |   ✅   |
 | Chrome Beta    |    ✅    |   ✅   |   ✅   |
 | Chromium       |    ✅    |   ✅   |   ✅   |
-| Edge           |    ✅    |   ✅   |   ✅   |
-| Brave          |    ✅    |   ✅   |   ✅   |
+| Edge           |   ✅²   |   ✅   |   ✅   |
+| Brave          |   ✅²   |   ✅   |   ✅   |
 | Opera          |    ✅    |   ✅   |   ✅   |
 | OperaGX        |    ✅    |   ✅   |   -   |
 | Vivaldi        |    ✅    |   ✅   |   ✅   |
 | Yandex         |    ✅    |   ✅   |   -   |
-| CocCoc         |    ✅    |   ✅   |   -   |
+| CocCoc         |   ✅²   |   ✅   |   -   |
 | Arc            |    -    |   ✅   |   -   |
+| DuckDuckGo     |    ✅    |   -   |   -   |
 | QQ             |    ✅    |   -   |   -   |
 | 360 ChromeX    |    ✅    |   -   |   -   |
 | 360 Chrome     |    ✅    |   -   |   -   |
 | DC Browser     |    ✅    |   -   |   -   |
 | Sogou Explorer |    ✅    |   -   |   -   |
 | Firefox        |    ✅    |   ✅   |   ✅   |
+| Safari¹        |    -    |   ✅   |   -   |
+
+> ¹ Safari requires Full Disk Access; macOS will prompt on first run — grant it to allow extraction.
+>
+> ² On Windows, decrypting Chromium 127+ cookies (Chrome / Edge / Brave / CocCoc) requires the App-Bound Encryption payload built via `make build-windows` — see [Building from source](#building-from-source) below.
 
 ## Getting Started
 
 ### Install
 
 Installation of `HackBrowserData` is dead-simple, just download [the release for your system](https://github.com/moonD4rk/HackBrowserData/releases) and run the binary.
-
-You can also install via [Homebrew](https://brew.sh/):
-
-```bash
-brew install moonD4rk/tap/hack-browser-data
-```
 
 > In some situations, this security tool will be treated as a virus by Windows Defender or other antivirus software and can not be executed. The code is all open source, you can modify and compile by yourself.
 
@@ -72,15 +74,34 @@ cd HackBrowserData
 go build ./cmd/hack-browser-data/
 ```
 
-### Cross-platform build
+#### Cross-platform build
 
 ```bash
-# For Windows
+# For Windows (standard build, no Chromium 127+ ABE cookie support)
 GOOS=windows GOARCH=amd64 go build ./cmd/hack-browser-data/
 
 # For Linux
 GOOS=linux GOARCH=amd64 go build ./cmd/hack-browser-data/
 ```
+
+#### Windows build with App-Bound Encryption (optional)
+
+Chrome / Edge / Brave / CocCoc 127+ protect cookies with App-Bound Encryption. Decrypting those cookies requires a small C payload — [Zig](https://ziglang.org/) (0.13+) is the recommended C toolchain (the Makefile calls `zig cc`), though a Windows-targeting `gcc` such as MinGW-w64 also works.
+
+```bash
+# 1. Install Zig
+brew install zig                 # macOS
+scoop install zig                # Windows (scoop)
+# or download from https://ziglang.org/download/
+
+# 2. Build the payload (outputs crypto/windows/payload/abe_extractor_amd64.bin)
+make payload
+
+# 3. Cross-compile the Windows executable with the payload embedded
+make build-windows
+```
+
+The resulting `hack-browser-data.exe` includes full ABE cookie decryption on Chromium 127+.
 
 ## Usage
 
