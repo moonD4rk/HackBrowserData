@@ -122,11 +122,12 @@ Both data keys still ultimately derive from the same level-1 Chromium master key
 
 | Path | Role |
 |---|---|
-| `crypto/yandex.go` | Pure-Go primitives: `DecryptYandexIntermediateKey`, `AESGCMDecryptWithAAD`, `YandexLoginAAD`, `YandexCardAAD`, `YandexSignature`. Cross-platform, unit-testable on any host. |
-| `crypto/yandex_test.go` | Round-trip tests using synthesized blobs (no Yandex install required). |
-| `browser/chromium/yandex_key.go` | `loadYandexDataKey(dbPath, masterKey)` — opens the DB, checks `active_keys`, reads `meta.local_encryptor_data`, returns dataKey or `errYandexMasterPasswordSet`. |
-| `browser/chromium/extract_password.go` | `extractYandexPasswords` — queries `origin_url, username_element, username_value, password_element, password_value, signon_realm, date_created`; computes per-row AAD; decrypts. |
-| `browser/chromium/extract_creditcard_yandex.go` | `extractYandexCreditCards` + `countYandexCreditCards` — queries `records`; decrypts `private_data` with guid-AAD; parses both JSON blobs. |
+| `crypto/crypto.go` | New generic primitive `AESGCMDecryptBlob(key, blob, aad)` — splits `[12B nonce][ct+tag]` and runs AES-GCM. Not Yandex-specific; any protocol with this wire format can use it. |
+| `crypto/yandex.go` | Only exports `DecryptYandexIntermediateKey`. Holds the Yandex-specific protobuf signature strip + blob-length invariants as private constants. |
+| `crypto/yandex_test.go` | Round-trip + error-path tests for `DecryptYandexIntermediateKey` and `AESGCMDecryptBlob`. |
+| `browser/chromium/yandex_key.go` | `loadYandexDataKey(dbPath, masterKey)` — opens the DB, checks `active_keys.sealed_key`, reads `meta.local_encryptor_data`, returns dataKey or `errYandexMasterPasswordSet`. |
+| `browser/chromium/extract_password.go` | `extractYandexPasswords` + local `yandexLoginAAD` helper. Queries `origin_url, username_element, username_value, password_element, password_value, signon_realm, date_created`, computes SHA1 AAD locally, calls `crypto.AESGCMDecryptBlob`. |
+| `browser/chromium/extract_creditcard.go` | Merged file — Chromium `extractCreditCards` + Yandex `extractYandexCreditCards` + `countYandexCreditCards` + local `yandexCardAAD` helper + JSON struct types `yandexPublicData` / `yandexPrivateData`. |
 | `browser/chromium/source.go` | `creditCardExtractor` wrapper (parallel to `passwordExtractor` / `extensionExtractor`); `yandexExtractors` map registers Password and CreditCard overrides. |
 | `browser/chromium/chromium.go` | `countCategory` routes `CreditCard` to `countYandexCreditCards` when `cfg.Kind == ChromiumYandex` (table name differs). The extract side already dispatches through `b.extractors[cat]`. |
 | `types/models.go` | `CreditCardEntry` gains `CVC` and `Comment` string fields. Chromium leaves them empty. |
@@ -135,9 +136,16 @@ Both data keys still ultimately derive from the same level-1 Chromium master key
 
 The keyretriever tier (V10/V11/V20) is keyed on *cipher-version prefix* — the extract side dispatches on bytes `"v10"` / `"v11"` / `"v20"`. Yandex password rows carry no such prefix; they are raw `nonce\|ct+tag`. Injecting Yandex's intermediate-key step into `keyretriever.MasterKeys` would overload the tier abstraction (which models "pick the key for this prefix"), so the intermediate key is recovered inside the Yandex extractor using the Chromium V10 key as input. The keyretriever layer is untouched.
 
-### 5.2 Why `AESGCMDecryptWithAAD` is a new function rather than an extension of `AESGCMDecrypt`
+### 5.2 Why AAD construction lives in `browser/chromium/`, not in `crypto/`
 
-`crypto.AESGCMDecrypt` is called from the v10 Chromium path with an implicit `aad = nil` semantics and is covered by the Chromium regression suite. Changing its signature or threading an AAD parameter through would ripple through every extractor. A dedicated `AESGCMDecryptWithAAD` keeps the Chromium call sites byte-identical and confines the new behavior to Yandex.
+`crypto` exposes cryptographic primitives (AES, GCM, 3DES, DPAPI, PBKDF2, etc.) — things that transform bytes under a key. AAD construction for Yandex (`SHA1(origin_url ‖ \x00 ‖ …)` for passwords, raw `guid` for cards) is not cryptography; it is Yandex's per-row identification rule that happens to be bound to GCM's authentication tag. Placing it in `crypto` would leak Yandex protocol knowledge into a package that otherwise knows nothing about browsers.
+
+The final split:
+
+- `crypto.AESGCMDecryptBlob(key, blob, aad)` — generic AES-GCM with a caller-supplied AAD. Exported once, used by any current or future protocol that wants per-row AAD.
+- `chromium.yandexLoginAAD` / `chromium.yandexCardAAD` — private helpers next to the extractor that calls them. Protocol knowledge stays with the protocol consumer.
+
+This also keeps the `crypto` public surface small (3 extra exports: `DecryptYandexIntermediateKey`, `AESGCMDecryptBlob`, and the existing `AESGCMDecrypt`) rather than ballooning into a per-browser API.
 
 ## 6. Non-goals and deferred work
 
@@ -151,13 +159,13 @@ All decryption math is covered by pure-Go tests that synthesize Yandex DB files 
 
 | File | What it validates |
 |---|---|
-| `crypto/yandex_test.go` | `DecryptYandexIntermediateKey` round-trip, missing marker, truncated blob, bad signature, trailing data ignored; `AESGCMDecryptWithAAD` round-trip + bad AAD + bad nonce length; `YandexLoginAAD` / `YandexCardAAD` output shape with/without keyID. |
-| `browser/chromium/yandex_testutil_test.go` | `setupYandexPasswordDB` / `setupYandexCreditCardDB` — seal a dataKey into `meta.local_encryptor_data`, insert logins/records with matching AAD. |
-| `browser/chromium/extract_password_test.go` | `TestExtractYandexPasswords` end-to-end; master-password skip path; wrong master key surfaces as error. |
-| `browser/chromium/extract_creditcard_yandex_test.go` | Round-trip on 2-card fixture verifying Number/CVC/Comment/NickName/ExpMonth/ExpYear mapping; count on 3-row table; wrong master key surfaces as error. |
+| `crypto/yandex_test.go` | `DecryptYandexIntermediateKey` — round-trip, missing marker, truncated blob, bad signature, trailing data ignored. `AESGCMDecryptBlob` — round-trip, mismatched AAD fails GCM, blob shorter than nonce size surfaces as `errShortCiphertext`. |
+| `browser/chromium/yandex_testutil_test.go` | `setupYandexPasswordDB` / `setupYandexCreditCardDB` — seal a dataKey into `meta.local_encryptor_data`, insert logins/records with matching AAD. Uses the same `yandexLoginAAD` / `yandexCardAAD` helpers as production so fixture and extractor stay in lock-step. |
+| `browser/chromium/extract_password_test.go` | `TestExtractYandexPasswords` end-to-end (2 real logins round-tripped); master-password skip path; wrong master key surfaces as error. `TestYandexLoginAAD_*` covers the SHA1 shape with / without keyID. |
+| `browser/chromium/extract_creditcard_test.go` | Merged file — Chromium tests for `credit_cards` plus Yandex tests: round-trip on 2-card fixture verifying Number/CVC/Comment/NickName/ExpMonth/ExpYear mapping; count on 3-row `records` table; wrong master key surfaces as error. `TestYandexCardAAD` covers guid bytes / guid+keyID. |
 | `browser/chromium/chromium_test.go` | `TestExtractorsForKind` asserts `yandexExtractors` carries both `Password` and `CreditCard` entries. |
 
-Windows-host validation (out-of-tree, per `CLAUDE.local.md`): `make build-windows` → deploy to sandbox → `hbd.exe -v -b yandex` → verify non-empty `password.json` / `creditcard.json` and no regression in the 574-cookie 13-browser full-sweep baseline.
+Windows-host validation (out-of-tree, per `CLAUDE.local.md`): `make build-windows` → deploy to sandbox → `hbd.exe -v -b yandex` → verify non-empty `password.json` / `creditcard.json` and no regression on full-sweep baseline. Most recent run: 703 cookies across 13 browsers, 0 non-ASCII — "no regression" measured as `0 non-ASCII` rather than exact cookie count, since the sandbox naturally accumulates new cookies over time.
 
 ## 8. Rollout
 
