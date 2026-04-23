@@ -18,18 +18,6 @@ func DecryptChromium(key, ciphertext []byte) ([]byte, error) {
 	return AESGCMDecrypt(key, nonce, payload)
 }
 
-// DecryptYandex decrypts a Yandex-encrypted value.
-// TODO: Yandex uses the same AES-GCM format as Chromium for now;
-// update when Yandex-specific decryption diverges.
-func DecryptYandex(key, ciphertext []byte) ([]byte, error) {
-	if len(ciphertext) < minGCMDataSize {
-		return nil, errShortCiphertext
-	}
-	nonce := ciphertext[versionPrefixLen : versionPrefixLen+gcmNonceSize]
-	payload := ciphertext[versionPrefixLen+gcmNonceSize:]
-	return AESGCMDecrypt(key, nonce, payload)
-}
-
 // DecryptDPAPI decrypts a DPAPI-protected blob using the current user's
 // master key. The actual Win32 call (and its DATA_BLOB / LocalFree dance)
 // lives in utils/winapi so every package that needs a syscall handle

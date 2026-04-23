@@ -138,7 +138,11 @@ func (b *Browser) countCategory(cat types.Category, path string) int {
 	case types.Bookmark:
 		count, err = countBookmarks(path)
 	case types.CreditCard:
-		count, err = countCreditCards(path)
+		if b.cfg.Kind == types.ChromiumYandex {
+			count, err = countYandexCreditCards(path)
+		} else {
+			count, err = countCreditCards(path)
+		}
 	case types.Extension:
 		if b.cfg.Kind == types.ChromiumOpera {
 			count, err = countOperaExtensions(path)

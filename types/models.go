@@ -52,7 +52,8 @@ type DownloadEntry struct {
 	EndTime    time.Time `json:"end_time" csv:"end_time"`
 }
 
-// CreditCardEntry represents a single saved credit card.
+// CreditCardEntry represents a single saved credit card. CVC and Comment are
+// Yandex-specific; Chromium leaves them empty.
 type CreditCardEntry struct {
 	GUID     string `json:"guid" csv:"guid"`
 	Name     string `json:"name" csv:"name"`
@@ -61,6 +62,8 @@ type CreditCardEntry struct {
 	ExpYear  string `json:"exp_year" csv:"exp_year"`
 	NickName string `json:"nick_name" csv:"nick_name"`
 	Address  string `json:"address" csv:"address"`
+	CVC      string `json:"cvc" csv:"cvc"`
+	Comment  string `json:"comment" csv:"comment"`
 }
 
 // StorageEntry represents a single key-value pair from local or session storage.

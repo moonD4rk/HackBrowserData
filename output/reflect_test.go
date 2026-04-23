@@ -58,7 +58,7 @@ func TestStructCSVHeader(t *testing.T) {
 		{"BookmarkEntry", types.BookmarkEntry{}, []string{"id", "name", "type", "url", "folder", "created_at"}},
 		{"HistoryEntry", types.HistoryEntry{}, []string{"url", "title", "visit_count", "last_visit"}},
 		{"DownloadEntry", types.DownloadEntry{}, []string{"url", "target_path", "mime_type", "total_bytes", "start_time", "end_time"}},
-		{"CreditCardEntry", types.CreditCardEntry{}, []string{"guid", "name", "number", "exp_month", "exp_year", "nick_name", "address"}},
+		{"CreditCardEntry", types.CreditCardEntry{}, []string{"guid", "name", "number", "exp_month", "exp_year", "nick_name", "address", "cvc", "comment"}},
 		{"StorageEntry", types.StorageEntry{}, []string{"is_meta", "url", "key", "value"}},
 		{"ExtensionEntry", types.ExtensionEntry{}, []string{"name", "id", "description", "version", "homepage_url", "enabled"}},
 	}

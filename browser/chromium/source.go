@@ -94,10 +94,23 @@ func (e extensionExtractor) extract(_ keyretriever.MasterKeys, path string, data
 	return err
 }
 
-// yandexExtractors overrides Password extraction for Yandex,
-// which uses action_url instead of origin_url.
+// creditCardExtractor wraps a custom credit-card extract function, used by Yandex whose Ya Credit Cards DB stores
+// rows as records(guid, public_data, private_data) with JSON blobs rather than Chromium's flat credit_cards table.
+type creditCardExtractor struct {
+	fn func(keys keyretriever.MasterKeys, path string) ([]types.CreditCardEntry, error)
+}
+
+func (e creditCardExtractor) extract(keys keyretriever.MasterKeys, path string, data *types.BrowserData) error {
+	var err error
+	data.CreditCards, err = e.fn(keys, path)
+	return err
+}
+
+// yandexExtractors overrides Password and CreditCard extraction for Yandex, which wraps its data-encryption key inside
+// meta.local_encryptor_data, binds per-row AAD to GCM, and stores cards as JSON blobs in a records table.
 var yandexExtractors = map[types.Category]categoryExtractor{
-	types.Password: passwordExtractor{fn: extractYandexPasswords},
+	types.Password:   passwordExtractor{fn: extractYandexPasswords},
+	types.CreditCard: creditCardExtractor{fn: extractYandexCreditCards},
 }
 
 // operaExtractors overrides Extension extraction for Opera,

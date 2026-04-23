@@ -1,6 +1,8 @@
 package chromium
 
 import (
+	"bytes"
+	"crypto/sha1"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -52,12 +54,83 @@ func TestCountPasswords_Empty(t *testing.T) {
 }
 
 func TestExtractYandexPasswords(t *testing.T) {
-	path := createTestDB(t, "Ya Passman Data", loginsSchema,
-		insertLogin("https://origin.yandex.ru", "https://action.yandex.ru/submit", "user", "", 13350000000000000),
+	masterKey := bytes.Repeat([]byte{0x11}, 32)
+	dataKey := bytes.Repeat([]byte{0x22}, 32)
+
+	path := setupYandexPasswordDB(t, masterKey, dataKey, false,
+		yandexPassword{
+			OriginURL: "https://old.yandex.ru", UsernameElem: "u", UsernameVal: "alice",
+			PasswordElem: "p", SignonRealm: "https://old.yandex.ru", Password: "hunter2",
+			DateCreated: 13340000000000000,
+		},
+		yandexPassword{
+			OriginURL: "https://new.yandex.ru", UsernameElem: "u", UsernameVal: "bob",
+			PasswordElem: "p", SignonRealm: "https://new.yandex.ru", Password: "sesame",
+			DateCreated: 13360000000000000,
+		},
 	)
 
-	got, err := extractYandexPasswords(keyretriever.MasterKeys{}, path)
+	got, err := extractYandexPasswords(keyretriever.MasterKeys{V10: masterKey}, path)
 	require.NoError(t, err)
-	require.Len(t, got, 1)
-	assert.Equal(t, "https://action.yandex.ru/submit", got[0].URL) // action_url, not origin_url
+	require.Len(t, got, 2)
+
+	// Sorted newest-first on CreatedAt.
+	assert.Equal(t, "https://new.yandex.ru", got[0].URL)
+	assert.Equal(t, "bob", got[0].Username)
+	assert.Equal(t, "sesame", got[0].Password)
+	assert.Equal(t, "hunter2", got[1].Password)
+}
+
+func TestExtractYandexPasswords_MasterPasswordSkipped(t *testing.T) {
+	masterKey := bytes.Repeat([]byte{0x11}, 32)
+	dataKey := bytes.Repeat([]byte{0x22}, 32)
+
+	path := setupYandexPasswordDB(t, masterKey, dataKey, true,
+		yandexPassword{
+			OriginURL: "https://yandex.ru", UsernameElem: "u", UsernameVal: "alice",
+			PasswordElem: "p", SignonRealm: "https://yandex.ru", Password: "hunter2",
+			DateCreated: 13340000000000000,
+		},
+	)
+
+	got, err := extractYandexPasswords(keyretriever.MasterKeys{V10: masterKey}, path)
+	require.NoError(t, err)
+	assert.Empty(t, got, "master-password profiles should be skipped in v1")
+}
+
+func TestExtractYandexPasswords_WrongMasterKey(t *testing.T) {
+	goodKey := bytes.Repeat([]byte{0x11}, 32)
+	wrongKey := bytes.Repeat([]byte{0x99}, 32)
+	dataKey := bytes.Repeat([]byte{0x22}, 32)
+
+	path := setupYandexPasswordDB(t, goodKey, dataKey, false,
+		yandexPassword{
+			OriginURL: "https://yandex.ru", UsernameElem: "u", UsernameVal: "alice",
+			PasswordElem: "p", SignonRealm: "https://yandex.ru", Password: "hunter2",
+		},
+	)
+
+	// A wrong master key fails at the intermediate step, surfacing as an error
+	// from the extractor.
+	_, err := extractYandexPasswords(keyretriever.MasterKeys{V10: wrongKey}, path)
+	require.Error(t, err)
+}
+
+func TestYandexLoginAAD_NoMasterPassword(t *testing.T) {
+	got := yandexLoginAAD("https://example.com/", "user", "alice", "pass", "https://example.com/", nil)
+
+	h := sha1.New()
+	h.Write([]byte("https://example.com/\x00user\x00alice\x00pass\x00https://example.com/"))
+	want := h.Sum(nil)
+
+	assert.Equal(t, want, got)
+	assert.Len(t, got, sha1.Size)
+}
+
+func TestYandexLoginAAD_WithMasterPassword(t *testing.T) {
+	keyID := []byte("abc123")
+	got := yandexLoginAAD("u", "e1", "v1", "e2", "r", keyID)
+
+	require.Len(t, got, sha1.Size+len(keyID))
+	assert.Equal(t, keyID, got[sha1.Size:])
 }

@@ -98,6 +98,23 @@ func AESGCMDecrypt(key, nonce, ciphertext []byte) ([]byte, error) {
 	return aead.Open(nil, nonce, ciphertext, nil)
 }
 
+// AESGCMDecryptBlob decrypts a blob shaped as [12B nonce][ciphertext+16B GCM tag] with caller-supplied AAD.
+// Used by protocols that wrap AES-GCM output with a fixed-length nonce prefix (Yandex passwords/cards).
+func AESGCMDecryptBlob(key, blob, aad []byte) ([]byte, error) {
+	if len(blob) < gcmNonceSize {
+		return nil, errShortCiphertext
+	}
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	aead, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	return aead.Open(nil, blob[:gcmNonceSize], blob[gcmNonceSize:], aad)
+}
+
 // cbcEncrypt adds PKCS5 padding and encrypts plaintext in CBC mode.
 func cbcEncrypt(block cipher.Block, iv, plaintext []byte) ([]byte, error) {
 	if len(iv) != block.BlockSize() {

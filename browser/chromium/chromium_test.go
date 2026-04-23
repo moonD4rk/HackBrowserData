@@ -337,6 +337,7 @@ func TestExtractorsForKind(t *testing.T) {
 	yandexExt := extractorsForKind(types.ChromiumYandex)
 	require.NotNil(t, yandexExt)
 	assert.Contains(t, yandexExt, types.Password)
+	assert.Contains(t, yandexExt, types.CreditCard)
 
 	operaExt := extractorsForKind(types.ChromiumOpera)
 	require.NotNil(t, operaExt)
