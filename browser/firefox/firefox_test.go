@@ -398,8 +398,8 @@ func TestFirefoxHelpers_OutOfJSONRangeReturnsZero(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			b, err := tc.got.MarshalJSON()
-			assert.NoError(t, err)
-			assert.Equal(t, `"0001-01-01T00:00:00Z"`, string(b))
+			require.NoError(t, err)
+			assert.JSONEq(t, `"0001-01-01T00:00:00Z"`, string(b))
 		})
 	}
 }

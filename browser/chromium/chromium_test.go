@@ -777,6 +777,6 @@ func TestTimeEpoch_OutOfJSONRangeReturnsZero(t *testing.T) {
 	// to years past 9999. time.Time.MarshalJSON would crash on those;
 	// the helper must defensively return zero so JSON export works.
 	jsonBytes, err := timeEpoch(1 << 62).MarshalJSON()
-	assert.NoError(t, err)
-	assert.Equal(t, `"0001-01-01T00:00:00Z"`, string(jsonBytes))
+	require.NoError(t, err)
+	assert.JSONEq(t, `"0001-01-01T00:00:00Z"`, string(jsonBytes))
 }
