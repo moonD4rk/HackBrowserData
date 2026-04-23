@@ -27,7 +27,7 @@ func extractPasswords(keychainPassword string) ([]types.LoginEntry, error) {
 			URL:       url,
 			Username:  p.Account,
 			Password:  p.PlainPassword,
-			CreatedAt: p.Created,
+			CreatedAt: p.Created.UTC(),
 		})
 	}
 

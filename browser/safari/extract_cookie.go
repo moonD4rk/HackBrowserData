@@ -20,6 +20,8 @@ func extractCookies(path string) ([]types.CookieEntry, error) {
 	for _, page := range pages {
 		for _, c := range page.Cookies {
 			hasExpire := !c.Expires.IsZero()
+			// binarycookies returns time.Time in Local; normalize to UTC
+			// so exported JSON matches Chromium/Firefox cookie output.
 			cookies = append(cookies, types.CookieEntry{
 				Host:         string(c.Domain),
 				Path:         string(c.Path),
@@ -29,8 +31,8 @@ func extractCookies(path string) ([]types.CookieEntry, error) {
 				IsHTTPOnly:   c.HTTPOnly,
 				HasExpire:    hasExpire,
 				IsPersistent: hasExpire,
-				ExpireAt:     c.Expires,
-				CreatedAt:    c.Creation,
+				ExpireAt:     c.Expires.UTC(),
+				CreatedAt:    c.Creation.UTC(),
 			})
 		}
 	}
