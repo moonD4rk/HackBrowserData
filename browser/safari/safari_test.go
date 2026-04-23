@@ -336,12 +336,7 @@ func TestExtractCategory(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// coredataTimestamp
-// ---------------------------------------------------------------------------
-
-// Anchor: 2024-01-15T10:30:00Z = Unix 1705314600, which is
-// 1705314600 - 978307200 seconds past the Core Data epoch (2001-01-01Z).
+// Anchor: 2024-01-15T10:30:00Z, in seconds past the Core Data epoch (2001-01-01Z).
 const anchorCoreDataSeconds = 1705314600 - 978307200
 
 func TestCoredataTimestamp_AnchorDate(t *testing.T) {
@@ -351,8 +346,6 @@ func TestCoredataTimestamp_AnchorDate(t *testing.T) {
 }
 
 func TestCoredataTimestamp_EpochZero(t *testing.T) {
-	// Core Data "distant past" sentinel (0 seconds) maps to the zero
-	// time.Time rather than silently returning 2001-01-01.
 	assert.True(t, coredataTimestamp(0).IsZero())
 }
 
@@ -361,8 +354,6 @@ func TestCoredataTimestamp_NegativeReturnsZeroTime(t *testing.T) {
 }
 
 func TestCoredataTimestamp_FractionalSecondsPreserved(t *testing.T) {
-	// Core Data is a floating-point double, so fractional seconds are
-	// real. 0.5s fraction must survive, not silently truncate.
 	got := coredataTimestamp(float64(anchorCoreDataSeconds) + 0.5)
 	assert.Equal(t, 500*int64(time.Millisecond), int64(got.Nanosecond()))
 }

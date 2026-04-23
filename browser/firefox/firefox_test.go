@@ -317,11 +317,7 @@ func TestExtractCategory(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// firefoxMicros / firefoxMillis / firefoxSeconds
-// ---------------------------------------------------------------------------
-
-// Anchor: 2024-01-15T10:30:00Z → Unix seconds 1705314600.
+// Anchor: 2024-01-15T10:30:00Z.
 const anchorUnixSeconds = int64(1705314600)
 
 func TestFirefoxMicros_AnchorDate(t *testing.T) {
@@ -331,7 +327,6 @@ func TestFirefoxMicros_AnchorDate(t *testing.T) {
 }
 
 func TestFirefoxMicros_PrecisionPreserved(t *testing.T) {
-	// 123456 μs past the anchor — the sub-second portion must survive.
 	got := firefoxMicros(anchorUnixSeconds*1_000_000 + 123456)
 	assert.Equal(t, 123456*int64(time.Microsecond), int64(got.Nanosecond()))
 }
@@ -366,7 +361,6 @@ func TestFirefoxHelpers_NegativeReturnsZeroTime(t *testing.T) {
 }
 
 func TestFirefoxHelpers_AlwaysUTC(t *testing.T) {
-	// Verify no helper leaks time.Local, regardless of runner TZ.
 	t.Setenv("TZ", "Asia/Shanghai")
 	assert.Equal(t, time.UTC, firefoxMicros(anchorUnixSeconds*1_000_000).Location())
 	assert.Equal(t, time.UTC, firefoxMillis(anchorUnixSeconds*1_000).Location())
@@ -374,8 +368,6 @@ func TestFirefoxHelpers_AlwaysUTC(t *testing.T) {
 }
 
 func TestFirefoxHelpers_SameMomentAcrossUnits(t *testing.T) {
-	// The same wall-clock instant, expressed in three units, must
-	// produce three equal time.Time values (no unit confusion).
 	us := firefoxMicros(anchorUnixSeconds * 1_000_000)
 	ms := firefoxMillis(anchorUnixSeconds * 1_000)
 	s := firefoxSeconds(anchorUnixSeconds)
@@ -384,10 +376,6 @@ func TestFirefoxHelpers_SameMomentAcrossUnits(t *testing.T) {
 }
 
 func TestFirefoxHelpers_OutOfJSONRangeReturnsZero(t *testing.T) {
-	// Cookie expiry is occasionally set to INT64_MAX meaning "never";
-	// without the clamp, time.Time.MarshalJSON would crash at export.
-	// All three helpers must return the zero time for such input, so
-	// JSON round-trip just yields "0001-01-01T00:00:00Z".
 	for _, tc := range []struct {
 		name string
 		got  time.Time

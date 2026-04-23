@@ -722,13 +722,7 @@ func TestSetKeyRetrievers_SatisfiesInterface(t *testing.T) {
 	} = (*Browser)(nil)
 }
 
-// ---------------------------------------------------------------------------
-// timeEpoch
-// ---------------------------------------------------------------------------
-
-// Anchor: 2024-01-15T10:30:00Z = Unix seconds 1705314600. Chromium stores
-// this as microseconds since 1601-01-01 UTC, so the stored value is
-// (1705314600 + 11644473600) * 1e6.
+// Anchor: 2024-01-15T10:30:00Z as Chromium microseconds since 1601 UTC.
 const anchorUnixSeconds = int64(1705314600)
 
 var anchorChromiumMicros = (anchorUnixSeconds + 11644473600) * 1_000_000
@@ -741,41 +735,30 @@ func TestTimeEpoch_AnchorDate(t *testing.T) {
 }
 
 func TestTimeEpoch_ZeroReturnsZeroTime(t *testing.T) {
-	// Chromium uses 0 for session cookies (no persistent expiry).
 	assert.True(t, timeEpoch(0).IsZero())
 }
 
 func TestTimeEpoch_NegativeReturnsZeroTime(t *testing.T) {
-	// -1 is the legacy "never expires" sentinel on older profiles.
 	assert.True(t, timeEpoch(-1).IsZero())
 }
 
 func TestTimeEpoch_AlwaysUTC(t *testing.T) {
-	// Location must be UTC regardless of the test runner's TZ. Set a
-	// non-UTC local zone via t.Setenv so the assertion catches any
-	// accidental time.Local usage.
 	t.Setenv("TZ", "Asia/Shanghai")
 	got := timeEpoch(anchorChromiumMicros)
 	assert.Equal(t, time.UTC, got.Location())
 }
 
 func TestTimeEpoch_MicrosecondPrecisionPreserved(t *testing.T) {
-	// Add 123456 μs to the anchor and confirm the nanosecond component
-	// survives the conversion (no silent truncation to seconds).
 	got := timeEpoch(anchorChromiumMicros + 123456)
 	assert.Equal(t, 123456*int64(time.Microsecond), int64(got.Nanosecond()))
 }
 
 func TestTimeEpoch_UnixEpochBoundary(t *testing.T) {
-	// Exactly the offset constant → 1970-01-01T00:00:00 UTC.
 	got := timeEpoch(chromiumEpochOffsetMicros)
 	assert.Equal(t, time.Unix(0, 0).UTC(), got)
 }
 
 func TestTimeEpoch_OutOfJSONRangeReturnsZero(t *testing.T) {
-	// Some sites write nonsense "never expires" sentinels that compute
-	// to years past 9999. time.Time.MarshalJSON would crash on those;
-	// the helper must defensively return zero so JSON export works.
 	jsonBytes, err := timeEpoch(1 << 62).MarshalJSON()
 	require.NoError(t, err)
 	assert.JSONEq(t, `"0001-01-01T00:00:00Z"`, string(jsonBytes))
