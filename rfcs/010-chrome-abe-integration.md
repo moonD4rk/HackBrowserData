@@ -17,17 +17,15 @@ Related RFCs:
 - [RFC-006](006-key-retrieval-mechanisms.md) — `KeyRetriever` / `ChainRetriever`
 - [RFC-009](009-windows-locked-file-bypass.md) — other Windows-specific handling
 
-### 1.1 Tested matrix (as of 2026-04-19)
+### 1.1 Compatibility contract
 
-Single source of truth for version pins and observed-working targets. When re-validating, update dates and re-run the regression flow documented in the author's private playbook (not in this RFC).
-
-| Component | Contract | Last verified |
-|---|---|---|
-| Go toolchain | **1.20** (pinned; Go 1.21+ drops Win7) | 1.20.14 |
-| Windows host | Any Win10 1909+ (PE loader + UCRT) | Windows 10 19044 |
-| Chrome family | Any v127+ (ABE introduced) | Chrome 147.0.7727.57 |
-| zig toolchain | 0.13+ (for `make payload`) | 0.16.0 |
-| Target arch | x86_64 only (x86 / ARM64 reserved) | x86_64 |
+| Component | Contract |
+|---|---|
+| Go toolchain | **1.20** (pinned; Go 1.21+ drops Win7) |
+| Windows host | Any Win10 1909+ (PE loader + UCRT) |
+| Chrome family | Any v127+ (ABE introduced) |
+| zig toolchain | 0.13+ (for `make payload`) |
+| Target arch | x86_64 only (x86 / ARM64 reserved) |
 
 ## 2. The constraint that shapes the design
 
@@ -280,20 +278,18 @@ Tempting — it's known-good. But: C++ in an otherwise pure-C/Go repo; ASM tramp
 
 ## 10. Browser coverage
 
-As of 2026-04-19, tested against Chrome 147 family.
-
-| Browser class | Behavior | Status |
-|---|---|---|
-| Chrome Stable/Beta, Brave, CocCoc | ABE v20 via `CHROME_BASE` slot (5) | ✅ verified (cookies + passwords, zero non-ASCII in output) |
-| Microsoft Edge | ABE v20 via `EDGE` slot (8); v2 `E_NOINTERFACE` → v1 fallback succeeds | ✅ verified |
-| Avast Secure Browser | ABE v20 via `AVAST` slot (13) | ⚠️ table entry shipped; not yet sandbox-tested |
-| Opera / OperaGX / Vivaldi / Yandex / Arc / 360 / QQ / Sogou | Not in `com_iid.c` | ⚠️ legacy v10 cookies still decrypt via DPAPI; v20 cookies do not |
+| Browser class | Behavior |
+|---|---|
+| Chrome Stable/Beta, Brave, CocCoc | ABE v20 via `CHROME_BASE` slot (5) |
+| Microsoft Edge | ABE v20 via `EDGE` slot (8); v2 `E_NOINTERFACE` → v1 fallback succeeds |
+| Avast Secure Browser | ABE v20 via `AVAST` slot (13) |
+| Opera / OperaGX / Vivaldi / Yandex / Arc / 360 / QQ / Sogou | Not in `com_iid.c`; legacy v10 cookies still decrypt via DPAPI, v20 cookies do not |
 
 Authoritative CLSID/IID table: `crypto/windows/abe_native/com_iid.c`.
 
 ## 11. Adding support for a new Chromium fork
 
-Three steps. Detail (dump scripts, CLSID discovery) lives in private maintainer notes.
+Three steps.
 
 1. **Discover CLSID** — find the fork's elevation Windows service, look up its AppID in `HKLM\SOFTWARE\Classes\AppID`, then the CLSID that binds to it in `HKLM\SOFTWARE\Classes\CLSID`.
 2. **Mine IIDs from TypeLib** — the interface IIDs live in the TypeLib resource of `<InstallDir>\Application\<version>\elevation_service.exe`. PowerShell + `ITypeLib.GetTypeInfo` enumerates them. Map `IElevator<Vendor>` → v1 IID, `IElevator2<Vendor>` → v2 IID (absent for older vendors).
@@ -307,8 +303,8 @@ Edit `crypto/windows/abe_native/com_iid.c` (add the entry), `utils/winutil/brows
 
 - Non-`com_iid.c` browsers (Opera, Vivaldi, Yandex, Arc, 360, QQ, Sogou) fall back to DPAPI; v20 cookies remain encrypted. Fix = §11 procedure per vendor.
 - ARM64 Windows unsupported. Payload is `x86_64-windows-gnu` only. xaitax ships ARM64; we'd need parallel payload builds + runtime arch dispatch.
-- Chrome v20 domain-binding prefix: injector-old strips 32 bytes at the start of v20 plaintext. Not observed on Chrome 147 sandbox outputs; left unimplemented. Re-add if a future test surfaces the prefix.
-- Running-browser handling: if the user has the target browser open we spawn a second instance. No observed conflict, but some vendors (Opera GX) serialize elevation service; an opt-in `--kill-running` is future work.
+- Chrome v20 domain-binding prefix: injector-old strips 32 bytes at the start of v20 plaintext. Left unimplemented pending evidence that current Chrome versions emit this prefix; re-add if encountered.
+- Running-browser handling: if the user has the target browser open we spawn a second instance. Some vendors (Opera GX) serialize the elevation service, which could surface conflicts; an opt-in `--kill-running` is future work.
 
 **Future** (ordered by value):
 

@@ -25,7 +25,7 @@ Related RFCs:
 Deferred to a follow-up RFC / PR:
 
 - Master-password (RSA-OAEP + PBKDF2) unseal path.
-- Windows ABE v20 for Yandex; as of 2026-04 Yandex has not adopted App-Bound Encryption.
+- Windows ABE v20 for Yandex — not in scope until Yandex adopts App-Bound Encryption.
 - Linux support; Yandex Browser has no official Linux build.
 
 ## 2. Protocol differences at a glance
@@ -165,7 +165,7 @@ All decryption math is covered by pure-Go tests that synthesize Yandex DB files 
 | `browser/chromium/extract_creditcard_test.go` | Merged file — Chromium tests for `credit_cards` plus Yandex tests: round-trip on 2-card fixture verifying Number/CVC/Comment/NickName/ExpMonth/ExpYear mapping; count on 3-row `records` table; wrong master key surfaces as error. `TestYandexCardAAD` covers guid bytes / guid+keyID. |
 | `browser/chromium/chromium_test.go` | `TestExtractorsForKind` asserts `yandexExtractors` carries both `Password` and `CreditCard` entries. |
 
-Windows-host validation (out-of-tree, per `CLAUDE.local.md`): `make build-windows` → deploy to sandbox → `hbd.exe -v -b yandex` → verify non-empty `password.json` / `creditcard.json` and no regression on full-sweep baseline. Most recent run: 703 cookies across 13 browsers, 0 non-ASCII — "no regression" measured as `0 non-ASCII` rather than exact cookie count, since the sandbox naturally accumulates new cookies over time.
+End-to-end validation on a Windows host with a real Yandex profile is expected before shipping changes that touch the decryption path; the Chromium full-sweep suite doubles as a regression gate to catch unintended impact on other Chromium forks.
 
 ## 8. Rollout
 
