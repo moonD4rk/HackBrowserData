@@ -288,11 +288,38 @@ func resolveSourcePaths(sources map[types.Category][]sourcePath, profileDir stri
 	return resolved
 }
 
-// timestamp converts a Unix epoch timestamp (seconds) to a time.Time.
-func timestamp(stamp int64) time.Time {
-	s := time.Unix(stamp, 0)
-	if s.Local().Year() > 9999 {
-		return time.Date(9999, 12, 13, 23, 59, 59, 0, time.Local)
+// Firefox uses three timestamp units. Helpers emit UTC and return the zero
+// time.Time for non-positive or out-of-JSON-range input.
+//
+//   - firefoxMicros: PRTime (μs since Unix epoch) — moz_* tables.
+//   - firefoxMillis: Date.now() (ms) — logins.json, download endTime.
+//   - firefoxSeconds: seconds — moz_cookies.expiry only.
+func firefoxMicros(us int64) time.Time {
+	if us <= 0 {
+		return time.Time{}
 	}
-	return s
+	return clampJSON(time.UnixMicro(us).UTC())
+}
+
+func firefoxMillis(ms int64) time.Time {
+	if ms <= 0 {
+		return time.Time{}
+	}
+	return clampJSON(time.UnixMilli(ms).UTC())
+}
+
+func firefoxSeconds(s int64) time.Time {
+	if s <= 0 {
+		return time.Time{}
+	}
+	return clampJSON(time.Unix(s, 0).UTC())
+}
+
+// clampJSON maps years outside time.Time.MarshalJSON's [0, 9999] window
+// to the zero time, so JSON export can't crash on sentinel inputs.
+func clampJSON(t time.Time) time.Time {
+	if t.Year() < 1 || t.Year() > 9999 {
+		return time.Time{}
+	}
+	return t
 }

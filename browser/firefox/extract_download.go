@@ -32,7 +32,7 @@ func extractDownloads(path string) ([]types.DownloadEntry, error) {
 
 			entry := types.DownloadEntry{
 				URL:       url,
-				StartTime: timestamp(dateAdded / 1000000),
+				StartTime: firefoxMicros(dateAdded),
 			}
 
 			// Firefox stores download metadata as: "target_path,{json}"
@@ -42,7 +42,7 @@ func extractDownloads(path string) ([]types.DownloadEntry, error) {
 				entry.TargetPath = contentList[0]
 				json := "{" + contentList[1]
 				entry.TotalBytes = gjson.Get(json, "fileSize").Int()
-				entry.EndTime = timestamp(gjson.Get(json, "endTime").Int() / 1000)
+				entry.EndTime = firefoxMillis(gjson.Get(json, "endTime").Int())
 			} else {
 				entry.TargetPath = content
 			}

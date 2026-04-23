@@ -68,7 +68,7 @@ func extractPasswords(masterKey []byte, path string) ([]types.LoginEntry, error)
 			URL:       url,
 			Username:  string(user),
 			Password:  string(pwd),
-			CreatedAt: timestamp(v.Get("timeCreated").Int() / 1000),
+			CreatedAt: firefoxMillis(v.Get("timeCreated").Int()),
 		})
 	}
 	if decryptFails > 0 {

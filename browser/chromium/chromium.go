@@ -348,17 +348,19 @@ func isSkippedDir(name string) bool {
 	return false
 }
 
-// timeEpoch converts a WebKit/Chromium epoch timestamp (microseconds since
-// 1601-01-01) to a time.Time.
+// Offset from the Chromium epoch (1601-01-01 UTC) to the Unix epoch,
+// matching base::Time::kTimeTToMicrosecondsOffset in Chromium.
+const chromiumEpochOffsetMicros int64 = 11644473600000000
+
+// timeEpoch converts a Chromium base::Time (μs since 1601 UTC) to UTC.
+// Returns zero for non-positive input or out-of-JSON-range values.
 func timeEpoch(epoch int64) time.Time {
-	maxTime := int64(99633311740000000)
-	if epoch > maxTime {
-		return time.Date(2049, 1, 1, 1, 1, 1, 1, time.Local)
+	if epoch <= 0 {
+		return time.Time{}
 	}
-	t := time.Date(1601, 1, 1, 0, 0, 0, 0, time.Local)
-	d := time.Duration(epoch)
-	for i := 0; i < 1000; i++ {
-		t = t.Add(d)
+	t := time.UnixMicro(epoch - chromiumEpochOffsetMicros).UTC()
+	if t.Year() < 1 || t.Year() > 9999 {
+		return time.Time{}
 	}
 	return t
 }

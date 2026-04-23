@@ -27,7 +27,7 @@ func extractHistories(path string) ([]types.HistoryEntry, error) {
 				URL:        url,
 				Title:      title,
 				VisitCount: visitCount,
-				LastVisit:  timestamp(lastVisit / 1000000),
+				LastVisit:  firefoxMicros(lastVisit),
 			}, nil
 		})
 	if err != nil {

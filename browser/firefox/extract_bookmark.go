@@ -28,7 +28,7 @@ func extractBookmarks(path string) ([]types.BookmarkEntry, error) {
 				Name:      title,
 				URL:       url,
 				Folder:    bookmarkType(bt),
-				CreatedAt: timestamp(dateAdded / 1000000),
+				CreatedAt: firefoxMicros(dateAdded),
 			}, nil
 		})
 	if err != nil {

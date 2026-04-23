@@ -36,8 +36,8 @@ func extractCookies(path string) ([]types.CookieEntry, error) {
 				IsHTTPOnly:   isHTTPOnly != 0,
 				HasExpire:    hasExpire,
 				IsPersistent: hasExpire,
-				ExpireAt:     timestamp(expiry),
-				CreatedAt:    timestamp(createdAt / 1000000),
+				ExpireAt:     firefoxSeconds(expiry),
+				CreatedAt:    firefoxMicros(createdAt),
 			}, nil
 		})
 	if err != nil {

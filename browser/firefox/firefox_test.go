@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -314,4 +315,91 @@ func TestExtractCategory(t *testing.T) {
 		assert.Empty(t, data.CreditCards)
 		assert.Empty(t, data.SessionStorage)
 	})
+}
+
+// ---------------------------------------------------------------------------
+// firefoxMicros / firefoxMillis / firefoxSeconds
+// ---------------------------------------------------------------------------
+
+// Anchor: 2024-01-15T10:30:00Z → Unix seconds 1705314600.
+const anchorUnixSeconds = int64(1705314600)
+
+func TestFirefoxMicros_AnchorDate(t *testing.T) {
+	got := firefoxMicros(anchorUnixSeconds * 1_000_000)
+	want := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
+	assert.Equal(t, want, got)
+}
+
+func TestFirefoxMicros_PrecisionPreserved(t *testing.T) {
+	// 123456 μs past the anchor — the sub-second portion must survive.
+	got := firefoxMicros(anchorUnixSeconds*1_000_000 + 123456)
+	assert.Equal(t, 123456*int64(time.Microsecond), int64(got.Nanosecond()))
+}
+
+func TestFirefoxMillis_AnchorDate(t *testing.T) {
+	got := firefoxMillis(anchorUnixSeconds * 1_000)
+	want := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
+	assert.Equal(t, want, got)
+}
+
+func TestFirefoxMillis_PrecisionPreserved(t *testing.T) {
+	got := firefoxMillis(anchorUnixSeconds*1_000 + 789)
+	assert.Equal(t, 789*int64(time.Millisecond), int64(got.Nanosecond()))
+}
+
+func TestFirefoxSeconds_AnchorDate(t *testing.T) {
+	got := firefoxSeconds(anchorUnixSeconds)
+	want := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
+	assert.Equal(t, want, got)
+}
+
+func TestFirefoxHelpers_ZeroReturnsZeroTime(t *testing.T) {
+	assert.True(t, firefoxMicros(0).IsZero(), "micros")
+	assert.True(t, firefoxMillis(0).IsZero(), "millis")
+	assert.True(t, firefoxSeconds(0).IsZero(), "seconds")
+}
+
+func TestFirefoxHelpers_NegativeReturnsZeroTime(t *testing.T) {
+	assert.True(t, firefoxMicros(-1).IsZero(), "micros")
+	assert.True(t, firefoxMillis(-1).IsZero(), "millis")
+	assert.True(t, firefoxSeconds(-1).IsZero(), "seconds")
+}
+
+func TestFirefoxHelpers_AlwaysUTC(t *testing.T) {
+	// Verify no helper leaks time.Local, regardless of runner TZ.
+	t.Setenv("TZ", "Asia/Shanghai")
+	assert.Equal(t, time.UTC, firefoxMicros(anchorUnixSeconds*1_000_000).Location())
+	assert.Equal(t, time.UTC, firefoxMillis(anchorUnixSeconds*1_000).Location())
+	assert.Equal(t, time.UTC, firefoxSeconds(anchorUnixSeconds).Location())
+}
+
+func TestFirefoxHelpers_SameMomentAcrossUnits(t *testing.T) {
+	// The same wall-clock instant, expressed in three units, must
+	// produce three equal time.Time values (no unit confusion).
+	us := firefoxMicros(anchorUnixSeconds * 1_000_000)
+	ms := firefoxMillis(anchorUnixSeconds * 1_000)
+	s := firefoxSeconds(anchorUnixSeconds)
+	assert.True(t, us.Equal(ms))
+	assert.True(t, ms.Equal(s))
+}
+
+func TestFirefoxHelpers_OutOfJSONRangeReturnsZero(t *testing.T) {
+	// Cookie expiry is occasionally set to INT64_MAX meaning "never";
+	// without the clamp, time.Time.MarshalJSON would crash at export.
+	// All three helpers must return the zero time for such input, so
+	// JSON round-trip just yields "0001-01-01T00:00:00Z".
+	for _, tc := range []struct {
+		name string
+		got  time.Time
+	}{
+		{"seconds", firefoxSeconds(1 << 50)},
+		{"millis", firefoxMillis(1 << 60)},
+		{"micros", firefoxMicros(1 << 62)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := tc.got.MarshalJSON()
+			assert.NoError(t, err)
+			assert.Equal(t, `"0001-01-01T00:00:00Z"`, string(b))
+		})
+	}
 }

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -333,4 +334,41 @@ func TestExtractCategory(t *testing.T) {
 		b.extractCategory(data, types.CreditCard, "unused")
 		assert.Empty(t, data.CreditCards)
 	})
+}
+
+// ---------------------------------------------------------------------------
+// coredataTimestamp
+// ---------------------------------------------------------------------------
+
+// Anchor: 2024-01-15T10:30:00Z = Unix 1705314600, which is
+// 1705314600 - 978307200 seconds past the Core Data epoch (2001-01-01Z).
+const anchorCoreDataSeconds = 1705314600 - 978307200
+
+func TestCoredataTimestamp_AnchorDate(t *testing.T) {
+	got := coredataTimestamp(float64(anchorCoreDataSeconds))
+	want := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
+	assert.Equal(t, want, got)
+}
+
+func TestCoredataTimestamp_EpochZero(t *testing.T) {
+	// Core Data "distant past" sentinel (0 seconds) maps to the zero
+	// time.Time rather than silently returning 2001-01-01.
+	assert.True(t, coredataTimestamp(0).IsZero())
+}
+
+func TestCoredataTimestamp_NegativeReturnsZeroTime(t *testing.T) {
+	assert.True(t, coredataTimestamp(-1).IsZero())
+}
+
+func TestCoredataTimestamp_FractionalSecondsPreserved(t *testing.T) {
+	// Core Data is a floating-point double, so fractional seconds are
+	// real. 0.5s fraction must survive, not silently truncate.
+	got := coredataTimestamp(float64(anchorCoreDataSeconds) + 0.5)
+	assert.Equal(t, 500*int64(time.Millisecond), int64(got.Nanosecond()))
+}
+
+func TestCoredataTimestamp_AlwaysUTC(t *testing.T) {
+	t.Setenv("TZ", "Asia/Shanghai")
+	got := coredataTimestamp(float64(anchorCoreDataSeconds))
+	assert.Equal(t, time.UTC, got.Location())
 }
