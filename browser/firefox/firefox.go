@@ -315,7 +315,7 @@ func firefoxSeconds(s int64) time.Time {
 	return clampJSON(time.Unix(s, 0).UTC())
 }
 
-// clampJSON maps years outside time.Time.MarshalJSON's [0, 9999] window
+// clampJSON maps years outside time.Time.MarshalJSON's [1, 9999] window
 // to the zero time, so JSON export can't crash on sentinel inputs.
 func clampJSON(t time.Time) time.Time {
 	if t.Year() < 1 || t.Year() > 9999 {

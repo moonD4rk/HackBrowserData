@@ -743,9 +743,11 @@ func TestTimeEpoch_NegativeReturnsZeroTime(t *testing.T) {
 }
 
 func TestTimeEpoch_AlwaysUTC(t *testing.T) {
-	t.Setenv("TZ", "Asia/Shanghai")
+	// assert.Same checks pointer equality: time.UTC and time.Local are
+	// distinct *Location globals, so this catches any regression that
+	// drops .UTC() even when the runner's TZ happens to be UTC.
 	got := timeEpoch(anchorChromiumMicros)
-	assert.Equal(t, time.UTC, got.Location())
+	assert.Same(t, time.UTC, got.Location())
 }
 
 func TestTimeEpoch_MicrosecondPrecisionPreserved(t *testing.T) {

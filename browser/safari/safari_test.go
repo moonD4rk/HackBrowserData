@@ -359,7 +359,8 @@ func TestCoredataTimestamp_FractionalSecondsPreserved(t *testing.T) {
 }
 
 func TestCoredataTimestamp_AlwaysUTC(t *testing.T) {
-	t.Setenv("TZ", "Asia/Shanghai")
+	// assert.Same: pointer equality reliably catches any regression that
+	// leaks time.Local, independent of the runner's configured TZ.
 	got := coredataTimestamp(float64(anchorCoreDataSeconds))
-	assert.Equal(t, time.UTC, got.Location())
+	assert.Same(t, time.UTC, got.Location())
 }

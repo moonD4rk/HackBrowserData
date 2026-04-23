@@ -361,10 +361,11 @@ func TestFirefoxHelpers_NegativeReturnsZeroTime(t *testing.T) {
 }
 
 func TestFirefoxHelpers_AlwaysUTC(t *testing.T) {
-	t.Setenv("TZ", "Asia/Shanghai")
-	assert.Equal(t, time.UTC, firefoxMicros(anchorUnixSeconds*1_000_000).Location())
-	assert.Equal(t, time.UTC, firefoxMillis(anchorUnixSeconds*1_000).Location())
-	assert.Equal(t, time.UTC, firefoxSeconds(anchorUnixSeconds).Location())
+	// assert.Same: pointer equality reliably catches any helper that
+	// leaks time.Local, independent of the runner's configured TZ.
+	assert.Same(t, time.UTC, firefoxMicros(anchorUnixSeconds*1_000_000).Location())
+	assert.Same(t, time.UTC, firefoxMillis(anchorUnixSeconds*1_000).Location())
+	assert.Same(t, time.UTC, firefoxSeconds(anchorUnixSeconds).Location())
 }
 
 func TestFirefoxHelpers_SameMomentAcrossUnits(t *testing.T) {
