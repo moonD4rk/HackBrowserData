@@ -169,7 +169,8 @@ func (b *Browser) acquireFiles(session *filemanager.Session, categories []types.
 	return tempPaths
 }
 
-// warnedMasterKeyFailure dedupes "master key retrieval" WARN per browser; profiles share one Safe Storage entry.
+// warnedMasterKeyFailure dedupes "master key retrieval" WARN per installation (BrowserName + UserDataDir);
+// profiles share one Safe Storage entry, but glob-expanded configs may yield multiple installations of the same browser.
 var warnedMasterKeyFailure sync.Map
 
 // getMasterKeys retrieves master keys for all configured cipher tiers.
@@ -196,7 +197,8 @@ func (b *Browser) getMasterKeys(session *filemanager.Session) keyretriever.Maste
 
 	keys, err := keyretriever.NewMasterKeys(b.retrievers, b.cfg.Storage, localStateDst)
 	if err != nil {
-		if _, already := warnedMasterKeyFailure.LoadOrStore(b.BrowserName(), struct{}{}); !already {
+		installKey := b.BrowserName() + "|" + b.cfg.UserDataDir
+		if _, already := warnedMasterKeyFailure.LoadOrStore(installKey, struct{}{}); !already {
 			log.Warnf("%s: master key retrieval: %v", b.BrowserName(), err)
 		} else {
 			log.Debugf("%s: master key retrieval: %v", label, err)
