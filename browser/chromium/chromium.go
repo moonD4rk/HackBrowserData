@@ -3,6 +3,7 @@ package chromium
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
@@ -51,17 +52,7 @@ func NewBrowsers(cfg types.BrowserConfig) ([]*Browser, error) {
 	return browsers, nil
 }
 
-// SetKeyRetrievers wires the per-tier master-key retrievers used by Extract. Each slot
-// (V10 / V11 / V20) is populated only on platforms where that cipher tier is used:
-//
-//   - Windows: V10 (DPAPI) + V20 (ABE). V11 nil — Chromium does not emit v11 prefix on Windows.
-//   - Linux:   V10 ("peanuts" kV10Key) + V11 (D-Bus Secret Service kV11Key). V20 nil.
-//   - macOS:   V10 (Keychain chain). V11 and V20 nil.
-//
-// Slots are independent — a failure or absence in one tier does not affect others. A single
-// Chromium profile can carry mixed cipher-prefix ciphertexts (the motivation for issue #578), so
-// every configured retriever runs at extract time and decryptValue picks the matching key per
-// ciphertext.
+// SetKeyRetrievers wires the per-tier master-key retrievers (V10/V11/V20) used by Extract; unused tiers stay nil.
 func (b *Browser) SetKeyRetrievers(r keyretriever.Retrievers) {
 	b.retrievers = r
 }
@@ -178,12 +169,10 @@ func (b *Browser) acquireFiles(session *filemanager.Session, categories []types.
 	return tempPaths
 }
 
-// getMasterKeys retrieves the Chromium master keys for every configured tier. Chrome mixes
-// cipher tiers on the same profile — v20 for new cookies alongside v10 passwords on Windows; v10
-// (peanuts) alongside v11 (keyring) on Linux after session-mode changes — so every retriever in
-// b.retrievers runs independently and keyretriever.NewMasterKeys assembles the results. Any tier
-// key may be nil if its retriever failed or is not configured for this platform; decryptValue
-// treats a missing tier key as "that tier cannot decrypt" so partial success is still reported.
+// warnedMasterKeyFailure dedupes "master key retrieval" WARN per browser; profiles share one Safe Storage entry.
+var warnedMasterKeyFailure sync.Map
+
+// getMasterKeys retrieves master keys for all configured cipher tiers.
 func (b *Browser) getMasterKeys(session *filemanager.Session) keyretriever.MasterKeys {
 	label := b.BrowserName() + "/" + b.ProfileName()
 
@@ -207,7 +196,11 @@ func (b *Browser) getMasterKeys(session *filemanager.Session) keyretriever.Maste
 
 	keys, err := keyretriever.NewMasterKeys(b.retrievers, b.cfg.Storage, localStateDst)
 	if err != nil {
-		log.Warnf("%s: master key retrieval: %v", label, err)
+		if _, already := warnedMasterKeyFailure.LoadOrStore(b.BrowserName(), struct{}{}); !already {
+			log.Warnf("%s: master key retrieval: %v", b.BrowserName(), err)
+		} else {
+			log.Debugf("%s: master key retrieval: %v", label, err)
+		}
 	}
 	return keys
 }

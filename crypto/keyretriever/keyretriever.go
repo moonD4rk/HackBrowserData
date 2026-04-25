@@ -48,7 +48,7 @@ func (c *ChainRetriever) RetrieveKey(storage, localStatePath string) ([]byte, er
 			return key, nil
 		}
 		if err != nil {
-			log.Warnf("keyretriever %T failed: %v", r, err)
+			log.Debugf("keyretriever %T failed: %v", r, err)
 			errs = append(errs, fmt.Errorf("%T: %w", r, err))
 		}
 	}

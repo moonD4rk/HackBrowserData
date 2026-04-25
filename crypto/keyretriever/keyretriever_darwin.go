@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/moond4rk/keychainbreaker"
+
+	"github.com/moond4rk/hackbrowserdata/log"
 )
 
 // https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157
@@ -37,18 +39,25 @@ type GcoredumpRetriever struct {
 	err     error
 }
 
+// RetrieveKey logs internal failures at Debug and returns (nil, nil) so ChainRetriever falls
+// through to the next retriever silently. The most common failure ("requires root privileges")
+// is documented expected behavior, not a warning-worthy condition; surfacing it on every profile
+// would drown out genuine warnings. The same pattern is used by ABERetriever (see abe_windows.go).
 func (r *GcoredumpRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
 	r.once.Do(func() {
 		r.records, r.err = DecryptKeychainRecords()
-		if r.err != nil {
-			r.err = fmt.Errorf("gcoredump: %w", r.err)
-		}
 	})
 	if r.err != nil {
-		return nil, r.err
+		log.Debugf("gcoredump: %v", r.err)
+		return nil, nil //nolint:nilerr // intentional silent fallthrough
 	}
 
-	return findStorageKey(r.records, storage)
+	key, err := findStorageKey(r.records, storage)
+	if err != nil {
+		log.Debugf("gcoredump: %v", err)
+		return nil, nil //nolint:nilerr // intentional silent fallthrough
+	}
+	return key, nil
 }
 
 // loadKeychainRecords opens login.keychain-db and unlocks it with the given
@@ -141,7 +150,14 @@ func (r *SecurityCmdRetriever) retrieveKeyOnce(storage string) ([]byte, error) {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 			return nil, fmt.Errorf("security command timed out after %s", securityCmdTimeout)
 		}
-		return nil, fmt.Errorf("security command: %w (%s)", err, strings.TrimSpace(stderr.String()))
+		// `security find-generic-password` exits non-zero with empty stderr when the user denies
+		// the keychain access prompt or enters the wrong password. Surface that explicitly so the
+		// error message is actionable instead of the cryptic "exit status 128 ()".
+		stderrStr := strings.TrimSpace(stderr.String())
+		if stderrStr == "" {
+			return nil, fmt.Errorf("security command: %w (likely keychain access denied or wrong password)", err)
+		}
+		return nil, fmt.Errorf("security command: %w (%s)", err, stderrStr)
 	}
 	if stderr.Len() > 0 {
 		return nil, fmt.Errorf("keychain: %s", strings.TrimSpace(stderr.String()))
