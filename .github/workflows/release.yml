@@ -2,6 +2,23 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Run mode'
+        type: choice
+        options:
+          - snapshot
+          - release
+        default: snapshot
+      tag:
+        description: 'Release tag (required for release mode, e.g., v0.5.0)'
+        required: false
+        type: string
+      draft:
+        description: 'Publish as draft (release mode only)'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -10,6 +27,12 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
+      - name: Validate inputs
+        if: inputs.mode == 'release' && inputs.tag == ''
+        run: |
+          echo "::error::tag is required when mode=release"
+          exit 1
+
       - name: Check out code
         uses: actions/checkout@v6
         with:
@@ -20,11 +43,41 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Run GoReleaser
+      - name: Set up Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
+      - name: Create and push tag
+        if: inputs.mode == 'release'
+        run: |
+          git tag ${{ inputs.tag }}
+          git push origin ${{ inputs.tag }}
+
+      - name: Run GoReleaser (snapshot)
+        if: inputs.mode == 'snapshot'
         uses: goreleaser/goreleaser-action@v7
         with:
           version: '~> v2'
-          args: release --clean --draft
+          args: release --snapshot --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+      - name: Run GoReleaser (release)
+        if: inputs.mode == 'release'
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: '~> v2'
+          args: release --clean ${{ inputs.draft && '--draft' || '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+      - name: Upload snapshot artifacts
+        if: inputs.mode == 'snapshot'
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-dist
+          path: dist/
+          retention-days: 7

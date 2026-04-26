@@ -3,8 +3,26 @@ version: 2
 before:
   hooks:
     - go mod tidy
+    - make payload
 
 builds:
+  - id: "hack-browser-data-windows-amd64"
+    main: ./cmd/hack-browser-data/
+    binary: hack-browser-data
+    env:
+      - CGO_ENABLED=0
+    goos: [windows]
+    goarch: [amd64]
+    tags:
+      - abe_embed
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
+      - -X main.buildDate={{.Date}}
+
   - id: "hack-browser-data"
     main: ./cmd/hack-browser-data/
     binary: hack-browser-data
@@ -15,6 +33,8 @@ builds:
     ignore:
       - goos: darwin
         goarch: "386"
+      - goos: windows
+        goarch: amd64
       - goos: windows
         goarch: "386"
       - goos: windows
@@ -29,6 +49,9 @@ builds:
 
 archives:
   - id: "archive"
+    ids:
+      - hack-browser-data-windows-amd64
+      - hack-browser-data
     formats:
       - tar.gz
     format_overrides:
