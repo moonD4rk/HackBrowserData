@@ -48,11 +48,24 @@ jobs:
         with:
           version: 0.16.0
 
+      - name: Build ABE payload
+        run: make payload
+
       - name: Create and push tag
         if: inputs.mode == 'release'
+        env:
+          TAG: ${{ inputs.tag }}
         run: |
-          git tag ${{ inputs.tag }}
-          git push origin ${{ inputs.tag }}
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag '$TAG' already exists locally"
+            exit 1
+          fi
+          if git ls-remote --tags --exit-code origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag '$TAG' already exists on origin"
+            exit 1
+          fi
+          git tag -- "$TAG"
+          git push origin -- "$TAG"
 
       - name: Run GoReleaser (snapshot)
         if: inputs.mode == 'snapshot'
