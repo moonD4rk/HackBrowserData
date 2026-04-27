@@ -49,6 +49,7 @@ GitHub: https://github.com/moonD4rk/HackBrowserData`,
 }
 
 func main() {
+	configureDoubleClickMode()
 	if err := rootCmd().Execute(); err != nil {
 		os.Exit(1)
 	}

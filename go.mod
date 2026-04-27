@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/godbus/dbus/v5 v5.2.2
+	github.com/inconshreveable/mousetrap v1.1.0
 	github.com/moond4rk/binarycookies v1.0.2
 	github.com/moond4rk/keychainbreaker v0.2.5
 	github.com/moond4rk/plist v1.2.0
@@ -25,7 +26,6 @@ require (
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
-	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
