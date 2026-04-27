@@ -24,6 +24,7 @@ var (
 	Kernel32 = windows.NewLazySystemDLL("kernel32.dll")
 	Ntdll    = windows.NewLazySystemDLL("ntdll.dll")
 	Crypt32  = windows.NewLazySystemDLL("crypt32.dll")
+	User32   = windows.NewLazySystemDLL("user32.dll")
 )
 
 // CallBoolErr wraps the common "r1 == 0 means failure" Win32 convention.
