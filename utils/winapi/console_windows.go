@@ -10,12 +10,12 @@ var (
 const swHide = 0
 
 // HideConsoleWindow hides the console window attached to the current
-// process. Used when the binary is launched via Explorer double-click
-// so no cmd window appears.
-func HideConsoleWindow() {
+// process. Returns true if the window was previously visible.
+func HideConsoleWindow() bool {
 	hwnd, _, _ := procGetConsoleWindow.Call()
 	if hwnd == 0 {
-		return
+		return false
 	}
-	_, _, _ = procShowWindow.Call(hwnd, swHide)
+	prev, _, _ := procShowWindow.Call(hwnd, swHide)
+	return prev != 0
 }
