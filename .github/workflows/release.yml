@@ -89,7 +89,7 @@ jobs:
 
       - name: Upload snapshot artifacts
         if: inputs.mode == 'snapshot'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: snapshot-dist
           path: dist/
