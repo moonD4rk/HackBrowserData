@@ -1,6 +1,6 @@
 module github.com/moond4rk/hackbrowserdata
 
-go 1.20
+go 1.23
 
 require (
 	github.com/godbus/dbus/v5 v5.2.2
@@ -14,7 +14,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/syndtr/goleveldb v1.0.0
-	github.com/tidwall/gjson v1.18.0
+	github.com/tidwall/gjson v1.19.0
 	golang.org/x/sys v0.30.0
 	golang.org/x/term v0.29.0
 	modernc.org/sqlite v1.31.1
