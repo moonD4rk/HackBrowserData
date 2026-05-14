@@ -576,6 +576,42 @@ func TestGetMasterKeys_AllTiersInvoked(t *testing.T) {
 	}
 }
 
+// TestGetMasterKeys_WindowsABEThreading pins cfg.WindowsABE → hints.WindowsABEKey threading. A
+// regression here silently disables Windows ABE decryption with no dev-box-test signal — only the
+// windows-tunnel sandbox 574-cookie regression would catch it — so it must be pinned at unit level.
+func TestGetMasterKeys_WindowsABEThreading(t *testing.T) {
+	tests := []struct {
+		name       string
+		key        string
+		windowsABE bool
+		wantABEKey string
+	}{
+		{"WindowsABE=true threads cfg.Key into hints.WindowsABEKey", "chrome", true, "chrome"},
+		{"WindowsABE=false leaves hints.WindowsABEKey empty", "opera", false, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mock := &mockRetriever{key: []byte("k")}
+			browsers, err := NewBrowsers(types.BrowserConfig{
+				Key: tt.key, Name: "Test", Kind: types.Chromium,
+				UserDataDir: fixture.chrome, WindowsABE: tt.windowsABE,
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, browsers)
+
+			b := browsers[0]
+			b.SetKeyRetrievers(keyretriever.Retrievers{V20: mock})
+
+			session, err := filemanager.NewSession()
+			require.NoError(t, err)
+			defer session.Cleanup()
+
+			b.getMasterKeys(session)
+			assert.Equal(t, tt.wantABEKey, mock.hints.WindowsABEKey)
+		})
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Extract
 // ---------------------------------------------------------------------------

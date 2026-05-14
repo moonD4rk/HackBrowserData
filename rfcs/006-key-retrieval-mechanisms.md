@@ -24,7 +24,7 @@ The interface takes a single `Hints` struct so caller intent is explicit rather 
 
 ```go
 type Hints struct {
-    KeychainLabel  string // macOS Keychain account / Linux D-Bus collection label (e.g. "Chrome", "Chrome Safe Storage")
+    KeychainLabel  string // macOS Keychain account / Linux D-Bus Secret Service item label (e.g. "Chrome", "Chrome Safe Storage")
     WindowsABEKey  string // Windows ABE browser key used by ABERetriever to locate the elevation-service COM interface (e.g. "chrome", "edge"). "" → ABE not applicable; ABERetriever returns (nil, nil) silently.
     LocalStatePath string // path to Local State JSON. Only used on Windows (DPAPI + ABE both read it).
 }

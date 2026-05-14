@@ -26,8 +26,8 @@ var errNoABEKey = errors.New("abe: Local State has no app_bound_encrypted_key")
 type ABERetriever struct{}
 
 func (r *ABERetriever) RetrieveKey(hints Hints) ([]byte, error) {
-	// Non-ABE forks (Opera/Vivaldi/Yandex) and pre-v20 Chrome profiles supply no WindowsABEKey;
-	// return (nil, nil) so NewMasterKeys treats ABE as "not applicable" instead of an error.
+	// Non-ABE forks (Opera/Vivaldi/Yandex) supply no WindowsABEKey — treat as "not applicable".
+	// (Pre-v20 Chrome takes the errNoABEKey path below.)
 	browserKey := strings.TrimSpace(hints.WindowsABEKey)
 	if browserKey == "" {
 		return nil, nil

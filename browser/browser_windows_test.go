@@ -24,6 +24,9 @@ func TestWinUtilTableCoversABEBrowsers(t *testing.T) {
 
 	abeTable := make(map[string]struct{})
 	for key, entry := range winutil.Table {
+		if entry.Key != key {
+			t.Errorf("winutil.Table[%q].Key = %q; map key and Entry.Key must match (winutil.Entry doc invariant)", key, entry.Key)
+		}
 		if entry.ABE != winutil.ABENone {
 			abeTable[key] = struct{}{}
 		}
