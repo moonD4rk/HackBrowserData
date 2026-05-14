@@ -34,7 +34,7 @@ func TestFindStorageKey_NotFound(t *testing.T) {
 
 func TestKeychainPasswordRetriever_EmptyPassword(t *testing.T) {
 	r := &KeychainPasswordRetriever{Password: ""}
-	key, err := r.RetrieveKey("Chrome", "")
+	key, err := r.RetrieveKey(Hints{KeychainLabel: "Chrome"})
 	require.Error(t, err)
 	assert.Nil(t, key)
 	assert.Contains(t, err.Error(), "keychain password not provided")

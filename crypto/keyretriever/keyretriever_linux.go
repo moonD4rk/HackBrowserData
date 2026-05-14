@@ -21,7 +21,8 @@ var linuxParams = pbkdf2Params{
 // DBusRetriever queries GNOME Keyring / KDE Wallet via D-Bus Secret Service.
 type DBusRetriever struct{}
 
-func (r *DBusRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
+func (r *DBusRetriever) RetrieveKey(hints Hints) ([]byte, error) {
+	storage := hints.KeychainLabel
 	conn, err := dbus.SessionBus()
 	if err != nil {
 		return nil, fmt.Errorf("dbus session: %w", err)
@@ -74,7 +75,7 @@ func (r *DBusRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
 // the "v10" prefix when no keyring is available (headless servers, Docker, CI).
 type PosixRetriever struct{}
 
-func (r *PosixRetriever) RetrieveKey(_, _ string) ([]byte, error) {
+func (r *PosixRetriever) RetrieveKey(_ Hints) ([]byte, error) {
 	return linuxParams.deriveKey([]byte("peanuts")), nil
 }
 

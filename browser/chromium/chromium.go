@@ -195,7 +195,16 @@ func (b *Browser) getMasterKeys(session *filemanager.Session) keyretriever.Maste
 		break
 	}
 
-	keys, err := keyretriever.NewMasterKeys(b.retrievers, b.cfg.Storage, localStateDst)
+	abeKey := ""
+	if b.cfg.WindowsABE {
+		abeKey = b.cfg.Key
+	}
+	hints := keyretriever.Hints{
+		KeychainLabel:  b.cfg.KeychainLabel,
+		WindowsABEKey:  abeKey,
+		LocalStatePath: localStateDst,
+	}
+	keys, err := keyretriever.NewMasterKeys(b.retrievers, hints)
 	if err != nil {
 		installKey := b.BrowserName() + "|" + b.cfg.UserDataDir
 		if _, already := warnedMasterKeyFailure.LoadOrStore(installKey, struct{}{}); !already {

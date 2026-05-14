@@ -13,14 +13,14 @@ func platformBrowsers() []types.BrowserConfig {
 			Key:         "chrome",
 			Name:        chromeName,
 			Kind:        types.Chromium,
-			Storage:     "chrome",
+			WindowsABE:  true,
 			UserDataDir: homeDir + "/AppData/Local/Google/Chrome/User Data",
 		},
 		{
 			Key:         "edge",
 			Name:        edgeName,
 			Kind:        types.Chromium,
-			Storage:     "edge",
+			WindowsABE:  true,
 			UserDataDir: homeDir + "/AppData/Local/Microsoft/Edge/User Data",
 		},
 		{
@@ -33,7 +33,7 @@ func platformBrowsers() []types.BrowserConfig {
 			Key:         "chrome-beta",
 			Name:        chromeBetaName,
 			Kind:        types.Chromium,
-			Storage:     "chrome-beta",
+			WindowsABE:  true,
 			UserDataDir: homeDir + "/AppData/Local/Google/Chrome Beta/User Data",
 		},
 		{
@@ -58,14 +58,14 @@ func platformBrowsers() []types.BrowserConfig {
 			Key:         "coccoc",
 			Name:        coccocName,
 			Kind:        types.Chromium,
-			Storage:     "coccoc",
+			WindowsABE:  true,
 			UserDataDir: homeDir + "/AppData/Local/CocCoc/Browser/User Data",
 		},
 		{
 			Key:         "brave",
 			Name:        braveName,
 			Kind:        types.Chromium,
-			Storage:     "brave",
+			WindowsABE:  true,
 			UserDataDir: homeDir + "/AppData/Local/BraveSoftware/Brave-Browser/User Data",
 		},
 		{

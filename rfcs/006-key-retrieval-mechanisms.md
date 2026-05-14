@@ -20,10 +20,17 @@ For Chromium encryption details (cipher versions, AES-CBC/GCM), see [RFC-003](00
 
 ## 2. KeyRetriever Interface
 
-The interface takes two parameters:
+The interface takes a single `Hints` struct so caller intent is explicit rather than positional:
 
-- **`storage`** — platform-dependent identifier. On macOS it's the Keychain account label (e.g. `"Chrome"`); on Linux it's the D-Bus collection label (e.g. `"Chrome Safe Storage"`); on Windows it's the browser key used by `ABERetriever` to locate the elevation-service COM interface (e.g. `"chrome"`, `"edge"`). Ignored by `DPAPIRetriever`.
-- **`localStatePath`** — path to `Local State` JSON file. Only used on Windows (DPAPI + ABE both read it).
+```go
+type Hints struct {
+    KeychainLabel  string // macOS Keychain account / Linux D-Bus collection label (e.g. "Chrome", "Chrome Safe Storage")
+    WindowsABEKey  string // Windows ABE browser key used by ABERetriever to locate the elevation-service COM interface (e.g. "chrome", "edge"). "" → ABE not applicable; ABERetriever returns (nil, nil) silently.
+    LocalStatePath string // path to Local State JSON. Only used on Windows (DPAPI + ABE both read it).
+}
+```
+
+Each retriever reads only the field that applies to its platform; the others are ignored. Callers populate `Hints` from `BrowserConfig`: `KeychainLabel` is copied directly, `WindowsABEKey` is set to `cfg.Key` when `cfg.WindowsABE` is true.
 
 The return value is the **ready-to-use decryption key** — either the raw AES key (Windows) or the PBKDF2-derived key (macOS/Linux).
 
@@ -67,11 +74,11 @@ All macOS strategies produce a raw password string from the keychain. This is de
 | Key length | 16 bytes (AES-128) | |
 | Hash | HMAC-SHA1 | |
 
-### 3.4 Storage Labels
+### 3.4 Keychain Labels
 
 Each browser identifies its Keychain entry with a short account string — typically the browser's base name (`"Chrome"`, `"Brave"`, `"Arc"`). Edge uses `"Microsoft Edge"`. Related variants share labels rather than defining their own: Chrome Beta aliases onto `"Chrome"`, Opera GX aliases onto `"Opera"`.
 
-The authoritative mapping lives in the `Storage` field of each entry in `platformBrowsers()` (`browser/browser_darwin.go`).
+The authoritative mapping lives in the `KeychainLabel` field of each entry in `platformBrowsers()` (`browser/browser_darwin.go`).
 
 ## 4. Windows Key Retrieval
 
@@ -119,7 +126,7 @@ Windows populates two slots of the `keyretriever.Retrievers` struct — V10 (leg
 
 **Why not a ChainRetriever?** `ChainRetriever` has first-success semantics: once ABE returns a key, DPAPI is never called. That semantics is wrong for orthogonal tiers — it was the root cause of issue #578, where upgraded profiles' v10-encrypted passwords silently failed because only the v20 key was retrieved. `NewMasterKeys` evaluates each tier independently and returns an `errors.Join` of per-tier failures; log severity is a caller-side decision. `browser/chromium::getMasterKeys` currently logs all tier errors uniformly at `Warnf` — the distinction between "partial" and "total" failure was judged low-value for a short-lived CLI where all warn lines are visible in the default output.
 
-**Non-ABE Chromium forks** (Opera, Vivaldi, Yandex, 360, QQ, Sogou) have `Storage: ""` in `platformBrowsers()`. `ABERetriever` returns `(nil, nil)` for empty storage, which `NewMasterKeys` treats silently as "not applicable" — so attempting ABE on these forks is a no-op, not a failure. Their V10 DPAPI key continues to work unchanged.
+**Non-ABE Chromium forks** (Opera, Vivaldi, Yandex, 360, QQ, Sogou) omit `WindowsABE` in `platformBrowsers()` (default false). The caller leaves `Hints.WindowsABEKey` empty, and `ABERetriever` returns `(nil, nil)` for empty `WindowsABEKey`, which `NewMasterKeys` treats silently as "not applicable" — so attempting ABE on these forks is a no-op, not a failure. Their V10 DPAPI key continues to work unchanged.
 
 ## 5. Linux Key Retrieval
 
@@ -157,11 +164,11 @@ Both strategies produce a password, derived via PBKDF2 with notably weaker param
 
 A single iteration makes PBKDF2 essentially a keyed HMAC — no real key-stretching. Combined with the well-known fallback password `"peanuts"`, Linux Chromium encryption is trivial to break without the keyring.
 
-### 5.4 Storage Labels
+### 5.4 Keychain Labels
 
 Linux D-Bus labels follow a `"<name> Safe Storage"` convention, but many browsers alias onto a small shared set rather than defining their own. The three distinct labels are `"Chrome Safe Storage"`, `"Chromium Safe Storage"`, and `"Brave Safe Storage"` — everything else maps onto one of these.
 
-The authoritative mapping lives in the `Storage` field of each entry in `platformBrowsers()` (`browser/browser_linux.go`).
+The authoritative mapping lives in the `KeychainLabel` field of each entry in `platformBrowsers()` (`browser/browser_linux.go`).
 
 ## 6. Platform Summary
 

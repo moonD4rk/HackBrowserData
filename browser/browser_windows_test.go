@@ -8,25 +8,35 @@ import (
 	"github.com/moond4rk/hackbrowserdata/utils/winutil"
 )
 
-// TestWinUtilTableCoversABEBrowsers verifies that every Windows browser
-// with ABE support in winutil.Table has a matching Storage key in
-// platformBrowsers(). A mismatch means adding a new Chromium fork was
-// incomplete: either the BrowserConfig row lacks Storage: "<key>", or
-// winutil.Table has a stale entry nobody retrieves keys for.
+// TestWinUtilTableCoversABEBrowsers verifies that the set of Windows browsers
+// with WindowsABE: true in platformBrowsers() exactly matches the set of
+// winutil.Table entries that declare ABE support (keyed by BrowserConfig.Key ==
+// winutil.Entry.Key). A mismatch means adding a new Chromium fork was
+// incomplete: either a BrowserConfig row is missing WindowsABE: true, or
+// winutil.Table has a stale/missing entry.
 func TestWinUtilTableCoversABEBrowsers(t *testing.T) {
-	storages := make(map[string]struct{})
+	abeConfigs := make(map[string]struct{})
 	for _, b := range platformBrowsers() {
-		if b.Storage != "" {
-			storages[b.Storage] = struct{}{}
+		if b.WindowsABE {
+			abeConfigs[b.Key] = struct{}{}
 		}
 	}
 
+	abeTable := make(map[string]struct{})
 	for key, entry := range winutil.Table {
-		if entry.ABE == winutil.ABENone {
-			continue
+		if entry.ABE != winutil.ABENone {
+			abeTable[key] = struct{}{}
 		}
-		if _, ok := storages[key]; !ok {
-			t.Errorf("winutil.Table[%q] declares ABE support but no BrowserConfig.Storage matches — either fix the table or set Storage: %q in platformBrowsers()", key, key)
+	}
+
+	for key := range abeTable {
+		if _, ok := abeConfigs[key]; !ok {
+			t.Errorf("winutil.Table[%q] declares ABE support but no BrowserConfig with Key %q sets WindowsABE: true — either fix the table or set WindowsABE: true in platformBrowsers()", key, key)
+		}
+	}
+	for key := range abeConfigs {
+		if _, ok := abeTable[key]; !ok {
+			t.Errorf("BrowserConfig with Key %q sets WindowsABE: true but winutil.Table[%q] is missing or declares no ABE — add the table entry", key, key)
 		}
 	}
 }

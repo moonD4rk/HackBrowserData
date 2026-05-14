@@ -295,7 +295,7 @@ Three steps.
 2. **Mine IIDs from TypeLib** — the interface IIDs live in the TypeLib resource of `<InstallDir>\Application\<version>\elevation_service.exe`. PowerShell + `ITypeLib.GetTypeInfo` enumerates them. Map `IElevator<Vendor>` → v1 IID, `IElevator2<Vendor>` → v2 IID (absent for older vendors).
 3. **Determine vtable slot** — count `IElevator` methods in the TypeLib. Chrome-family has 3 methods (slot 5). Edge prepends 3 placeholders (slot 8). Avast extends the interface further (slot 13).
 
-Edit `crypto/windows/abe_native/com_iid.c` (add the entry), `utils/winutil/browser_meta_windows.go` (add a matching `winutil.Entry` with the right `ABEKind` and install-path fallbacks), `browser/browser_windows.go` (set `Storage: "<key>"` for the new `BrowserConfig`), then `make payload-clean && make build-windows` and redeploy.
+Edit `crypto/windows/abe_native/com_iid.c` (add the entry), `utils/winutil/browser_meta_windows.go` (add a matching `winutil.Entry` with the right `ABEKind` and install-path fallbacks; `Entry.Key` must equal the `BrowserConfig.Key` of the matching ABE-enabled config), `browser/browser_windows.go` (set `WindowsABE: true` on the new `BrowserConfig` so its `Key` doubles as the ABE / winutil.Table identifier), then `make payload-clean && make build-windows` and redeploy.
 
 ## 12. Known issues & future work
 

@@ -43,7 +43,7 @@ type GcoredumpRetriever struct {
 // through to the next retriever silently. The most common failure ("requires root privileges")
 // is documented expected behavior, not a warning-worthy condition; surfacing it on every profile
 // would drown out genuine warnings. The same pattern is used by ABERetriever (see abe_windows.go).
-func (r *GcoredumpRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
+func (r *GcoredumpRetriever) RetrieveKey(hints Hints) ([]byte, error) {
 	r.once.Do(func() {
 		r.records, r.err = DecryptKeychainRecords()
 	})
@@ -52,7 +52,7 @@ func (r *GcoredumpRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
 		return nil, nil //nolint:nilerr // intentional silent fallthrough
 	}
 
-	key, err := findStorageKey(r.records, storage)
+	key, err := findStorageKey(r.records, hints.KeychainLabel)
 	if err != nil {
 		log.Debugf("gcoredump: %v", err)
 		return nil, nil //nolint:nilerr // intentional silent fallthrough
@@ -96,7 +96,7 @@ type KeychainPasswordRetriever struct {
 	err     error
 }
 
-func (r *KeychainPasswordRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
+func (r *KeychainPasswordRetriever) RetrieveKey(hints Hints) ([]byte, error) {
 	if r.Password == "" {
 		return nil, fmt.Errorf("keychain password not provided")
 	}
@@ -108,7 +108,7 @@ func (r *KeychainPasswordRetriever) RetrieveKey(storage, _ string) ([]byte, erro
 		return nil, r.err
 	}
 
-	return findStorageKey(r.records, storage)
+	return findStorageKey(r.records, hints.KeychainLabel)
 }
 
 // SecurityCmdRetriever uses macOS `security` CLI to query Keychain.
@@ -124,7 +124,8 @@ type securityResult struct {
 	err error
 }
 
-func (r *SecurityCmdRetriever) RetrieveKey(storage, _ string) ([]byte, error) {
+func (r *SecurityCmdRetriever) RetrieveKey(hints Hints) ([]byte, error) {
+	storage := hints.KeychainLabel
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

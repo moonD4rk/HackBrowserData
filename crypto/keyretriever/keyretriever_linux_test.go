@@ -12,7 +12,7 @@ import (
 func TestPosixRetriever(t *testing.T) {
 	r := &PosixRetriever{}
 
-	key, err := r.RetrieveKey("Chrome", "")
+	key, err := r.RetrieveKey(Hints{KeychainLabel: "Chrome"})
 	require.NoError(t, err)
 	assert.Equal(t, linuxParams.deriveKey([]byte("peanuts")), key)
 	assert.Len(t, key, linuxParams.keySize)
@@ -27,9 +27,9 @@ func TestPosixRetriever(t *testing.T) {
 	}
 	assert.False(t, allZero, "derived key should not be all zeros")
 
-	// "peanuts" is a hardcoded password, so the result should be the same regardless of storage
-	// name or number of calls.
-	key2, err := r.RetrieveKey("Brave", "")
+	// "peanuts" is a hardcoded password, so the result should be the same regardless of the hints
+	// or number of calls.
+	key2, err := r.RetrieveKey(Hints{KeychainLabel: "Brave"})
 	require.NoError(t, err)
 	assert.Equal(t, key, key2, "kV10Key should be constant across any storage label")
 }
@@ -42,7 +42,7 @@ func TestPosixRetriever_MatchesChromiumKV10Key(t *testing.T) {
 		0x9d, 0xfa, 0x14, 0x7c, 0xa9, 0x27, 0x27, 0x78,
 	}
 	r := &PosixRetriever{}
-	key, err := r.RetrieveKey("", "")
+	key, err := r.RetrieveKey(Hints{})
 	require.NoError(t, err)
 	assert.Equal(t, want, key)
 }

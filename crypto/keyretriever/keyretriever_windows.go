@@ -16,8 +16,8 @@ import (
 // and decrypts it using Windows DPAPI.
 type DPAPIRetriever struct{}
 
-func (r *DPAPIRetriever) RetrieveKey(_, localStatePath string) ([]byte, error) {
-	data, err := os.ReadFile(localStatePath)
+func (r *DPAPIRetriever) RetrieveKey(hints Hints) ([]byte, error) {
+	data, err := os.ReadFile(hints.LocalStatePath)
 	if err != nil {
 		return nil, fmt.Errorf("read Local State: %w", err)
 	}

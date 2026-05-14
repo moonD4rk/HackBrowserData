@@ -29,7 +29,7 @@ var ErrExecutableNotFound = errors.New("browser executable not found")
 //     is not running and the registry is missing the entry).
 //
 // browserKey must match an Entry in Table; keys align with
-// browser.BrowserConfig.Storage.
+// browser.BrowserConfig.Key (for configs that set WindowsABE: true).
 func ExecutablePath(browserKey string) (string, error) {
 	entry, ok := Table[browserKey]
 	if !ok {

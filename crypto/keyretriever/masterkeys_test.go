@@ -10,20 +10,18 @@ import (
 )
 
 // recordingRetriever captures call count and arguments so tests can verify each tier's retriever
-// is invoked exactly once with the expected storage and localStatePath.
+// is invoked exactly once with the expected hints.
 type recordingRetriever struct {
 	key []byte
 	err error
 
-	calls      int
-	gotStorage string
-	gotPath    string
+	calls    int
+	gotHints Hints
 }
 
-func (r *recordingRetriever) RetrieveKey(storage, localStatePath string) ([]byte, error) {
+func (r *recordingRetriever) RetrieveKey(hints Hints) ([]byte, error) {
 	r.calls++
-	r.gotStorage = storage
-	r.gotPath = localStatePath
+	r.gotHints = hints
 	return r.key, r.err
 }
 
@@ -115,7 +113,7 @@ func TestNewMasterKeys_Matrix(t *testing.T) {
 				r.V20 = tt.v20
 			}
 
-			keys, err := NewMasterKeys(r, "chrome", "/tmp/Local State")
+			keys, err := NewMasterKeys(r, Hints{KeychainLabel: "chrome", LocalStatePath: "/tmp/Local State"})
 			assert.Equal(t, tt.wantV10, keys.V10)
 			assert.Equal(t, tt.wantV11, keys.V11)
 			assert.Equal(t, tt.wantV20, keys.V20)
@@ -136,8 +134,7 @@ func TestNewMasterKeys_Matrix(t *testing.T) {
 					continue
 				}
 				assert.Equal(t, 1, mock.calls, "%s retriever should be called exactly once", name)
-				assert.Equal(t, "chrome", mock.gotStorage)
-				assert.Equal(t, "/tmp/Local State", mock.gotPath)
+				assert.Equal(t, Hints{KeychainLabel: "chrome", LocalStatePath: "/tmp/Local State"}, mock.gotHints)
 			}
 		})
 	}
@@ -145,7 +142,7 @@ func TestNewMasterKeys_Matrix(t *testing.T) {
 
 func TestNewMasterKeys_AllNilRetrievers(t *testing.T) {
 	// All slots nil — macOS/Linux with no retriever wiring, or Windows with neither tier set up.
-	keys, err := NewMasterKeys(Retrievers{}, "chrome", "/tmp/Local State")
+	keys, err := NewMasterKeys(Retrievers{}, Hints{KeychainLabel: "chrome", LocalStatePath: "/tmp/Local State"})
 	require.NoError(t, err)
 	assert.Nil(t, keys.V10)
 	assert.Nil(t, keys.V11)
@@ -156,14 +153,14 @@ func TestNewMasterKeys_PartialNil(t *testing.T) {
 	// Only V10 wired — typical macOS shape. V11/V20 left nil.
 	k10 := []byte("v10-key-bytes-for-testing")
 	r := &recordingRetriever{key: k10}
-	keys, err := NewMasterKeys(Retrievers{V10: r}, "Chrome", "")
+	keys, err := NewMasterKeys(Retrievers{V10: r}, Hints{KeychainLabel: "Chrome"})
 
 	require.NoError(t, err)
 	assert.Equal(t, k10, keys.V10)
 	assert.Nil(t, keys.V11)
 	assert.Nil(t, keys.V20)
 	assert.Equal(t, 1, r.calls)
-	assert.Equal(t, "Chrome", r.gotStorage)
+	assert.Equal(t, Hints{KeychainLabel: "Chrome"}, r.gotHints)
 }
 
 func TestNewMasterKeys_ErrorWrapping(t *testing.T) {
@@ -172,7 +169,7 @@ func TestNewMasterKeys_ErrorWrapping(t *testing.T) {
 	sentinel := errors.New("sentinel")
 	r := Retrievers{V20: &recordingRetriever{err: sentinel}}
 
-	_, err := NewMasterKeys(r, "chrome", "")
+	_, err := NewMasterKeys(r, Hints{KeychainLabel: "chrome"})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, sentinel, "errors.Is should find wrapped sentinel error")
 }

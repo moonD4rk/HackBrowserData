@@ -35,9 +35,9 @@ const (
 
 // Entry is the per-browser Windows metadata record.
 //
-// Key must match browser.BrowserConfig.Storage so retrievers and path
-// resolvers share a single lookup identifier. CLSID/IID bytes are *not*
-// stored here; see the package doc for why.
+// Key must match browser.BrowserConfig.Key for every config that sets
+// WindowsABE: true, so retrievers and path resolvers share a single lookup
+// identifier. CLSID/IID bytes are *not* stored here; see the package doc for why.
 type Entry struct {
 	Key              string
 	ExeName          string

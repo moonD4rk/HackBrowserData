@@ -20,13 +20,16 @@ import (
 // has no storage lookup.
 var errStorageNotFound = errors.New("not found in credential store") //nolint:unused // only used on darwin and linux
 
-// KeyRetriever retrieves the master encryption key for a Chromium-based browser. Each platform has
-// different implementations:
-//   - macOS: Keychain access (security command) or gcoredump exploit
-//   - Windows: DPAPI decryption of Local State file
-//   - Linux: D-Bus Secret Service or fallback to "peanuts" password
+// Hints bundles inputs for KeyRetriever; each retriever reads only the field that applies to it.
+type Hints struct {
+	KeychainLabel  string // macOS Keychain account / Linux D-Bus Secret Service label
+	WindowsABEKey  string // Windows ABE browser key (e.g. "chrome"); "" → ABE not applicable
+	LocalStatePath string // path to (temp-copied) Local State JSON; only used on Windows
+}
+
+// KeyRetriever retrieves the master encryption key for a Chromium-based browser.
 type KeyRetriever interface {
-	RetrieveKey(storage, localStatePath string) ([]byte, error)
+	RetrieveKey(hints Hints) ([]byte, error)
 }
 
 // ChainRetriever tries multiple retrievers in order, returning the first success. Used on macOS
@@ -40,10 +43,10 @@ func NewChain(retrievers ...KeyRetriever) KeyRetriever {
 	return &ChainRetriever{retrievers: retrievers}
 }
 
-func (c *ChainRetriever) RetrieveKey(storage, localStatePath string) ([]byte, error) {
+func (c *ChainRetriever) RetrieveKey(hints Hints) ([]byte, error) {
 	var errs []error
 	for _, r := range c.retrievers {
-		key, err := r.RetrieveKey(storage, localStatePath)
+		key, err := r.RetrieveKey(hints)
 		if err == nil && len(key) > 0 {
 			return key, nil
 		}

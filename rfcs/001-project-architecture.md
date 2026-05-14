@@ -75,7 +75,7 @@ See `types/category.go` for the authoritative enum definition.
 
 ### 4.2 BrowserConfig
 
-`BrowserConfig` is the declarative, platform-specific browser definition containing: Key (CLI matching), Name (display), Kind (engine), Storage (keychain label), UserDataDir (data path).
+`BrowserConfig` is the declarative, platform-specific browser definition containing: Key (CLI matching; also the Windows ABE / winutil.Table identifier when WindowsABE is true), Name (display), Kind (engine), KeychainLabel (macOS Keychain / Linux D-Bus Secret Service label), WindowsABE (bool — enable Windows App-Bound Encryption v20 path), UserDataDir (data path).
 
 ### 4.3 Browser Selection Flow
 

@@ -83,11 +83,12 @@ const (
 
 // BrowserConfig holds the declarative configuration for a browser installation.
 type BrowserConfig struct {
-	Key         string      // lookup key: "chrome", "edge", "firefox"
-	Name        string      // display name: "Chrome", "Edge", "Firefox"
-	Kind        BrowserKind // engine type
-	Storage     string      // macOS/Linux: keychain/GNOME label. Windows: ABE browser key (triggers reflective injection when populated).
-	UserDataDir string      // base browser directory
+	Key           string      // lookup key; doubles as the Windows ABE / winutil.Table key when WindowsABE is true
+	Name          string      // display name
+	Kind          BrowserKind // engine type
+	KeychainLabel string      // macOS Keychain account / Linux D-Bus Secret Service label; "" = none
+	WindowsABE    bool        // enable Windows App-Bound Encryption v20 (reflective injection)
+	UserDataDir   string      // base browser directory
 }
 
 // BrowserData holds all extracted browser data with typed slices.
