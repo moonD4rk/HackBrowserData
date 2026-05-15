@@ -9,6 +9,8 @@ updates:
     ignore:
       - dependency-name: "modernc.org/sqlite"
         versions: [">=1.32.0"]  # v1.32+ requires Go 1.21, project is pinned to Go 1.20
+      - dependency-name: "github.com/tidwall/gjson"
+        versions: [">=1.19.0"]  # v1.19.0+ requires Go 1.23, project is pinned to Go 1.20
       - dependency-name: "golang.org/x/text"  # indirect dep, newer versions may require Go 1.21+
       - dependency-name: "golang.org/x/sys"  # newer versions require Go 1.21+
       - dependency-name: "golang.org/x/term"
