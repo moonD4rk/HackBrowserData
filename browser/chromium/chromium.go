@@ -59,11 +59,50 @@ func (b *Browser) SetKeyRetrievers(r keyretriever.Retrievers) {
 
 func (b *Browser) BrowserName() string { return b.cfg.Name }
 func (b *Browser) ProfileDir() string  { return b.profileDir }
+func (b *Browser) UserDataDir() string { return b.cfg.UserDataDir }
 func (b *Browser) ProfileName() string {
 	if b.profileDir == "" {
 		return ""
 	}
 	return filepath.Base(b.profileDir)
+}
+
+// ExportKeys derives this profile's master keys without performing extraction.
+// It runs the same retrievers Extract would use and returns the assembled
+// MasterKeys plus a joined error (nil on full success, non-nil if any tier
+// failed). Used by cross-host workflows where keys are produced on one host
+// and consumed on another.
+func (b *Browser) ExportKeys() (keyretriever.MasterKeys, error) {
+	session, err := filemanager.NewSession()
+	if err != nil {
+		return keyretriever.MasterKeys{}, err
+	}
+	defer session.Cleanup()
+
+	var localStateDst string
+	for _, dir := range []string{filepath.Dir(b.profileDir), b.profileDir} {
+		candidate := filepath.Join(dir, "Local State")
+		if !fileutil.FileExists(candidate) {
+			continue
+		}
+		dst := filepath.Join(session.TempDir(), "Local State")
+		if err := session.Acquire(candidate, dst, false); err != nil {
+			break
+		}
+		localStateDst = dst
+		break
+	}
+
+	abeKey := ""
+	if b.cfg.WindowsABE {
+		abeKey = b.cfg.Key
+	}
+	hints := keyretriever.Hints{
+		KeychainLabel:  b.cfg.KeychainLabel,
+		WindowsABEKey:  abeKey,
+		LocalStatePath: localStateDst,
+	}
+	return keyretriever.NewMasterKeys(b.retrievers, hints)
 }
 
 // Extract copies browser files to a temp directory, retrieves the master key,

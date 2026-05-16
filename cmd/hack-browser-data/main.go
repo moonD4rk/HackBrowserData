@@ -31,7 +31,7 @@ GitHub: https://github.com/moonD4rk/HackBrowserData`,
 	root.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "enable debug logging")
 
 	dump := dumpCmd()
-	root.AddCommand(dump, listCmd(), versionCmd())
+	root.AddCommand(dump, listCmd(), keysCmd(), versionCmd())
 
 	// Default to dump when no subcommand is given.
 	// Copy dump flags to root so that `hack-browser-data -b chrome`

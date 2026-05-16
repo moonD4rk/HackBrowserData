@@ -45,6 +45,7 @@ func resolveProfilePaths(p profileContext) map[types.Category]resolvedPath {
 
 func (b *Browser) BrowserName() string { return b.cfg.Name }
 func (b *Browser) ProfileName() string { return b.profile.name }
+func (b *Browser) UserDataDir() string { return b.cfg.UserDataDir }
 
 func (b *Browser) ProfileDir() string {
 	if b.profile.isDefault() {

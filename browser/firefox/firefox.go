@@ -49,6 +49,7 @@ func NewBrowsers(cfg types.BrowserConfig) ([]*Browser, error) {
 
 func (b *Browser) BrowserName() string { return b.cfg.Name }
 func (b *Browser) ProfileDir() string  { return b.profileDir }
+func (b *Browser) UserDataDir() string { return b.cfg.UserDataDir }
 func (b *Browser) ProfileName() string {
 	if b.profileDir == "" {
 		return ""
