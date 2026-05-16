@@ -132,8 +132,8 @@ func platformBrowsers() []types.BrowserConfig {
 func newPlatformInjector(_ PickOptions) func(Browser) {
 	retrievers := keyretriever.DefaultRetrievers()
 	return func(b Browser) {
-		if s, ok := b.(keyRetrieversSetter); ok {
-			s.SetKeyRetrievers(retrievers)
+		if km, ok := b.(KeyManager); ok {
+			km.SetKeyRetrievers(retrievers)
 		}
 	}
 }

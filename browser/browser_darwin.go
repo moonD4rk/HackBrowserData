@@ -155,20 +155,8 @@ func resolveKeychainPassword(flagPassword string) string {
 	return password
 }
 
-// keychainPasswordSetter is an optional capability interface satisfied by
-// Safari, which reads InternetPassword records directly from the login keychain.
-type keychainPasswordSetter interface {
-	SetKeychainPassword(string)
-}
-
-// newPlatformInjector returns a closure that injects the Chromium master-key
-// retriever and the Safari Keychain password into each Browser.
-//
-// Resolution is lazy: the keychain password prompt and retriever construction
-// are deferred until the first Browser that actually needs them passes through
-// the closure. Browsers that satisfy neither setter interface (e.g. Firefox)
-// short-circuit without ever touching the keychain, so `-b firefox` on macOS
-// no longer triggers a password prompt.
+// newPlatformInjector lazily wires retrievers (and the macOS keychain password) into each Browser;
+// `-b firefox` never triggers a keychain prompt because lazy resolution skips browsers that need neither.
 func newPlatformInjector(opts PickOptions) func(Browser) {
 	var (
 		password   string
@@ -176,8 +164,8 @@ func newPlatformInjector(opts PickOptions) func(Browser) {
 		resolved   bool
 	)
 	return func(b Browser) {
-		rs, needsRetrievers := b.(keyRetrieversSetter)
-		kps, needsKeychainPassword := b.(keychainPasswordSetter)
+		km, needsRetrievers := b.(KeyManager)
+		kps, needsKeychainPassword := b.(KeychainPasswordReceiver)
 		if !needsRetrievers && !needsKeychainPassword {
 			return
 		}
@@ -187,7 +175,7 @@ func newPlatformInjector(opts PickOptions) func(Browser) {
 			resolved = true
 		}
 		if needsRetrievers {
-			rs.SetKeyRetrievers(retrievers)
+			km.SetKeyRetrievers(retrievers)
 		}
 		if needsKeychainPassword {
 			kps.SetKeychainPassword(password)
