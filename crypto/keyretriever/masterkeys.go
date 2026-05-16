@@ -14,6 +14,12 @@ type MasterKeys struct {
 	V20 []byte `json:"v20,omitempty"`
 }
 
+// HasAny reports whether at least one tier carries a usable key. Centralizes the "is this MasterKeys
+// worth keeping" check so new tiers (V21, V12, …) only need to be added here, not at every caller.
+func (k MasterKeys) HasAny() bool {
+	return k.V10 != nil || k.V11 != nil || k.V20 != nil
+}
+
 // Retrievers is the per-tier retriever configuration; unused slots are nil.
 type Retrievers struct {
 	V10 KeyRetriever

@@ -38,11 +38,13 @@ type mockChromiumBrowser struct {
 	mockBrowser
 	keys      keyretriever.MasterKeys
 	exportErr error
+	calls     int
 }
 
 func (m *mockChromiumBrowser) SetKeyRetrievers(_ keyretriever.Retrievers) {}
 
 func (m *mockChromiumBrowser) ExportKeys() (keyretriever.MasterKeys, error) {
+	m.calls++
 	return m.keys, m.exportErr
 }
 
@@ -171,5 +173,56 @@ func TestBuildDump_JSONRoundTrip(t *testing.T) {
 	}
 	if parsed.Vaults[0].Keys.V11 != nil {
 		t.Errorf("V11 should be omitted (nil), got %v", parsed.Vaults[0].Keys.V11)
+	}
+}
+
+func TestBuildDump_PartialKeys(t *testing.T) {
+	b := &mockChromiumBrowser{
+		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: testUDD},
+		keys:        keyretriever.MasterKeys{V10: []byte("v10")},
+		exportErr:   errors.New("v20: ABE failed"),
+	}
+
+	dump := BuildDump([]Browser{b})
+
+	if len(dump.Vaults) != 1 {
+		t.Fatalf("Vaults len = %d, want 1 (partial result must be preserved)", len(dump.Vaults))
+	}
+	if string(dump.Vaults[0].Keys.V10) != "v10" {
+		t.Errorf("V10 should be preserved despite V20 error, got %q", dump.Vaults[0].Keys.V10)
+	}
+	if dump.Vaults[0].Keys.V20 != nil {
+		t.Errorf("V20 should remain nil, got %v", dump.Vaults[0].Keys.V20)
+	}
+}
+
+func TestBuildDump_GroupingOrderIndependent(t *testing.T) {
+	for _, name := range []string{"p1 first", "p2 first"} {
+		t.Run(name, func(t *testing.T) {
+			p1 := &mockChromiumBrowser{
+				mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: testUDD},
+				keys:        keyretriever.MasterKeys{V10: []byte("v10")},
+			}
+			p2 := &mockChromiumBrowser{
+				mockBrowser: mockBrowser{name: chromeName, profile: testProfile1, userDataDir: testUDD},
+				keys:        keyretriever.MasterKeys{V10: []byte("v10")},
+			}
+			list := []Browser{p1, p2}
+			if name == "p2 first" {
+				list = []Browser{p2, p1}
+			}
+
+			dump := BuildDump(list)
+
+			if len(dump.Vaults) != 1 {
+				t.Fatalf("Vaults len = %d, want 1", len(dump.Vaults))
+			}
+			if len(dump.Vaults[0].Profiles) != 2 {
+				t.Errorf("Profiles = %v, want 2", dump.Vaults[0].Profiles)
+			}
+			if calls := p1.calls + p2.calls; calls != 1 {
+				t.Errorf("ExportKeys total calls = %d, want 1 (one call per installation)", calls)
+			}
+		})
 	}
 }
