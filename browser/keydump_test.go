@@ -10,6 +10,13 @@ import (
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
+const (
+	testProfileDefault = "Default"
+	testProfile1       = "Profile 1"
+	testUDD            = "/p"
+	testEdgeName       = "Edge"
+)
+
 type mockBrowser struct {
 	name, profile, profileDir, userDataDir string
 }
@@ -47,27 +54,27 @@ func TestBuildDump_Empty(t *testing.T) {
 	if dump.Host.OS != runtime.GOOS {
 		t.Errorf("Host.OS = %q, want %q", dump.Host.OS, runtime.GOOS)
 	}
-	if len(dump.Installations) != 0 {
-		t.Errorf("Installations len = %d, want 0", len(dump.Installations))
+	if len(dump.Vaults) != 0 {
+		t.Errorf("Vaults len = %d, want 0", len(dump.Vaults))
 	}
 }
 
 func TestBuildDump_SingleChromium(t *testing.T) {
 	b := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: "Chrome", profile: "Default", profileDir: "/p/Default", userDataDir: "/p"},
+		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, profileDir: "/p/Default", userDataDir: testUDD},
 		keys:        keyretriever.MasterKeys{V10: []byte("v10-key")},
 	}
 
 	dump := BuildDump([]Browser{b})
 
-	if len(dump.Installations) != 1 {
-		t.Fatalf("Installations len = %d, want 1", len(dump.Installations))
+	if len(dump.Vaults) != 1 {
+		t.Fatalf("Vaults len = %d, want 1", len(dump.Vaults))
 	}
-	inst := dump.Installations[0]
-	if inst.Browser != "Chrome" || inst.UserDataDir != "/p" {
+	inst := dump.Vaults[0]
+	if inst.Browser != chromeName || inst.UserDataDir != testUDD {
 		t.Errorf("inst metadata = %+v", inst)
 	}
-	if len(inst.Profiles) != 1 || inst.Profiles[0] != "Default" {
+	if len(inst.Profiles) != 1 || inst.Profiles[0] != testProfileDefault {
 		t.Errorf("Profiles = %v", inst.Profiles)
 	}
 	if string(inst.Keys.V10) != "v10-key" {
@@ -77,64 +84,64 @@ func TestBuildDump_SingleChromium(t *testing.T) {
 
 func TestBuildDump_MultipleProfilesSameInstallation(t *testing.T) {
 	p1 := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: "Chrome", profile: "Default", userDataDir: "/p"},
+		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: testUDD},
 		keys:        keyretriever.MasterKeys{V10: []byte("v10")},
 	}
 	p2 := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: "Chrome", profile: "Profile 1", userDataDir: "/p"},
+		mockBrowser: mockBrowser{name: chromeName, profile: testProfile1, userDataDir: testUDD},
 		exportErr:   errors.New("ExportKeys should not be called for second profile"),
 	}
 
 	dump := BuildDump([]Browser{p1, p2})
 
-	if len(dump.Installations) != 1 {
-		t.Fatalf("Installations len = %d, want 1 (same installation grouping)", len(dump.Installations))
+	if len(dump.Vaults) != 1 {
+		t.Fatalf("Vaults len = %d, want 1 (same installation grouping)", len(dump.Vaults))
 	}
-	if len(dump.Installations[0].Profiles) != 2 {
-		t.Errorf("Profiles = %v, want both Default and Profile 1", dump.Installations[0].Profiles)
+	if len(dump.Vaults[0].Profiles) != 2 {
+		t.Errorf("Profiles = %v, want both profiles", dump.Vaults[0].Profiles)
 	}
 }
 
 func TestBuildDump_SkipsNonKeyManager(t *testing.T) {
 	chrome := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: "Chrome", profile: "Default", userDataDir: "/chrome"},
+		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: "/chrome"},
 		keys:        keyretriever.MasterKeys{V10: []byte("v10")},
 	}
-	firefox := &mockBrowser{name: "Firefox", profile: "default-release", userDataDir: "/ff"}
+	firefox := &mockBrowser{name: firefoxName, profile: "default-release", userDataDir: "/ff"}
 
 	dump := BuildDump([]Browser{chrome, firefox})
 
-	if len(dump.Installations) != 1 {
-		t.Fatalf("Installations len = %d, want 1 (Firefox skipped)", len(dump.Installations))
+	if len(dump.Vaults) != 1 {
+		t.Fatalf("Vaults len = %d, want 1 (firefox skipped)", len(dump.Vaults))
 	}
-	if dump.Installations[0].Browser != "Chrome" {
-		t.Errorf("Browser = %q, want Chrome", dump.Installations[0].Browser)
+	if dump.Vaults[0].Browser != chromeName {
+		t.Errorf("Browser = %q, want %q", dump.Vaults[0].Browser, chromeName)
 	}
 }
 
 func TestBuildDump_SkipsExportError(t *testing.T) {
 	good := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: "Chrome", profile: "Default", userDataDir: "/chrome"},
+		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: "/chrome"},
 		keys:        keyretriever.MasterKeys{V10: []byte("v10")},
 	}
 	failing := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: "Edge", profile: "Default", userDataDir: "/edge"},
+		mockBrowser: mockBrowser{name: testEdgeName, profile: testProfileDefault, userDataDir: "/edge"},
 		exportErr:   errors.New("retriever failed"),
 	}
 
 	dump := BuildDump([]Browser{good, failing})
 
-	if len(dump.Installations) != 1 {
-		t.Fatalf("Installations len = %d, want 1 (Edge skipped on export error)", len(dump.Installations))
+	if len(dump.Vaults) != 1 {
+		t.Fatalf("Vaults len = %d, want 1 (failing browser skipped)", len(dump.Vaults))
 	}
-	if dump.Installations[0].Browser != "Chrome" {
-		t.Errorf("Browser = %q, want Chrome", dump.Installations[0].Browser)
+	if dump.Vaults[0].Browser != chromeName {
+		t.Errorf("Browser = %q, want %q", dump.Vaults[0].Browser, chromeName)
 	}
 }
 
 func TestBuildDump_JSONRoundTrip(t *testing.T) {
 	b := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: "Chrome", profile: "Default", userDataDir: "/p"},
+		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: testUDD},
 		keys:        keyretriever.MasterKeys{V10: []byte{0x01, 0x02, 0x03}, V20: []byte{0xff, 0xee}},
 	}
 
@@ -153,16 +160,16 @@ func TestBuildDump_JSONRoundTrip(t *testing.T) {
 	if parsed.Version != dump.Version {
 		t.Errorf("Version round-trip: got %q, want %q", parsed.Version, dump.Version)
 	}
-	if len(parsed.Installations) != 1 {
-		t.Fatalf("Installations len = %d", len(parsed.Installations))
+	if len(parsed.Vaults) != 1 {
+		t.Fatalf("Vaults len = %d", len(parsed.Vaults))
 	}
-	if !bytes.Equal(parsed.Installations[0].Keys.V10, dump.Installations[0].Keys.V10) {
+	if !bytes.Equal(parsed.Vaults[0].Keys.V10, dump.Vaults[0].Keys.V10) {
 		t.Errorf("V10 round-trip mismatch")
 	}
-	if !bytes.Equal(parsed.Installations[0].Keys.V20, dump.Installations[0].Keys.V20) {
+	if !bytes.Equal(parsed.Vaults[0].Keys.V20, dump.Vaults[0].Keys.V20) {
 		t.Errorf("V20 round-trip mismatch")
 	}
-	if parsed.Installations[0].Keys.V11 != nil {
-		t.Errorf("V11 should be omitted (nil), got %v", parsed.Installations[0].Keys.V11)
+	if parsed.Vaults[0].Keys.V11 != nil {
+		t.Errorf("V11 should be omitted (nil), got %v", parsed.Vaults[0].Keys.V11)
 	}
 }

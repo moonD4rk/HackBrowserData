@@ -12,54 +12,44 @@ import (
 
 const DumpVersion = "1"
 
-// Dump is the cross-host portable container for Chromium-family master keys.
-// A Dump produced on one host can be consumed on another to skip platform-native
-// key retrieval (DPAPI, ABE injection, Keychain prompt, D-Bus query) when
-// decrypting a copy of the browser's profile data.
+// Dump is the cross-host portable container for Chromium master keys. Producing it on one host lets another host skip
+// platform-native retrieval (DPAPI, ABE injection, Keychain prompt, D-Bus query) when decrypting copied profile data.
 type Dump struct {
-	Version       string         `json:"version"`
-	GeneratedAt   time.Time      `json:"generated_at"`
-	Host          DumpHost       `json:"host"`
-	Installations []Installation `json:"installations"`
+	Version   string    `json:"version"`
+	CreatedAt time.Time `json:"created_at"`
+	Host      Host      `json:"host"`
+	Vaults    []Vault   `json:"vaults"`
 }
 
-// DumpHost OS / Arch always set; Hostname / User best-effort (empty on syscall failure).
-type DumpHost struct {
+// Host OS / Arch always set; Hostname / User best-effort (empty on syscall failure).
+type Host struct {
 	OS       string `json:"os"`
 	Arch     string `json:"arch"`
 	Hostname string `json:"hostname,omitempty"`
 	User     string `json:"user,omitempty"`
 }
 
-// Installation groups profiles sharing master keys (master keys are per-installation, not per-profile).
-type Installation struct {
-	Browser     string      `json:"browser"`
-	UserDataDir string      `json:"user_data_dir"`
-	Profiles    []string    `json:"profiles"`
-	Keys        InstallKeys `json:"keys"`
+// Vault groups profiles sharing master keys (master keys are per-installation, not per-profile).
+type Vault struct {
+	Browser     string     `json:"browser"`
+	UserDataDir string     `json:"user_data_dir"`
+	Profiles    []string   `json:"profiles"`
+	Keys        MasterKeys `json:"keys"`
 }
 
-// InstallKeys per-cipher-tier master keys; encoding/json marshals []byte as base64.
-type InstallKeys struct {
-	V10 []byte `json:"v10,omitempty"`
-	V11 []byte `json:"v11,omitempty"`
-	V20 []byte `json:"v20,omitempty"`
-}
-
-// NewDump returns a Dump initialized with current host metadata and an empty Installations slice
+// NewDump returns a Dump initialized with current host metadata and an empty Vaults slice
 func NewDump() Dump {
 	return Dump{
-		Version:       DumpVersion,
-		GeneratedAt:   time.Now().UTC(),
-		Host:          currentHost(),
-		Installations: []Installation{},
+		Version:   DumpVersion,
+		CreatedAt: time.Now().UTC(),
+		Host:      currentHost(),
+		Vaults:    []Vault{},
 	}
 }
 
-// currentHost collects host identification. Hostname / User are best-effort:
-// syscall failures leave the field empty, omitted from JSON via `omitempty`.
-func currentHost() DumpHost {
-	h := DumpHost{OS: runtime.GOOS, Arch: runtime.GOARCH}
+// currentHost collects host identification; Hostname/User are best-effort (syscall failure leaves them empty + omitempty).
+func currentHost() Host {
+	h := Host{OS: runtime.GOOS, Arch: runtime.GOARCH}
 	if name, err := os.Hostname(); err == nil {
 		h.Hostname = name
 	}

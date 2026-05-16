@@ -41,7 +41,7 @@ func keysExportCmd() *cobra.Command {
 			}
 
 			dump := browser.BuildDump(browsers)
-			log.Infof("Exported keys for %d installation(s)", len(dump.Installations))
+			log.Infof("Exported keys for %d vault(s)", len(dump.Vaults))
 
 			if outputPath == "" {
 				return dump.WriteJSON(os.Stdout)

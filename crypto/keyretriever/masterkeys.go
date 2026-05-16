@@ -9,9 +9,9 @@ import (
 // (Chrome 127+ on Windows mixes v10+v20; Linux can mix v10+v11), so each tier must be populated
 // independently for lossless decryption. A nil tier means that cipher version cannot be decrypted.
 type MasterKeys struct {
-	V10 []byte
-	V11 []byte
-	V20 []byte
+	V10 []byte `json:"v10,omitempty"`
+	V11 []byte `json:"v11,omitempty"`
+	V20 []byte `json:"v20,omitempty"`
 }
 
 // Retrievers is the per-tier retriever configuration; unused slots are nil.
