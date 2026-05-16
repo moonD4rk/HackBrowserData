@@ -1,7 +1,6 @@
 package chromium
 
 import (
-	"crypto/sha1"
 	"database/sql"
 	"errors"
 	"sort"
@@ -98,27 +97,4 @@ func extractYandexPasswords(keys keyretriever.MasterKeys, path string) ([]types.
 
 func countPasswords(path string) (int, error) {
 	return sqliteutil.CountRows(path, false, countLoginQuery)
-}
-
-// yandexLoginAAD is SHA1(origin_url \x00 username_element \x00 username_value \x00 password_element \x00 signon_realm),
-// with keyID appended when the profile has a master password (v1 always passes nil).
-func yandexLoginAAD(originURL, usernameElem, usernameVal, passwordElem, signonRealm string, keyID []byte) []byte {
-	h := sha1.New()
-	h.Write([]byte(originURL))
-	h.Write([]byte{0})
-	h.Write([]byte(usernameElem))
-	h.Write([]byte{0})
-	h.Write([]byte(usernameVal))
-	h.Write([]byte{0})
-	h.Write([]byte(passwordElem))
-	h.Write([]byte{0})
-	h.Write([]byte(signonRealm))
-	sum := h.Sum(nil)
-	if len(keyID) == 0 {
-		return sum
-	}
-	out := make([]byte, 0, len(sum)+len(keyID))
-	out = append(out, sum...)
-	out = append(out, keyID...)
-	return out
 }

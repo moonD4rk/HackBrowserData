@@ -119,14 +119,3 @@ func countCreditCards(path string) (int, error) {
 func countYandexCreditCards(path string) (int, error) {
 	return sqliteutil.CountRows(path, false, yandexCreditCardCountQuery)
 }
-
-// yandexCardAAD is the raw guid bytes (+ keyID if the profile has a master password).
-func yandexCardAAD(guid string, keyID []byte) []byte {
-	if len(keyID) == 0 {
-		return []byte(guid)
-	}
-	out := make([]byte, 0, len(guid)+len(keyID))
-	out = append(out, guid...)
-	out = append(out, keyID...)
-	return out
-}

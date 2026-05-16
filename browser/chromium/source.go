@@ -32,24 +32,6 @@ var chromiumSources = map[types.Category][]sourcePath{
 	types.SessionStorage: {dir("Session Storage")},
 }
 
-// yandexSourceOverrides contains only the entries that differ from chromiumSources.
-var yandexSourceOverrides = map[types.Category][]sourcePath{
-	types.Password:   {file("Ya Passman Data")},
-	types.CreditCard: {file("Ya Credit Cards")},
-}
-
-// yandexSources returns chromiumSources with Yandex-specific overrides applied.
-func yandexSources() map[types.Category][]sourcePath {
-	sources := make(map[types.Category][]sourcePath, len(chromiumSources))
-	for k, v := range chromiumSources {
-		sources[k] = v
-	}
-	for k, v := range yandexSourceOverrides {
-		sources[k] = v
-	}
-	return sources
-}
-
 // sourcesForKind returns the source mapping for a browser kind.
 func sourcesForKind(kind types.BrowserKind) map[types.Category][]sourcePath {
 	switch kind {
@@ -104,13 +86,6 @@ func (e creditCardExtractor) extract(keys keyretriever.MasterKeys, path string, 
 	var err error
 	data.CreditCards, err = e.fn(keys, path)
 	return err
-}
-
-// yandexExtractors overrides Password and CreditCard extraction for Yandex, which wraps its data-encryption key inside
-// meta.local_encryptor_data, binds per-row AAD to GCM, and stores cards as JSON blobs in a records table.
-var yandexExtractors = map[types.Category]categoryExtractor{
-	types.Password:   passwordExtractor{fn: extractYandexPasswords},
-	types.CreditCard: creditCardExtractor{fn: extractYandexCreditCards},
 }
 
 // operaExtractors overrides Extension extraction for Opera,
