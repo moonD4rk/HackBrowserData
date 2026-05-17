@@ -69,12 +69,16 @@ func (d Dump) WriteJSON(w io.Writer) error {
 	return nil
 }
 
-// ReadJSON parses a Dump from r.
+// ReadJSON parses a Dump from r and rejects schema versions this build cannot interpret —
+// silent misparse of a future v2 schema is worse than a clear error.
 func ReadJSON(r io.Reader) (Dump, error) {
 	var d Dump
 	dec := json.NewDecoder(r)
 	if err := dec.Decode(&d); err != nil {
 		return Dump{}, fmt.Errorf("decode dump: %w", err)
+	}
+	if d.Version != DumpVersion {
+		return Dump{}, fmt.Errorf("unsupported dump version %q (this build expects %q)", d.Version, DumpVersion)
 	}
 	return d, nil
 }

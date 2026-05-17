@@ -36,12 +36,15 @@ func (m *mockBrowser) CountEntries(_ []types.Category) (map[types.Category]int, 
 
 type mockChromiumBrowser struct {
 	mockBrowser
-	keys      keyretriever.MasterKeys
-	exportErr error
-	calls     int
+	keys               keyretriever.MasterKeys
+	exportErr          error
+	calls              int
+	receivedRetrievers keyretriever.Retrievers
 }
 
-func (m *mockChromiumBrowser) SetKeyRetrievers(_ keyretriever.Retrievers) {}
+func (m *mockChromiumBrowser) SetKeyRetrievers(r keyretriever.Retrievers) {
+	m.receivedRetrievers = r
+}
 
 func (m *mockChromiumBrowser) ExportKeys() (keyretriever.MasterKeys, error) {
 	m.calls++
@@ -193,6 +196,127 @@ func TestBuildDump_PartialKeys(t *testing.T) {
 	}
 	if dump.Vaults[0].Keys.V20 != nil {
 		t.Errorf("V20 should remain nil, got %v", dump.Vaults[0].Keys.V20)
+	}
+}
+
+func TestApplyDump_Match(t *testing.T) {
+	b := &mockChromiumBrowser{
+		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: testUDD},
+	}
+	dump := keyretriever.Dump{
+		Vaults: []keyretriever.Vault{
+			{Browser: chromeName, UserDataDir: testUDD, Keys: keyretriever.MasterKeys{V10: []byte("v10-from-dump")}},
+		},
+	}
+	ApplyDump([]Browser{b}, dump)
+
+	if b.receivedRetrievers.V10 == nil {
+		t.Fatal("V10 retriever should be set from matching vault")
+	}
+	got, err := b.receivedRetrievers.V10.RetrieveKey(keyretriever.Hints{})
+	if err != nil || string(got) != "v10-from-dump" {
+		t.Errorf("V10.RetrieveKey() = %q, err = %v, want %q", got, err, "v10-from-dump")
+	}
+	if b.receivedRetrievers.V11 != nil {
+		t.Errorf("V11 should be nil (tier not in dump), got %v", b.receivedRetrievers.V11)
+	}
+}
+
+func TestApplyDump_MissingVault(t *testing.T) {
+	b := &mockChromiumBrowser{
+		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: testUDD},
+	}
+	dump := keyretriever.Dump{
+		Vaults: []keyretriever.Vault{
+			{Browser: testEdgeName, UserDataDir: "/edge", Keys: keyretriever.MasterKeys{V10: []byte("v10")}},
+		},
+	}
+	ApplyDump([]Browser{b}, dump)
+
+	if b.receivedRetrievers.V10 != nil {
+		t.Errorf("V10 should remain nil when no matching vault, got %v", b.receivedRetrievers.V10)
+	}
+}
+
+func TestApplyDump_NonKeyManagerSkipped(t *testing.T) {
+	firefox := &mockBrowser{name: firefoxName, profile: "default-release", userDataDir: "/ff"}
+	dump := keyretriever.Dump{
+		Vaults: []keyretriever.Vault{
+			{Browser: firefoxName, UserDataDir: "/ff", Keys: keyretriever.MasterKeys{V10: []byte("v10")}},
+		},
+	}
+	// firefox does not implement KeyManager; ApplyDump must not panic and must not attempt injection.
+	ApplyDump([]Browser{firefox}, dump)
+}
+
+func TestApplyDump_RoundTrip(t *testing.T) {
+	src := &mockChromiumBrowser{
+		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: testUDD},
+		keys:        keyretriever.MasterKeys{V10: []byte("v10-rt"), V20: []byte("v20-rt")},
+	}
+	dump := BuildDump([]Browser{src})
+
+	dst := &mockChromiumBrowser{
+		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: testUDD},
+	}
+	ApplyDump([]Browser{dst}, dump)
+
+	v10, _ := dst.receivedRetrievers.V10.RetrieveKey(keyretriever.Hints{})
+	if string(v10) != "v10-rt" {
+		t.Errorf("V10 round-trip: got %q, want v10-rt", v10)
+	}
+	v20, _ := dst.receivedRetrievers.V20.RetrieveKey(keyretriever.Hints{})
+	if string(v20) != "v20-rt" {
+		t.Errorf("V20 round-trip: got %q, want v20-rt", v20)
+	}
+	if dst.receivedRetrievers.V11 != nil {
+		t.Errorf("V11 should be nil (not in source keys), got %v", dst.receivedRetrievers.V11)
+	}
+}
+
+func TestApplyDump_FallbackOnPathMismatch(t *testing.T) {
+	// Cross-host scenario: dump was created on Windows but is applied on Linux/macOS where the
+	// UserDataDir literally differs. With a single vault for the browser, ApplyDump should still
+	// inject — otherwise the primary cross-host use case fails silently.
+	b := &mockChromiumBrowser{
+		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: "/local/chrome"},
+	}
+	dump := keyretriever.Dump{
+		Vaults: []keyretriever.Vault{
+			{
+				Browser:     chromeName,
+				UserDataDir: `C:\Users\foo\AppData\Local\Google\Chrome\User Data`,
+				Keys:        keyretriever.MasterKeys{V10: []byte("v10-fallback")},
+			},
+		},
+	}
+	ApplyDump([]Browser{b}, dump)
+
+	if b.receivedRetrievers.V10 == nil {
+		t.Fatal("V10 retriever should be set via single-vault fallback")
+	}
+	got, err := b.receivedRetrievers.V10.RetrieveKey(keyretriever.Hints{})
+	if err != nil || string(got) != "v10-fallback" {
+		t.Errorf("V10.RetrieveKey() = %q, err = %v, want %q", got, err, "v10-fallback")
+	}
+}
+
+func TestApplyDump_NoFallbackWhenAmbiguous(t *testing.T) {
+	// Two Chrome vaults in the dump and no exact path match — ApplyDump must not guess which
+	// installation the local browser corresponds to.
+	b := &mockChromiumBrowser{
+		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: "/local/chrome"},
+	}
+	dump := keyretriever.Dump{
+		Vaults: []keyretriever.Vault{
+			{Browser: chromeName, UserDataDir: "/path/a", Keys: keyretriever.MasterKeys{V10: []byte("a")}},
+			{Browser: chromeName, UserDataDir: "/path/b", Keys: keyretriever.MasterKeys{V10: []byte("b")}},
+		},
+	}
+	ApplyDump([]Browser{b}, dump)
+
+	if b.receivedRetrievers.V10 != nil {
+		t.Errorf("V10 should remain nil when fallback is ambiguous, got %v", b.receivedRetrievers.V10)
 	}
 }
 
