@@ -104,8 +104,18 @@ func selectBrowsers(browserName, profilePath, keychainPw, keysPath string) ([]br
 		})
 	}
 
+	// Require -p and a single -b to prevent dumped keys from being applied to local profile data,
+	// which would decrypt to garbage. -b all is rejected because pickFromConfigs ignores -p in that case.
+	if profilePath == "" {
+		return nil, fmt.Errorf("--keys requires -p <copied-profile-dir>")
+	}
+	name := strings.ToLower(browserName)
+	if name == "" || name == "all" {
+		return nil, fmt.Errorf(`--keys requires -b <browser> (single, not "all")`)
+	}
+
 	if keychainPw != "" {
-		log.Warnf("--keychain-pw is ignored when --keys is set; platform key retrieval is skipped")
+		log.Warnf("--keychain-pw is ignored when --keys is set")
 	}
 
 	browsers, err := browser.DiscoverBrowsers(browser.PickOptions{
@@ -128,6 +138,14 @@ func selectBrowsers(browserName, profilePath, keychainPw, keysPath string) ([]br
 	}
 
 	browser.ApplyDump(browsers, dump)
+
+	for _, b := range browsers {
+		if _, ok := b.(browser.KeychainPasswordReceiver); ok {
+			log.Infof("Safari has no portable master key; run `dump -b safari` separately for full extraction")
+			break
+		}
+	}
+
 	return browsers, nil
 }
 
