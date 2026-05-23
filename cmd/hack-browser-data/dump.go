@@ -2,12 +2,14 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/moond4rk/hackbrowserdata/browser"
+	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
 	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/output"
 	"github.com/moond4rk/hackbrowserdata/types"
@@ -22,6 +24,7 @@ func dumpCmd() *cobra.Command {
 		outputDir    string
 		profilePath  string
 		keychainPw   string
+		keysPath     string
 		compress     bool
 	)
 
@@ -32,13 +35,10 @@ func dumpCmd() *cobra.Command {
   hack-browser-data dump -b chrome -c password,cookie
   hack-browser-data dump -b chrome -f json -d output
   hack-browser-data dump -f cookie-editor
+  hack-browser-data dump --keys dump.json -b chrome -p /path/to/copied/User\ Data
   hack-browser-data dump --zip`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			browsers, err := browser.PickBrowsers(browser.PickOptions{
-				Name:             browserName,
-				ProfilePath:      profilePath,
-				KeychainPassword: keychainPw,
-			})
+			browsers, err := selectBrowsers(browserName, profilePath, keychainPw, keysPath)
 			if err != nil {
 				return err
 			}
@@ -86,9 +86,67 @@ func dumpCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&outputDir, "dir", "d", "results", "output directory")
 	cmd.Flags().StringVarP(&profilePath, "profile-path", "p", "", "custom profile dir path, get with chrome://version")
 	cmd.Flags().StringVar(&keychainPw, "keychain-pw", "", "macOS keychain password")
+	cmd.Flags().StringVar(&keysPath, "keys", "", "import master keys from JSON file (from `keys export`), skipping platform retrieval")
 	cmd.Flags().BoolVar(&compress, "zip", false, "compress output to zip")
 
 	return cmd
+}
+
+// selectBrowsers returns wired-up browsers for either platform-native key retrieval (default) or
+// dump-based key injection (when keysPath is non-empty). The dump path uses DiscoverBrowsers so it
+// never triggers a keychain prompt or platform retrievers.
+func selectBrowsers(browserName, profilePath, keychainPw, keysPath string) ([]browser.Browser, error) {
+	if keysPath == "" {
+		return browser.PickBrowsers(browser.PickOptions{
+			Name:             browserName,
+			ProfilePath:      profilePath,
+			KeychainPassword: keychainPw,
+		})
+	}
+
+	// Require -p and a single -b to prevent dumped keys from being applied to local profile data,
+	// which would decrypt to garbage. -b all is rejected because pickFromConfigs ignores -p in that case.
+	if profilePath == "" {
+		return nil, fmt.Errorf("--keys requires -p <copied-profile-dir>")
+	}
+	name := strings.ToLower(browserName)
+	if name == "" || name == "all" {
+		return nil, fmt.Errorf(`--keys requires -b <browser> (single, not "all")`)
+	}
+
+	if keychainPw != "" {
+		log.Warnf("--keychain-pw is ignored when --keys is set")
+	}
+
+	browsers, err := browser.DiscoverBrowsers(browser.PickOptions{
+		Name:        browserName,
+		ProfilePath: profilePath,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	f, err := os.Open(keysPath)
+	if err != nil {
+		return nil, fmt.Errorf("open keys file %q: %w", keysPath, err)
+	}
+	defer f.Close()
+
+	dump, err := keyretriever.ReadJSON(f)
+	if err != nil {
+		return nil, fmt.Errorf("read keys file %q: %w", keysPath, err)
+	}
+
+	browser.ApplyDump(browsers, dump)
+
+	for _, b := range browsers {
+		if _, ok := b.(browser.KeychainPasswordReceiver); ok {
+			log.Infof("Safari has no portable master key; run `dump -b safari` separately for full extraction")
+			break
+		}
+	}
+
+	return browsers, nil
 }
 
 // parseCategories converts a comma-separated string into a Category slice.
