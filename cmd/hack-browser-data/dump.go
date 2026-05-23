@@ -35,7 +35,7 @@ func dumpCmd() *cobra.Command {
   hack-browser-data dump -b chrome -c password,cookie
   hack-browser-data dump -b chrome -f json -d output
   hack-browser-data dump -f cookie-editor
-  hack-browser-data dump --keys dump.json -p /path/to/copied/User\ Data
+  hack-browser-data dump --keys dump.json -b chrome -p /path/to/copied/User\ Data
   hack-browser-data dump --zip`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			browsers, err := selectBrowsers(browserName, profilePath, keychainPw, keysPath)
@@ -128,13 +128,13 @@ func selectBrowsers(browserName, profilePath, keychainPw, keysPath string) ([]br
 
 	f, err := os.Open(keysPath)
 	if err != nil {
-		return nil, fmt.Errorf("open keys file %s: %w", keysPath, err)
+		return nil, fmt.Errorf("open keys file %q: %w", keysPath, err)
 	}
 	defer f.Close()
 
 	dump, err := keyretriever.ReadJSON(f)
 	if err != nil {
-		return nil, fmt.Errorf("read keys file %s: %w", keysPath, err)
+		return nil, fmt.Errorf("read keys file %q: %w", keysPath, err)
 	}
 
 	browser.ApplyDump(browsers, dump)
