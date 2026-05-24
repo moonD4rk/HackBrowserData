@@ -122,6 +122,9 @@ func loadAndApplyKeys(browserName, profilePath, keysPath string) ([]browser.Brow
 	if name == "" || name == "all" {
 		return nil, fmt.Errorf(`requires -b <browser> (single, not "all")`)
 	}
+	if keysPath == "" {
+		return nil, fmt.Errorf("requires -i <keys-file> (or - for stdin)")
+	}
 
 	var r io.Reader = os.Stdin
 	if keysPath != "-" {
