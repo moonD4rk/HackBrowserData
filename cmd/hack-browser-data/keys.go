@@ -35,7 +35,7 @@ func keysExportCmd() *cobra.Command {
 		Example: `  hack-browser-data keys export -o dump.json
   hack-browser-data keys export -b chrome`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			browsers, err := browser.PickBrowsers(browser.PickOptions{
+			browsers, err := browser.DiscoverBrowsersWithKeys(browser.PickOptions{
 				Name:             browserName,
 				KeychainPassword: keychainPw,
 			})

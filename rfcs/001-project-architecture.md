@@ -13,14 +13,14 @@ Key constraints:
 - **Go 1.20** — the module must build with Go 1.20 to maintain Windows 7 support. Features from Go 1.21+ (`log/slog`, `slices`, `maps`, `cmp`) must not be used.
 - **Supported engines**: Chromium (including Yandex and Opera variants) and Firefox.
 - **Supported platforms**: Windows (DPAPI), macOS (Keychain), Linux (D-Bus Secret Service).
-- **No root-level library API** — the CLI calls `browser.PickBrowsers()` directly; there is no importable `pkg/` surface.
+- **No root-level library API** — the CLI calls `browser.DiscoverBrowsersWithKeys()` directly; there is no importable `pkg/` surface.
 
 ## 2. Directory Structure
 
 ```
 HackBrowserData/
 ├── cmd/hack-browser-data/    # CLI entrypoint: cobra root, dump, list, version
-├── browser/                  # Browser interface, PickBrowsers(), platform browser lists
+├── browser/                  # Browser interface, DiscoverBrowsersWithKeys(), platform browser lists
 │   ├── chromium/             # Chromium engine: extraction, decryption, profile discovery
 │   └── firefox/              # Firefox engine: extraction, NSS key derivation
 ├── types/                    # Data model: Category enum, Entry structs, BrowserData
@@ -82,14 +82,14 @@ See `types/category.go` for the authoritative enum definition.
 There are two entry points, one for extraction and one for discovery:
 
 ```
-PickBrowsers(opts)                    // used by `dump` — ready to Extract
+DiscoverBrowsersWithKeys(opts)                    // used by `dump` — ready to Extract
   → pickFromConfigs(configs, opts)     // shared discovery core
       → platformBrowsers()             // build-tagged list for this OS
       → filter by name / profile path
       → newBrowsers(cfg)                // dispatch to chromium/firefox/safari.NewBrowsers
           → discoverProfiles()          // scan profile subdirectories
           → resolveSourcePaths()        // stat candidates, first match wins
-  → newPlatformInjector(opts)          // build-tagged: returns a func(Browser)
+  → newCredentialInjector(opts)          // build-tagged: returns a browserInjector
       → for each browser:               // closure captures retriever + keychain pw lazily
           inject(b)                     // type-assert retrieverSetter / keychainPasswordSetter
 
@@ -97,7 +97,7 @@ DiscoverBrowsers(opts)                 // used by `list` / `list --detail`
   → pickFromConfigs(configs, opts)     // same shared discovery core, NO injection
 ```
 
-`PickBrowsers` does discovery + decryption setup in one call; the returned
+`DiscoverBrowsersWithKeys` does discovery + decryption setup in one call; the returned
 browsers are ready for `b.Extract`. `DiscoverBrowsers` skips injection
 entirely, so list-style commands never trigger the macOS Keychain password
 prompt — they have no use for the credential. Both entry points share the
@@ -106,8 +106,8 @@ consistent.
 
 Key design decisions:
 
-- **One KeyRetriever chain per process** — built lazily inside `newPlatformInjector` and reused across every Chromium browser and every profile to prevent repeated keychain prompts on macOS.
-- **Discovery is decoupled from injection** — `pickFromConfigs` is injection-free; `DiscoverBrowsers` stops after it, `PickBrowsers` continues into injection.
+- **One KeyRetriever chain per process** — built lazily inside `newCredentialInjector` and reused across every Chromium browser and every profile to prevent repeated keychain prompts on macOS.
+- **Discovery is decoupled from injection** — `pickFromConfigs` is injection-free; `DiscoverBrowsers` stops after it, `DiscoverBrowsersWithKeys` continues into injection.
 - **Profile discovery differs by engine**: Chromium looks for `Preferences` files in subdirectories; Firefox accepts any subdirectory containing known source files.
 - **Flat layout fallback** — Opera-style browsers that store data directly in UserDataDir (no profile subdirectories) are handled by falling back to the base directory.
 

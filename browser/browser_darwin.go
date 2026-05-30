@@ -155,9 +155,9 @@ func resolveKeychainPassword(flagPassword string) string {
 	return password
 }
 
-// newPlatformInjector lazily wires retrievers (and the macOS keychain password) into each Browser;
+// newCredentialInjector lazily wires retrievers (and the macOS keychain password) into each Browser;
 // `-b firefox` never triggers a keychain prompt because lazy resolution skips browsers that need neither.
-func newPlatformInjector(opts PickOptions) func(Browser) {
+func newCredentialInjector(opts PickOptions) browserInjector {
 	var (
 		password   string
 		retrievers keyretriever.Retrievers

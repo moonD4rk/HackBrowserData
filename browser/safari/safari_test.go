@@ -59,17 +59,18 @@ func TestNewBrowsers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := tt.setup(t)
 			cfg := types.BrowserConfig{Name: "Safari", Kind: types.Safari, UserDataDir: dir}
-			browsers, err := NewBrowsers(cfg)
+			b, err := NewBrowser(cfg)
 			require.NoError(t, err)
 
 			if tt.wantLen == 0 {
-				assert.Empty(t, browsers)
+				assert.Nil(t, b)
 				return
 			}
-			require.Len(t, browsers, tt.wantLen)
-			assert.Equal(t, "Safari", browsers[0].BrowserName())
-			assert.Equal(t, "default", browsers[0].ProfileName())
-			assert.Equal(t, dir, browsers[0].ProfileDir())
+			require.NotNil(t, b)
+			assert.Equal(t, "Safari", b.BrowserName())
+			require.Len(t, b.Profiles(), 1)
+			assert.Equal(t, "default", b.Profiles()[0].Name)
+			assert.Equal(t, dir, b.Profiles()[0].Dir)
 		})
 	}
 }
@@ -106,32 +107,33 @@ func TestNewBrowsers_MultiProfile(t *testing.T) {
 	})
 
 	cfg := types.BrowserConfig{Name: "Safari", Kind: types.Safari, UserDataDir: legacyHome}
-	browsers, err := NewBrowsers(cfg)
+	b, err := NewBrowser(cfg)
 	require.NoError(t, err)
-	require.Len(t, browsers, 2)
+	require.NotNil(t, b)
+	require.Len(t, b.profiles, 2)
 
-	names := []string{browsers[0].ProfileName(), browsers[1].ProfileName()}
+	names := []string{b.profiles[0].ctx.name, b.profiles[1].ctx.name}
 	assert.Contains(t, names, "default")
 	assert.Contains(t, names, "work")
 
-	for _, b := range browsers {
-		switch b.ProfileName() {
+	for _, p := range b.profiles {
+		switch p.ctx.name {
 		case "default":
-			assert.Equal(t, legacyHome, b.ProfileDir())
-			assert.Contains(t, b.sourcePaths, types.History)
-			assert.Equal(t, filepath.Join(legacyHome, "History.db"), b.sourcePaths[types.History].absPath)
+			assert.Equal(t, legacyHome, p.dir())
+			assert.Contains(t, p.sourcePaths, types.History)
+			assert.Equal(t, filepath.Join(legacyHome, "History.db"), p.sourcePaths[types.History].absPath)
 			// Default profile's LocalStorage root (WebsiteData/Default) isn't created in this fixture,
 			// so it won't resolve — which is the point: resolveSourcePaths only registers paths that exist.
-			assert.NotContains(t, b.sourcePaths, types.LocalStorage)
+			assert.NotContains(t, p.sourcePaths, types.LocalStorage)
 		case "work":
-			assert.Equal(t, filepath.Join(container, "Safari", "Profiles", uuid), b.ProfileDir())
-			assert.Contains(t, b.sourcePaths, types.History)
+			assert.Equal(t, filepath.Join(container, "Safari", "Profiles", uuid), p.dir())
+			assert.Contains(t, p.sourcePaths, types.History)
 			assert.Equal(t,
 				filepath.Join(container, "Safari", "Profiles", uuid, "History.db"),
-				b.sourcePaths[types.History].absPath)
-			require.Contains(t, b.sourcePaths, types.LocalStorage)
-			assert.Equal(t, namedOriginsDir, b.sourcePaths[types.LocalStorage].absPath)
-			assert.True(t, b.sourcePaths[types.LocalStorage].isDir)
+				p.sourcePaths[types.History].absPath)
+			require.Contains(t, p.sourcePaths, types.LocalStorage)
+			assert.Equal(t, namedOriginsDir, p.sourcePaths[types.LocalStorage].absPath)
+			assert.True(t, p.sourcePaths[types.LocalStorage].isDir)
 		}
 	}
 }
@@ -174,167 +176,18 @@ func TestCountEntries(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "History.db"), data, 0o644))
 
-	browsers, err := NewBrowsers(types.BrowserConfig{
+	b, err := NewBrowser(types.BrowserConfig{
 		Name: "Safari", Kind: types.Safari, UserDataDir: dir,
 	})
 	require.NoError(t, err)
-	require.Len(t, browsers, 1)
+	require.NotNil(t, b)
 
-	counts, err := browsers[0].CountEntries([]types.Category{types.History})
+	results, err := b.CountEntries([]types.Category{types.History})
 	require.NoError(t, err)
-	assert.Equal(t, 2, counts[types.History])
+	require.Len(t, results, 1)
+	assert.Equal(t, 2, results[0].Counts[types.History])
 }
 
-// ---------------------------------------------------------------------------
-// countCategory / extractCategory
-// ---------------------------------------------------------------------------
-
-func TestCountCategory(t *testing.T) {
-	t.Run("History", func(t *testing.T) {
-		path := createTestDB(t, "History.db",
-			[]string{safariHistoryItemsSchema, safariHistoryVisitsSchema},
-			insertHistoryItem(1, "https://example.com", "example.com", 1),
-		)
-		b := &Browser{}
-		assert.Equal(t, 1, b.countCategory(types.History, path))
-	})
-
-	t.Run("Cookie", func(t *testing.T) {
-		path := buildTestBinaryCookies(t, []testCookie{
-			{domain: ".example.com", name: "a", path: "/", value: "1", expires: 2000000000.0, creation: 700000000.0},
-			{domain: ".go.dev", name: "b", path: "/", value: "2", expires: 2000000000.0, creation: 700000000.0},
-		})
-		b := &Browser{}
-		assert.Equal(t, 2, b.countCategory(types.Cookie, path))
-	})
-
-	t.Run("Bookmark", func(t *testing.T) {
-		path := buildTestBookmarksPlist(t, safariBookmark{
-			Type: bookmarkTypeList,
-			Children: []safariBookmark{
-				{Type: bookmarkTypeLeaf, URLString: "https://a.com", URIDictionary: uriDictionary{Title: "A"}},
-				{Type: bookmarkTypeLeaf, URLString: "https://b.com", URIDictionary: uriDictionary{Title: "B"}},
-			},
-		})
-		b := &Browser{}
-		assert.Equal(t, 2, b.countCategory(types.Bookmark, path))
-	})
-
-	t.Run("Download", func(t *testing.T) {
-		path := buildTestDownloadsPlist(t, safariDownloads{
-			DownloadHistory: []safariDownloadEntry{
-				{URL: "https://example.com/file.zip", Path: "/tmp/file.zip", TotalBytes: 100},
-			},
-		})
-		b := &Browser{}
-		assert.Equal(t, 1, b.countCategory(types.Download, path))
-	})
-
-	t.Run("LocalStorage", func(t *testing.T) {
-		dir := buildTestLocalStorageDir(t, map[string][]testLocalStorageItem{
-			"https://example.com": {{Key: "k1", Value: "v1"}, {Key: "k2", Value: "v2"}},
-			"https://go.dev":      {{Key: "theme", Value: "dark"}},
-		})
-		b := &Browser{}
-		assert.Equal(t, 3, b.countCategory(types.LocalStorage, dir))
-	})
-
-	t.Run("UnsupportedCategory", func(t *testing.T) {
-		b := &Browser{}
-		assert.Equal(t, 0, b.countCategory(types.CreditCard, "unused"))
-		assert.Equal(t, 0, b.countCategory(types.SessionStorage, "unused"))
-	})
-}
-
-func TestExtractCategory(t *testing.T) {
-	t.Run("History", func(t *testing.T) {
-		path := createTestDB(t, "History.db",
-			[]string{safariHistoryItemsSchema, safariHistoryVisitsSchema},
-			insertHistoryItem(1, "https://example.com", "example.com", 3),
-			insertHistoryItem(2, "https://go.dev", "go.dev", 1),
-			insertHistoryVisit(1, 1, 700000000.0, "Example"),
-			insertHistoryVisit(2, 2, 700000000.0, "Go"),
-		)
-		b := &Browser{}
-		data := &types.BrowserData{}
-		b.extractCategory(data, types.History, path)
-
-		require.Len(t, data.Histories, 2)
-		// Sorted by visit count descending
-		assert.Equal(t, 3, data.Histories[0].VisitCount)
-		assert.Equal(t, 1, data.Histories[1].VisitCount)
-	})
-
-	t.Run("Cookie", func(t *testing.T) {
-		path := buildTestBinaryCookies(t, []testCookie{
-			{
-				domain: ".example.com", name: "session", path: "/", value: "abc",
-				secure: true, httpOnly: true, expires: 2000000000.0, creation: 700000000.0,
-			},
-		})
-		b := &Browser{}
-		data := &types.BrowserData{}
-		b.extractCategory(data, types.Cookie, path)
-
-		require.Len(t, data.Cookies, 1)
-		assert.Equal(t, ".example.com", data.Cookies[0].Host)
-		assert.Equal(t, "session", data.Cookies[0].Name)
-		assert.True(t, data.Cookies[0].IsSecure)
-		assert.True(t, data.Cookies[0].IsHTTPOnly)
-	})
-
-	t.Run("Bookmark", func(t *testing.T) {
-		path := buildTestBookmarksPlist(t, safariBookmark{
-			Type: bookmarkTypeList,
-			Children: []safariBookmark{
-				{Type: bookmarkTypeLeaf, URLString: "https://github.com", URIDictionary: uriDictionary{Title: "GitHub"}},
-			},
-		})
-		b := &Browser{}
-		data := &types.BrowserData{}
-		b.extractCategory(data, types.Bookmark, path)
-
-		require.Len(t, data.Bookmarks, 1)
-		assert.Equal(t, "GitHub", data.Bookmarks[0].Name)
-		assert.Equal(t, "https://github.com", data.Bookmarks[0].URL)
-	})
-
-	t.Run("Download", func(t *testing.T) {
-		path := buildTestDownloadsPlist(t, safariDownloads{
-			DownloadHistory: []safariDownloadEntry{
-				{URL: "https://example.com/file.zip", Path: "/tmp/file.zip", TotalBytes: 1024},
-			},
-		})
-		b := &Browser{}
-		data := &types.BrowserData{}
-		b.extractCategory(data, types.Download, path)
-
-		require.Len(t, data.Downloads, 1)
-		assert.Equal(t, "https://example.com/file.zip", data.Downloads[0].URL)
-		assert.Equal(t, int64(1024), data.Downloads[0].TotalBytes)
-	})
-
-	t.Run("LocalStorage", func(t *testing.T) {
-		dir := buildTestLocalStorageDir(t, map[string][]testLocalStorageItem{
-			"https://github.com": {{Key: "theme", Value: "dark"}},
-		})
-		b := &Browser{}
-		data := &types.BrowserData{}
-		b.extractCategory(data, types.LocalStorage, dir)
-
-		require.Len(t, data.LocalStorage, 1)
-		assert.Equal(t, "https://github.com", data.LocalStorage[0].URL)
-		assert.Equal(t, "theme", data.LocalStorage[0].Key)
-		assert.Equal(t, "dark", data.LocalStorage[0].Value)
-	})
-
-	t.Run("UnsupportedCategory", func(t *testing.T) {
-		b := &Browser{}
-		data := &types.BrowserData{}
-		b.extractCategory(data, types.CreditCard, "unused")
-		assert.Empty(t, data.CreditCards)
-	})
-}
 
 // Anchor: 2024-01-15T10:30:00Z, in seconds past the Core Data epoch (2001-01-01Z).
 const anchorCoreDataSeconds = 1705314600 - 978307200

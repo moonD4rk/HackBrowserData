@@ -17,12 +17,14 @@ func extractAndWrite(browsers []browser.Browser, categories []types.Category, ou
 		return err
 	}
 	for _, b := range browsers {
-		log.Infof("Extracting %s/%s...", b.BrowserName(), b.ProfileName())
-		data, extractErr := b.Extract(categories)
+		log.Infof("Extracting %s...", b.BrowserName())
+		results, extractErr := b.Extract(categories)
 		if extractErr != nil {
-			log.Errorf("extract %s/%s: %v", b.BrowserName(), b.ProfileName(), extractErr)
+			log.Errorf("extract %s: %v", b.BrowserName(), extractErr)
 		}
-		w.Add(b.BrowserName(), b.ProfileName(), data)
+		for _, r := range results {
+			w.Add(b.BrowserName(), r.Name, r.Data)
+		}
 	}
 	if err := w.Write(); err != nil {
 		return err

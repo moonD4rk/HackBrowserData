@@ -14,15 +14,15 @@ import (
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
-// Browser is the interface implemented by every engine package —
-// chromium.Browser, firefox.Browser, and safari.Browser.
+// Browser is one installation: a single resolved UserDataDir that holds its
+// profiles and, for Chromium, owns the master key shared across them. It is
+// implemented by chromium.Browser, firefox.Browser, and safari.Browser.
 type Browser interface {
 	BrowserName() string
-	ProfileName() string
-	ProfileDir() string
 	UserDataDir() string
-	Extract(categories []types.Category) (*types.BrowserData, error)
-	CountEntries(categories []types.Category) (map[types.Category]int, error)
+	Profiles() []types.Profile
+	Extract(categories []types.Category) ([]types.ExtractResult, error)
+	CountEntries(categories []types.Category) ([]types.CountResult, error)
 }
 
 // PickOptions configures which browsers to pick.
@@ -32,7 +32,12 @@ type PickOptions struct {
 	KeychainPassword string // macOS only — see browser_darwin.go
 }
 
-// PickBrowsers returns browsers that are fully wired up for Extract: the
+// browserInjector wires decryption credentials (key retrievers and, on macOS,
+// the Keychain password) into a discovered Browser. Its construction is
+// platform-specific; see newCredentialInjector in browser_{darwin,linux,windows}.go.
+type browserInjector func(Browser)
+
+// DiscoverBrowsersWithKeys returns installations that are fully wired up for Extract: the
 // key retriever chain and (on macOS) the Keychain password are already
 // injected, so the caller can call b.Extract directly. This is the entry
 // point for extraction workflows like `dump`.
@@ -44,36 +49,35 @@ type PickOptions struct {
 //
 // When Name is "all", all known browsers are tried. ProfilePath overrides
 // the default user data directory (only when targeting a specific browser).
-func PickBrowsers(opts PickOptions) ([]Browser, error) {
-	browsers, err := pickFromConfigs(platformBrowsers(), opts)
+func DiscoverBrowsersWithKeys(opts PickOptions) ([]Browser, error) {
+	browsers, err := DiscoverBrowsers(opts)
 	if err != nil {
 		return nil, err
 	}
-	inject := newPlatformInjector(opts)
+	inject := newCredentialInjector(opts)
 	for _, b := range browsers {
 		inject(b)
 	}
 	return browsers, nil
 }
 
-// DiscoverBrowsers returns browsers for metadata-only workflows — listing,
+// DiscoverBrowsers returns installations for metadata-only workflows — listing,
 // profile paths, per-category counts. Decryption dependencies are NOT
 // injected, so calling b.Extract on the returned browsers will not
 // successfully decrypt protected data (passwords, cookies, credit cards).
-// CountEntries, BrowserName, ProfileName, and ProfileDir all work
-// correctly without injection.
+// CountEntries, BrowserName, and Profiles all work correctly without injection.
 //
-// Unlike PickBrowsers, DiscoverBrowsers never prompts for the macOS
+// Unlike DiscoverBrowsersWithKeys, DiscoverBrowsers never prompts for the macOS
 // Keychain password, making it the correct choice for `list`-style
 // commands that have no use for the credential.
 func DiscoverBrowsers(opts PickOptions) ([]Browser, error) {
 	return pickFromConfigs(platformBrowsers(), opts)
 }
 
-// pickFromConfigs is the testable core of PickBrowsers: it filters the
-// platform browser list and discovers installed profiles for each match.
-// Dependency injection (key retrievers, keychain credentials) is intentionally
-// NOT done here — see PrepareExtract.
+// pickFromConfigs is the testable core of DiscoverBrowsers: it filters the
+// platform browser list and discovers each matching installation (one Browser
+// per UserDataDir, holding its profiles). Dependency injection (key retrievers,
+// keychain credentials) is intentionally NOT done here.
 func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser, error) {
 	name := strings.ToLower(opts.Name)
 	if name == "" {
@@ -97,28 +101,28 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 			}
 		}
 
-		found, err := newBrowsers(cfg)
+		b, err := newBrowser(cfg)
 		if err != nil {
 			log.Errorf("browser %s: %v", cfg.Name, err)
 			continue
 		}
-		if len(found) == 0 {
+		if b == nil {
 			log.Debugf("browser %s not found at %s", cfg.Name, cfg.UserDataDir)
 			continue
 		}
 
-		browsers = append(browsers, found...)
+		browsers = append(browsers, b)
 	}
 	return browsers, nil
 }
 
-// KeyManager is implemented by engines that accept externally-provided master-key retrievers (Chromium family only).
+// KeyManager is implemented by installations that accept externally-provided master-key retrievers (Chromium family only).
 type KeyManager interface {
 	SetKeyRetrievers(keyretriever.Retrievers)
 	ExportKeys() (keyretriever.MasterKeys, error)
 }
 
-// KeychainPasswordReceiver is implemented by engines that need the macOS login password (Safari only).
+// KeychainPasswordReceiver is implemented by installations that need the macOS login password (Safari only).
 type KeychainPasswordReceiver interface {
 	SetKeychainPassword(string)
 }
@@ -151,42 +155,39 @@ func resolveGlobs(configs []types.BrowserConfig) []types.BrowserConfig {
 	return out
 }
 
-// newBrowsers dispatches to the correct engine based on BrowserKind
-// and converts engine-specific types to the Browser interface.
-func newBrowsers(cfg types.BrowserConfig) ([]Browser, error) {
+// newBrowser dispatches to the correct engine based on BrowserKind and returns
+// one installation, or a nil Browser when no profile was found.
+func newBrowser(cfg types.BrowserConfig) (Browser, error) {
 	switch cfg.Kind {
 	case types.Chromium, types.ChromiumYandex, types.ChromiumOpera:
-		found, err := chromium.NewBrowsers(cfg)
+		b, err := chromium.NewBrowser(cfg)
 		if err != nil {
 			return nil, err
 		}
-		result := make([]Browser, len(found))
-		for i, b := range found {
-			result[i] = b
+		if b == nil {
+			return nil, nil
 		}
-		return result, nil
+		return b, nil
 
 	case types.Firefox:
-		found, err := firefox.NewBrowsers(cfg)
+		b, err := firefox.NewBrowser(cfg)
 		if err != nil {
 			return nil, err
 		}
-		result := make([]Browser, len(found))
-		for i, b := range found {
-			result[i] = b
+		if b == nil {
+			return nil, nil
 		}
-		return result, nil
+		return b, nil
 
 	case types.Safari:
-		found, err := safari.NewBrowsers(cfg)
+		b, err := safari.NewBrowser(cfg)
 		if err != nil {
 			return nil, err
 		}
-		result := make([]Browser, len(found))
-		for i, b := range found {
-			result[i] = b
+		if b == nil {
+			return nil, nil
 		}
-		return result, nil
+		return b, nil
 
 	default:
 		return nil, fmt.Errorf("unknown browser kind: %d", cfg.Kind)

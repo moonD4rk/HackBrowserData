@@ -13,66 +13,89 @@ import (
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
-// Browser represents a single Chromium profile ready for extraction.
+// Browser is one Chromium installation: a single UserDataDir holding profiles
+// that share a master key. The key is derived once and reused across profiles.
 type Browser struct {
-	cfg         types.BrowserConfig
-	profileDir  string                               // absolute path to profile directory
-	retrievers  keyretriever.Retrievers              // per-tier key sources (V10 / V11 / V20; unused tiers nil)
-	sources     map[types.Category][]sourcePath      // Category → candidate paths (priority order)
-	extractors  map[types.Category]categoryExtractor // Category → custom extract function override
-	sourcePaths map[types.Category]resolvedPath      // Category → discovered absolute path
+	cfg        types.BrowserConfig
+	retrievers keyretriever.Retrievers
+	profiles   []*profile
+
+	keysOnce sync.Once
+	keys     keyretriever.MasterKeys
 }
 
-// NewBrowsers discovers Chromium profiles under cfg.UserDataDir and returns
-// one Browser per profile. Call SetKeyRetrievers on each returned browser before
-// Extract to enable decryption of sensitive data (passwords, cookies, etc.).
-func NewBrowsers(cfg types.BrowserConfig) ([]*Browser, error) {
+// NewBrowser discovers the Chromium profiles under cfg.UserDataDir and returns
+// the installation, or nil if no profile with resolvable sources exists. Call
+// SetKeyRetrievers before Extract to enable decryption of sensitive data.
+func NewBrowser(cfg types.BrowserConfig) (*Browser, error) {
 	sources := sourcesForKind(cfg.Kind)
 	extractors := extractorsForKind(cfg.Kind)
 
-	profileDirs := discoverProfiles(cfg.UserDataDir, sources)
-	if len(profileDirs) == 0 {
-		return nil, nil
-	}
-
-	var browsers []*Browser
-	for _, profileDir := range profileDirs {
+	var profiles []*profile
+	for _, profileDir := range discoverProfiles(cfg.UserDataDir, sources) {
 		sourcePaths := resolveSourcePaths(sources, profileDir)
 		if len(sourcePaths) == 0 {
 			continue
 		}
-		browsers = append(browsers, &Browser{
-			cfg:         cfg,
+		profiles = append(profiles, &profile{
 			profileDir:  profileDir,
-			sources:     sources,
+			browserName: cfg.Name,
+			kind:        cfg.Kind,
 			extractors:  extractors,
 			sourcePaths: sourcePaths,
 		})
 	}
-	return browsers, nil
+	if len(profiles) == 0 {
+		return nil, nil
+	}
+	return &Browser{cfg: cfg, profiles: profiles}, nil
 }
 
-// SetKeyRetrievers wires the per-tier master-key retrievers (V10/V11/V20) used by Extract; unused tiers stay nil.
-func (b *Browser) SetKeyRetrievers(r keyretriever.Retrievers) {
-	b.retrievers = r
-}
+// SetKeyRetrievers wires the per-tier master-key retrievers (V10/V11/V20) used by
+// Extract; unused tiers stay nil.
+func (b *Browser) SetKeyRetrievers(r keyretriever.Retrievers) { b.retrievers = r }
 
 func (b *Browser) BrowserName() string { return b.cfg.Name }
-func (b *Browser) ProfileDir() string  { return b.profileDir }
 func (b *Browser) UserDataDir() string { return b.cfg.UserDataDir }
-func (b *Browser) ProfileName() string {
-	if b.profileDir == "" {
-		return ""
+
+// Profiles returns the identity of every profile in this installation.
+func (b *Browser) Profiles() []types.Profile {
+	out := make([]types.Profile, 0, len(b.profiles))
+	for _, p := range b.profiles {
+		out = append(out, types.Profile{Name: p.name(), Dir: p.profileDir})
 	}
-	return filepath.Base(b.profileDir)
+	return out
 }
 
-// ExportKeys derives this profile's master keys without performing extraction.
-// Returns whatever tiers succeeded plus a joined error describing any failed
-// tiers; callers preserve partial results because a Chrome 127+ profile mixes
+// Extract derives the installation's master key once, then extracts every profile.
+func (b *Browser) Extract(categories []types.Category) ([]types.ExtractResult, error) {
+	keys := b.masterKeys()
+	results := make([]types.ExtractResult, 0, len(b.profiles))
+	for _, p := range b.profiles {
+		results = append(results, types.ExtractResult{
+			Profile: types.Profile{Name: p.name(), Dir: p.profileDir},
+			Data:    p.extract(keys, categories),
+		})
+	}
+	return results, nil
+}
+
+// CountEntries counts entries per category for every profile without decryption.
+func (b *Browser) CountEntries(categories []types.Category) ([]types.CountResult, error) {
+	results := make([]types.CountResult, 0, len(b.profiles))
+	for _, p := range b.profiles {
+		results = append(results, types.CountResult{
+			Profile: types.Profile{Name: p.name(), Dir: p.profileDir},
+			Counts:  p.count(categories),
+		})
+	}
+	return results, nil
+}
+
+// ExportKeys derives the installation's master keys without extraction. Returns
+// whatever tiers succeeded plus a joined error describing any failed tiers;
+// callers preserve partial results because a Chrome 127+ installation mixes
 // v10 + v20 ciphertexts and a v20-only failure must not erase a usable v10 key.
-// Used by cross-host workflows where keys are produced on one host and consumed
-// on another.
 func (b *Browser) ExportKeys() (keyretriever.MasterKeys, error) {
 	session, err := filemanager.NewSession()
 	if err != nil {
@@ -83,25 +106,34 @@ func (b *Browser) ExportKeys() (keyretriever.MasterKeys, error) {
 	return keyretriever.NewMasterKeys(b.retrievers, b.buildHints(session))
 }
 
-// buildHints discovers Local State (acquiring it into session.TempDir so Windows DPAPI/ABE retrievers can
-// read it from a path the process owns) and assembles per-tier retriever hints. Shared by Extract and
-// ExportKeys so the two stay in lockstep. Multi-profile layout: Local State lives in the parent of
-// profileDir. Flat layout (Opera): Local State sits alongside data files inside profileDir.
-func (b *Browser) buildHints(session *filemanager.Session) keyretriever.Hints {
-	label := b.BrowserName() + "/" + b.ProfileName()
-	var localStateDst string
-	for _, dir := range []string{filepath.Dir(b.profileDir), b.profileDir} {
-		candidate := filepath.Join(dir, "Local State")
-		if !fileutil.FileExists(candidate) {
-			continue
+// masterKeys derives the installation's keys exactly once and caches them.
+// Because derivation happens a single time per installation, a failure is warned
+// exactly once — no cross-profile dedup state is needed.
+func (b *Browser) masterKeys() keyretriever.MasterKeys {
+	b.keysOnce.Do(func() {
+		keys, err := b.ExportKeys()
+		if err != nil {
+			log.Warnf("%s: master key retrieval: %v", b.BrowserName(), err)
 		}
+		b.keys = keys
+	})
+	return b.keys
+}
+
+// buildHints acquires Local State (into session.TempDir so Windows DPAPI/ABE
+// retrievers can read it from a path the process owns) and assembles per-tier
+// retriever hints. Local State lives at the installation root (cfg.UserDataDir)
+// in both the multi-profile and flat (Opera) layouts.
+func (b *Browser) buildHints(session *filemanager.Session) keyretriever.Hints {
+	var localStateDst string
+	candidate := filepath.Join(b.cfg.UserDataDir, "Local State")
+	if fileutil.FileExists(candidate) {
 		dst := filepath.Join(session.TempDir(), "Local State")
 		if err := session.Acquire(candidate, dst, false); err != nil {
-			log.Debugf("acquire Local State for %s: %v", label, err)
-			break
+			log.Debugf("acquire Local State for %s: %v", b.BrowserName(), err)
+		} else {
+			localStateDst = dst
 		}
-		localStateDst = dst
-		break
 	}
 
 	abeKey := ""
@@ -112,164 +144,6 @@ func (b *Browser) buildHints(session *filemanager.Session) keyretriever.Hints {
 		KeychainLabel:  b.cfg.KeychainLabel,
 		WindowsABEKey:  abeKey,
 		LocalStatePath: localStateDst,
-	}
-}
-
-// Extract copies browser files to a temp directory, retrieves the master key,
-// and extracts data for the requested categories.
-func (b *Browser) Extract(categories []types.Category) (*types.BrowserData, error) {
-	session, err := filemanager.NewSession()
-	if err != nil {
-		return nil, err
-	}
-	defer session.Cleanup()
-
-	tempPaths := b.acquireFiles(session, categories)
-
-	keys := b.getMasterKeys(session)
-
-	data := &types.BrowserData{}
-	for _, cat := range categories {
-		path, ok := tempPaths[cat]
-		if !ok {
-			continue
-		}
-		b.extractCategory(data, cat, keys, path)
-	}
-	return data, nil
-}
-
-// CountEntries copies browser files to a temp directory and counts entries
-// per category without decryption. Much faster than Extract for display-only
-// use cases like "list --detail".
-func (b *Browser) CountEntries(categories []types.Category) (map[types.Category]int, error) {
-	session, err := filemanager.NewSession()
-	if err != nil {
-		return nil, err
-	}
-	defer session.Cleanup()
-
-	tempPaths := b.acquireFiles(session, categories)
-
-	counts := make(map[types.Category]int)
-	for _, cat := range categories {
-		path, ok := tempPaths[cat]
-		if !ok {
-			continue
-		}
-		counts[cat] = b.countCategory(cat, path)
-	}
-	return counts, nil
-}
-
-// countCategory calls the appropriate count function for a category.
-func (b *Browser) countCategory(cat types.Category, path string) int {
-	var count int
-	var err error
-	switch cat {
-	case types.Password:
-		count, err = countPasswords(path)
-	case types.Cookie:
-		count, err = countCookies(path)
-	case types.History:
-		count, err = countHistories(path)
-	case types.Download:
-		count, err = countDownloads(path)
-	case types.Bookmark:
-		count, err = countBookmarks(path)
-	case types.CreditCard:
-		if b.cfg.Kind == types.ChromiumYandex {
-			count, err = countYandexCreditCards(path)
-		} else {
-			count, err = countCreditCards(path)
-		}
-	case types.Extension:
-		if b.cfg.Kind == types.ChromiumOpera {
-			count, err = countOperaExtensions(path)
-		} else {
-			count, err = countExtensions(path)
-		}
-	case types.LocalStorage:
-		count, err = countLocalStorage(path)
-	case types.SessionStorage:
-		count, err = countSessionStorage(path)
-	}
-	if err != nil {
-		log.Debugf("count %s for %s: %v", cat, b.BrowserName()+"/"+b.ProfileName(), err)
-	}
-	return count
-}
-
-// acquireFiles copies source files to the session temp directory.
-func (b *Browser) acquireFiles(session *filemanager.Session, categories []types.Category) map[types.Category]string {
-	tempPaths := make(map[types.Category]string)
-	for _, cat := range categories {
-		rp, ok := b.sourcePaths[cat]
-		if !ok {
-			continue
-		}
-		dst := filepath.Join(session.TempDir(), cat.String())
-		if err := session.Acquire(rp.absPath, dst, rp.isDir); err != nil {
-			log.Debugf("acquire %s: %v", cat, err)
-			continue
-		}
-		tempPaths[cat] = dst
-	}
-	return tempPaths
-}
-
-// warnedMasterKeyFailure dedupes "master key retrieval" WARN per installation (BrowserName + UserDataDir);
-// profiles share one Safe Storage entry, but glob-expanded configs may yield multiple installations of the same browser.
-var warnedMasterKeyFailure sync.Map
-
-// getMasterKeys retrieves master keys for all configured cipher tiers.
-func (b *Browser) getMasterKeys(session *filemanager.Session) keyretriever.MasterKeys {
-	keys, err := keyretriever.NewMasterKeys(b.retrievers, b.buildHints(session))
-	if err != nil {
-		installKey := b.BrowserName() + "|" + b.cfg.UserDataDir
-		if _, already := warnedMasterKeyFailure.LoadOrStore(installKey, struct{}{}); !already {
-			log.Warnf("%s: master key retrieval: %v", b.BrowserName(), err)
-		} else {
-			log.Debugf("%s/%s: master key retrieval: %v", b.BrowserName(), b.ProfileName(), err)
-		}
-	}
-	return keys
-}
-
-// extractCategory calls the appropriate extract function for a category.
-// If a custom extractor is registered for this category (via extractorsForKind),
-// it is used instead of the default switch logic.
-func (b *Browser) extractCategory(data *types.BrowserData, cat types.Category, keys keyretriever.MasterKeys, path string) {
-	if ext, ok := b.extractors[cat]; ok {
-		if err := ext.extract(keys, path, data); err != nil {
-			log.Debugf("extract %s for %s: %v", cat, b.BrowserName()+"/"+b.ProfileName(), err)
-		}
-		return
-	}
-
-	var err error
-	switch cat {
-	case types.Password:
-		data.Passwords, err = extractPasswords(keys, path)
-	case types.Cookie:
-		data.Cookies, err = extractCookies(keys, path)
-	case types.History:
-		data.Histories, err = extractHistories(path)
-	case types.Download:
-		data.Downloads, err = extractDownloads(path)
-	case types.Bookmark:
-		data.Bookmarks, err = extractBookmarks(path)
-	case types.CreditCard:
-		data.CreditCards, err = extractCreditCards(keys, path)
-	case types.Extension:
-		data.Extensions, err = extractExtensions(path)
-	case types.LocalStorage:
-		data.LocalStorage, err = extractLocalStorage(path)
-	case types.SessionStorage:
-		data.SessionStorage, err = extractSessionStorage(path)
-	}
-	if err != nil {
-		log.Debugf("extract %s for %s: %v", cat, b.BrowserName()+"/"+b.ProfileName(), err)
 	}
 }
 

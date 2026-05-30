@@ -67,12 +67,12 @@ func platformBrowsers() []types.BrowserConfig {
 	}
 }
 
-// newPlatformInjector returns a closure that wires the Linux Chromium master-key retrievers into
+// newCredentialInjector returns a closure that wires the Linux Chromium master-key retrievers into
 // each Browser. Linux has two tiers: V10 uses the "peanuts" hardcoded password (kV10Key); V11
 // uses the D-Bus Secret Service keyring (kV11Key). V20 is nil — App-Bound Encryption is Windows-
 // only. Both V10 and V11 run independently so a profile carrying mixed cipher prefixes decrypts
 // both tiers.
-func newPlatformInjector(_ PickOptions) func(Browser) {
+func newCredentialInjector(_ PickOptions) browserInjector {
 	retrievers := keyretriever.DefaultRetrievers()
 	return func(b Browser) {
 		if km, ok := b.(KeyManager); ok {
