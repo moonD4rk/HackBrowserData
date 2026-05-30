@@ -188,7 +188,6 @@ func TestCountEntries(t *testing.T) {
 	assert.Equal(t, 2, results[0].Counts[types.History])
 }
 
-
 // Anchor: 2024-01-15T10:30:00Z, in seconds past the Core Data epoch (2001-01-01Z).
 const anchorCoreDataSeconds = 1705314600 - 978307200
 
