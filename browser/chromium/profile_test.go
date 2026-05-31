@@ -75,8 +75,8 @@ func TestAcquireFiles(t *testing.T) {
 	paths := p.acquireFiles(session, cats)
 
 	assert.Len(t, paths, len(cats))
-	for _, p := range paths {
-		_, err := os.Stat(p)
+	for _, path := range paths {
+		_, err := os.Stat(path)
 		require.NoError(t, err, "acquired file should exist")
 	}
 }
