@@ -9,7 +9,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/browser/chromium"
 	"github.com/moond4rk/hackbrowserdata/browser/firefox"
 	"github.com/moond4rk/hackbrowserdata/browser/safari"
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
+	"github.com/moond4rk/hackbrowserdata/keys"
 	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
@@ -118,8 +118,8 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 
 // KeyManager is implemented by installations that accept externally-provided master-key retrievers (Chromium family only).
 type KeyManager interface {
-	SetKeyRetrievers(keyretriever.Retrievers)
-	ExportKeys() (keyretriever.MasterKeys, error)
+	SetRetrievers(keys.Retrievers)
+	ExportKeys() (keys.MasterKeys, error)
 }
 
 // KeychainPasswordReceiver is implemented by installations that need the macOS login password (Safari only).

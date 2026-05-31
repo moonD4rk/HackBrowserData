@@ -1,6 +1,6 @@
 //go:build linux
 
-package keyretriever
+package keys
 
 import (
 	"testing"

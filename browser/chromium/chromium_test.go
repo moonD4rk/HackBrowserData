@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
+	"github.com/moond4rk/hackbrowserdata/keys"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -380,21 +380,21 @@ func TestLocalStatePath(t *testing.T) {
 
 // mockRetriever records the arguments passed to RetrieveKey.
 type mockRetriever struct {
-	hints  keyretriever.Hints
+	hints  keys.Hints
 	key    []byte
 	err    error
 	called bool
 }
 
-func (m *mockRetriever) RetrieveKey(hints keyretriever.Hints) ([]byte, error) {
+func (m *mockRetriever) RetrieveKey(hints keys.Hints) ([]byte, error) {
 	m.called = true
 	m.hints = hints
 	return m.key, m.err
 }
 
 func TestGetMasterKeys(t *testing.T) {
-	// getMasterKeys routes through keyretriever.NewMasterKeys on every platform — the V10 mock
-	// wired via SetKeyRetrievers(Retrievers{V10: mock}) is consulted cross-platform.
+	// getMasterKeys routes through keys.NewMasterKeys on every platform — the V10 mock
+	// wired via SetRetrievers(Retrievers{V10: mock}) is consulted cross-platform.
 
 	// Profile directory without Local State file.
 	dirNoLocalState := t.TempDir()
@@ -405,7 +405,7 @@ func TestGetMasterKeys(t *testing.T) {
 		name              string
 		dir               string
 		keychainLabel     string
-		retriever         keyretriever.KeyRetriever // nil → don't call SetKeyRetrievers
+		retriever         keys.Retriever // nil → don't call SetRetrievers
 		wantV10           []byte
 		wantKeychainLabel string
 		wantLocalState    bool // whether localStatePath passed to retriever is non-empty
@@ -442,13 +442,13 @@ func TestGetMasterKeys(t *testing.T) {
 			require.NotNil(t, b)
 
 			if tt.retriever != nil {
-				b.SetKeyRetrievers(keyretriever.Retrievers{V10: tt.retriever})
+				b.SetRetrievers(keys.Retrievers{V10: tt.retriever})
 			}
 
-			keys := b.masterKeys()
-			assert.Equal(t, tt.wantV10, keys.V10)
-			assert.Nil(t, keys.V11, "V11 stays nil when no v11 retriever is wired")
-			assert.Nil(t, keys.V20, "V20 stays nil when no v20 retriever is wired")
+			mk := b.masterKeys()
+			assert.Equal(t, tt.wantV10, mk.V10)
+			assert.Nil(t, mk.V11, "V11 stays nil when no v11 retriever is wired")
+			assert.Nil(t, mk.V20, "V20 stays nil when no v20 retriever is wired")
 
 			if tt.retriever == nil {
 				return
@@ -470,7 +470,7 @@ func TestGetMasterKeys(t *testing.T) {
 // Before the refactor a Windows-only bypass meant only one tier's retriever was consulted, so a
 // profile mixing prefixes silently lost the un-retrieved tier. After the refactor every
 // configured tier must be called exactly once and its key must land in the matching MasterKeys
-// slot. This catches any future "bypass keyretriever for a faster path" regression and covers the
+// slot. This catches any future "bypass the keys package for a faster path" regression and covers the
 // analogous Linux v10/v11 case — no platform silently drops a tier any more.
 func TestGetMasterKeys_AllTiersInvoked(t *testing.T) {
 	v10mock := &mockRetriever{key: []byte("fake-v10-key")}
@@ -483,12 +483,12 @@ func TestGetMasterKeys_AllTiersInvoked(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, b)
 
-	b.SetKeyRetrievers(keyretriever.Retrievers{V10: v10mock, V11: v11mock, V20: v20mock})
+	b.SetRetrievers(keys.Retrievers{V10: v10mock, V11: v11mock, V20: v20mock})
 
-	keys := b.masterKeys()
-	assert.Equal(t, []byte("fake-v10-key"), keys.V10, "V10 slot must be populated")
-	assert.Equal(t, []byte("fake-v11-key"), keys.V11, "V11 slot must be populated")
-	assert.Equal(t, []byte("fake-v20-key"), keys.V20, "V20 slot must be populated")
+	mk := b.masterKeys()
+	assert.Equal(t, []byte("fake-v10-key"), mk.V10, "V10 slot must be populated")
+	assert.Equal(t, []byte("fake-v11-key"), mk.V11, "V11 slot must be populated")
+	assert.Equal(t, []byte("fake-v20-key"), mk.V20, "V20 slot must be populated")
 	assert.True(t, v10mock.called, "V10 retriever must be called — no silent bypass")
 	assert.True(t, v11mock.called, "V11 retriever must be called — no silent bypass")
 	assert.True(t, v20mock.called, "V20 retriever must be called — no silent bypass")
@@ -521,7 +521,7 @@ func TestGetMasterKeys_WindowsABEThreading(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, b)
 
-			b.SetKeyRetrievers(keyretriever.Retrievers{V20: mock})
+			b.SetRetrievers(keys.Retrievers{V20: mock})
 
 			b.masterKeys()
 			assert.Equal(t, tt.wantABEKey, mock.hints.WindowsABEKey)
@@ -540,8 +540,8 @@ func TestExtract(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		retriever     keyretriever.KeyRetriever // nil → don't call SetRetriever
-		wantRetriever bool                      // whether retriever should be called
+		retriever     keys.Retriever // nil → don't call SetRetriever
+		wantRetriever bool           // whether retriever should be called
 	}{
 		{
 			name: "without retriever extracts unencrypted data",
@@ -562,7 +562,7 @@ func TestExtract(t *testing.T) {
 			require.NotNil(t, b)
 
 			if tt.retriever != nil {
-				b.SetKeyRetrievers(keyretriever.Retrievers{V10: tt.retriever})
+				b.SetRetrievers(keys.Retrievers{V10: tt.retriever})
 			}
 
 			results, err := b.Extract([]types.Category{types.History})
@@ -629,13 +629,13 @@ func TestCountEntries_NoRetrieverNeeded(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// SetKeyRetrievers: verify *Browser satisfies the interface used by
+// SetRetrievers: verify *Browser satisfies the interface used by
 // browser.pickFromConfigs for post-construction retriever injection.
 // ---------------------------------------------------------------------------
 
-func TestSetKeyRetrievers_SatisfiesInterface(t *testing.T) {
+func TestSetRetrievers_SatisfiesInterface(t *testing.T) {
 	var _ interface {
-		SetKeyRetrievers(keyretriever.Retrievers)
+		SetRetrievers(keys.Retrievers)
 	} = (*Browser)(nil)
 }
 

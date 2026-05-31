@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
+	"github.com/moond4rk/hackbrowserdata/keys"
 )
 
 func setupCreditCardDB(t *testing.T) string {
@@ -21,7 +21,7 @@ func setupCreditCardDB(t *testing.T) string {
 func TestExtractCreditCards(t *testing.T) {
 	path := setupCreditCardDB(t)
 
-	got, err := extractCreditCards(keyretriever.MasterKeys{}, path)
+	got, err := extractCreditCards(keys.MasterKeys{}, path)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -80,7 +80,7 @@ func TestExtractYandexCreditCards(t *testing.T) {
 		},
 	)
 
-	got, err := extractYandexCreditCards(keyretriever.MasterKeys{V10: masterKey}, path)
+	got, err := extractYandexCreditCards(keys.MasterKeys{V10: masterKey}, path)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -128,7 +128,7 @@ func TestExtractYandexCreditCards_WrongMasterKey(t *testing.T) {
 		yandexCreditCard{GUID: "g1", FullCardNumber: "4111"},
 	)
 
-	_, err := extractYandexCreditCards(keyretriever.MasterKeys{V10: wrongKey}, path)
+	_, err := extractYandexCreditCards(keys.MasterKeys{V10: wrongKey}, path)
 	require.Error(t, err)
 }
 

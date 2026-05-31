@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
+	"github.com/moond4rk/hackbrowserdata/keys"
 )
 
 func TestDecryptValue_V10(t *testing.T) {
@@ -40,7 +40,7 @@ func TestDecryptValue_V10(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := decryptValue(keyretriever.MasterKeys{V10: tt.key}, v10Ciphertext)
+			got, err := decryptValue(keys.MasterKeys{V10: tt.key}, v10Ciphertext)
 			if tt.wantErrMsg != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.wantErrMsg)
@@ -61,7 +61,7 @@ func TestDecryptValue_V11(t *testing.T) {
 	v11Ciphertext := append([]byte("v11"), cbcEncrypted...)
 
 	// v11 ciphertexts route to the V11 slot (Linux's keyring-derived kV11Key) — not V10 (peanuts).
-	got, err := decryptValue(keyretriever.MasterKeys{V11: testAESKey}, v11Ciphertext)
+	got, err := decryptValue(keys.MasterKeys{V11: testAESKey}, v11Ciphertext)
 	require.NoError(t, err)
 	assert.Equal(t, plaintext, got)
 }
@@ -87,22 +87,22 @@ func TestDecryptValue_V10_V11_SlotSeparation(t *testing.T) {
 	require.NoError(t, err)
 	v11Ciphertext := append([]byte("v11"), v11Enc...)
 
-	keys := keyretriever.MasterKeys{V10: k10, V11: k11}
+	mk := keys.MasterKeys{V10: k10, V11: k11}
 
 	t.Run("v10 ciphertext decrypts via V10 slot", func(t *testing.T) {
-		got, err := decryptValue(keys, v10Ciphertext)
+		got, err := decryptValue(mk, v10Ciphertext)
 		require.NoError(t, err)
 		assert.Equal(t, v10plain, got)
 	})
 
 	t.Run("v11 ciphertext decrypts via V11 slot", func(t *testing.T) {
-		got, err := decryptValue(keys, v11Ciphertext)
+		got, err := decryptValue(mk, v11Ciphertext)
 		require.NoError(t, err)
 		assert.Equal(t, v11plain, got)
 	})
 
 	t.Run("swapped keys fail both directions", func(t *testing.T) {
-		swapped := keyretriever.MasterKeys{V10: k11, V11: k10}
+		swapped := keys.MasterKeys{V10: k11, V11: k10}
 		_, err := decryptValue(swapped, v10Ciphertext)
 		require.Error(t, err, "v10 with V11's key must fail")
 		_, err = decryptValue(swapped, v11Ciphertext)

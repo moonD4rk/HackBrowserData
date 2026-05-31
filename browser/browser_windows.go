@@ -3,7 +3,7 @@
 package browser
 
 import (
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
+	"github.com/moond4rk/hackbrowserdata/keys"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -130,10 +130,10 @@ func platformBrowsers() []types.BrowserConfig {
 // Chrome profile upgraded from pre-127 carries v20 cookies alongside v10 passwords — so both
 // retrievers run independently rather than as a first-success chain.
 func newCredentialInjector(_ PickOptions) browserInjector {
-	retrievers := keyretriever.DefaultRetrievers()
+	retrievers := keys.DefaultRetrievers()
 	return func(b Browser) {
 		if km, ok := b.(KeyManager); ok {
-			km.SetKeyRetrievers(retrievers)
+			km.SetRetrievers(retrievers)
 		}
 	}
 }

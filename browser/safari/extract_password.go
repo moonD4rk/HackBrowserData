@@ -47,7 +47,7 @@ func countPasswords(keychainPassword string) (int, error) {
 
 // getInternetPasswords reads InternetPassword records directly from the
 // macOS login keychain. See rfcs/006-key-retrieval-mechanisms.md §7 for why
-// Safari owns this path instead of routing through crypto/keyretriever.
+// Safari owns this path instead of routing through the keys package.
 //
 // TryUnlock is always invoked — with the user-supplied password when one is
 // available, otherwise with no options — to enable keychainbreaker's partial

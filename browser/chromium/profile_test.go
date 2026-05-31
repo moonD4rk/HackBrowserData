@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
 	"github.com/moond4rk/hackbrowserdata/filemanager"
+	"github.com/moond4rk/hackbrowserdata/keys"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -32,7 +32,7 @@ func TestExtractCategory_CustomExtractor(t *testing.T) {
 	}
 
 	data := &types.BrowserData{}
-	p.extractCategory(data, types.Extension, keyretriever.MasterKeys{}, "unused-path")
+	p.extractCategory(data, types.Extension, keys.MasterKeys{}, "unused-path")
 
 	assert.True(t, called, "custom extractor should be called")
 	require.Len(t, data.Extensions, 1)
@@ -51,7 +51,7 @@ func TestExtractCategory_DefaultFallback(t *testing.T) {
 	}
 
 	data := &types.BrowserData{}
-	p.extractCategory(data, types.History, keyretriever.MasterKeys{}, path)
+	p.extractCategory(data, types.History, keys.MasterKeys{}, path)
 
 	require.Len(t, data.Histories, 1)
 	assert.Equal(t, "Example", data.Histories[0].Title)

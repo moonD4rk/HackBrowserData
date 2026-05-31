@@ -9,7 +9,7 @@ import (
 	"github.com/moond4rk/keychainbreaker"
 	"golang.org/x/term"
 
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
+	"github.com/moond4rk/hackbrowserdata/keys"
 	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
@@ -160,7 +160,7 @@ func resolveKeychainPassword(flagPassword string) string {
 func newCredentialInjector(opts PickOptions) browserInjector {
 	var (
 		password   string
-		retrievers keyretriever.Retrievers
+		retrievers keys.Retrievers
 		resolved   bool
 	)
 	return func(b Browser) {
@@ -171,11 +171,11 @@ func newCredentialInjector(opts PickOptions) browserInjector {
 		}
 		if !resolved {
 			password = resolveKeychainPassword(opts.KeychainPassword)
-			retrievers = keyretriever.DefaultRetrievers(password)
+			retrievers = keys.DefaultRetrievers(password)
 			resolved = true
 		}
 		if needsRetrievers {
-			km.SetKeyRetrievers(retrievers)
+			km.SetRetrievers(retrievers)
 		}
 		if needsKeychainPassword {
 			kps.SetKeychainPassword(password)

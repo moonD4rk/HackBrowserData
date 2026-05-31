@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
+	"github.com/moond4rk/hackbrowserdata/keys"
 )
 
 // encryptWithDPAPI encrypts data using Windows DPAPI (CryptProtectData).
@@ -64,7 +64,7 @@ func TestDecryptValue_V10_Windows(t *testing.T) {
 	// v10 format on Windows: "v10" + nonce(12) + encrypted
 	ciphertext := append([]byte("v10"), append(nonce, gcmEncrypted...)...)
 
-	got, err := decryptValue(keyretriever.MasterKeys{V10: testAESKey}, ciphertext)
+	got, err := decryptValue(keys.MasterKeys{V10: testAESKey}, ciphertext)
 	require.NoError(t, err)
 	assert.Equal(t, plaintext, got)
 }
@@ -78,7 +78,7 @@ func TestDecryptValue_DPAPI_Windows(t *testing.T) {
 	require.NotEmpty(t, encrypted)
 
 	// No v10/v20 prefix → decryptValue routes to DPAPI path; no per-tier key needed.
-	got, err := decryptValue(keyretriever.MasterKeys{}, encrypted)
+	got, err := decryptValue(keys.MasterKeys{}, encrypted)
 	require.NoError(t, err)
 	assert.Equal(t, plaintext, got)
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/moond4rk/hackbrowserdata/browser"
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
+	"github.com/moond4rk/hackbrowserdata/keys"
 	"github.com/moond4rk/hackbrowserdata/log"
 )
 
@@ -135,7 +135,7 @@ func loadAndApplyKeys(browserName, profilePath, keysPath string) ([]browser.Brow
 		defer f.Close()
 		r = f
 	}
-	dump, err := keyretriever.ReadJSON(r)
+	dump, err := keys.ReadJSON(r)
 	if err != nil {
 		return nil, fmt.Errorf("read keys file %q: %w", keysPath, err)
 	}

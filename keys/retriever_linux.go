@@ -1,6 +1,6 @@
 //go:build linux
 
-package keyretriever
+package keys
 
 import (
 	"crypto/sha1"
@@ -69,27 +69,17 @@ func (r *DBusRetriever) RetrieveKey(hints Hints) ([]byte, error) {
 	return nil, fmt.Errorf("%q: %w", storage, errStorageNotFound)
 }
 
-// PosixRetriever produces Chromium's kV10Key by applying PBKDF2 to the hardcoded password
-// "peanuts". Matches Chromium's upstream PosixKeyProvider (components/os_crypt/async/browser/
-// posix_key_provider.cc): a deterministic 16-byte AES-128 key used to encrypt ciphertexts with
-// the "v10" prefix when no keyring is available (headless servers, Docker, CI).
+// PosixRetriever derives Chromium's kV10Key via PBKDF2 over the hardcoded "peanuts" password — the
+// deterministic v10 key used when no keyring exists (headless/Docker/CI). Mirrors PosixKeyProvider.
 type PosixRetriever struct{}
 
 func (r *PosixRetriever) RetrieveKey(_ Hints) ([]byte, error) {
 	return linuxParams.deriveKey([]byte("peanuts")), nil
 }
 
-// DefaultRetrievers returns the Linux Retrievers, one per cipher tier. Chromium on Linux emits
-// distinct prefixes for distinct key sources:
-//
-//   - v10 prefix → PBKDF2("peanuts") — Chromium's kV10Key, emitted when no keyring is available
-//     (headless servers, Docker, CI).
-//   - v11 prefix → PBKDF2(keyring secret) — Chromium's kV11Key, emitted when D-Bus Secret
-//     Service (GNOME Keyring / KWallet) is reachable.
-//
-// A profile can carry both prefixes if the host moved between keyring-equipped and headless
-// sessions, so both tiers run independently with per-tier logging rather than a first-success
-// chain.
+// DefaultRetrievers wires the Linux tiers, one per prefix Chromium emits: v10 = PBKDF2("peanuts")
+// (kV10Key, no keyring); v11 = PBKDF2(keyring secret) (kV11Key, via D-Bus). A profile can carry both
+// if the host moved between headless and keyring sessions, so both run independently.
 func DefaultRetrievers() Retrievers {
 	return Retrievers{
 		V10: &PosixRetriever{},

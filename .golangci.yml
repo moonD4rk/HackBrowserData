@@ -164,6 +164,7 @@ linters:
           - gosec
           - errcheck
           - lll
+          - goconst
       - source: "defer"
         linters:
           - errcheck
@@ -173,7 +174,7 @@ linters:
       - path: "cmd/hack-browser-data/main.go"
         linters:
           - lll
-      - path: "crypto/keyretriever/gcoredump_darwin.go"
+      - path: "keys/gcoredump_darwin.go"
         linters:
           - gocognit
 

@@ -1,6 +1,6 @@
 //go:build windows
 
-package keyretriever
+package keys
 
 import (
 	"encoding/base64"

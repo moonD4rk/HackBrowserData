@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
+	"github.com/moond4rk/hackbrowserdata/keys"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -44,25 +44,25 @@ func (m *mockBrowser) CountEntries(_ []types.Category) ([]types.CountResult, err
 
 type mockChromiumBrowser struct {
 	mockBrowser
-	keys               keyretriever.MasterKeys
+	keys               keys.MasterKeys
 	exportErr          error
 	calls              int
-	receivedRetrievers keyretriever.Retrievers
+	receivedRetrievers keys.Retrievers
 }
 
-func (m *mockChromiumBrowser) SetKeyRetrievers(r keyretriever.Retrievers) {
+func (m *mockChromiumBrowser) SetRetrievers(r keys.Retrievers) {
 	m.receivedRetrievers = r
 }
 
-func (m *mockChromiumBrowser) ExportKeys() (keyretriever.MasterKeys, error) {
+func (m *mockChromiumBrowser) ExportKeys() (keys.MasterKeys, error) {
 	m.calls++
 	return m.keys, m.exportErr
 }
 
 func TestBuildDump_Empty(t *testing.T) {
 	dump := BuildDump(nil)
-	if dump.Version != keyretriever.DumpVersion {
-		t.Errorf("Version = %q, want %q", dump.Version, keyretriever.DumpVersion)
+	if dump.Version != keys.DumpVersion {
+		t.Errorf("Version = %q, want %q", dump.Version, keys.DumpVersion)
 	}
 	if dump.Host.OS != runtime.GOOS {
 		t.Errorf("Host.OS = %q, want %q", dump.Host.OS, runtime.GOOS)
@@ -75,7 +75,7 @@ func TestBuildDump_Empty(t *testing.T) {
 func TestBuildDump_SingleChromium(t *testing.T) {
 	b := &mockChromiumBrowser{
 		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
-		keys:        keyretriever.MasterKeys{V10: []byte("v10-key")},
+		keys:        keys.MasterKeys{V10: []byte("v10-key")},
 	}
 
 	dump := BuildDump([]Browser{b})
@@ -101,7 +101,7 @@ func TestBuildDump_SingleChromium(t *testing.T) {
 func TestBuildDump_MultipleProfilesOneVault(t *testing.T) {
 	b := &mockChromiumBrowser{
 		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault, testProfile1}},
-		keys:        keyretriever.MasterKeys{V10: []byte("v10")},
+		keys:        keys.MasterKeys{V10: []byte("v10")},
 	}
 
 	dump := BuildDump([]Browser{b})
@@ -120,7 +120,7 @@ func TestBuildDump_MultipleProfilesOneVault(t *testing.T) {
 func TestBuildDump_SkipsNonKeyManager(t *testing.T) {
 	chrome := &mockChromiumBrowser{
 		mockBrowser: mockBrowser{name: chromeName, userDataDir: "/chrome", profiles: []string{testProfileDefault}},
-		keys:        keyretriever.MasterKeys{V10: []byte("v10")},
+		keys:        keys.MasterKeys{V10: []byte("v10")},
 	}
 	firefox := &mockBrowser{name: firefoxName, userDataDir: "/ff", profiles: []string{"default-release"}}
 
@@ -137,7 +137,7 @@ func TestBuildDump_SkipsNonKeyManager(t *testing.T) {
 func TestBuildDump_SkipsExportError(t *testing.T) {
 	good := &mockChromiumBrowser{
 		mockBrowser: mockBrowser{name: chromeName, userDataDir: "/chrome", profiles: []string{testProfileDefault}},
-		keys:        keyretriever.MasterKeys{V10: []byte("v10")},
+		keys:        keys.MasterKeys{V10: []byte("v10")},
 	}
 	failing := &mockChromiumBrowser{
 		mockBrowser: mockBrowser{name: testEdgeName, userDataDir: "/edge", profiles: []string{testProfileDefault}},
@@ -157,7 +157,7 @@ func TestBuildDump_SkipsExportError(t *testing.T) {
 func TestBuildDump_JSONRoundTrip(t *testing.T) {
 	b := &mockChromiumBrowser{
 		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
-		keys:        keyretriever.MasterKeys{V10: []byte{0x01, 0x02, 0x03}, V20: []byte{0xff, 0xee}},
+		keys:        keys.MasterKeys{V10: []byte{0x01, 0x02, 0x03}, V20: []byte{0xff, 0xee}},
 	}
 
 	dump := BuildDump([]Browser{b})
@@ -167,7 +167,7 @@ func TestBuildDump_JSONRoundTrip(t *testing.T) {
 		t.Fatalf("WriteJSON: %v", err)
 	}
 
-	parsed, err := keyretriever.ReadJSON(&buf)
+	parsed, err := keys.ReadJSON(&buf)
 	if err != nil {
 		t.Fatalf("ReadJSON: %v", err)
 	}
@@ -192,7 +192,7 @@ func TestBuildDump_JSONRoundTrip(t *testing.T) {
 func TestBuildDump_PartialKeys(t *testing.T) {
 	b := &mockChromiumBrowser{
 		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
-		keys:        keyretriever.MasterKeys{V10: []byte("v10")},
+		keys:        keys.MasterKeys{V10: []byte("v10")},
 		exportErr:   errors.New("v20: ABE failed"),
 	}
 
@@ -213,9 +213,9 @@ func TestApplyDump_Match(t *testing.T) {
 	b := &mockChromiumBrowser{
 		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
 	}
-	dump := keyretriever.Dump{
-		Vaults: []keyretriever.Vault{
-			{Browser: chromeName, UserDataDir: testUDD, Keys: keyretriever.MasterKeys{V10: []byte("v10-from-dump")}},
+	dump := keys.Dump{
+		Vaults: []keys.Vault{
+			{Browser: chromeName, UserDataDir: testUDD, Keys: keys.MasterKeys{V10: []byte("v10-from-dump")}},
 		},
 	}
 	ApplyDump([]Browser{b}, dump)
@@ -223,7 +223,7 @@ func TestApplyDump_Match(t *testing.T) {
 	if b.receivedRetrievers.V10 == nil {
 		t.Fatal("V10 retriever should be set from matching vault")
 	}
-	got, err := b.receivedRetrievers.V10.RetrieveKey(keyretriever.Hints{})
+	got, err := b.receivedRetrievers.V10.RetrieveKey(keys.Hints{})
 	if err != nil || string(got) != "v10-from-dump" {
 		t.Errorf("V10.RetrieveKey() = %q, err = %v, want %q", got, err, "v10-from-dump")
 	}
@@ -236,9 +236,9 @@ func TestApplyDump_MissingVault(t *testing.T) {
 	b := &mockChromiumBrowser{
 		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
 	}
-	dump := keyretriever.Dump{
-		Vaults: []keyretriever.Vault{
-			{Browser: testEdgeName, UserDataDir: "/edge", Keys: keyretriever.MasterKeys{V10: []byte("v10")}},
+	dump := keys.Dump{
+		Vaults: []keys.Vault{
+			{Browser: testEdgeName, UserDataDir: "/edge", Keys: keys.MasterKeys{V10: []byte("v10")}},
 		},
 	}
 	ApplyDump([]Browser{b}, dump)
@@ -250,9 +250,9 @@ func TestApplyDump_MissingVault(t *testing.T) {
 
 func TestApplyDump_NonKeyManagerSkipped(t *testing.T) {
 	firefox := &mockBrowser{name: firefoxName, userDataDir: "/ff", profiles: []string{"default-release"}}
-	dump := keyretriever.Dump{
-		Vaults: []keyretriever.Vault{
-			{Browser: firefoxName, UserDataDir: "/ff", Keys: keyretriever.MasterKeys{V10: []byte("v10")}},
+	dump := keys.Dump{
+		Vaults: []keys.Vault{
+			{Browser: firefoxName, UserDataDir: "/ff", Keys: keys.MasterKeys{V10: []byte("v10")}},
 		},
 	}
 	// firefox does not implement KeyManager; ApplyDump must not panic and must not attempt injection.
@@ -262,7 +262,7 @@ func TestApplyDump_NonKeyManagerSkipped(t *testing.T) {
 func TestApplyDump_RoundTrip(t *testing.T) {
 	src := &mockChromiumBrowser{
 		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
-		keys:        keyretriever.MasterKeys{V10: []byte("v10-rt"), V20: []byte("v20-rt")},
+		keys:        keys.MasterKeys{V10: []byte("v10-rt"), V20: []byte("v20-rt")},
 	}
 	dump := BuildDump([]Browser{src})
 
@@ -271,11 +271,11 @@ func TestApplyDump_RoundTrip(t *testing.T) {
 	}
 	ApplyDump([]Browser{dst}, dump)
 
-	v10, _ := dst.receivedRetrievers.V10.RetrieveKey(keyretriever.Hints{})
+	v10, _ := dst.receivedRetrievers.V10.RetrieveKey(keys.Hints{})
 	if string(v10) != "v10-rt" {
 		t.Errorf("V10 round-trip: got %q, want v10-rt", v10)
 	}
-	v20, _ := dst.receivedRetrievers.V20.RetrieveKey(keyretriever.Hints{})
+	v20, _ := dst.receivedRetrievers.V20.RetrieveKey(keys.Hints{})
 	if string(v20) != "v20-rt" {
 		t.Errorf("V20 round-trip: got %q, want v20-rt", v20)
 	}
@@ -291,12 +291,12 @@ func TestApplyDump_FallbackOnPathMismatch(t *testing.T) {
 	b := &mockChromiumBrowser{
 		mockBrowser: mockBrowser{name: chromeName, userDataDir: "/local/chrome", profiles: []string{testProfileDefault}},
 	}
-	dump := keyretriever.Dump{
-		Vaults: []keyretriever.Vault{
+	dump := keys.Dump{
+		Vaults: []keys.Vault{
 			{
 				Browser:     chromeName,
 				UserDataDir: `C:\Users\foo\AppData\Local\Google\Chrome\User Data`,
-				Keys:        keyretriever.MasterKeys{V10: []byte("v10-fallback")},
+				Keys:        keys.MasterKeys{V10: []byte("v10-fallback")},
 			},
 		},
 	}
@@ -305,7 +305,7 @@ func TestApplyDump_FallbackOnPathMismatch(t *testing.T) {
 	if b.receivedRetrievers.V10 == nil {
 		t.Fatal("V10 retriever should be set via single-vault fallback")
 	}
-	got, err := b.receivedRetrievers.V10.RetrieveKey(keyretriever.Hints{})
+	got, err := b.receivedRetrievers.V10.RetrieveKey(keys.Hints{})
 	if err != nil || string(got) != "v10-fallback" {
 		t.Errorf("V10.RetrieveKey() = %q, err = %v, want %q", got, err, "v10-fallback")
 	}
@@ -317,10 +317,10 @@ func TestApplyDump_NoFallbackWhenAmbiguous(t *testing.T) {
 	b := &mockChromiumBrowser{
 		mockBrowser: mockBrowser{name: chromeName, userDataDir: "/local/chrome", profiles: []string{testProfileDefault}},
 	}
-	dump := keyretriever.Dump{
-		Vaults: []keyretriever.Vault{
-			{Browser: chromeName, UserDataDir: "/path/a", Keys: keyretriever.MasterKeys{V10: []byte("a")}},
-			{Browser: chromeName, UserDataDir: "/path/b", Keys: keyretriever.MasterKeys{V10: []byte("b")}},
+	dump := keys.Dump{
+		Vaults: []keys.Vault{
+			{Browser: chromeName, UserDataDir: "/path/a", Keys: keys.MasterKeys{V10: []byte("a")}},
+			{Browser: chromeName, UserDataDir: "/path/b", Keys: keys.MasterKeys{V10: []byte("b")}},
 		},
 	}
 	ApplyDump([]Browser{b}, dump)

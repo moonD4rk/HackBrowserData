@@ -1,4 +1,4 @@
-package keyretriever
+package keys
 
 import (
 	"errors"
