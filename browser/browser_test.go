@@ -341,7 +341,7 @@ func TestResolveGlobs(t *testing.T) {
 	}
 }
 
-func TestNewBrowsersDispatch(t *testing.T) {
+func TestNewBrowserDispatch(t *testing.T) {
 	chromiumDir := t.TempDir()
 	mkFile(t, chromiumDir, "Default", "Preferences")
 	mkFile(t, chromiumDir, "Default", "History")
@@ -357,7 +357,7 @@ func TestNewBrowsersDispatch(t *testing.T) {
 	tests := []struct {
 		name        string
 		cfg         types.BrowserConfig
-		wantLen     int
+		wantNil     bool
 		wantName    string
 		wantProfile string
 		wantErr     string
@@ -365,21 +365,18 @@ func TestNewBrowsersDispatch(t *testing.T) {
 		{
 			name:        "chromium dispatch",
 			cfg:         types.BrowserConfig{Key: "chrome", Name: "Chrome", Kind: types.Chromium, UserDataDir: chromiumDir},
-			wantLen:     1,
 			wantName:    "Chrome",
 			wantProfile: "Default",
 		},
 		{
 			name:        "firefox dispatch",
 			cfg:         types.BrowserConfig{Key: "firefox", Name: "Firefox", Kind: types.Firefox, UserDataDir: firefoxDir},
-			wantLen:     1,
 			wantName:    "Firefox",
 			wantProfile: "abc.default",
 		},
 		{
 			name:        "safari dispatch",
 			cfg:         types.BrowserConfig{Key: "safari", Name: "Safari", Kind: types.Safari, UserDataDir: safariDir},
-			wantLen:     1,
 			wantName:    "Safari",
 			wantProfile: "default",
 		},
@@ -389,38 +386,45 @@ func TestNewBrowsersDispatch(t *testing.T) {
 			wantErr: "unknown browser kind",
 		},
 		{
-			name: "empty dir returns empty",
-			cfg:  types.BrowserConfig{Key: "chrome", Name: "Chrome", Kind: types.Chromium, UserDataDir: emptyDir},
+			name:    "empty dir returns nil",
+			cfg:     types.BrowserConfig{Key: "chrome", Name: "Chrome", Kind: types.Chromium, UserDataDir: emptyDir},
+			wantNil: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			found, err := newBrowsers(tt.cfg)
+			b, err := newBrowser(tt.cfg)
 			if tt.wantErr != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.wantErr)
 				return
 			}
 			require.NoError(t, err)
-			require.Len(t, found, tt.wantLen)
-			if tt.wantLen > 0 {
-				assert.Equal(t, tt.wantName, found[0].BrowserName())
-				assert.Equal(t, tt.wantProfile, found[0].ProfileName())
+			if tt.wantNil {
+				assert.Nil(t, b)
+				return
 			}
+			require.NotNil(t, b)
+			assert.Equal(t, tt.wantName, b.BrowserName())
+			profiles := b.Profiles()
+			require.NotEmpty(t, profiles)
+			assert.Equal(t, tt.wantProfile, profiles[0].Name)
 		})
 	}
 }
 
-// assertBrowsers verifies browser names and profiles match expectations (order-independent).
+// assertBrowsers flattens installations into (browser, profile) pairs and
+// verifies they match expectations (order-independent).
 func assertBrowsers(t *testing.T, browsers []Browser, wantNames, wantProfiles []string) {
 	t.Helper()
-	assert.Len(t, browsers, len(wantNames))
 
 	var gotNames, gotProfiles []string
 	for _, b := range browsers {
-		gotNames = append(gotNames, b.BrowserName())
-		gotProfiles = append(gotProfiles, b.ProfileName())
+		for _, p := range b.Profiles() {
+			gotNames = append(gotNames, b.BrowserName())
+			gotProfiles = append(gotProfiles, p.Name)
+		}
 	}
 	sort.Strings(gotNames)
 	sort.Strings(gotProfiles)

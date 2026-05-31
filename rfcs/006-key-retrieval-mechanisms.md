@@ -36,7 +36,7 @@ The return value is the **ready-to-use decryption key** — either the raw AES k
 
 `ChainRetriever` wraps multiple retrievers and tries them in order. The first successful result wins. If all fail, errors from every retriever are combined into a single error.
 
-**Caching**: the retriever chain is created once per process inside `newPlatformInjector` (see `browser/browser_{darwin,linux,windows}.go`) and shared across every Chromium browser and every profile. macOS retrievers additionally use `sync.Once` internally, so multi-profile browsers only trigger one keychain prompt or memory dump.
+**Caching**: the retriever chain is created once per process inside `newCredentialInjector` (see `browser/browser_{darwin,linux,windows}.go`) and shared across every Chromium browser and every profile. macOS retrievers additionally use `sync.Once` internally, so multi-profile browsers only trigger one keychain prompt or memory dump.
 
 ## 3. macOS Key Retrieval
 
@@ -122,7 +122,7 @@ Windows populates two slots of the `keyretriever.Retrievers` struct — V10 (leg
 | V10 | `DPAPIRetriever` | `os_crypt.encrypted_key` | `CryptUnprotectData` (Crypt32.dll) |
 | V20 | `ABERetriever` | `os_crypt.app_bound_encrypted_key` | IElevator via reflective injection (see [RFC-010](010-chrome-abe-integration.md)) |
 
-`browser/browser_windows.go::newPlatformInjector` calls `keyretriever.DefaultRetrievers()` and wires the resulting struct through `Browser.SetKeyRetrievers(r)`. At extract time `keyretriever.NewMasterKeys` runs each slot independently — a failure on one tier does not prevent the other from succeeding, because mixed-tier Chrome profiles (upgraded from pre-127) need partial success to be useful.
+`browser/browser_windows.go::newCredentialInjector` calls `keyretriever.DefaultRetrievers()` and wires the resulting struct through `Browser.SetKeyRetrievers(r)`. At extract time `keyretriever.NewMasterKeys` runs each slot independently — a failure on one tier does not prevent the other from succeeding, because mixed-tier Chrome profiles (upgraded from pre-127) need partial success to be useful.
 
 **Why not a ChainRetriever?** `ChainRetriever` has first-success semantics: once ABE returns a key, DPAPI is never called. That semantics is wrong for orthogonal tiers — it was the root cause of issue #578, where upgraded profiles' v10-encrypted passwords silently failed because only the v20 key was retrieved. `NewMasterKeys` evaluates each tier independently and returns an `errors.Join` of per-tier failures; log severity is a caller-side decision. `browser/chromium::getMasterKeys` currently logs all tier errors uniformly at `Warnf` — the distinction between "partial" and "total" failure was judged low-value for a short-lived CLI where all warn lines are visible in the default output.
 
@@ -214,7 +214,7 @@ Future contributors adding a new macOS browser that reads credentials from the K
 
 ### 7.3 Where the `--keychain-pw` Password Goes
 
-The macOS login password is resolved once at startup by `browser/browser_darwin.go::resolveKeychainPassword`, then delivered to both consumers from within a single platform-specific closure, `newPlatformInjector` (defined per platform in `browser/browser_{darwin,linux,windows}.go`). The closure captures both the retriever chain and the raw password, and applies whichever capability interface each Browser happens to satisfy:
+The macOS login password is resolved once at startup by `browser/browser_darwin.go::resolveKeychainPassword`, then delivered to both consumers from within a single platform-specific closure, `newCredentialInjector` (defined per platform in `browser/browser_{darwin,linux,windows}.go`). The closure captures both the retriever chain and the raw password, and applies whichever capability interface each Browser happens to satisfy:
 
 | Consumer | Capability interface | Defined in | Payload |
 |---|---|---|---|

@@ -28,7 +28,7 @@ The primary command. Extracts, decrypts, and writes browser data to files.
 | `--keychain-pw` | | | macOS keychain password |
 | `--zip` | | `false` | Compress output to zip |
 
-**Workflow**: PickBrowsers (filter by `-b`) → parseCategories (split `-c` on commas) → NewWriter (select formatter by `-f`) → Extract loop (each browser) → Write → optional CompressDir.
+**Workflow**: DiscoverBrowsersWithKeys (filter by `-b`) → parseCategories (split `-c` on commas) → NewWriter (select formatter by `-f`) → Extract loop (each browser) → Write → optional CompressDir.
 
 The nine recognized categories are: `password`, `cookie`, `bookmark`, `history`, `download`, `creditcard`, `extension`, `localstorage`, `sessionstorage`. The string `"all"` maps to all nine.
 
@@ -121,7 +121,7 @@ File permissions are restrictive: directories `0750`, files `0600` (data may con
 
 ```
 CLI: hack-browser-data dump -b chrome -c password,cookie -f csv -d results
-  → PickBrowsers(name="chrome")       → []Browser
+  → DiscoverBrowsersWithKeys(name="chrome")       → []Browser
   → parseCategories("password,cookie") → []Category
   → NewWriter("results", "csv")        → *Writer
   → for each browser:

@@ -17,20 +17,28 @@ const (
 	testEdgeName       = "Edge"
 )
 
+// mockBrowser is one installation holding zero or more profile names.
 type mockBrowser struct {
-	name, profile, profileDir, userDataDir string
+	name, userDataDir string
+	profiles          []string
 }
 
 func (m *mockBrowser) BrowserName() string { return m.name }
-func (m *mockBrowser) ProfileName() string { return m.profile }
-func (m *mockBrowser) ProfileDir() string  { return m.profileDir }
 func (m *mockBrowser) UserDataDir() string { return m.userDataDir }
 
-func (m *mockBrowser) Extract(_ []types.Category) (*types.BrowserData, error) {
-	return &types.BrowserData{}, nil
+func (m *mockBrowser) Profiles() []types.Profile {
+	out := make([]types.Profile, 0, len(m.profiles))
+	for _, p := range m.profiles {
+		out = append(out, types.Profile{Name: p, Dir: m.userDataDir + "/" + p})
+	}
+	return out
 }
 
-func (m *mockBrowser) CountEntries(_ []types.Category) (map[types.Category]int, error) {
+func (m *mockBrowser) Extract(_ []types.Category) ([]types.ExtractResult, error) {
+	return nil, nil
+}
+
+func (m *mockBrowser) CountEntries(_ []types.Category) ([]types.CountResult, error) {
 	return nil, nil
 }
 
@@ -66,7 +74,7 @@ func TestBuildDump_Empty(t *testing.T) {
 
 func TestBuildDump_SingleChromium(t *testing.T) {
 	b := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, profileDir: "/p/Default", userDataDir: testUDD},
+		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
 		keys:        keyretriever.MasterKeys{V10: []byte("v10-key")},
 	}
 
@@ -87,32 +95,34 @@ func TestBuildDump_SingleChromium(t *testing.T) {
 	}
 }
 
-func TestBuildDump_MultipleProfilesSameInstallation(t *testing.T) {
-	p1 := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: testUDD},
+// TestBuildDump_MultipleProfilesOneVault verifies that one installation holding
+// multiple profiles produces a single vault with all profile names, deriving the
+// key exactly once.
+func TestBuildDump_MultipleProfilesOneVault(t *testing.T) {
+	b := &mockChromiumBrowser{
+		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault, testProfile1}},
 		keys:        keyretriever.MasterKeys{V10: []byte("v10")},
 	}
-	p2 := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, profile: testProfile1, userDataDir: testUDD},
-		exportErr:   errors.New("ExportKeys should not be called for second profile"),
-	}
 
-	dump := BuildDump([]Browser{p1, p2})
+	dump := BuildDump([]Browser{b})
 
 	if len(dump.Vaults) != 1 {
-		t.Fatalf("Vaults len = %d, want 1 (same installation grouping)", len(dump.Vaults))
+		t.Fatalf("Vaults len = %d, want 1 (one installation = one vault)", len(dump.Vaults))
 	}
 	if len(dump.Vaults[0].Profiles) != 2 {
 		t.Errorf("Profiles = %v, want both profiles", dump.Vaults[0].Profiles)
+	}
+	if b.calls != 1 {
+		t.Errorf("ExportKeys calls = %d, want 1 (one call per installation)", b.calls)
 	}
 }
 
 func TestBuildDump_SkipsNonKeyManager(t *testing.T) {
 	chrome := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: "/chrome"},
+		mockBrowser: mockBrowser{name: chromeName, userDataDir: "/chrome", profiles: []string{testProfileDefault}},
 		keys:        keyretriever.MasterKeys{V10: []byte("v10")},
 	}
-	firefox := &mockBrowser{name: firefoxName, profile: "default-release", userDataDir: "/ff"}
+	firefox := &mockBrowser{name: firefoxName, userDataDir: "/ff", profiles: []string{"default-release"}}
 
 	dump := BuildDump([]Browser{chrome, firefox})
 
@@ -126,11 +136,11 @@ func TestBuildDump_SkipsNonKeyManager(t *testing.T) {
 
 func TestBuildDump_SkipsExportError(t *testing.T) {
 	good := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: "/chrome"},
+		mockBrowser: mockBrowser{name: chromeName, userDataDir: "/chrome", profiles: []string{testProfileDefault}},
 		keys:        keyretriever.MasterKeys{V10: []byte("v10")},
 	}
 	failing := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: testEdgeName, profile: testProfileDefault, userDataDir: "/edge"},
+		mockBrowser: mockBrowser{name: testEdgeName, userDataDir: "/edge", profiles: []string{testProfileDefault}},
 		exportErr:   errors.New("retriever failed"),
 	}
 
@@ -146,7 +156,7 @@ func TestBuildDump_SkipsExportError(t *testing.T) {
 
 func TestBuildDump_JSONRoundTrip(t *testing.T) {
 	b := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: testUDD},
+		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
 		keys:        keyretriever.MasterKeys{V10: []byte{0x01, 0x02, 0x03}, V20: []byte{0xff, 0xee}},
 	}
 
@@ -181,7 +191,7 @@ func TestBuildDump_JSONRoundTrip(t *testing.T) {
 
 func TestBuildDump_PartialKeys(t *testing.T) {
 	b := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: testUDD},
+		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
 		keys:        keyretriever.MasterKeys{V10: []byte("v10")},
 		exportErr:   errors.New("v20: ABE failed"),
 	}
@@ -201,7 +211,7 @@ func TestBuildDump_PartialKeys(t *testing.T) {
 
 func TestApplyDump_Match(t *testing.T) {
 	b := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: testUDD},
+		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
 	}
 	dump := keyretriever.Dump{
 		Vaults: []keyretriever.Vault{
@@ -224,7 +234,7 @@ func TestApplyDump_Match(t *testing.T) {
 
 func TestApplyDump_MissingVault(t *testing.T) {
 	b := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: testUDD},
+		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
 	}
 	dump := keyretriever.Dump{
 		Vaults: []keyretriever.Vault{
@@ -239,7 +249,7 @@ func TestApplyDump_MissingVault(t *testing.T) {
 }
 
 func TestApplyDump_NonKeyManagerSkipped(t *testing.T) {
-	firefox := &mockBrowser{name: firefoxName, profile: "default-release", userDataDir: "/ff"}
+	firefox := &mockBrowser{name: firefoxName, userDataDir: "/ff", profiles: []string{"default-release"}}
 	dump := keyretriever.Dump{
 		Vaults: []keyretriever.Vault{
 			{Browser: firefoxName, UserDataDir: "/ff", Keys: keyretriever.MasterKeys{V10: []byte("v10")}},
@@ -251,13 +261,13 @@ func TestApplyDump_NonKeyManagerSkipped(t *testing.T) {
 
 func TestApplyDump_RoundTrip(t *testing.T) {
 	src := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: testUDD},
+		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
 		keys:        keyretriever.MasterKeys{V10: []byte("v10-rt"), V20: []byte("v20-rt")},
 	}
 	dump := BuildDump([]Browser{src})
 
 	dst := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: testUDD},
+		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
 	}
 	ApplyDump([]Browser{dst}, dump)
 
@@ -279,7 +289,7 @@ func TestApplyDump_FallbackOnPathMismatch(t *testing.T) {
 	// UserDataDir literally differs. With a single vault for the browser, ApplyDump should still
 	// inject — otherwise the primary cross-host use case fails silently.
 	b := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: "/local/chrome"},
+		mockBrowser: mockBrowser{name: chromeName, userDataDir: "/local/chrome", profiles: []string{testProfileDefault}},
 	}
 	dump := keyretriever.Dump{
 		Vaults: []keyretriever.Vault{
@@ -305,7 +315,7 @@ func TestApplyDump_NoFallbackWhenAmbiguous(t *testing.T) {
 	// Two Chrome vaults in the dump and no exact path match — ApplyDump must not guess which
 	// installation the local browser corresponds to.
 	b := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: "/local/chrome"},
+		mockBrowser: mockBrowser{name: chromeName, userDataDir: "/local/chrome", profiles: []string{testProfileDefault}},
 	}
 	dump := keyretriever.Dump{
 		Vaults: []keyretriever.Vault{
@@ -317,36 +327,5 @@ func TestApplyDump_NoFallbackWhenAmbiguous(t *testing.T) {
 
 	if b.receivedRetrievers.V10 != nil {
 		t.Errorf("V10 should remain nil when fallback is ambiguous, got %v", b.receivedRetrievers.V10)
-	}
-}
-
-func TestBuildDump_GroupingOrderIndependent(t *testing.T) {
-	for _, name := range []string{"p1 first", "p2 first"} {
-		t.Run(name, func(t *testing.T) {
-			p1 := &mockChromiumBrowser{
-				mockBrowser: mockBrowser{name: chromeName, profile: testProfileDefault, userDataDir: testUDD},
-				keys:        keyretriever.MasterKeys{V10: []byte("v10")},
-			}
-			p2 := &mockChromiumBrowser{
-				mockBrowser: mockBrowser{name: chromeName, profile: testProfile1, userDataDir: testUDD},
-				keys:        keyretriever.MasterKeys{V10: []byte("v10")},
-			}
-			list := []Browser{p1, p2}
-			if name == "p2 first" {
-				list = []Browser{p2, p1}
-			}
-
-			dump := BuildDump(list)
-
-			if len(dump.Vaults) != 1 {
-				t.Fatalf("Vaults len = %d, want 1", len(dump.Vaults))
-			}
-			if len(dump.Vaults[0].Profiles) != 2 {
-				t.Errorf("Profiles = %v, want 2", dump.Vaults[0].Profiles)
-			}
-			if calls := p1.calls + p2.calls; calls != 1 {
-				t.Errorf("ExportKeys total calls = %d, want 1 (one call per installation)", calls)
-			}
-		})
 	}
 }

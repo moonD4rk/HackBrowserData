@@ -7,170 +7,74 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/moond4rk/hackbrowserdata/filemanager"
-	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/types"
-	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
-// Browser represents a single Firefox profile ready for extraction.
+// Browser is one Firefox installation: the Profiles directory holding one or
+// more profiles. Firefox keys are per-profile (each profile's key4.db), so the
+// installation does not implement KeyManager.
 type Browser struct {
-	cfg         types.BrowserConfig
-	profileDir  string                          // absolute path to profile directory
-	sources     map[types.Category][]sourcePath // Category → candidate paths (priority order)
-	sourcePaths map[types.Category]resolvedPath // Category → discovered absolute path
+	cfg      types.BrowserConfig
+	profiles []*profile
 }
 
-// NewBrowsers discovers Firefox profiles under cfg.UserDataDir and returns
-// one Browser per profile. Firefox profile directories have random names
-// (e.g. "97nszz88.default-release"); any subdirectory containing known
-// data files is treated as a valid profile.
-func NewBrowsers(cfg types.BrowserConfig) ([]*Browser, error) {
-	profileDirs := discoverProfiles(cfg.UserDataDir, firefoxSources)
-	if len(profileDirs) == 0 {
-		return nil, nil
-	}
-
-	var browsers []*Browser
-	for _, profileDir := range profileDirs {
+// NewBrowser discovers the Firefox profiles under cfg.UserDataDir and returns
+// the installation, or nil if no profile with resolvable sources exists.
+// Firefox profile directories have random names (e.g. "97nszz88.default-release");
+// any subdirectory containing known data files is treated as a valid profile.
+func NewBrowser(cfg types.BrowserConfig) (*Browser, error) {
+	var profiles []*profile
+	for _, profileDir := range discoverProfiles(cfg.UserDataDir, firefoxSources) {
 		sourcePaths := resolveSourcePaths(firefoxSources, profileDir)
 		if len(sourcePaths) == 0 {
 			continue
 		}
-		browsers = append(browsers, &Browser{
-			cfg:         cfg,
+		profiles = append(profiles, &profile{
 			profileDir:  profileDir,
-			sources:     firefoxSources,
+			browserName: cfg.Name,
 			sourcePaths: sourcePaths,
 		})
 	}
-	return browsers, nil
+	if len(profiles) == 0 {
+		return nil, nil
+	}
+	return &Browser{cfg: cfg, profiles: profiles}, nil
 }
 
 func (b *Browser) BrowserName() string { return b.cfg.Name }
-func (b *Browser) ProfileDir() string  { return b.profileDir }
 func (b *Browser) UserDataDir() string { return b.cfg.UserDataDir }
-func (b *Browser) ProfileName() string {
-	if b.profileDir == "" {
-		return ""
+
+// Profiles returns the identity of every profile in this installation.
+func (b *Browser) Profiles() []types.Profile {
+	out := make([]types.Profile, 0, len(b.profiles))
+	for _, p := range b.profiles {
+		out = append(out, types.Profile{Name: p.name(), Dir: p.profileDir})
 	}
-	return filepath.Base(b.profileDir)
+	return out
 }
 
-// Extract copies browser files to a temp directory, retrieves the master key,
-// and extracts data for the requested categories.
-func (b *Browser) Extract(categories []types.Category) (*types.BrowserData, error) {
-	session, err := filemanager.NewSession()
-	if err != nil {
-		return nil, err
+// Extract extracts every profile, deriving each profile's key independently.
+func (b *Browser) Extract(categories []types.Category) ([]types.ExtractResult, error) {
+	results := make([]types.ExtractResult, 0, len(b.profiles))
+	for _, p := range b.profiles {
+		results = append(results, types.ExtractResult{
+			Profile: types.Profile{Name: p.name(), Dir: p.profileDir},
+			Data:    p.extract(categories),
+		})
 	}
-	defer session.Cleanup()
-
-	tempPaths := b.acquireFiles(session, categories)
-
-	masterKey, err := b.getMasterKey(session, tempPaths)
-	if err != nil {
-		log.Debugf("get master key for %s: %v", b.BrowserName()+"/"+b.ProfileName(), err)
-	}
-
-	data := &types.BrowserData{}
-	for _, cat := range categories {
-		path, ok := tempPaths[cat]
-		if !ok {
-			continue
-		}
-		b.extractCategory(data, cat, masterKey, path)
-	}
-	return data, nil
+	return results, nil
 }
 
-// CountEntries copies browser files to a temp directory and counts entries
-// per category without decryption. Much faster than Extract for display-only
-// use cases like "list --detail".
-func (b *Browser) CountEntries(categories []types.Category) (map[types.Category]int, error) {
-	session, err := filemanager.NewSession()
-	if err != nil {
-		return nil, err
+// CountEntries counts entries per category for every profile without decryption.
+func (b *Browser) CountEntries(categories []types.Category) ([]types.CountResult, error) {
+	results := make([]types.CountResult, 0, len(b.profiles))
+	for _, p := range b.profiles {
+		results = append(results, types.CountResult{
+			Profile: types.Profile{Name: p.name(), Dir: p.profileDir},
+			Counts:  p.count(categories),
+		})
 	}
-	defer session.Cleanup()
-
-	tempPaths := b.acquireFiles(session, categories)
-
-	counts := make(map[types.Category]int)
-	for _, cat := range categories {
-		path, ok := tempPaths[cat]
-		if !ok {
-			continue
-		}
-		counts[cat] = b.countCategory(cat, path)
-	}
-	return counts, nil
-}
-
-// countCategory calls the appropriate count function for a category.
-func (b *Browser) countCategory(cat types.Category, path string) int {
-	var count int
-	var err error
-	switch cat {
-	case types.Password:
-		count, err = countPasswords(path)
-	case types.Cookie:
-		count, err = countCookies(path)
-	case types.History:
-		count, err = countHistories(path)
-	case types.Download:
-		count, err = countDownloads(path)
-	case types.Bookmark:
-		count, err = countBookmarks(path)
-	case types.Extension:
-		count, err = countExtensions(path)
-	case types.LocalStorage:
-		count, err = countLocalStorage(path)
-	case types.CreditCard, types.SessionStorage:
-		// Firefox does not support CreditCard or SessionStorage.
-	}
-	if err != nil {
-		log.Debugf("count %s for %s: %v", cat, b.BrowserName()+"/"+b.ProfileName(), err)
-	}
-	return count
-}
-
-// acquireFiles copies source files to the session temp directory.
-func (b *Browser) acquireFiles(session *filemanager.Session, categories []types.Category) map[types.Category]string {
-	tempPaths := make(map[types.Category]string)
-	for _, cat := range categories {
-		rp, ok := b.sourcePaths[cat]
-		if !ok {
-			continue
-		}
-		dst := filepath.Join(session.TempDir(), cat.String())
-		if err := session.Acquire(rp.absPath, dst, rp.isDir); err != nil {
-			log.Debugf("acquire %s: %v", cat, err)
-			continue
-		}
-		tempPaths[cat] = dst
-	}
-	return tempPaths
-}
-
-// getMasterKey retrieves the Firefox master encryption key from key4.db.
-// The key is derived via NSS ASN1 PBE decryption (platform-agnostic).
-// If logins.json was already acquired by acquireFiles, the derived key
-// is validated by attempting to decrypt an actual login entry.
-func (b *Browser) getMasterKey(session *filemanager.Session, tempPaths map[types.Category]string) ([]byte, error) {
-	key4Src := filepath.Join(b.profileDir, "key4.db")
-	if !fileutil.FileExists(key4Src) {
-		return nil, nil
-	}
-	key4Dst := filepath.Join(session.TempDir(), "key4.db")
-	if err := session.Acquire(key4Src, key4Dst, false); err != nil {
-		return nil, fmt.Errorf("acquire key4.db: %w", err)
-	}
-
-	// logins.json is already acquired by acquireFiles as the Password source;
-	// reuse it for master key validation if available.
-	loginsPath := tempPaths[types.Password]
-	return retrieveMasterKey(key4Dst, loginsPath)
+	return results, nil
 }
 
 // retrieveMasterKey reads key4.db and derives the master key using NSS.
@@ -201,32 +105,6 @@ func retrieveMasterKey(key4Path, loginsPath string) ([]byte, error) {
 	}
 
 	return nil, fmt.Errorf("derived %d key(s) but none could decrypt logins", len(keys))
-}
-
-// extractCategory calls the appropriate extract function for a category.
-func (b *Browser) extractCategory(data *types.BrowserData, cat types.Category, masterKey []byte, path string) {
-	var err error
-	switch cat {
-	case types.Password:
-		data.Passwords, err = extractPasswords(masterKey, path)
-	case types.Cookie:
-		data.Cookies, err = extractCookies(path)
-	case types.History:
-		data.Histories, err = extractHistories(path)
-	case types.Download:
-		data.Downloads, err = extractDownloads(path)
-	case types.Bookmark:
-		data.Bookmarks, err = extractBookmarks(path)
-	case types.Extension:
-		data.Extensions, err = extractExtensions(path)
-	case types.LocalStorage:
-		data.LocalStorage, err = extractLocalStorage(path)
-	case types.CreditCard, types.SessionStorage:
-		// Firefox does not support CreditCard or SessionStorage extraction.
-	}
-	if err != nil {
-		log.Debugf("extract %s for %s: %v", cat, b.BrowserName()+"/"+b.ProfileName(), err)
-	}
 }
 
 // resolvedPath holds the absolute path and type for a discovered source.

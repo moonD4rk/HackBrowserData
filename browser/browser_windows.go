@@ -125,11 +125,11 @@ func platformBrowsers() []types.BrowserConfig {
 	}
 }
 
-// newPlatformInjector returns a closure that wires the Windows v10 (DPAPI) and v20 (ABE) Chromium
+// newCredentialInjector returns a closure that wires the Windows v10 (DPAPI) and v20 (ABE) Chromium
 // master-key retrievers into each Browser. Per issue #578 the two tiers are orthogonal — a single
 // Chrome profile upgraded from pre-127 carries v20 cookies alongside v10 passwords — so both
 // retrievers run independently rather than as a first-success chain.
-func newPlatformInjector(_ PickOptions) func(Browser) {
+func newCredentialInjector(_ PickOptions) browserInjector {
 	retrievers := keyretriever.DefaultRetrievers()
 	return func(b Browser) {
 		if km, ok := b.(KeyManager); ok {

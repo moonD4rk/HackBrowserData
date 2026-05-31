@@ -72,4 +72,4 @@ make payload-clean   # rm crypto/*.bin
 - `modernc.org/sqlite` pinned at v1.31.1 (v1.32+ requires Go 1.21)
 - `golang.org/x/text` will be removed in refactoring (use 3-byte UTF-8 BOM instead)
 - No `pkg/` + `internal/` directory structure — keep it simple
-- No root-level library API — CLI calls `browser.PickBrowsers()` directly
+- No root-level library API — CLI calls `browser.DiscoverBrowsersWithKeys()` directly
