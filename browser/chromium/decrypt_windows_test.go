@@ -54,17 +54,19 @@ func encryptWithDPAPI(plaintext []byte) ([]byte, error) {
 }
 
 func TestDecryptValue_V10_Windows(t *testing.T) {
-	// Windows uses AES-GCM for v10 (not AES-CBC like macOS/Linux)
+	// Windows v10 is AES-256-GCM, so the master key is 32 bytes; decryptValue routes v10 by key
+	// length (32B→GCM). testAESKey is 16B, so this uses an explicit 32B key.
+	key32 := []byte("0123456789abcdef0123456789abcdef") // 32 bytes
 	plaintext := []byte("test_secret_value")
 	nonce := []byte("123456789012") // 12-byte nonce
 
-	gcmEncrypted, err := crypto.AESGCMEncrypt(testAESKey, nonce, plaintext)
+	gcmEncrypted, err := crypto.AESGCMEncrypt(key32, nonce, plaintext)
 	require.NoError(t, err)
 
 	// v10 format on Windows: "v10" + nonce(12) + encrypted
 	ciphertext := append([]byte("v10"), append(nonce, gcmEncrypted...)...)
 
-	got, err := decryptValue(masterkey.MasterKeys{V10: testAESKey}, ciphertext)
+	got, err := decryptValue(masterkey.MasterKeys{V10: key32}, ciphertext)
 	require.NoError(t, err)
 	assert.Equal(t, plaintext, got)
 }
