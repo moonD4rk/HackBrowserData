@@ -1,4 +1,4 @@
-// Package keys retrieves Chromium master keys (per-platform retrievers + a cross-host Dump format).
+// Package masterkey retrieves Chromium master keys (per-platform retrievers + a cross-host Dump format).
 // Firefox and Safari own their own key paths and don't route through here.
 package masterkey
 
@@ -24,7 +24,7 @@ type Retriever interface {
 	RetrieveKey(hints Hints) ([]byte, error)
 }
 
-// ChainRetriever tries retrievers in order, first success wins (macOS: gcoredump→password→security; Linux: D-Bus→peanuts).
+// ChainRetriever tries retrievers in order, first success wins (macOS V10: gcoredump→password→security).
 type ChainRetriever struct {
 	retrievers []Retriever
 }

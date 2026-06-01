@@ -37,7 +37,7 @@ func decryptValue(masterKeys masterkey.MasterKeys, ciphertext []byte) ([]byte, e
 		// exercise the same decryption path as Windows.
 		return crypto.DecryptChromiumV20(masterKeys.V20, ciphertext)
 	case crypto.CipherV12:
-		// Chromium's SecretPortalKeyRetriever (Flatpak / xdg-desktop-portal) — HKDF-SHA256 +
+		// Chromium's SecretPortalKeyProvider (Flatpak / xdg-desktop-portal) — HKDF-SHA256 +
 		// AES-256-GCM with a secret retrieved via org.freedesktop.portal.Desktop. Recognized here
 		// to surface an actionable "known gap" error rather than the generic "unsupported" one.
 		return nil, fmt.Errorf("unsupported cipher version v12 (Chromium SecretPortal / Flatpak; not yet implemented)")
