@@ -14,7 +14,7 @@ This RFC documents how HackBrowserData integrates ABE support end-to-end while k
 Related RFCs:
 
 - [RFC-003](003-chromium-encryption.md) — cipher versions (v10, v11, v20)
-- [RFC-006](006-key-retrieval-mechanisms.md) — `KeyRetriever` / `ChainRetriever`
+- [RFC-006](006-key-retrieval-mechanisms.md) — `Retriever` / `ChainRetriever`
 - [RFC-009](009-windows-locked-file-bypass.md) — other Windows-specific handling
 
 ### 1.1 Compatibility contract
@@ -46,7 +46,7 @@ End-to-end flow when `hack-browser-data.exe` encounters a v20 Chromium cookie on
 
 ```
 browser/chromium.Extract()
-  → keyretriever.Chain [ABERetriever, DPAPIRetriever]
+  → masterkey.Chain [ABERetriever, DPAPIRetriever]
   → ABERetriever.RetrieveKey():
       reads Local State → extracts APPB-prefixed blob
       resolves browser exe via registry App Paths
@@ -191,7 +191,7 @@ Go consumes the same constants via **`go tool cgo -godefs`** (a development-time
 
 ### 5.3 Retriever wiring & v20 routing
 
-`keyretriever.DefaultRetrievers()` on Windows returns a `Retrievers` struct with `V10 = &DPAPIRetriever{}` and `V20 = &ABERetriever{}`. The two tiers are wired independently — not in a ChainRetriever — because a single Chrome profile upgraded from pre-127 can carry mixed v10+v20 ciphertexts, and both keys must be available for `decryptValue` to route each ciphertext to its matching tier (see [RFC-006](006-key-retrieval-mechanisms.md) §4.4 and issue #578). `ABERetriever.RetrieveKey`:
+`masterkey.DefaultRetrievers()` on Windows returns a `Retrievers` struct with `V10 = &DPAPIRetriever{}` and `V20 = &ABERetriever{}`. The two tiers are wired independently — not in a ChainRetriever — because a single Chrome profile upgraded from pre-127 can carry mixed v10+v20 ciphertexts, and both keys must be available for `decryptValue` to route each ciphertext to its matching tier (see [RFC-006](006-key-retrieval-mechanisms.md) §4.4 and issue #578). `ABERetriever.RetrieveKey`:
 
 1. Reads `Local State` → extracts `os_crypt.app_bound_encrypted_key` → strips `APPB` prefix. If the field is missing, `ABERetriever` returns `(nil, nil)`, `V20` remains empty, and the independently-wired `V10` DPAPI tier still runs.
 2. Resolves browser executable via `utils/winutil/browser_path_windows.go` (registry App Paths → hardcoded fallback).
@@ -321,5 +321,5 @@ Edit `crypto/windows/abe_native/com_iid.c` (add the entry), `utils/winutil/brows
 | RFC | Relation |
 |---|---|
 | [RFC-003 Chromium Encryption](003-chromium-encryption.md) | v10/v11/v20 cipher format reference; v20 now implemented on Windows per this RFC |
-| [RFC-006 Key Retrieval](006-key-retrieval-mechanisms.md) | `keyretriever.Retrievers` taxonomy; Windows populates V10 (DPAPI) + V20 (ABE) as independent tier slots |
+| [RFC-006 Key Retrieval](006-key-retrieval-mechanisms.md) | `masterkey.Retrievers` taxonomy; Windows populates V10 (DPAPI) + V20 (ABE) as independent tier slots |
 | [RFC-009 Windows Locked Files](009-windows-locked-file-bypass.md) | Sibling Windows-specific workaround (handle duplication for locked DBs) |

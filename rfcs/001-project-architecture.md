@@ -25,7 +25,7 @@ HackBrowserData/
 │   └── firefox/              # Firefox engine: extraction, NSS key derivation
 ├── types/                    # Data model: Category enum, Entry structs, BrowserData
 ├── crypto/                   # Encryption primitives, cipher version detection
-│   └── keyretriever/         # Platform-specific master key retrieval (Keychain/DPAPI/D-Bus)
+├── masterkey/                # Platform-specific master key retrieval (Keychain/DPAPI/D-Bus)
 ├── filemanager/              # Temp file session, locked file handling (Windows)
 ├── output/                   # Output Writer: CSV, JSON, CookieEditor formatters
 ├── log/                      # Logging with level filtering
@@ -83,10 +83,10 @@ There are two entry points, one for extraction and one for discovery:
 
 ```
 DiscoverBrowsersWithKeys(opts)                    // used by `dump` — ready to Extract
-  → pickFromConfigs(configs, opts)     // shared discovery core
+  → discoverFromConfigs(configs, opts)     // shared discovery core
       → platformBrowsers()             // build-tagged list for this OS
       → filter by name / profile path
-      → newBrowsers(cfg)                // dispatch to chromium/firefox/safari.NewBrowsers
+      → newBrowser(cfg)                // dispatch to chromium/firefox/safari.NewBrowser
           → discoverProfiles()          // scan profile subdirectories
           → resolveSourcePaths()        // stat candidates, first match wins
   → newCredentialInjector(opts)          // build-tagged: returns a browserInjector
@@ -94,20 +94,15 @@ DiscoverBrowsersWithKeys(opts)                    // used by `dump` — ready to
           inject(b)                     // type-assert retrieverSetter / keychainPasswordSetter
 
 DiscoverBrowsers(opts)                 // used by `list` / `list --detail`
-  → pickFromConfigs(configs, opts)     // same shared discovery core, NO injection
+  → discoverFromConfigs(configs, opts)     // same shared discovery core, NO injection
 ```
 
-`DiscoverBrowsersWithKeys` does discovery + decryption setup in one call; the returned
-browsers are ready for `b.Extract`. `DiscoverBrowsers` skips injection
-entirely, so list-style commands never trigger the macOS Keychain password
-prompt — they have no use for the credential. Both entry points share the
-same `pickFromConfigs` core, so filtering/profile-path/glob semantics stay
-consistent.
+`DiscoverBrowsersWithKeys` does discovery + decryption setup in one call; the returned browsers are ready for `b.Extract`. `DiscoverBrowsers` skips injection entirely, so list-style commands never trigger the macOS Keychain password prompt — they have no use for the credential. Both entry points share the same `discoverFromConfigs` core, so filtering/profile-path/glob semantics stay consistent.
 
 Key design decisions:
 
-- **One KeyRetriever chain per process** — built lazily inside `newCredentialInjector` and reused across every Chromium browser and every profile to prevent repeated keychain prompts on macOS.
-- **Discovery is decoupled from injection** — `pickFromConfigs` is injection-free; `DiscoverBrowsers` stops after it, `DiscoverBrowsersWithKeys` continues into injection.
+- **One Retriever chain per process** — built lazily inside `newCredentialInjector` and reused across every Chromium browser and every profile to prevent repeated keychain prompts on macOS.
+- **Discovery is decoupled from injection** — `discoverFromConfigs` is injection-free; `DiscoverBrowsers` stops after it, `DiscoverBrowsersWithKeys` continues into injection.
 - **Profile discovery differs by engine**: Chromium looks for `Preferences` files in subdirectories; Firefox accepts any subdirectory containing known source files.
 - **Flat layout fallback** — Opera-style browsers that store data directly in UserDataDir (no profile subdirectories) are handled by falling back to the base directory.
 
