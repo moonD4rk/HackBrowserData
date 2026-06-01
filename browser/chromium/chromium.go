@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
 	"github.com/moond4rk/hackbrowserdata/filemanager"
 	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
@@ -17,16 +17,15 @@ import (
 // that share a master key. The key is derived once and reused across profiles.
 type Browser struct {
 	cfg        types.BrowserConfig
-	retrievers keyretriever.Retrievers
+	retrievers masterkey.Retrievers
 	profiles   []*profile
 
 	keysOnce sync.Once
-	keys     keyretriever.MasterKeys
+	keys     masterkey.MasterKeys
 }
 
-// NewBrowser discovers the Chromium profiles under cfg.UserDataDir and returns
-// the installation, or nil if no profile with resolvable sources exists. Call
-// SetKeyRetrievers before Extract to enable decryption of sensitive data.
+// NewBrowser discovers the profiles under cfg.UserDataDir, or returns nil if none resolve.
+// Call SetRetrievers before Extract to enable decryption.
 func NewBrowser(cfg types.BrowserConfig) (*Browser, error) {
 	sources := sourcesForKind(cfg.Kind)
 	extractors := extractorsForKind(cfg.Kind)
@@ -51,9 +50,9 @@ func NewBrowser(cfg types.BrowserConfig) (*Browser, error) {
 	return &Browser{cfg: cfg, profiles: profiles}, nil
 }
 
-// SetKeyRetrievers wires the per-tier master-key retrievers (V10/V11/V20) used by
+// SetRetrievers wires the per-tier master-key retrievers (V10/V11/V20) used by
 // Extract; unused tiers stay nil.
-func (b *Browser) SetKeyRetrievers(r keyretriever.Retrievers) { b.retrievers = r }
+func (b *Browser) SetRetrievers(r masterkey.Retrievers) { b.retrievers = r }
 
 func (b *Browser) BrowserName() string { return b.cfg.Name }
 func (b *Browser) UserDataDir() string { return b.cfg.UserDataDir }
@@ -69,12 +68,12 @@ func (b *Browser) Profiles() []types.Profile {
 
 // Extract derives the installation's master key once, then extracts every profile.
 func (b *Browser) Extract(categories []types.Category) ([]types.ExtractResult, error) {
-	keys := b.masterKeys()
+	masterKeys := b.masterKeys()
 	results := make([]types.ExtractResult, 0, len(b.profiles))
 	for _, p := range b.profiles {
 		results = append(results, types.ExtractResult{
 			Profile: types.Profile{Name: p.name(), Dir: p.profileDir},
-			Data:    p.extract(keys, categories),
+			Data:    p.extract(masterKeys, categories),
 		})
 	}
 	return results, nil
@@ -92,39 +91,34 @@ func (b *Browser) CountEntries(categories []types.Category) ([]types.CountResult
 	return results, nil
 }
 
-// ExportKeys derives the installation's master keys without extraction. Returns
-// whatever tiers succeeded plus a joined error describing any failed tiers;
-// callers preserve partial results because a Chrome 127+ installation mixes
-// v10 + v20 ciphertexts and a v20-only failure must not erase a usable v10 key.
-func (b *Browser) ExportKeys() (keyretriever.MasterKeys, error) {
+// ExportKeys derives the master keys without extracting. Returns the tiers that succeeded plus a
+// joined error for those that failed — partial results matter (a v20-only failure keeps the v10 key).
+func (b *Browser) ExportKeys() (masterkey.MasterKeys, error) {
 	session, err := filemanager.NewSession()
 	if err != nil {
-		return keyretriever.MasterKeys{}, err
+		return masterkey.MasterKeys{}, err
 	}
 	defer session.Cleanup()
 
-	return keyretriever.NewMasterKeys(b.retrievers, b.buildHints(session))
+	return masterkey.NewMasterKeys(b.retrievers, b.buildHints(session))
 }
 
-// masterKeys derives the installation's keys exactly once and caches them.
-// Because derivation happens a single time per installation, a failure is warned
-// exactly once — no cross-profile dedup state is needed.
-func (b *Browser) masterKeys() keyretriever.MasterKeys {
+// masterKeys derives and caches the installation's keys exactly once (sync.Once), so a failure is
+// warned once — no cross-profile dedup state needed.
+func (b *Browser) masterKeys() masterkey.MasterKeys {
 	b.keysOnce.Do(func() {
-		keys, err := b.ExportKeys()
+		masterKeys, err := b.ExportKeys()
 		if err != nil {
 			log.Warnf("%s: master key retrieval: %v", b.BrowserName(), err)
 		}
-		b.keys = keys
+		b.keys = masterKeys
 	})
 	return b.keys
 }
 
-// buildHints acquires Local State (into session.TempDir so Windows DPAPI/ABE
-// retrievers can read it from a path the process owns) and assembles per-tier
-// retriever hints. Local State lives at the installation root (cfg.UserDataDir)
-// in both the multi-profile and flat (Opera) layouts.
-func (b *Browser) buildHints(session *filemanager.Session) keyretriever.Hints {
+// buildHints copies Local State into the session temp dir (so Windows DPAPI/ABE retrievers read it
+// from a process-owned path) and assembles the Hints. Local State sits at the installation root.
+func (b *Browser) buildHints(session *filemanager.Session) masterkey.Hints {
 	var localStateDst string
 	candidate := filepath.Join(b.cfg.UserDataDir, "Local State")
 	if fileutil.FileExists(candidate) {
@@ -140,7 +134,7 @@ func (b *Browser) buildHints(session *filemanager.Session) keyretriever.Hints {
 	if b.cfg.WindowsABE {
 		abeKey = b.cfg.Key
 	}
-	return keyretriever.Hints{
+	return masterkey.Hints{
 		KeychainLabel:  b.cfg.KeychainLabel,
 		WindowsABEKey:  abeKey,
 		LocalStatePath: localStateDst,

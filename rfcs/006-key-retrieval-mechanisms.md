@@ -14,11 +14,11 @@ Chromium-based browsers encrypt sensitive data (passwords, cookies, credit cards
 | Windows | `Local State` JSON (DPAPI-encrypted) | Raw AES-256 key |
 | Linux | GNOME Keyring / KDE Wallet via D-Bus | Password string → PBKDF2 → AES-128 |
 
-Each platform may have multiple retrieval strategies. The `KeyRetriever` interface and `ChainRetriever` pattern abstract over these strategies, trying each in priority order until one succeeds.
+Each platform may have multiple retrieval strategies. The `Retriever` interface and `ChainRetriever` pattern abstract over these strategies, trying each in priority order until one succeeds.
 
 For Chromium encryption details (cipher versions, AES-CBC/GCM), see [RFC-003](003-chromium-encryption.md). Firefox manages its own keys via `key4.db` — see [RFC-005](005-firefox-encryption.md).
 
-## 2. KeyRetriever Interface
+## 2. Retriever Interface
 
 The interface takes a single `Hints` struct so caller intent is explicit rather than positional:
 
@@ -115,14 +115,14 @@ Unlike macOS/Linux, DPAPI gives the **final AES-256 key directly**. No intermedi
 
 ### 4.4 Dual-Tier Retrievers (V10 + V20)
 
-Windows populates two slots of the `keyretriever.Retrievers` struct — V10 (legacy DPAPI) and V20 (Chrome 127+ App-Bound Encryption) — which run independently rather than as a first-success chain. V11 stays nil on Windows (Chromium does not emit v11 prefix there).
+Windows populates two slots of the `masterkey.Retrievers` struct — V10 (legacy DPAPI) and V20 (Chrome 127+ App-Bound Encryption) — which run independently rather than as a first-success chain. V11 stays nil on Windows (Chromium does not emit v11 prefix there).
 
 | Slot | Retriever | Source field | Mechanism |
 |------|-----------|--------------|-----------|
 | V10 | `DPAPIRetriever` | `os_crypt.encrypted_key` | `CryptUnprotectData` (Crypt32.dll) |
 | V20 | `ABERetriever` | `os_crypt.app_bound_encrypted_key` | IElevator via reflective injection (see [RFC-010](010-chrome-abe-integration.md)) |
 
-`browser/browser_windows.go::newCredentialInjector` calls `keyretriever.DefaultRetrievers()` and wires the resulting struct through `Browser.SetKeyRetrievers(r)`. At extract time `keyretriever.NewMasterKeys` runs each slot independently — a failure on one tier does not prevent the other from succeeding, because mixed-tier Chrome profiles (upgraded from pre-127) need partial success to be useful.
+`browser/browser_windows.go::newCredentialInjector` calls `masterkey.DefaultRetrievers()` and wires the resulting struct through `Browser.SetRetrievers(r)`. At extract time `masterkey.NewMasterKeys` runs each slot independently — a failure on one tier does not prevent the other from succeeding, because mixed-tier Chrome profiles (upgraded from pre-127) need partial success to be useful.
 
 **Why not a ChainRetriever?** `ChainRetriever` has first-success semantics: once ABE returns a key, DPAPI is never called. That semantics is wrong for orthogonal tiers — it was the root cause of issue #578, where upgraded profiles' v10-encrypted passwords silently failed because only the v20 key was retrieved. `NewMasterKeys` evaluates each tier independently and returns an `errors.Join` of per-tier failures; log severity is a caller-side decision. `browser/chromium::getMasterKeys` currently logs all tier errors uniformly at `Warnf` — the distinction between "partial" and "total" failure was judged low-value for a short-lived CLI where all warn lines are visible in the default output.
 
@@ -132,7 +132,7 @@ Windows populates two slots of the `keyretriever.Retrievers` struct — V10 (leg
 
 ### 5.1 Dual-Tier Retrievers (V10 + V11)
 
-Linux populates two slots of the `keyretriever.Retrievers` struct — one per cipher prefix that Chromium emits on this platform:
+Linux populates two slots of the `masterkey.Retrievers` struct — one per cipher prefix that Chromium emits on this platform:
 
 | Slot | Prefix | Retriever | Mechanism | Chromium name |
 |------|--------|-----------|-----------|---------------|
@@ -182,7 +182,7 @@ The authoritative mapping lives in the `KeychainLabel` field of each entry in `p
 
 ## 7. Safari Credential Extraction
 
-Safari is **not** a consumer of the `KeyRetriever` interface. It has its own credential-extraction path in `browser/safari/extract_password.go`, which uses [keychainbreaker](https://github.com/moond4rk/keychainbreaker) directly to list `InternetPassword` records from `login.keychain-db`.
+Safari is **not** a consumer of the `Retriever` interface. It has its own credential-extraction path in `browser/safari/extract_password.go`, which uses [keychainbreaker](https://github.com/moond4rk/keychainbreaker) directly to list `InternetPassword` records from `login.keychain-db`.
 
 This is a deliberate architectural choice, not an oversight. The following sections explain why.
 
@@ -196,21 +196,21 @@ This is a deliberate architectural choice, not an oversight. The following secti
 | Failure mode | Hard fail (no key → cannot decrypt) | Soft fail (degrade to metadata-only) |
 | Caching benefit | High (multi-profile, multi-browser) | None (single browser, single call) |
 
-Forcing Safari through the `KeyRetriever` interface would require returning a different type than `[]byte`, contradicting the interface's documented purpose as the *master-key* abstraction. Forcing it through a parallel "InternetPassword chain" would be over-engineering for a single consumer that has no fallback strategies worth chaining.
+Forcing Safari through the `Retriever` interface would require returning a different type than `[]byte`, contradicting the interface's documented purpose as the *master-key* abstraction. Forcing it through a parallel "InternetPassword chain" would be over-engineering for a single consumer that has no fallback strategies worth chaining.
 
 Note the "failure mode" row in particular: Chromium *must* have a master key or extraction fails entirely, so it needs a chain of escalating strategies. Safari can degrade gracefully — if the keychain cannot be unlocked, metadata-only export (URLs and usernames, no plaintext passwords) is still useful output, so a single "try keychainbreaker, warn on failure" is sufficient.
 
 ### 7.2 The General Rule
 
-> **Each browser package owns its own credential-acquisition strategy. `crypto/keyretriever` exists only to share retrieval logic across the Chromium variant family. New browser implementations should follow Safari's and Firefox's example — own your credential code.**
+> **Each browser package owns its own credential-acquisition strategy. `masterkey` exists only to share retrieval logic across the Chromium variant family. New browser implementations should follow Safari's and Firefox's example — own your credential code.**
 
 Evidence the rule is already in force:
 
-- **Firefox** (`browser/firefox/firefox.go`) does not import `keyretriever` or `keychainbreaker`. It derives keys from `key4.db` via internal NSS PBE. See RFC-005.
+- **Firefox** (`browser/firefox/firefox.go`) does not import `masterkey` or `keychainbreaker`. It derives keys from `key4.db` via internal NSS PBE. See RFC-005.
 - **Safari** (`browser/safari/extract_password.go`) uses `keychainbreaker` directly for `InternetPassword` records.
-- **Chromium variants** all go through `crypto/keyretriever` because they share exactly one chain and benefit from the shared `sync.Once` caching.
+- **Chromium variants** all go through `masterkey` because they share exactly one chain and benefit from the shared `sync.Once` caching.
 
-Future contributors adding a new macOS browser that reads credentials from the Keychain should add their access logic to that browser's package, not extend `keyretriever`. Only extend `keyretriever` if the new browser is a Chromium variant that fits the existing master-key chain.
+Future contributors adding a new macOS browser that reads credentials from the Keychain should add their access logic to that browser's package, not extend `masterkey`. Only extend `masterkey` if the new browser is a Chromium variant that fits the existing master-key chain.
 
 ### 7.3 Where the `--keychain-pw` Password Goes
 
@@ -218,7 +218,7 @@ The macOS login password is resolved once at startup by `browser/browser_darwin.
 
 | Consumer | Capability interface | Defined in | Payload |
 |---|---|---|---|
-| Chromium browsers | `keyRetrieversSetter` | `browser/browser.go` | `keyretriever.Retrievers` struct (V10 / V11 / V20 slots; unused tiers nil) |
+| Chromium browsers | `keyRetrieversSetter` | `browser/browser.go` | `masterkey.Retrievers` struct (V10 / V11 / V20 slots; unused tiers nil) |
 | Safari | `keychainPasswordSetter` | `browser/browser_darwin.go` | raw `string` |
 
 The two setters are **intentionally not unified**. They carry different abstractions — one hands the browser a pre-assembled retrieval chain, the other hands the browser a credential token to unlock its own access path. Unifying them would create a leaky polymorphic interface with no real shared semantics. Note that `keychainPasswordSetter` is defined in the darwin-only file because Safari (its only implementer) is darwin-only.

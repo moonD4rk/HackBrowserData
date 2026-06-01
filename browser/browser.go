@@ -9,14 +9,12 @@ import (
 	"github.com/moond4rk/hackbrowserdata/browser/chromium"
 	"github.com/moond4rk/hackbrowserdata/browser/firefox"
 	"github.com/moond4rk/hackbrowserdata/browser/safari"
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
 	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
-// Browser is one installation: a single resolved UserDataDir that holds its
-// profiles and, for Chromium, owns the master key shared across them. It is
-// implemented by chromium.Browser, firefox.Browser, and safari.Browser.
+// Browser is one installation: a UserDataDir holding profiles that (for Chromium) share one master key.
 type Browser interface {
 	BrowserName() string
 	UserDataDir() string
@@ -25,31 +23,18 @@ type Browser interface {
 	CountEntries(categories []types.Category) ([]types.CountResult, error)
 }
 
-// PickOptions configures which browsers to pick.
-type PickOptions struct {
-	Name             string // browser name filter: "all"|"chrome"|"firefox"|...
-	ProfilePath      string // custom profile directory override
+type DiscoverOptions struct {
+	Name             string // "all"|"chrome"|"firefox"|...
+	ProfilePath      string // custom profile dir override
 	KeychainPassword string // macOS only — see browser_darwin.go
 }
 
-// browserInjector wires decryption credentials (key retrievers and, on macOS,
-// the Keychain password) into a discovered Browser. Its construction is
-// platform-specific; see newCredentialInjector in browser_{darwin,linux,windows}.go.
+// browserInjector injects decryption credentials into a Browser; built per-platform by newCredentialInjector.
 type browserInjector func(Browser)
 
-// DiscoverBrowsersWithKeys returns installations that are fully wired up for Extract: the
-// key retriever chain and (on macOS) the Keychain password are already
-// injected, so the caller can call b.Extract directly. This is the entry
-// point for extraction workflows like `dump`.
-//
-// On macOS this may trigger an interactive prompt for the login password
-// when the target set includes a Chromium variant or Safari. Commands that
-// only need metadata (name, profile path, per-category counts) should use
-// DiscoverBrowsers instead to skip injection — and thereby the prompt.
-//
-// When Name is "all", all known browsers are tried. ProfilePath overrides
-// the default user data directory (only when targeting a specific browser).
-func DiscoverBrowsersWithKeys(opts PickOptions) ([]Browser, error) {
+// DiscoverBrowsersWithKeys is DiscoverBrowsers plus credential injection, so the returned installations are ready for Extract.
+// On macOS it may prompt for the login password — metadata-only callers should use DiscoverBrowsers to avoid the prompt.
+func DiscoverBrowsersWithKeys(opts DiscoverOptions) ([]Browser, error) {
 	browsers, err := DiscoverBrowsers(opts)
 	if err != nil {
 		return nil, err
@@ -61,24 +46,14 @@ func DiscoverBrowsersWithKeys(opts PickOptions) ([]Browser, error) {
 	return browsers, nil
 }
 
-// DiscoverBrowsers returns installations for metadata-only workflows — listing,
-// profile paths, per-category counts. Decryption dependencies are NOT
-// injected, so calling b.Extract on the returned browsers will not
-// successfully decrypt protected data (passwords, cookies, credit cards).
-// CountEntries, BrowserName, and Profiles all work correctly without injection.
-//
-// Unlike DiscoverBrowsersWithKeys, DiscoverBrowsers never prompts for the macOS
-// Keychain password, making it the correct choice for `list`-style
-// commands that have no use for the credential.
-func DiscoverBrowsers(opts PickOptions) ([]Browser, error) {
-	return pickFromConfigs(platformBrowsers(), opts)
+// DiscoverBrowsers skips credential injection: metadata (Profiles, CountEntries) works, Extract won't decrypt protected data,
+// and macOS never prompts. Use it for list-style commands.
+func DiscoverBrowsers(opts DiscoverOptions) ([]Browser, error) {
+	return discoverFromConfigs(platformBrowsers(), opts)
 }
 
-// pickFromConfigs is the testable core of DiscoverBrowsers: it filters the
-// platform browser list and discovers each matching installation (one Browser
-// per UserDataDir, holding its profiles). Dependency injection (key retrievers,
-// keychain credentials) is intentionally NOT done here.
-func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser, error) {
+// discoverFromConfigs is the testable core of DiscoverBrowsers; it deliberately does no credential injection.
+func discoverFromConfigs(configs []types.BrowserConfig, opts DiscoverOptions) ([]Browser, error) {
 	name := strings.ToLower(opts.Name)
 	if name == "" {
 		name = "all"
@@ -92,7 +67,6 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 			continue
 		}
 
-		// Override profile directory when targeting a specific browser.
 		if opts.ProfilePath != "" && name != "all" {
 			if cfg.Kind == types.Firefox {
 				cfg.UserDataDir = filepath.Dir(filepath.Clean(opts.ProfilePath))
@@ -116,10 +90,10 @@ func pickFromConfigs(configs []types.BrowserConfig, opts PickOptions) ([]Browser
 	return browsers, nil
 }
 
-// KeyManager is implemented by installations that accept externally-provided master-key retrievers (Chromium family only).
+// KeyManager is implemented by installations accepting external master-key retrievers (Chromium only).
 type KeyManager interface {
-	SetKeyRetrievers(keyretriever.Retrievers)
-	ExportKeys() (keyretriever.MasterKeys, error)
+	SetRetrievers(masterkey.Retrievers)
+	ExportKeys() (masterkey.MasterKeys, error)
 }
 
 // KeychainPasswordReceiver is implemented by installations that need the macOS login password (Safari only).
@@ -127,17 +101,8 @@ type KeychainPasswordReceiver interface {
 	SetKeychainPassword(string)
 }
 
-// resolveGlobs expands glob patterns in browser configs' UserDataDir.
-// This supports MSIX/UWP browsers on Windows whose package directories
-// contain a dynamic publisher hash suffix (e.g., "TheBrowserCompany.Arc_*").
-//
-// For literal paths (no glob metacharacters), Glob returns the path itself
-// when it exists, so the config passes through unchanged. When a path does
-// not exist and contains no metacharacters, Glob returns nil and the
-// original config is preserved — the main loop handles "not found" as usual.
-//
-// When a glob matches multiple directories, the config is duplicated so
-// each resolved path is treated as a separate browser data directory.
+// resolveGlobs expands UserDataDir glob patterns for Windows MSIX/UWP browsers whose package dirs carry a dynamic
+// publisher-hash suffix (e.g. "TheBrowserCompany.Arc_*"). A glob matching N dirs yields N configs.
 func resolveGlobs(configs []types.BrowserConfig) []types.BrowserConfig {
 	var out []types.BrowserConfig
 	for _, cfg := range configs {
@@ -155,8 +120,7 @@ func resolveGlobs(configs []types.BrowserConfig) []types.BrowserConfig {
 	return out
 }
 
-// newBrowser dispatches to the correct engine based on BrowserKind and returns
-// one installation, or a nil Browser when no profile was found.
+// newBrowser dispatches on BrowserKind, returning a nil Browser when no profile is found.
 func newBrowser(cfg types.BrowserConfig) (Browser, error) {
 	switch cfg.Kind {
 	case types.Chromium, types.ChromiumYandex, types.ChromiumOpera:

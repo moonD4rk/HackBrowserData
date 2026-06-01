@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
+	"github.com/moond4rk/hackbrowserdata/masterkey"
 )
 
 // TestDecryptValue_MixedTier is the regression test for mixed-cipher profiles (issue #578 on
@@ -33,7 +33,7 @@ func TestDecryptValue_MixedTier(t *testing.T) {
 	v20Ciphertext := append([]byte("v20"), append(nonce, gcmEnc...)...)
 
 	t.Run("all tiers populated: v20 picks V20, decrypts", func(t *testing.T) {
-		got, err := decryptValue(keyretriever.MasterKeys{V10: k10, V11: k11, V20: k20}, v20Ciphertext)
+		got, err := decryptValue(masterkey.MasterKeys{V10: k10, V11: k11, V20: k20}, v20Ciphertext)
 		require.NoError(t, err)
 		assert.Equal(t, plaintext, got)
 	})
@@ -41,20 +41,20 @@ func TestDecryptValue_MixedTier(t *testing.T) {
 	t.Run("V20 holds wrong key: v20 still picks V20 slot (not V10/V11), errors", func(t *testing.T) {
 		// If the dispatcher incorrectly fell back to V10 or V11 when V20 had a wrong key, this
 		// would succeed. Proves the router uses prefix-based selection, not first-usable-key.
-		_, err := decryptValue(keyretriever.MasterKeys{V10: k20, V11: k20, V20: k10}, v20Ciphertext)
+		_, err := decryptValue(masterkey.MasterKeys{V10: k20, V11: k20, V20: k10}, v20Ciphertext)
 		require.Error(t, err)
 	})
 
 	t.Run("only V20 populated: v20 still decrypts", func(t *testing.T) {
 		// The pre-#578 symmetric regression: when DPAPI/keyring failed and only V20 was retrieved,
 		// v20 cookies had to still decrypt. This asserts V10 and V11 being nil doesn't block v20.
-		got, err := decryptValue(keyretriever.MasterKeys{V20: k20}, v20Ciphertext)
+		got, err := decryptValue(masterkey.MasterKeys{V20: k20}, v20Ciphertext)
 		require.NoError(t, err)
 		assert.Equal(t, plaintext, got)
 	})
 
 	t.Run("V20 slot unpopulated: v20 errors (no key to use)", func(t *testing.T) {
-		_, err := decryptValue(keyretriever.MasterKeys{V10: k10, V11: k11}, v20Ciphertext)
+		_, err := decryptValue(masterkey.MasterKeys{V10: k10, V11: k11}, v20Ciphertext)
 		require.Error(t, err)
 	})
 }

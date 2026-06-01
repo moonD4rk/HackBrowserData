@@ -9,8 +9,8 @@ import (
 	"github.com/moond4rk/keychainbreaker"
 	"golang.org/x/term"
 
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
 	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -108,13 +108,8 @@ func platformBrowsers() []types.BrowserConfig {
 	}
 }
 
-// resolveKeychainPassword returns the keychain password for macOS.
-// If not provided via CLI flag, it prompts interactively when stdin is a TTY.
-// After obtaining the password, it verifies against keychainbreaker; on any
-// failure it returns "" so downstream code enters "no password" mode rather
-// than propagating a known-bad credential. Safari then exports
-// keychain-protected entries as metadata-only via keychainbreaker's partial
-// extraction mode; Chromium falls back to SecurityCmdRetriever.
+// resolveKeychainPassword resolves the macOS login password (CLI flag, else TTY prompt) and verifies it against
+// keychainbreaker. On any failure it returns "" so callers fall back to no-password mode rather than a known-bad credential.
 func resolveKeychainPassword(flagPassword string) string {
 	password := flagPassword
 	if password == "" {
@@ -137,10 +132,6 @@ func resolveKeychainPassword(flagPassword string) string {
 		return ""
 	}
 
-	// Verify early: try to unlock keychain with keychainbreaker. On failure
-	// return "" so KeychainPasswordRetriever and Safari both skip the credential
-	// and rely on their respective fallback paths (SecurityCmdRetriever for
-	// Chromium, metadata-only export for Safari).
 	kc, err := keychainbreaker.Open()
 	if err != nil {
 		log.Warnf("keychain open failed: %v; keychain-protected data will be exported as metadata only", err)
@@ -157,10 +148,10 @@ func resolveKeychainPassword(flagPassword string) string {
 
 // newCredentialInjector lazily wires retrievers (and the macOS keychain password) into each Browser;
 // `-b firefox` never triggers a keychain prompt because lazy resolution skips browsers that need neither.
-func newCredentialInjector(opts PickOptions) browserInjector {
+func newCredentialInjector(opts DiscoverOptions) browserInjector {
 	var (
 		password   string
-		retrievers keyretriever.Retrievers
+		retrievers masterkey.Retrievers
 		resolved   bool
 	)
 	return func(b Browser) {
@@ -171,11 +162,11 @@ func newCredentialInjector(opts PickOptions) browserInjector {
 		}
 		if !resolved {
 			password = resolveKeychainPassword(opts.KeychainPassword)
-			retrievers = keyretriever.DefaultRetrievers(password)
+			retrievers = masterkey.DefaultRetrievers(password)
 			resolved = true
 		}
 		if needsRetrievers {
-			km.SetKeyRetrievers(retrievers)
+			km.SetRetrievers(retrievers)
 		}
 		if needsKeychainPassword {
 			kps.SetKeychainPassword(password)

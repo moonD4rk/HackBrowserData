@@ -1,6 +1,6 @@
 //go:build windows
 
-package keyretriever
+package masterkey
 
 import (
 	"encoding/base64"
@@ -12,8 +12,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/crypto"
 )
 
-// DPAPIRetriever reads the encrypted key from Chrome's Local State file
-// and decrypts it using Windows DPAPI.
+// DPAPIRetriever unwraps Chrome's Local State os_crypt.encrypted_key via Windows DPAPI.
 type DPAPIRetriever struct{}
 
 func (r *DPAPIRetriever) RetrieveKey(hints Hints) ([]byte, error) {
@@ -32,7 +31,6 @@ func (r *DPAPIRetriever) RetrieveKey(hints Hints) ([]byte, error) {
 		return nil, fmt.Errorf("base64 decode encrypted_key: %w", err)
 	}
 
-	// First 5 bytes are the "DPAPI" prefix, validate and skip them
 	const dpapiPrefix = "DPAPI"
 	if len(keyBytes) <= len(dpapiPrefix) {
 		return nil, fmt.Errorf("encrypted_key too short: %d bytes", len(keyBytes))
@@ -48,11 +46,8 @@ func (r *DPAPIRetriever) RetrieveKey(hints Hints) ([]byte, error) {
 	return masterKey, nil
 }
 
-// DefaultRetrievers returns the Windows Retrievers: DPAPI for v10 (Chrome's os_crypt.encrypted_key)
-// and ABE for v20 (Chrome 127+ os_crypt.app_bound_encrypted_key retrieved via reflective injection
-// into the browser's elevation service). Both run independently — a single Chrome profile upgraded
-// from pre-v127 carries mixed v10+v20 ciphertexts, and both tiers must be attempted to decrypt the
-// full profile (see issue #578).
+// DefaultRetrievers wires the Windows tiers: DPAPI for v10, ABE for v20 (Chrome 127+, via reflective
+// injection). Both run — a profile upgraded from pre-v127 mixes v10+v20 and needs both (issue #578).
 func DefaultRetrievers() Retrievers {
 	return Retrievers{
 		V10: &DPAPIRetriever{},

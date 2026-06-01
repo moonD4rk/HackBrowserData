@@ -6,8 +6,8 @@ import (
 	"errors"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
 	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
@@ -36,7 +36,7 @@ type yandexPrivateData struct {
 	SecretComment  string `json:"secret_comment"`
 }
 
-func extractCreditCards(keys keyretriever.MasterKeys, path string) ([]types.CreditCardEntry, error) {
+func extractCreditCards(masterKeys masterkey.MasterKeys, path string) ([]types.CreditCardEntry, error) {
 	cards, err := sqliteutil.QueryRows(path, false, defaultCreditCardQuery,
 		func(rows *sql.Rows) (types.CreditCardEntry, error) {
 			var guid, name, month, year, nickname, address string
@@ -44,7 +44,7 @@ func extractCreditCards(keys keyretriever.MasterKeys, path string) ([]types.Cred
 			if err := rows.Scan(&guid, &name, &month, &year, &encNumber, &nickname, &address); err != nil {
 				return types.CreditCardEntry{}, err
 			}
-			number, _ := decryptValue(keys, encNumber)
+			number, _ := decryptValue(masterKeys, encNumber)
 			return types.CreditCardEntry{
 				GUID:     guid,
 				Name:     name,
@@ -62,8 +62,8 @@ func extractCreditCards(keys keyretriever.MasterKeys, path string) ([]types.Cred
 }
 
 // extractYandexCreditCards reads the records table (not Chromium's credit_cards). AAD = guid. See RFC-012 §4.
-func extractYandexCreditCards(keys keyretriever.MasterKeys, path string) ([]types.CreditCardEntry, error) {
-	dataKey, err := loadYandexDataKey(path, keys.V10)
+func extractYandexCreditCards(masterKeys masterkey.MasterKeys, path string) ([]types.CreditCardEntry, error) {
+	dataKey, err := loadYandexDataKey(path, masterKeys.V10)
 	if err != nil {
 		if errors.Is(err, errYandexMasterPasswordSet) {
 			log.Warnf("%s: %v", path, err)

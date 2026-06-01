@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/moond4rk/hackbrowserdata/browser"
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
 	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/masterkey"
 )
 
 func keysCmd() *cobra.Command {
@@ -35,7 +35,7 @@ func keysExportCmd() *cobra.Command {
 		Example: `  hack-browser-data keys export -o dump.json
   hack-browser-data keys export -b chrome`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			browsers, err := browser.DiscoverBrowsersWithKeys(browser.PickOptions{
+			browsers, err := browser.DiscoverBrowsersWithKeys(browser.DiscoverOptions{
 				Name:             browserName,
 				KeychainPassword: keychainPw,
 			})
@@ -135,12 +135,12 @@ func loadAndApplyKeys(browserName, profilePath, keysPath string) ([]browser.Brow
 		defer f.Close()
 		r = f
 	}
-	dump, err := keyretriever.ReadJSON(r)
+	dump, err := masterkey.ReadJSON(r)
 	if err != nil {
 		return nil, fmt.Errorf("read keys file %q: %w", keysPath, err)
 	}
 
-	browsers, err := browser.DiscoverBrowsers(browser.PickOptions{
+	browsers, err := browser.DiscoverBrowsers(browser.DiscoverOptions{
 		Name:        browserName,
 		ProfilePath: profilePath,
 	})

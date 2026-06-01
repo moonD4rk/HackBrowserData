@@ -3,7 +3,7 @@
 package browser
 
 import (
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
+	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -67,16 +67,13 @@ func platformBrowsers() []types.BrowserConfig {
 	}
 }
 
-// newCredentialInjector returns a closure that wires the Linux Chromium master-key retrievers into
-// each Browser. Linux has two tiers: V10 uses the "peanuts" hardcoded password (kV10Key); V11
-// uses the D-Bus Secret Service keyring (kV11Key). V20 is nil — App-Bound Encryption is Windows-
-// only. Both V10 and V11 run independently so a profile carrying mixed cipher prefixes decrypts
-// both tiers.
-func newCredentialInjector(_ PickOptions) browserInjector {
-	retrievers := keyretriever.DefaultRetrievers()
+// newCredentialInjector wires the Linux Chromium retrievers: V10 ("peanuts" hardcoded) and V11 (D-Bus Secret Service),
+// run independently for mixed-cipher profiles. V20 is nil — App-Bound Encryption is Windows-only.
+func newCredentialInjector(_ DiscoverOptions) browserInjector {
+	retrievers := masterkey.DefaultRetrievers()
 	return func(b Browser) {
 		if km, ok := b.(KeyManager); ok {
-			km.SetKeyRetrievers(retrievers)
+			km.SetRetrievers(retrievers)
 		}
 	}
 }

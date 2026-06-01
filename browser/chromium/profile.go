@@ -3,9 +3,9 @@ package chromium
 import (
 	"path/filepath"
 
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
 	"github.com/moond4rk/hackbrowserdata/filemanager"
 	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -30,7 +30,7 @@ func (p *profile) label() string { return p.browserName + "/" + p.name() }
 
 // extract copies the profile's source files to a temp directory and extracts the
 // requested categories, decrypting with the installation's master keys.
-func (p *profile) extract(keys keyretriever.MasterKeys, categories []types.Category) *types.BrowserData {
+func (p *profile) extract(masterKeys masterkey.MasterKeys, categories []types.Category) *types.BrowserData {
 	session, err := filemanager.NewSession()
 	if err != nil {
 		log.Debugf("new session for %s: %v", p.label(), err)
@@ -45,7 +45,7 @@ func (p *profile) extract(keys keyretriever.MasterKeys, categories []types.Categ
 		if !ok {
 			continue
 		}
-		p.extractCategory(data, cat, keys, path)
+		p.extractCategory(data, cat, masterKeys, path)
 	}
 	return data
 }
@@ -91,9 +91,9 @@ func (p *profile) acquireFiles(session *filemanager.Session, categories []types.
 
 // extractCategory calls the appropriate extract function for a category. A custom
 // extractor (registered via extractorsForKind) takes precedence over the switch.
-func (p *profile) extractCategory(data *types.BrowserData, cat types.Category, keys keyretriever.MasterKeys, path string) {
+func (p *profile) extractCategory(data *types.BrowserData, cat types.Category, masterKeys masterkey.MasterKeys, path string) {
 	if ext, ok := p.extractors[cat]; ok {
-		if err := ext.extract(keys, path, data); err != nil {
+		if err := ext.extract(masterKeys, path, data); err != nil {
 			log.Debugf("extract %s for %s: %v", cat, p.label(), err)
 		}
 		return
@@ -102,9 +102,9 @@ func (p *profile) extractCategory(data *types.BrowserData, cat types.Category, k
 	var err error
 	switch cat {
 	case types.Password:
-		data.Passwords, err = extractPasswords(keys, path)
+		data.Passwords, err = extractPasswords(masterKeys, path)
 	case types.Cookie:
-		data.Cookies, err = extractCookies(keys, path)
+		data.Cookies, err = extractCookies(masterKeys, path)
 	case types.History:
 		data.Histories, err = extractHistories(path)
 	case types.Download:
@@ -112,7 +112,7 @@ func (p *profile) extractCategory(data *types.BrowserData, cat types.Category, k
 	case types.Bookmark:
 		data.Bookmarks, err = extractBookmarks(path)
 	case types.CreditCard:
-		data.CreditCards, err = extractCreditCards(keys, path)
+		data.CreditCards, err = extractCreditCards(masterKeys, path)
 	case types.Extension:
 		data.Extensions, err = extractExtensions(path)
 	case types.LocalStorage:

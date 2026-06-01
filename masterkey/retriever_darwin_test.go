@@ -1,6 +1,6 @@
 //go:build darwin
 
-package keyretriever
+package masterkey
 
 import (
 	"testing"

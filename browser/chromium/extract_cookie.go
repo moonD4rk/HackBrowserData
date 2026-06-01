@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"sort"
 
-	"github.com/moond4rk/hackbrowserdata/crypto/keyretriever"
+	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
@@ -18,7 +18,7 @@ const (
 	countCookieQuery = `SELECT COUNT(*) FROM cookies`
 )
 
-func extractCookies(keys keyretriever.MasterKeys, path string) ([]types.CookieEntry, error) {
+func extractCookies(masterKeys masterkey.MasterKeys, path string) ([]types.CookieEntry, error) {
 	cookies, err := sqliteutil.QueryRows(path, false, defaultCookieQuery,
 		func(rows *sql.Rows) (types.CookieEntry, error) {
 			var (
@@ -34,7 +34,7 @@ func extractCookies(keys keyretriever.MasterKeys, path string) ([]types.CookieEn
 				return types.CookieEntry{}, err
 			}
 
-			value, _ := decryptValue(keys, encryptedValue)
+			value, _ := decryptValue(masterKeys, encryptedValue)
 			value = stripCookieHash(value, host)
 			return types.CookieEntry{
 				Name:         name,
