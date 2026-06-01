@@ -3,15 +3,15 @@ package browser
 import (
 	"runtime"
 
-	"github.com/moond4rk/hackbrowserdata/keys"
 	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/masterkey"
 )
 
 // BuildDump exports one Vault per installation (Firefox/Safari, lacking KeyManager, are skipped).
 // Partial results are kept — a Chrome 127+ profile mixes v10+v20, so a v20-only failure must not
 // discard a usable v10 key.
-func BuildDump(browsers []Browser) keys.Dump {
-	dump := keys.NewDump()
+func BuildDump(browsers []Browser) masterkey.Dump {
+	dump := masterkey.NewDump()
 	for _, b := range browsers {
 		km, ok := b.(KeyManager)
 		if !ok {
@@ -28,7 +28,7 @@ func BuildDump(browsers []Browser) keys.Dump {
 		if !mk.HasAny() {
 			continue
 		}
-		dump.Vaults = append(dump.Vaults, keys.Vault{
+		dump.Vaults = append(dump.Vaults, masterkey.Vault{
 			Browser:     b.BrowserName(),
 			UserDataDir: b.UserDataDir(),
 			Profiles:    profileNames(b),
@@ -51,13 +51,13 @@ func profileNames(b Browser) []string {
 // Match is by (BrowserName, UserDataDir); on miss — commonly a cross-host path mismatch (Windows vs
 // POSIX, or a relocated dir via -p) — it falls back to the sole vault for that browser name. No match
 // → warn and leave the platform retrievers in place.
-func ApplyDump(browsers []Browser, dump keys.Dump) {
+func ApplyDump(browsers []Browser, dump masterkey.Dump) {
 	if dump.Host.OS != "" && dump.Host.OS != runtime.GOOS {
 		log.Infof("apply-keys: dump created on %s/%s; current host is %s/%s",
 			dump.Host.OS, dump.Host.Arch, runtime.GOOS, runtime.GOARCH)
 	}
-	vaultIndex := make(map[string]*keys.Vault, len(dump.Vaults))
-	vaultsByBrowser := make(map[string][]*keys.Vault)
+	vaultIndex := make(map[string]*masterkey.Vault, len(dump.Vaults))
+	vaultsByBrowser := make(map[string][]*masterkey.Vault)
 	for i := range dump.Vaults {
 		v := &dump.Vaults[i]
 		vaultIndex[v.Browser+"|"+v.UserDataDir] = v
@@ -81,7 +81,7 @@ func ApplyDump(browsers []Browser, dump keys.Dump) {
 			log.Warnf("apply-keys: %s no matching vault in dump", b.BrowserName())
 			continue
 		}
-		km.SetRetrievers(keys.Retrievers{
+		km.SetRetrievers(masterkey.Retrievers{
 			V10: maybeStaticRetriever(v.Keys.V10),
 			V11: maybeStaticRetriever(v.Keys.V11),
 			V20: maybeStaticRetriever(v.Keys.V20),
@@ -91,9 +91,9 @@ func ApplyDump(browsers []Browser, dump keys.Dump) {
 
 // maybeStaticRetriever wraps non-empty key bytes as a StaticRetriever; an empty/nil key returns nil
 // to preserve the "tier not applicable" signal NewMasterKeys expects.
-func maybeStaticRetriever(key []byte) keys.Retriever {
+func maybeStaticRetriever(key []byte) masterkey.Retriever {
 	if len(key) == 0 {
 		return nil
 	}
-	return keys.NewStaticRetriever(key)
+	return masterkey.NewStaticRetriever(key)
 }

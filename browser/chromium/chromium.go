@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/moond4rk/hackbrowserdata/filemanager"
-	"github.com/moond4rk/hackbrowserdata/keys"
 	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
@@ -17,11 +17,11 @@ import (
 // that share a master key. The key is derived once and reused across profiles.
 type Browser struct {
 	cfg        types.BrowserConfig
-	retrievers keys.Retrievers
+	retrievers masterkey.Retrievers
 	profiles   []*profile
 
 	keysOnce sync.Once
-	keys     keys.MasterKeys
+	keys     masterkey.MasterKeys
 }
 
 // NewBrowser discovers the profiles under cfg.UserDataDir, or returns nil if none resolve.
@@ -52,7 +52,7 @@ func NewBrowser(cfg types.BrowserConfig) (*Browser, error) {
 
 // SetRetrievers wires the per-tier master-key retrievers (V10/V11/V20) used by
 // Extract; unused tiers stay nil.
-func (b *Browser) SetRetrievers(r keys.Retrievers) { b.retrievers = r }
+func (b *Browser) SetRetrievers(r masterkey.Retrievers) { b.retrievers = r }
 
 func (b *Browser) BrowserName() string { return b.cfg.Name }
 func (b *Browser) UserDataDir() string { return b.cfg.UserDataDir }
@@ -93,19 +93,19 @@ func (b *Browser) CountEntries(categories []types.Category) ([]types.CountResult
 
 // ExportKeys derives the master keys without extracting. Returns the tiers that succeeded plus a
 // joined error for those that failed — partial results matter (a v20-only failure keeps the v10 key).
-func (b *Browser) ExportKeys() (keys.MasterKeys, error) {
+func (b *Browser) ExportKeys() (masterkey.MasterKeys, error) {
 	session, err := filemanager.NewSession()
 	if err != nil {
-		return keys.MasterKeys{}, err
+		return masterkey.MasterKeys{}, err
 	}
 	defer session.Cleanup()
 
-	return keys.NewMasterKeys(b.retrievers, b.buildHints(session))
+	return masterkey.NewMasterKeys(b.retrievers, b.buildHints(session))
 }
 
 // masterKeys derives and caches the installation's keys exactly once (sync.Once), so a failure is
 // warned once — no cross-profile dedup state needed.
-func (b *Browser) masterKeys() keys.MasterKeys {
+func (b *Browser) masterKeys() masterkey.MasterKeys {
 	b.keysOnce.Do(func() {
 		masterKeys, err := b.ExportKeys()
 		if err != nil {
@@ -118,7 +118,7 @@ func (b *Browser) masterKeys() keys.MasterKeys {
 
 // buildHints copies Local State into the session temp dir (so Windows DPAPI/ABE retrievers read it
 // from a process-owned path) and assembles the Hints. Local State sits at the installation root.
-func (b *Browser) buildHints(session *filemanager.Session) keys.Hints {
+func (b *Browser) buildHints(session *filemanager.Session) masterkey.Hints {
 	var localStateDst string
 	candidate := filepath.Join(b.cfg.UserDataDir, "Local State")
 	if fileutil.FileExists(candidate) {
@@ -134,7 +134,7 @@ func (b *Browser) buildHints(session *filemanager.Session) keys.Hints {
 	if b.cfg.WindowsABE {
 		abeKey = b.cfg.Key
 	}
-	return keys.Hints{
+	return masterkey.Hints{
 		KeychainLabel:  b.cfg.KeychainLabel,
 		WindowsABEKey:  abeKey,
 		LocalStatePath: localStateDst,

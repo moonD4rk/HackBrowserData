@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"sort"
 
-	"github.com/moond4rk/hackbrowserdata/keys"
+	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
@@ -18,7 +18,7 @@ const (
 	countCookieQuery = `SELECT COUNT(*) FROM cookies`
 )
 
-func extractCookies(masterKeys keys.MasterKeys, path string) ([]types.CookieEntry, error) {
+func extractCookies(masterKeys masterkey.MasterKeys, path string) ([]types.CookieEntry, error) {
 	cookies, err := sqliteutil.QueryRows(path, false, defaultCookieQuery,
 		func(rows *sql.Rows) (types.CookieEntry, error) {
 			var (

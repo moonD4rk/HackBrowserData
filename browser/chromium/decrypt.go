@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/keys"
+	"github.com/moond4rk/hackbrowserdata/masterkey"
 )
 
 // decryptValue decrypts a Chromium-encrypted value by dispatching on the ciphertext's version
@@ -18,7 +18,7 @@ import (
 // changes), so every applicable key must be populated upstream for lossless extraction. Missing
 // tier keys surface as decrypt errors at the ciphertext level; the extract layer treats those as
 // empty plaintexts rather than fatal errors.
-func decryptValue(masterKeys keys.MasterKeys, ciphertext []byte) ([]byte, error) {
+func decryptValue(masterKeys masterkey.MasterKeys, ciphertext []byte) ([]byte, error) {
 	if len(ciphertext) == 0 {
 		return nil, nil
 	}

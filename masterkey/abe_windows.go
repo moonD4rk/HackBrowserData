@@ -1,6 +1,6 @@
 //go:build windows
 
-package keys
+package masterkey
 
 import (
 	"encoding/base64"

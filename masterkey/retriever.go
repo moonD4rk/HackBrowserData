@@ -1,6 +1,6 @@
 // Package keys retrieves Chromium master keys (per-platform retrievers + a cross-host Dump format).
 // Firefox and Safari own their own key paths and don't route through here.
-package keys
+package masterkey
 
 import (
 	"errors"

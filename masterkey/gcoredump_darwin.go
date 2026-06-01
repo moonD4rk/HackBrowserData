@@ -1,6 +1,6 @@
 //go:build darwin
 
-package keys
+package masterkey
 
 // CVE-2025-24204: gcore holds the com.apple.system-task-ports.read entitlement, so a root process can
 // dump securityd memory without a TCC prompt; we scan the dump for the 24-byte keychain master key.

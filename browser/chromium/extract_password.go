@@ -6,8 +6,8 @@ import (
 	"sort"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/keys"
 	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
@@ -20,11 +20,11 @@ const (
 		password_element, password_value, signon_realm, date_created FROM logins`
 )
 
-func extractPasswords(masterKeys keys.MasterKeys, path string) ([]types.LoginEntry, error) {
+func extractPasswords(masterKeys masterkey.MasterKeys, path string) ([]types.LoginEntry, error) {
 	return extractPasswordsWithQuery(masterKeys, path, defaultLoginQuery)
 }
 
-func extractPasswordsWithQuery(masterKeys keys.MasterKeys, path, query string) ([]types.LoginEntry, error) {
+func extractPasswordsWithQuery(masterKeys masterkey.MasterKeys, path, query string) ([]types.LoginEntry, error) {
 	logins, err := sqliteutil.QueryRows(path, false, query,
 		func(rows *sql.Rows) (types.LoginEntry, error) {
 			var url, username string
@@ -53,7 +53,7 @@ func extractPasswordsWithQuery(masterKeys keys.MasterKeys, path, query string) (
 
 // extractYandexPasswords walks Ya Passman Data; protocol in RFC-012 §4.
 // Note: URL column is origin_url — it's what the per-row AAD is computed over (not action_url).
-func extractYandexPasswords(masterKeys keys.MasterKeys, path string) ([]types.LoginEntry, error) {
+func extractYandexPasswords(masterKeys masterkey.MasterKeys, path string) ([]types.LoginEntry, error) {
 	dataKey, err := loadYandexDataKey(path, masterKeys.V10)
 	if err != nil {
 		if errors.Is(err, errYandexMasterPasswordSet) {

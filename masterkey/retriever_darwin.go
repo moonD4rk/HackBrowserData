@@ -1,6 +1,6 @@
 //go:build darwin
 
-package keys
+package masterkey
 
 import (
 	"bytes"

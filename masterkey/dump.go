@@ -1,4 +1,4 @@
-package keys
+package masterkey
 
 import (
 	"encoding/json"

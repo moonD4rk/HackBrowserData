@@ -3,7 +3,7 @@ package chromium
 import (
 	"path/filepath"
 
-	"github.com/moond4rk/hackbrowserdata/keys"
+	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -51,15 +51,15 @@ func sourcesForKind(kind types.BrowserKind) map[types.Category][]sourcePath {
 // switch logic, enabling browser-specific parsing (e.g. Opera's opsettings
 // for extensions, Yandex's credit card table, QBCI-encrypted bookmarks).
 type categoryExtractor interface {
-	extract(masterKeys keys.MasterKeys, path string, data *types.BrowserData) error
+	extract(masterKeys masterkey.MasterKeys, path string, data *types.BrowserData) error
 }
 
 // passwordExtractor wraps a custom password extract function.
 type passwordExtractor struct {
-	fn func(masterKeys keys.MasterKeys, path string) ([]types.LoginEntry, error)
+	fn func(masterKeys masterkey.MasterKeys, path string) ([]types.LoginEntry, error)
 }
 
-func (e passwordExtractor) extract(masterKeys keys.MasterKeys, path string, data *types.BrowserData) error {
+func (e passwordExtractor) extract(masterKeys masterkey.MasterKeys, path string, data *types.BrowserData) error {
 	var err error
 	data.Passwords, err = e.fn(masterKeys, path)
 	return err
@@ -70,7 +70,7 @@ type extensionExtractor struct {
 	fn func(path string) ([]types.ExtensionEntry, error)
 }
 
-func (e extensionExtractor) extract(_ keys.MasterKeys, path string, data *types.BrowserData) error {
+func (e extensionExtractor) extract(_ masterkey.MasterKeys, path string, data *types.BrowserData) error {
 	var err error
 	data.Extensions, err = e.fn(path)
 	return err
@@ -79,10 +79,10 @@ func (e extensionExtractor) extract(_ keys.MasterKeys, path string, data *types.
 // creditCardExtractor wraps a custom credit-card extract function, used by Yandex whose Ya Credit Cards DB stores
 // rows as records(guid, public_data, private_data) with JSON blobs rather than Chromium's flat credit_cards table.
 type creditCardExtractor struct {
-	fn func(masterKeys keys.MasterKeys, path string) ([]types.CreditCardEntry, error)
+	fn func(masterKeys masterkey.MasterKeys, path string) ([]types.CreditCardEntry, error)
 }
 
-func (e creditCardExtractor) extract(masterKeys keys.MasterKeys, path string, data *types.BrowserData) error {
+func (e creditCardExtractor) extract(masterKeys masterkey.MasterKeys, path string, data *types.BrowserData) error {
 	var err error
 	data.CreditCards, err = e.fn(masterKeys, path)
 	return err

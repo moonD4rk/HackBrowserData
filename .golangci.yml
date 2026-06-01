@@ -79,15 +79,21 @@ linters:
     funlen:
       lines: -1
       statements: 50
+    # goconst kept deliberately lenient (above the default min-occurrences: 3) — short, repeated
+    # literals like test fixtures and scheme strings aren't worth extracting into named constants.
     goconst:
-      min-len: 2
-      min-occurrences: 3
+      min-len: 5
+      min-occurrences: 5
       ignore-string-values:
         - "all"
         - "csv"
         - "json"
         - "https"
         - "http"
+        # browser registry keys/names — declarative table, not worth constants
+        - "chrome"
+        - "Chrome"
+        - "firefox"
     gocritic:
       enabled-tags:
         - diagnostic
@@ -174,7 +180,7 @@ linters:
       - path: "cmd/hack-browser-data/main.go"
         linters:
           - lll
-      - path: "keys/gcoredump_darwin.go"
+      - path: "masterkey/gcoredump_darwin.go"
         linters:
           - gocognit
 

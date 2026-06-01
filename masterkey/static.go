@@ -1,4 +1,4 @@
-package keys
+package masterkey
 
 // StaticRetriever returns pre-supplied key bytes (from a Dump) instead of platform retrieval, ignoring
 // Hints. An empty key returns (nil, nil) — the "tier not applicable" signal NewMasterKeys expects.

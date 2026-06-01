@@ -1,6 +1,6 @@
 //go:build darwin || linux
 
-package keys
+package masterkey
 
 import (
 	"hash"

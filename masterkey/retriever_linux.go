@@ -1,6 +1,6 @@
 //go:build linux
 
-package keys
+package masterkey
 
 import (
 	"crypto/sha1"
