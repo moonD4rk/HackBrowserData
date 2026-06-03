@@ -26,16 +26,20 @@ func decryptValue(masterKeys masterkey.MasterKeys, ciphertext []byte) ([]byte, e
 	version := crypto.DetectVersion(ciphertext)
 	switch version {
 	case crypto.CipherV10:
-		return crypto.DecryptChromium(masterKeys.V10, ciphertext)
+		// v10's cipher depends on the platform that sealed it: a 32-byte AES-256 key means GCM
+		// (Windows), a 16-byte AES-128 key means CBC (macOS/Linux). Dispatching on key length keeps
+		// cross-host decryption OS-independent: a 32-byte key dumped on Windows decrypts here on macOS.
+		if len(masterKeys.V10) == 32 {
+			return crypto.DecryptChromiumGCM(masterKeys.V10, ciphertext)
+		}
+		return crypto.DecryptChromiumCBC(masterKeys.V10, ciphertext)
 	case crypto.CipherV11:
-		// v11 is Linux-only and shares v10's AES-CBC path, but uses the keyring-derived kV11Key
-		// rather than the peanuts-derived kV10Key — so a Linux profile with both prefixes needs
-		// distinct per-tier keys to decrypt everything.
-		return crypto.DecryptChromium(masterKeys.V11, ciphertext)
+		// v11 is Linux-only AES-CBC; same algorithm as Linux v10 but the key comes from the keyring
+		// (kV11Key) rather than peanuts (kV10Key), so both tiers need distinct keys.
+		return crypto.DecryptChromiumCBC(masterKeys.V11, ciphertext)
 	case crypto.CipherV20:
-		// v20 is cross-platform AES-GCM; routed through a dedicated function so Linux/macOS CI can
-		// exercise the same decryption path as Windows.
-		return crypto.DecryptChromiumV20(masterKeys.V20, ciphertext)
+		// v20 is cross-platform AES-GCM (Chrome 127+ ABE); same wire layout as Windows v10.
+		return crypto.DecryptChromiumGCM(masterKeys.V20, ciphertext)
 	case crypto.CipherV12:
 		// Chromium's SecretPortalKeyProvider (Flatpak / xdg-desktop-portal) — HKDF-SHA256 +
 		// AES-256-GCM with a secret retrieved via org.freedesktop.portal.Desktop. Recognized here

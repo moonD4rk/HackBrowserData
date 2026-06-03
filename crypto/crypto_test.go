@@ -185,3 +185,67 @@ func TestDES3Decrypt_EmptyCiphertext(t *testing.T) {
 	_, err = DES3Decrypt(key, iv, []byte{})
 	require.Error(t, err)
 }
+
+// --- Cross-OS Chromium v10/v11 decryption ---
+// DecryptChromiumGCM / DecryptChromiumCBC are platform-neutral, so these run on every
+// GOOS and prove a key dumped on one platform decrypts that platform's data anywhere.
+
+// key32 is the 32-byte AES-256-GCM tier (Windows v10 / v20); aesKey is the 16-byte
+// AES-128-CBC tier (macOS/Linux v10/v11).
+var key32 = bytes.Repeat([]byte(baseKey), 4)
+
+func TestDecryptChromiumGCM_CrossPlatform(t *testing.T) {
+	plaintext := []byte("windows_v10_value")
+	gcm, err := AESGCMEncrypt(key32, aesGCMNonce, plaintext)
+	require.NoError(t, err)
+
+	ciphertext := append([]byte("v10"), append(aesGCMNonce, gcm...)...)
+	got, err := DecryptChromiumGCM(key32, ciphertext)
+	require.NoError(t, err)
+	assert.Equal(t, plaintext, got)
+}
+
+func TestDecryptChromiumCBC_CrossPlatform(t *testing.T) {
+	plaintext := []byte("posix_v10_value")
+	enc, err := AESCBCEncrypt(aesKey, chromiumCBCIV, plaintext)
+	require.NoError(t, err)
+
+	ciphertext := append([]byte("v10"), enc...)
+	got, err := DecryptChromiumCBC(aesKey, ciphertext)
+	require.NoError(t, err)
+	assert.Equal(t, plaintext, got)
+}
+
+// TestKEmptyKey_MatchesChromium pins the runtime-derived kEmptyKey to Chromium's
+// reference bytes in os_crypt_linux.cc; now cross-platform since kEmptyKey is
+// defined for every GOOS.
+func TestKEmptyKey_MatchesChromium(t *testing.T) {
+	want := []byte{
+		0xd0, 0xd0, 0xec, 0x9c, 0x7d, 0x77, 0xd4, 0x3a,
+		0xc5, 0x41, 0x87, 0xfa, 0x48, 0x18, 0xd1, 0x7f,
+	}
+	assert.Equal(t, want, kEmptyKey)
+	assert.Len(t, kEmptyKey, 16)
+}
+
+func TestDecryptChromiumCBC_EmptyKeyFallback(t *testing.T) {
+	plaintext := []byte("legacy_kwallet_value")
+	encrypted, err := AESCBCEncrypt(kEmptyKey, chromiumCBCIV, plaintext)
+	require.NoError(t, err)
+	ciphertext := append([]byte("v11"), encrypted...)
+
+	wrongKey := bytes.Repeat([]byte{0xAA}, 16)
+	got, err := DecryptChromiumCBC(wrongKey, ciphertext)
+	require.NoError(t, err)
+	assert.Equal(t, plaintext, got)
+}
+
+func TestDecryptChromium_ShortCiphertext(t *testing.T) {
+	// GCM minimum is prefix(3)+nonce(12) = 15 bytes.
+	_, err := DecryptChromiumGCM(key32, []byte("v10nonce11"))
+	require.ErrorIs(t, err, errShortCiphertext)
+
+	// CBC minimum is prefix(3)+block(16) = 19 bytes.
+	_, err = DecryptChromiumCBC(aesKey, []byte("v11short"))
+	require.ErrorIs(t, err, errShortCiphertext)
+}
