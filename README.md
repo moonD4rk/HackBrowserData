@@ -332,13 +332,6 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
                     <sub><b>YuXJ</b></sub>
                 </a>
             </td>
-            <td align="center">
-                <a href="https://github.com/ac0d3r">
-                    <img src="https://avatars.githubusercontent.com/u/26270009?v=4" width="100;" alt="ac0d3r"/>
-                    <br />
-                    <sub><b>zznQ</b></sub>
-                </a>
-            </td>
 		</tr>
 	<tbody>
 </table>
