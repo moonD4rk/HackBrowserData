@@ -13,59 +13,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/masterkey"
 )
 
-func keysCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "keys",
-		Short: "Manage cross-host master keys",
-	}
-	cmd.AddCommand(keysExportCmd(), keysImportCmd())
-	return cmd
-}
-
-func keysExportCmd() *cobra.Command {
-	var (
-		browserName string
-		outputPath  string
-		keychainPw  string
-	)
-
-	cmd := &cobra.Command{
-		Use:   "export",
-		Short: "Export Chromium master keys as JSON for cross-host decryption",
-		Example: `  hack-browser-data keys export -o dump.json
-  hack-browser-data keys export -b chrome`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			browsers, err := browser.DiscoverBrowsersWithKeys(browser.DiscoverOptions{
-				Name:             browserName,
-				KeychainPassword: keychainPw,
-			})
-			if err != nil {
-				return err
-			}
-
-			dump := browser.BuildDump(browsers)
-			log.Infof("Exported keys for %d vault(s)", len(dump.Vaults))
-
-			if outputPath == "" {
-				return dump.WriteJSON(os.Stdout)
-			}
-			f, err := os.OpenFile(outputPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
-			if err != nil {
-				return fmt.Errorf("create %s: %w", outputPath, err)
-			}
-			defer f.Close()
-			return dump.WriteJSON(f)
-		},
-	}
-
-	cmd.Flags().StringVarP(&browserName, "browser", "b", "all", "target browser: all|"+browser.Names())
-	cmd.Flags().StringVarP(&outputPath, "output", "o", "", "output file (default: stdout)")
-	cmd.Flags().StringVar(&keychainPw, "keychain-pw", "", "macOS keychain password")
-
-	return cmd
-}
-
-func keysImportCmd() *cobra.Command {
+func restoreCmd() *cobra.Command {
 	var (
 		keysPath     string
 		browserName  string
@@ -77,11 +25,11 @@ func keysImportCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "import",
-		Short: "Import master keys from JSON and decrypt a copied profile",
-		Example: `  hack-browser-data keys import -i dump.json -b chrome -p /path/to/copied/User\ Data
-  hack-browser-data keys import -i dump.json -b edge -p /path -c cookie -f csv
-  ssh origin "hack-browser-data keys export" | hack-browser-data keys import -i - -b chrome -p /path`,
+		Use:   "restore",
+		Short: "Decrypt a copied profile using exported master keys",
+		Example: `  hack-browser-data restore -i keys.json -b chrome -p /path/to/copied/User\ Data
+  hack-browser-data restore -i keys.json -b edge -p /path -c cookie -f csv
+  ssh origin "hack-browser-data dumpkeys" | hack-browser-data restore -i - -b chrome -p /path`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			browsers, err := loadAndApplyKeys(browserName, profilePath, keysPath)
 			if err != nil {
