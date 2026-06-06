@@ -36,7 +36,7 @@ func archiveCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			log.Infof("Archived %d file(s) to %s", n, outputPath)
+			log.Infof("Archived %d entries to %s", n, outputPath)
 			return nil
 		},
 	}

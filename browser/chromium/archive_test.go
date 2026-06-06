@@ -56,3 +56,33 @@ func TestArchiveSources_ForwardSlashLayout(t *testing.T) {
 		t.Errorf("missing Local State entry (User Data root file), got %+v", srcs)
 	}
 }
+
+func TestArchiveSources_FlatLayoutNoExtraLevel(t *testing.T) {
+	// Flat-layout install: data lives directly under UserDataDir with no Default/ subdir, so
+	// discoverProfiles falls back to UserDataDir itself as the profile (profileDir == root).
+	udd := t.TempDir()
+	if err := os.WriteFile(filepath.Join(udd, "History"), []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	b, err := NewBrowser(types.BrowserConfig{Key: "opera", Name: "opera", Kind: types.Chromium, UserDataDir: udd})
+	if err != nil || b == nil {
+		t.Fatalf("NewBrowser: b=%v err=%v", b, err)
+	}
+
+	srcs := b.ArchiveSources([]types.Category{types.History})
+
+	phantom := filepath.Base(udd) + "/"
+	var gotHistory bool
+	for _, s := range srcs {
+		if strings.HasPrefix(s.LayoutRel, phantom) {
+			t.Errorf("flat layout must not insert a %q level, got %q", phantom, s.LayoutRel)
+		}
+		if s.LayoutRel == "History" {
+			gotHistory = true
+		}
+	}
+	if !gotHistory {
+		t.Errorf("expected History at archive root, got %+v", srcs)
+	}
+}

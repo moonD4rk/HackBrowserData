@@ -32,7 +32,12 @@ func (b *Browser) ArchiveSources(categories []types.Category) []ArchiveSource {
 		}
 	}
 	for _, p := range b.profiles {
-		profileRel := filepath.Base(p.profileDir)
+		// Flat-layout installs hold data directly under UserDataDir (profileDir == root); skip the
+		// basename so the archive matches the real layout instead of inserting a phantom level.
+		profileRel := ""
+		if p.profileDir != b.cfg.UserDataDir {
+			profileRel = filepath.Base(p.profileDir)
+		}
 		for _, marker := range profileMarkers {
 			abs := filepath.Join(p.profileDir, marker)
 			if fileutil.FileExists(abs) {
