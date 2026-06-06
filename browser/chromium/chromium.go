@@ -55,6 +55,7 @@ func NewBrowser(cfg types.BrowserConfig) (*Browser, error) {
 func (b *Browser) SetRetrievers(r masterkey.Retrievers) { b.retrievers = r }
 
 func (b *Browser) BrowserName() string { return b.cfg.Name }
+func (b *Browser) BrowserKey() string  { return b.cfg.Key }
 func (b *Browser) UserDataDir() string { return b.cfg.UserDataDir }
 
 // Profiles returns the identity of every profile in this installation.
@@ -204,9 +205,11 @@ func hasAnySource(sources map[types.Category][]sourcePath, dir string) bool {
 	return false
 }
 
-// resolvedPath holds the absolute path and type for a discovered source.
+// resolvedPath holds the absolute path, the slash-relative source path, and the type of a discovered
+// source. rel is retained (not just absPath) so archive can reproduce the User Data layout.
 type resolvedPath struct {
 	absPath string
+	rel     string
 	isDir   bool
 }
 
@@ -222,7 +225,7 @@ func resolveSourcePaths(sources map[types.Category][]sourcePath, profileDir stri
 				continue
 			}
 			if sp.isDir == info.IsDir() {
-				resolved[cat] = resolvedPath{abs, sp.isDir}
+				resolved[cat] = resolvedPath{absPath: abs, rel: sp.rel, isDir: sp.isDir}
 				break
 			}
 		}

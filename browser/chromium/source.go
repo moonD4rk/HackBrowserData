@@ -1,8 +1,6 @@
 package chromium
 
 import (
-	"path/filepath"
-
 	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
@@ -14,8 +12,10 @@ type sourcePath struct {
 	isDir bool   // true for directory targets (LevelDB, Session Storage)
 }
 
-func file(rel string) sourcePath { return sourcePath{rel: filepath.FromSlash(rel), isDir: false} }
-func dir(rel string) sourcePath  { return sourcePath{rel: filepath.FromSlash(rel), isDir: true} }
+// rel stays slash-canonical (e.g. "Network/Cookies"); filepath.Join converts at resolve time, and
+// archive reuses it verbatim as a forward-slash zip entry name.
+func file(rel string) sourcePath { return sourcePath{rel: rel, isDir: false} }
+func dir(rel string) sourcePath  { return sourcePath{rel: rel, isDir: true} }
 
 // chromiumSources defines the standard Chromium file layout.
 // Each category maps to one or more candidate paths tried in priority order;
