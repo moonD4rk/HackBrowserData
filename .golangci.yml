@@ -94,6 +94,7 @@ linters:
         - "chrome"
         - "Chrome"
         - "firefox"
+        - "chromium"
     gocritic:
       enabled-tags:
         - diagnostic

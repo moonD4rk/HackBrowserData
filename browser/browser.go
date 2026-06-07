@@ -91,9 +91,12 @@ func discoverFromConfigs(configs []types.BrowserConfig, opts DiscoverOptions) ([
 }
 
 // KeyManager is implemented by installations accepting external master-key retrievers (Chromium only).
+// BrowserKey/Kind expose the identity a portable dump needs to rebuild the engine off the platform table.
 type KeyManager interface {
 	SetRetrievers(masterkey.Retrievers)
 	ExportKeys() (masterkey.MasterKeys, error)
+	BrowserKey() string
+	Kind() types.BrowserKind
 }
 
 // KeychainPasswordReceiver is implemented by installations that need the macOS login password (Safari only).
