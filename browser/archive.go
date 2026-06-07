@@ -19,11 +19,11 @@ type Archivable interface {
 	ArchiveSources(categories []types.Category) []chromium.ArchiveSource
 }
 
-// BuildArchive packs each browser's decryption-relevant files into a zip whose internal layout is
+// WriteArchive packs each browser's decryption-relevant files into a zip whose internal layout is
 // <browser-key>/<User Data layout>, so a restore can re-expand it and decrypt with a keys.json. Files
 // are staged through a locked-file session first because Windows holds exclusive SQLite locks. Returns
 // the number of source entries staged (a directory source counts once).
-func BuildArchive(browsers []Browser, categories []types.Category, outPath string) (int, error) {
+func WriteArchive(browsers []Browser, categories []types.Category, outPath string) (int, error) {
 	session, err := filemanager.NewSession()
 	if err != nil {
 		return 0, err

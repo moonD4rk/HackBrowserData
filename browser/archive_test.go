@@ -10,9 +10,9 @@ import (
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
-// TestBuildArchive_RoundTrip exercises the archive path: ArchiveSources -> BuildArchive (stage+zip)
+// TestWriteArchive_RoundTrip exercises the archive path: ArchiveSources -> WriteArchive (stage+zip)
 // -> Unzip, asserting the archive's internal layout is <key>/<User Data layout>.
-func TestBuildArchive_RoundTrip(t *testing.T) {
+func TestWriteArchive_RoundTrip(t *testing.T) {
 	origin := t.TempDir()
 	def := filepath.Join(origin, "Default")
 	if err := os.MkdirAll(def, 0o755); err != nil {
@@ -34,12 +34,12 @@ func TestBuildArchive_RoundTrip(t *testing.T) {
 	}
 
 	zipPath := filepath.Join(t.TempDir(), "data.zip")
-	n, err := BuildArchive([]Browser{b}, []types.Category{types.History}, zipPath)
+	n, err := WriteArchive([]Browser{b}, []types.Category{types.History}, zipPath)
 	if err != nil {
-		t.Fatalf("BuildArchive: %v", err)
+		t.Fatalf("WriteArchive: %v", err)
 	}
 	if n == 0 {
-		t.Fatal("BuildArchive captured 0 files")
+		t.Fatal("WriteArchive captured 0 entries")
 	}
 
 	extracted := t.TempDir()

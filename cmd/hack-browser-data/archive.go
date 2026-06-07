@@ -32,7 +32,7 @@ func archiveCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			n, err := browser.BuildArchive(browsers, categories, outputPath)
+			n, err := browser.WriteArchive(browsers, categories, outputPath)
 			if err != nil {
 				return err
 			}
