@@ -1,8 +1,9 @@
 # RFC-013: CLI Redesign — Flat-Verb Surface & Cross-Host Restore
 
 **Author**: moonD4rk
-**Status**: Accepted — implementation pending
+**Status**: Accepted — `archive` (#607) implemented; cross-platform `restore` (#606) pending
 **Created**: 2026-06-03
+**Revised**: 2026-06-06 (subdir-convention archive, dual-mode restore, Local State, delivery order)
 
 ## 1. Summary
 
@@ -41,8 +42,8 @@ Workflows:
 ```
 local     : hbd dump -b chrome -c cookie,password
 cross-host: origin>   hbd dumpkeys -o keys.json
-            origin>   hbd archive  -b chrome -o data.zip
-            analyst>  hbd restore --keys keys.json --data-zip data.zip -c cookie
+            origin>   hbd archive  -b chrome -o browser-data.zip
+            analyst>  hbd restore --keys keys.json --data-zip browser-data.zip -c cookie
 ```
 
 The `keys` parent command is removed: `keys export` becomes `dumpkeys`, `keys import` becomes `restore`, and a new `archive` fills the missing data-transport step. `dump` / `list` / `version` keep their current behavior; `dump` stays the default when no subcommand is given (which also covers the Windows double-click case).
@@ -63,8 +64,8 @@ The resolution to §2.3 is a single rule: **the set of browsers a command may ac
 The cross-host producer emits two independent, composable artifacts; the consumer takes both.
 
 - `dumpkeys` writes `keys.json` — the portable master keys (stdout by default for `ssh origin hbd dumpkeys | …` pipelines; `-o` for a 0600 file).
-- `archive` writes `data.zip` — only the decryption-relevant files for the requested `-c` categories (`Login Data`, `Cookies`, `Web Data`, `History`, … plus `Local State` and `Preferences`), read through the existing locked-file bypass, preserving the relative `User Data` layout so the zip's internal root *is* the `User Data` dir.
-- `restore` takes `--keys keys.json` and the data via two explicit flags, `--data-dir <dir>` or `--data-zip <zip>` (mutually exclusive, exactly one required). A zip is extracted to a temporary directory; a directory is used as-is. Because the archive preserves layout, `unzip data.zip -d X && restore --data-dir X` equals `restore --data-zip data.zip`.
+- `archive` writes `browser-data.zip` — the decryption-relevant files for the requested `-c` categories (`Login Data`, `Cookies`, `Web Data`, `History`, …), read through the existing locked-file bypass. To carry more than one browser and to keep restore unambiguous, the zip is laid out as `<browser-key>/<User Data layout>` (e.g. `chrome/Default/Network/Cookies`) — one subdir per installation, each subdir being that browser's `User Data` root. Two things are always included regardless of `-c`: each profile's `Preferences`/`Preferences_02` (so restore can rediscover the profile — the marker is no extraction source) and the installation's `Local State` (carried for fidelity only; restore decrypts with the keys in `keys.json` and never reads it). Zip entry names are always forward-slash, so a Windows-produced archive restores on macOS/Linux.
+- `restore` takes `--keys keys.json` and the data via two explicit flags, `--data-dir <dir>` or `--data-zip <zip>` (mutually exclusive, exactly one required). A zip is extracted to a temporary directory; a directory is used as-is, so `unzip browser-data.zip -d X && restore --data-dir X` equals `restore --data-zip browser-data.zip`. The data resolves two ways: when it holds `<browser-key>/` subdirs (the `archive` layout) each vault is rooted at its own subdir and several browsers restore at once; otherwise `--data-dir` is a single browser's hand-copied `User Data` root, which is unambiguous only for one vault — so `-b` must select it. This preserves the pre-redesign "point at a copied profile folder" workflow.
 
 `restore` is a **separate verb**, not a `dump --keys` mode. Folding it into `dump` would force one command to carry two mutually-exclusive input modes (`-b` for local discovery xor `--keys/--data` for transported artifacts) and dead flags (a `--keychain-pw` that silently does nothing once keys are supplied — a friction the earlier `dump --keys` design already hit). One verb, one job keeps each command's flags and help self-contained. `restore -b` is an **optional filter** over the dump's vaults, not a required selector, because the dump self-describes what each vault is (§4, §6).
 
@@ -90,9 +91,9 @@ This crystallizes the principle that lets cross-platform decryption and the curr
 
 Working backwards from the chosen surface:
 
-- **keydump struct** (`masterkey/dump.go`): the vault carries the engine kind so restore can construct without the local table. The `Browser` field becomes the canonical key (it was the display name), a `Kind` string field is added (values `chromium` / `chromium-yandex` / `chromium-opera`), and `DumpVersion` goes "1"→"2". `UserDataDir` and `Profiles` remain as informational fields. The keys stay `V10` / `V11` / `V20` (Chromium-only; Firefox keys are out of scope, §9).
-- **`browser/keydump.go`**: `BuildDump` records the kind; the overlay `ApplyDump` (which mutates locally-discovered browsers) is replaced by a construct-from-dump path that synthesizes a `BrowserConfig` from each vault and builds the engine directly — no `platformBrowsers()` dependency. This is the mechanical form of §4.
-- **`archive`** reuses the per-category source-path resolution already used by extraction, plus the existing locked-file session and the zip helper.
+- **keydump struct** (`masterkey/dump.go`): the vault carries the engine kind so restore can construct without the local table. The `Browser` field becomes the canonical key (it was the display name), a `Kind` string field is added (values `chromium` / `chromium-yandex` / `chromium-opera`, mapped to/from the internal enum by an explicit bijection so a reordered enum can't silently corrupt), and `DumpVersion` is bumped to "2". The format is designed fresh — `ReadJSON` rejects other versions and there are no backward-compat shims for pre-redesign dumps. `UserDataDir` and `Profiles` remain informational. The keys stay `V10` / `V11` / `V20` (Chromium-only; Firefox keys are out of scope, §9).
+- **`browser/keydump.go`**: `BuildDump` records the key and kind; the overlay `ApplyDump` (which mutates locally-discovered browsers) is replaced by `BuildFromDump`, which synthesizes a `BrowserConfig` per vault and builds the engine directly — no `platformBrowsers()` dependency. It resolves the data via the subdir convention or, for a hand-copied folder, the supplied dir as a single browser's root (§5). This is the mechanical form of §4.
+- **`archive`** reuses the engine's per-category source resolution through a new `ArchiveSources` accessor — each source path is kept slash-canonical so the forward-slash zip entry name falls out directly — plus the existing locked-file session. The flattening `CompressDir` helper is unfit (it drops the layout and deletes the source), so `archive` uses a new layout-preserving `ZipDir`, and `restore --data-zip` a Zip-Slip-safe `Unzip`.
 - **cmd layer**: drop the `keys` parent; add `dumpkeys`, `archive`, `restore` as siblings of `dump` / `list` / `version`.
 - **Cross-cutting (orthogonal to the taxonomy)**: a Chromium-import password CSV format (`name,url,username,password,note`, #602) and category-aware credential prompting so a no-decryption request never asks for a password (#570).
 
@@ -102,6 +103,13 @@ Working backwards from the chosen surface:
 2. #606 implementation: **Option A** — self-describing dump (§6).
 3. keydump vault identity: **option 1A** — `Browser` becomes the canonical key and a `Kind` field is added (§7).
 4. Verb names are final: `archive` and `restore`.
+
+### Refinements (2026-06-06)
+
+5. Archive layout is the subdir convention `<browser-key>/<User Data layout>` (multi-browser); `restore` is dual-mode — that layout, or a single hand-copied `User Data` root selected by `-b` (§5).
+6. `archive` always includes each profile's `Preferences` marker (required for restore's profile discovery) and the installation's `Local State` (fidelity only — restore decrypts from `keys.json` and never reads it; §5).
+7. No backward compatibility: the dump format is designed fresh, with no shims for pre-redesign artifacts.
+8. Delivery order: `archive` (#607) lands first as an independent PR (it stands alone — its output also feeds the current overlay `restore` for same-OS browsers); the self-describing cross-platform `restore` (#606) follows.
 
 ## 9. Non-goals / deferred
 
