@@ -174,18 +174,18 @@ func retrieversFromKeys(mk masterkey.MasterKeys) masterkey.Retrievers {
 	}
 }
 
-func kindToDump(k types.BrowserKind) (string, error) {
-	switch k {
-	case types.Chromium, types.ChromiumYandex, types.ChromiumOpera:
-		return k.String(), nil
-	default:
-		return "", fmt.Errorf("engine kind %s is not exportable", k)
-	}
-}
-
-// dumpableKinds are the engine kinds a vault may carry; kindFromDump reverses BrowserKind.String()
-// over exactly these, keeping the wire vocabulary single-sourced in the types enum.
+// dumpableKinds are the engine kinds a vault may carry; kindToDump/kindFromDump translate to and from
+// the wire form via BrowserKind.String(), keeping the vocabulary single-sourced in the types enum.
 var dumpableKinds = []types.BrowserKind{types.Chromium, types.ChromiumYandex, types.ChromiumOpera}
+
+func kindToDump(k types.BrowserKind) (string, error) {
+	for _, dk := range dumpableKinds {
+		if k == dk {
+			return k.String(), nil
+		}
+	}
+	return "", fmt.Errorf("engine kind %s is not exportable", k)
+}
 
 func kindFromDump(s string) (types.BrowserKind, error) {
 	for _, k := range dumpableKinds {

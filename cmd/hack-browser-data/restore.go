@@ -57,7 +57,7 @@ func restoreCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&keysPath, "keys", "", "keys file from dumpkeys (use - for stdin)")
 	cmd.Flags().StringVar(&dataDir, "data-dir", "", "copied profile data dir (archive layout, or one browser's User Data with -b)")
-	cmd.Flags().StringVar(&dataZip, "data-zip", "", "archive zip from `archive` (alternative to --data-dir)")
+	cmd.Flags().StringVar(&dataZip, "data-zip", "", "zip produced by the archive command (alternative to --data-dir)")
 	cmd.Flags().StringVarP(&browserName, "browser", "b", "", "restore only this browser (optional; must match a vault in --keys)")
 	cmd.Flags().StringVarP(&category, "category", "c", "all", "data categories (comma-separated): all|"+categoryNames())
 	cmd.Flags().StringVarP(&outputFormat, "format", "f", "json", "output format: csv|json|cookie-editor")
@@ -73,9 +73,6 @@ func restoreCmd() *cobra.Command {
 func loadRestoreBrowsers(keysPath, dataDir, browserName string) ([]browser.Browser, error) {
 	if keysPath == "" {
 		return nil, fmt.Errorf("requires --keys <file> (or - for stdin)")
-	}
-	if dataDir == "" {
-		return nil, fmt.Errorf("requires --data-dir <dir>")
 	}
 
 	var r io.Reader = os.Stdin
