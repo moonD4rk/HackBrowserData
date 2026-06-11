@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/godbus/dbus/v5 v5.2.2
 	github.com/inconshreveable/mousetrap v1.1.0
-	github.com/moond4rk/binarycookies v1.0.2
+	github.com/moond4rk/binarycookies v1.0.3
 	github.com/moond4rk/keychainbreaker v0.2.5
 	github.com/moond4rk/plist v1.2.1
 	github.com/otiai10/copy v1.14.1
