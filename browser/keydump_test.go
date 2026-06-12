@@ -3,7 +3,10 @@ package browser
 import (
 	"bytes"
 	"errors"
+	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/moond4rk/hackbrowserdata/masterkey"
@@ -44,6 +47,8 @@ func (m *mockBrowser) CountEntries(_ []types.Category) ([]types.CountResult, err
 
 type mockChromiumBrowser struct {
 	mockBrowser
+	key                string
+	kind               types.BrowserKind
 	keys               masterkey.MasterKeys
 	exportErr          error
 	calls              int
@@ -58,6 +63,15 @@ func (m *mockChromiumBrowser) ExportKeys() (masterkey.MasterKeys, error) {
 	m.calls++
 	return m.keys, m.exportErr
 }
+
+func (m *mockChromiumBrowser) BrowserKey() string {
+	if m.key != "" {
+		return m.key
+	}
+	return strings.ToLower(m.name)
+}
+
+func (m *mockChromiumBrowser) Kind() types.BrowserKind { return m.kind }
 
 func TestBuildDump_Empty(t *testing.T) {
 	dump := BuildDump(nil)
@@ -84,8 +98,11 @@ func TestBuildDump_SingleChromium(t *testing.T) {
 		t.Fatalf("Vaults len = %d, want 1", len(dump.Vaults))
 	}
 	inst := dump.Vaults[0]
-	if inst.Browser != chromeName || inst.UserDataDir != testUDD {
+	if !strings.EqualFold(inst.Browser, chromeName) || inst.UserDataDir != testUDD {
 		t.Errorf("inst metadata = %+v", inst)
+	}
+	if inst.Kind != "chromium" {
+		t.Errorf("Kind = %q, want chromium", inst.Kind)
 	}
 	if len(inst.Profiles) != 1 || inst.Profiles[0] != testProfileDefault {
 		t.Errorf("Profiles = %v", inst.Profiles)
@@ -129,8 +146,8 @@ func TestBuildDump_SkipsNonKeyManager(t *testing.T) {
 	if len(dump.Vaults) != 1 {
 		t.Fatalf("Vaults len = %d, want 1 (firefox skipped)", len(dump.Vaults))
 	}
-	if dump.Vaults[0].Browser != chromeName {
-		t.Errorf("Browser = %q, want %q", dump.Vaults[0].Browser, chromeName)
+	if !strings.EqualFold(dump.Vaults[0].Browser, chromeName) {
+		t.Errorf("Browser = %q, want %q", dump.Vaults[0].Browser, strings.ToLower(chromeName))
 	}
 }
 
@@ -149,8 +166,8 @@ func TestBuildDump_SkipsExportError(t *testing.T) {
 	if len(dump.Vaults) != 1 {
 		t.Fatalf("Vaults len = %d, want 1 (failing browser skipped)", len(dump.Vaults))
 	}
-	if dump.Vaults[0].Browser != chromeName {
-		t.Errorf("Browser = %q, want %q", dump.Vaults[0].Browser, chromeName)
+	if !strings.EqualFold(dump.Vaults[0].Browser, chromeName) {
+		t.Errorf("Browser = %q, want %q", dump.Vaults[0].Browser, strings.ToLower(chromeName))
 	}
 }
 
@@ -177,6 +194,9 @@ func TestBuildDump_JSONRoundTrip(t *testing.T) {
 	}
 	if len(parsed.Vaults) != 1 {
 		t.Fatalf("Vaults len = %d", len(parsed.Vaults))
+	}
+	if parsed.Vaults[0].Kind != "chromium" {
+		t.Errorf("Kind round-trip: got %q, want chromium", parsed.Vaults[0].Kind)
 	}
 	if !bytes.Equal(parsed.Vaults[0].Keys.V10, dump.Vaults[0].Keys.V10) {
 		t.Errorf("V10 round-trip mismatch")
@@ -209,123 +229,168 @@ func TestBuildDump_PartialKeys(t *testing.T) {
 	}
 }
 
-func TestApplyDump_Match(t *testing.T) {
-	b := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
+func TestKindDumpRoundTrip(t *testing.T) {
+	for _, k := range []types.BrowserKind{types.Chromium, types.ChromiumYandex, types.ChromiumOpera} {
+		s, err := kindToDump(k)
+		if err != nil {
+			t.Fatalf("kindToDump(%d): %v", k, err)
+		}
+		got, err := kindFromDump(s)
+		if err != nil || got != k {
+			t.Errorf("round trip %d -> %q -> %d (err %v)", k, s, got, err)
+		}
 	}
-	dump := masterkey.Dump{
-		Vaults: []masterkey.Vault{
-			{Browser: chromeName, UserDataDir: testUDD, Keys: masterkey.MasterKeys{V10: []byte("v10-from-dump")}},
-		},
+	if _, err := kindToDump(types.Firefox); err == nil {
+		t.Error("kindToDump(Firefox) should error")
 	}
-	ApplyDump([]Browser{b}, dump)
-
-	if b.receivedRetrievers.V10 == nil {
-		t.Fatal("V10 retriever should be set from matching vault")
-	}
-	got, err := b.receivedRetrievers.V10.RetrieveKey(masterkey.Hints{})
-	if err != nil || string(got) != "v10-from-dump" {
-		t.Errorf("V10.RetrieveKey() = %q, err = %v, want %q", got, err, "v10-from-dump")
-	}
-	if b.receivedRetrievers.V11 != nil {
-		t.Errorf("V11 should be nil (tier not in dump), got %v", b.receivedRetrievers.V11)
+	if _, err := kindFromDump("nope"); err == nil {
+		t.Error("kindFromDump(nope) should error")
 	}
 }
 
-func TestApplyDump_MissingVault(t *testing.T) {
-	b := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
-	}
-	dump := masterkey.Dump{
-		Vaults: []masterkey.Vault{
-			{Browser: testEdgeName, UserDataDir: "/edge", Keys: masterkey.MasterKeys{V10: []byte("v10")}},
-		},
-	}
-	ApplyDump([]Browser{b}, dump)
+func TestRetrieversFromKeys(t *testing.T) {
+	r := retrieversFromKeys(masterkey.MasterKeys{V10: []byte("k10"), V20: []byte("k20")})
 
-	if b.receivedRetrievers.V10 != nil {
-		t.Errorf("V10 should remain nil when no matching vault, got %v", b.receivedRetrievers.V10)
+	if r.V10 == nil || r.V20 == nil {
+		t.Fatal("V10 and V20 retrievers should be set from non-empty keys")
+	}
+	if r.V11 != nil {
+		t.Error("V11 retriever should be nil when the key is absent")
+	}
+	if got, _ := r.V10.RetrieveKey(masterkey.Hints{}); string(got) != "k10" {
+		t.Errorf("V10 key = %q, want k10", got)
+	}
+	if got, _ := r.V20.RetrieveKey(masterkey.Hints{}); string(got) != "k20" {
+		t.Errorf("V20 key = %q, want k20", got)
 	}
 }
 
-func TestApplyDump_NonKeyManagerSkipped(t *testing.T) {
-	firefox := &mockBrowser{name: firefoxName, userDataDir: "/ff", profiles: []string{"default-release"}}
-	dump := masterkey.Dump{
-		Vaults: []masterkey.Vault{
-			{Browser: firefoxName, UserDataDir: "/ff", Keys: masterkey.MasterKeys{V10: []byte("v10")}},
-		},
-	}
-	// firefox does not implement KeyManager; ApplyDump must not panic and must not attempt injection.
-	ApplyDump([]Browser{firefox}, dump)
-}
-
-func TestApplyDump_RoundTrip(t *testing.T) {
-	src := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
-		keys:        masterkey.MasterKeys{V10: []byte("v10-rt"), V20: []byte("v20-rt")},
-	}
-	dump := BuildDump([]Browser{src})
-
-	dst := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
-	}
-	ApplyDump([]Browser{dst}, dump)
-
-	v10, _ := dst.receivedRetrievers.V10.RetrieveKey(masterkey.Hints{})
-	if string(v10) != "v10-rt" {
-		t.Errorf("V10 round-trip: got %q, want v10-rt", v10)
-	}
-	v20, _ := dst.receivedRetrievers.V20.RetrieveKey(masterkey.Hints{})
-	if string(v20) != "v20-rt" {
-		t.Errorf("V20 round-trip: got %q, want v20-rt", v20)
-	}
-	if dst.receivedRetrievers.V11 != nil {
-		t.Errorf("V11 should be nil (not in source keys), got %v", dst.receivedRetrievers.V11)
+// makeUserData writes a minimal Chromium profile tree: a Preferences marker plus History (a real
+// extraction source, so the profile resolves) under each named profile dir.
+func makeUserData(t *testing.T, root string, profiles ...string) {
+	t.Helper()
+	for _, p := range profiles {
+		dir := filepath.Join(root, p)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		for _, f := range []string{"Preferences", "History"} {
+			if err := os.WriteFile(filepath.Join(dir, f), []byte("x"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 }
 
-func TestApplyDump_FallbackOnPathMismatch(t *testing.T) {
-	// Cross-host scenario: dump was created on Windows but is applied on Linux/macOS where the
-	// UserDataDir literally differs. With a single vault for the browser, ApplyDump should still
-	// inject — otherwise the primary cross-host use case fails silently.
-	b := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, userDataDir: "/local/chrome", profiles: []string{testProfileDefault}},
-	}
-	dump := masterkey.Dump{
-		Vaults: []masterkey.Vault{
-			{
-				Browser:     chromeName,
-				UserDataDir: `C:\Users\foo\AppData\Local\Google\Chrome\User Data`,
-				Keys:        masterkey.MasterKeys{V10: []byte("v10-fallback")},
-			},
-		},
-	}
-	ApplyDump([]Browser{b}, dump)
+func TestBuildFromDump_ConventionMultiBrowser(t *testing.T) {
+	dataDir := t.TempDir()
+	makeUserData(t, filepath.Join(dataDir, "chrome"), testProfileDefault)
+	makeUserData(t, filepath.Join(dataDir, "edge"), testProfileDefault)
+	dump := masterkey.Dump{Vaults: []masterkey.Vault{
+		{Browser: "chrome", Kind: "chromium", Keys: masterkey.MasterKeys{V10: []byte("c")}},
+		{Browser: "edge", Kind: "chromium", Keys: masterkey.MasterKeys{V10: []byte("e")}},
+	}}
 
-	if b.receivedRetrievers.V10 == nil {
-		t.Fatal("V10 retriever should be set via single-vault fallback")
+	browsers, err := BuildFromDump(dump, dataDir, "")
+	if err != nil {
+		t.Fatalf("BuildFromDump: %v", err)
 	}
-	got, err := b.receivedRetrievers.V10.RetrieveKey(masterkey.Hints{})
-	if err != nil || string(got) != "v10-fallback" {
-		t.Errorf("V10.RetrieveKey() = %q, err = %v, want %q", got, err, "v10-fallback")
+	if len(browsers) != 2 {
+		t.Fatalf("got %d browsers, want 2", len(browsers))
 	}
 }
 
-func TestApplyDump_NoFallbackWhenAmbiguous(t *testing.T) {
-	// Two Chrome vaults in the dump and no exact path match — ApplyDump must not guess which
-	// installation the local browser corresponds to.
-	b := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, userDataDir: "/local/chrome", profiles: []string{testProfileDefault}},
-	}
-	dump := masterkey.Dump{
-		Vaults: []masterkey.Vault{
-			{Browser: chromeName, UserDataDir: "/path/a", Keys: masterkey.MasterKeys{V10: []byte("a")}},
-			{Browser: chromeName, UserDataDir: "/path/b", Keys: masterkey.MasterKeys{V10: []byte("b")}},
-		},
-	}
-	ApplyDump([]Browser{b}, dump)
+// TestBuildFromDump_ForeignKindNoPlatformTable proves restore never consults platformBrowsers():
+// sogou is Windows-only yet reconstructs from its vault on any OS.
+func TestBuildFromDump_ForeignKindNoPlatformTable(t *testing.T) {
+	dataDir := t.TempDir()
+	makeUserData(t, filepath.Join(dataDir, "sogou"), testProfileDefault)
+	dump := masterkey.Dump{Vaults: []masterkey.Vault{
+		{Browser: "sogou", Kind: "chromium", Keys: masterkey.MasterKeys{V10: []byte("k")}},
+	}}
 
-	if b.receivedRetrievers.V10 != nil {
-		t.Errorf("V10 should remain nil when fallback is ambiguous, got %v", b.receivedRetrievers.V10)
+	browsers, err := BuildFromDump(dump, dataDir, "")
+	if err != nil {
+		t.Fatalf("BuildFromDump: %v", err)
+	}
+	if len(browsers) != 1 {
+		t.Fatalf("got %d browsers, want 1", len(browsers))
+	}
+	if browsers[0].BrowserName() != "sogou" {
+		t.Errorf("BrowserName = %q, want sogou", browsers[0].BrowserName())
+	}
+}
+
+func TestBuildFromDump_RawSingleBrowser(t *testing.T) {
+	dataDir := t.TempDir()
+	makeUserData(t, dataDir, testProfileDefault)
+	dump := masterkey.Dump{Vaults: []masterkey.Vault{
+		{Browser: "chrome", Kind: "chromium", Keys: masterkey.MasterKeys{V10: []byte("c")}},
+	}}
+
+	browsers, err := BuildFromDump(dump, dataDir, "chrome")
+	if err != nil {
+		t.Fatalf("BuildFromDump: %v", err)
+	}
+	if len(browsers) != 1 {
+		t.Fatalf("got %d browsers, want 1", len(browsers))
+	}
+	if browsers[0].UserDataDir() != dataDir {
+		t.Errorf("UserDataDir = %q, want %q (raw root)", browsers[0].UserDataDir(), dataDir)
+	}
+}
+
+func TestBuildFromDump_UnknownBrowserErrors(t *testing.T) {
+	dataDir := t.TempDir()
+	dump := masterkey.Dump{Vaults: []masterkey.Vault{
+		{Browser: "chrome", Kind: "chromium", Keys: masterkey.MasterKeys{V10: []byte("c")}},
+	}}
+	if _, err := BuildFromDump(dump, dataDir, "sogou"); err == nil {
+		t.Fatal("expected error for -b matching no vault")
+	}
+}
+
+func TestBuildFromDump_RawAmbiguousErrors(t *testing.T) {
+	dataDir := t.TempDir()
+	makeUserData(t, dataDir, testProfileDefault)
+	dump := masterkey.Dump{Vaults: []masterkey.Vault{
+		{Browser: "chrome", Kind: "chromium", Keys: masterkey.MasterKeys{V10: []byte("c")}},
+		{Browser: "edge", Kind: "chromium", Keys: masterkey.MasterKeys{V10: []byte("e")}},
+	}}
+	if _, err := BuildFromDump(dump, dataDir, ""); err == nil {
+		t.Fatal("expected ambiguity error for raw multi-vault restore without -b")
+	}
+}
+
+func TestBuildFromDump_MissingDataDirErrors(t *testing.T) {
+	dump := masterkey.Dump{Vaults: []masterkey.Vault{
+		{Browser: "chrome", Kind: "chromium", Keys: masterkey.MasterKeys{V10: []byte("c")}},
+	}}
+	if _, err := BuildFromDump(dump, "/no/such/dir", ""); err == nil {
+		t.Fatal("expected error when data dir does not exist")
+	}
+}
+
+// TestBuildFromDump_MarkerlessTreeStillResolves covers an archive/copy that omitted Preferences:
+// the source-bearing-subdir fallback in discoverProfiles must still find the profile.
+func TestBuildFromDump_MarkerlessTreeStillResolves(t *testing.T) {
+	dataDir := t.TempDir()
+	dir := filepath.Join(dataDir, "chrome", testProfileDefault)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "History"), []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	dump := masterkey.Dump{Vaults: []masterkey.Vault{
+		{Browser: "chrome", Kind: "chromium", Keys: masterkey.MasterKeys{V10: []byte("c")}},
+	}}
+
+	browsers, err := BuildFromDump(dump, dataDir, "")
+	if err != nil {
+		t.Fatalf("BuildFromDump: %v", err)
+	}
+	if len(browsers) != 1 {
+		t.Fatalf("got %d browsers, want 1 (marker-less profile must resolve via source fallback)", len(browsers))
 	}
 }

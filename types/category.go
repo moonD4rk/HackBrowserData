@@ -81,6 +81,25 @@ const (
 	Safari
 )
 
+// String returns the canonical lowercase name of the engine kind; the chromium-family values are
+// also the stable wire form carried in a keys dump, so don't change them lightly.
+func (k BrowserKind) String() string {
+	switch k {
+	case Chromium:
+		return "chromium"
+	case ChromiumYandex:
+		return "chromium-yandex"
+	case ChromiumOpera:
+		return "chromium-opera"
+	case Firefox:
+		return "firefox"
+	case Safari:
+		return "safari"
+	default:
+		return "unknown"
+	}
+}
+
 // BrowserConfig holds the declarative configuration for a browser installation.
 type BrowserConfig struct {
 	Key           string      // lookup key; doubles as the Windows ABE / winutil.Table key when WindowsABE is true
