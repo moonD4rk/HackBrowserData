@@ -54,9 +54,10 @@ func NewBrowser(cfg types.BrowserConfig) (*Browser, error) {
 // Extract; unused tiers stay nil.
 func (b *Browser) SetRetrievers(r masterkey.Retrievers) { b.retrievers = r }
 
-func (b *Browser) BrowserName() string { return b.cfg.Name }
-func (b *Browser) BrowserKey() string  { return b.cfg.Key }
-func (b *Browser) UserDataDir() string { return b.cfg.UserDataDir }
+func (b *Browser) BrowserName() string     { return b.cfg.Name }
+func (b *Browser) BrowserKey() string      { return b.cfg.Key }
+func (b *Browser) UserDataDir() string     { return b.cfg.UserDataDir }
+func (b *Browser) Kind() types.BrowserKind { return b.cfg.Kind }
 
 // Profiles returns the identity of every profile in this installation.
 func (b *Browser) Profiles() []types.Profile {
@@ -162,11 +163,24 @@ func discoverProfiles(userDataDir string, sources map[types.Category][]sourcePat
 		}
 	}
 
-	// Flat layout fallback (older Opera): data files directly in userDataDir.
-	// Opera stores data alongside Local State in userDataDir itself, so check
-	// for any known source file instead of Preferences.
+	// Flat layout (older Opera): data files directly under userDataDir with no profile subdir. Check the
+	// root before the subdir fallback so a stray source-bearing subdir can't suppress root discovery.
 	if len(profiles) == 0 && hasAnySource(sources, userDataDir) {
 		profiles = append(profiles, userDataDir)
+	}
+
+	// Restored/copied trees may omit the Preferences marker (it is no extraction source). When the marker
+	// scan and flat-layout check both find nothing, treat any source-bearing subdir as a profile.
+	if len(profiles) == 0 {
+		for _, e := range entries {
+			if !e.IsDir() || isSkippedDir(e.Name()) {
+				continue
+			}
+			dir := filepath.Join(userDataDir, e.Name())
+			if hasAnySource(sources, dir) {
+				profiles = append(profiles, dir)
+			}
+		}
 	}
 	return profiles
 }

@@ -238,6 +238,50 @@ func TestNewBrowsers(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// discoverProfiles: fallback boundaries (marker-less copies, flat-layout precedence)
+// ---------------------------------------------------------------------------
+
+func TestDiscoverProfiles(t *testing.T) {
+	t.Run("markerless multi-subdir resolves all source-bearing dirs", func(t *testing.T) {
+		dir := t.TempDir()
+		mkFile(dir, "Default", "History")
+		mkFile(dir, "Profile 1", "History")
+		assert.Len(t, discoverProfiles(dir, chromiumSources), 2)
+	})
+
+	t.Run("marker present keeps fallback dormant", func(t *testing.T) {
+		dir := t.TempDir()
+		mkFile(dir, "Default", "Preferences")
+		mkFile(dir, "Default", "History")
+		mkFile(dir, "NotAProfile", "History")
+		got := discoverProfiles(dir, chromiumSources)
+		require.Len(t, got, 1)
+		assert.Equal(t, filepath.Join(dir, "Default"), got[0])
+	})
+
+	t.Run("skipped dir ignored by markerless fallback", func(t *testing.T) {
+		dir := t.TempDir()
+		mkFile(dir, "System Profile", "History")
+		assert.Empty(t, discoverProfiles(dir, chromiumSources))
+	})
+
+	t.Run("sourceless subdir ignored", func(t *testing.T) {
+		dir := t.TempDir()
+		mkDir(dir, "Crashpad")
+		assert.Empty(t, discoverProfiles(dir, chromiumSources))
+	})
+
+	t.Run("flat-layout root wins over source-bearing subdir", func(t *testing.T) {
+		dir := t.TempDir()
+		mkFile(dir, "History")
+		mkFile(dir, "Subthing", "History")
+		got := discoverProfiles(dir, chromiumSources)
+		require.Len(t, got, 1)
+		assert.Equal(t, dir, got[0], "flat-layout root must win; subdir must not hijack discovery")
+	})
+}
+
+// ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------
 

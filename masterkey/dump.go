@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const DumpVersion = "1"
+const DumpVersion = "2"
 
 // Dump is the portable, cross-host container for Chromium master keys — produce it on one host to
 // decrypt copied profile data on another without DPAPI / ABE / Keychain / D-Bus.
@@ -30,8 +30,11 @@ type Host struct {
 }
 
 // Vault groups profiles sharing master keys (master keys are per-installation, not per-profile).
+// Browser is the lookup key (e.g. "chrome"); Kind is the engine ("chromium"|"chromium-yandex"|
+// "chromium-opera") so a consumer can rebuild the engine without the local browser table.
 type Vault struct {
 	Browser     string     `json:"browser"`
+	Kind        string     `json:"kind"`
 	UserDataDir string     `json:"user_data_dir"`
 	Profiles    []string   `json:"profiles"`
 	Keys        MasterKeys `json:"keys"`
@@ -66,8 +69,8 @@ func (d Dump) WriteJSON(w io.Writer) error {
 	return nil
 }
 
-// ReadJSON parses a Dump and rejects versions this build can't interpret — a silent misparse of a
-// future v2 schema is worse than a clear error.
+// ReadJSON parses a Dump and rejects any version this build can't interpret — a silent misparse of an
+// unrecognized schema is worse than a clear error.
 func ReadJSON(r io.Reader) (Dump, error) {
 	var d Dump
 	dec := json.NewDecoder(r)
