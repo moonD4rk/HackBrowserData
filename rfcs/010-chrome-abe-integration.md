@@ -46,7 +46,7 @@ End-to-end flow when `hack-browser-data.exe` encounters a v20 Chromium cookie on
 
 ```
 browser/chromium.Extract()
-  → masterkey.Chain [ABERetriever, DPAPIRetriever]
+  → masterkey.Retrievers{V10: &DPAPIRetriever{}, V20: &ABERetriever{}}
   → ABERetriever.RetrieveKey():
       reads Local State → extracts APPB-prefixed blob
       resolves browser exe via registry App Paths
@@ -92,7 +92,7 @@ DoExtractKey                  → see §4.2
 2. `ReadProcessMemory` for the 12-byte diagnostic header, then 32-byte key when `status == ready`.
 3. `TerminateProcess(browser)` — the target was a throwaway from the start.
 
-The returned key flows back up to `crypto.DecryptChromiumV20` (cross-platform AES-256-GCM; see §5.3) and then to the usual cookie/password extraction pipeline.
+The returned key flows back up to `crypto.DecryptChromiumGCM` (cross-platform AES-256-GCM; see §5.3) and then to the usual cookie/password extraction pipeline.
 
 ## 4. C payload — `crypto/windows/abe_native/`
 
@@ -163,12 +163,11 @@ Validity relies on Windows **KnownDlls + session-consistent ASLR** — `kernel32
 
 ### 5.1 Injector package — `utils/injector/`
 
-Three files collaborate:
+Four files collaborate:
 
 | File | Role |
 |---|---|
-| `reflective_windows.go` | `Reflective.Inject(exePath, payload, env) ([]byte, error)` — the orchestrator |
-| `winapi_windows.go` | Package-level `windows.LazyProc` handles + `callBoolErr` helper. Centralizes `VirtualAllocEx` / `CreateRemoteThread` / NtFlushIC / import-address lookups. `ReadProcessMemory` / `WriteProcessMemory` use `x/sys/windows` typed wrappers directly. |
+| `reflective_windows.go` | `Reflective.Inject(exePath, payload, env) ([]byte, error)` — the orchestrator. Win32 calls (`VirtualAllocEx`, `CreateRemoteThread`, `NtFlushIC`, import-address lookups) delegate to `utils/winapi/` via `CallBoolErr`. |
 | `errors_windows.go` | `formatABEError(scratchResult) string` — renders the C-side diag channel into human-readable strings via two lookup maps (`ABE_ERR_*` names + known HRESULT names like `E_ACCESSDENIED`). |
 | `pe_windows.go` | `FindExportFileOffset(dllBytes, "Bootstrap")` — raw-file offset via `debug/pe`. |
 | `arch_windows.go` | Architecture validation (amd64-only today). |
@@ -185,7 +184,7 @@ _Static_assert(offsetof(struct BootstrapScratch, hresult) == 0x2C, "hresult offs
 _Static_assert(offsetof(struct BootstrapScratch, shared) == 0x40, "shared offset");
 ```
 
-Go consumes the same constants via **`go tool cgo -godefs`** (a development-time tool, not a runtime dependency). `make gen-layout` regenerates `crypto/windows/abe_native/bootstrap/layout.go` from `bootstrap_layout.h` using `CC="zig cc"` for bit-identical results across host OSes. `make gen-layout-verify` is wired into CI to fail if the committed `layout.go` is stale.
+Go consumes the same constants via **`go tool cgo -godefs`** (a development-time tool, not a runtime dependency). `make gen-layout` regenerates `crypto/windows/abe_native/bootstrap/layout.go` from `bootstrap_layout.h` using `CC="zig cc"` for bit-identical results across host OSes. `make gen-layout-verify` can be run locally to verify the committed `layout.go` matches the current header.
 
 **Why `cgo -godefs` rather than runtime `import "C"`**: we only need constants shared, not FFI to C functions. Runtime CGO would force the whole project into `CGO_ENABLED=1`, losing the "non-Windows contributor needs no C toolchain" guarantee. `cgo -godefs` bakes the values into a pure-Go file that commits to git; the project stays `CGO_ENABLED=0`.
 
@@ -201,12 +200,12 @@ Go consumes the same constants via **`go tool cgo -godefs`** (a development-time
 
 On extraction success, logs at `Info` level (`abe: retrieved <browser> master key via reflective injection`).
 
-**v20 decryption** is cross-platform by design: `browser/chromium/decrypt.go` routes `CipherV20` → `crypto.DecryptChromiumV20` (defined in `crypto/crypto.go`, uses `AESGCMDecrypt`). This lets Linux/macOS CI exercise the same decryption path as Windows — only the key-source side is platform-gated.
+**v20 decryption** is cross-platform by design: `browser/chromium/decrypt.go` routes `CipherV20` → `crypto.DecryptChromiumGCM` (defined in `crypto/crypto.go`, uses `AESGCMDecrypt`). This lets Linux/macOS CI exercise the same decryption path as Windows — only the key-source side is platform-gated.
 
 ## 6. Build chain
 
 - **Default build** (any host, no zig): `go build ./cmd/hack-browser-data/` succeeds; ABE is stubbed out. Legacy v10/v11 cookies still decrypt via DPAPI.
-- **Windows release with ABE**: `make build-windows` = `make payload` (zig cc → `crypto/abe_extractor_amd64.bin`) + `GOOS=windows go build -tags abe_embed`. The `abe_embed` tag activates `//go:embed` on the compiled binary.
+- **Windows release with ABE**: `make build-windows` = `make payload` (zig cc → `crypto/windows/payload/abe_extractor_amd64.bin`) + `GOOS=windows go build -tags abe_embed`. The `abe_embed` tag activates `//go:embed` on the compiled binary.
 - **Layout regen**: `make gen-layout` after any change to `bootstrap_layout.h`.
 - **`go.mod` unchanged** — no new dependencies. `zig` is the only external toolchain, and only when actually rebuilding the payload.
 
@@ -226,7 +225,7 @@ All ABE-specific Go code is behind `//go:build windows` (plus `&& abe_embed` for
 **No payload bytes ever touch disk on the target machine.**
 
 - Payload DLL exists only as:
-  1. Build artifact on the developer machine (`crypto/abe_extractor_amd64.bin`, git-ignored)
+  1. Build artifact on the developer machine (`crypto/windows/payload/abe_extractor_amd64.bin`, git-ignored)
   2. `.rdata` section of `hack-browser-data.exe` (`//go:embed`)
   3. Go `[]byte` in our process memory (one `copy()` for import patching)
   4. `VirtualAllocEx`'d region in the target browser during injection; released on `TerminateProcess`

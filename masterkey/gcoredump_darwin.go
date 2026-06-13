@@ -102,7 +102,6 @@ func DecryptKeychainRecords() ([]keychainbreaker.GenericPassword, error) {
 		return nil, fmt.Errorf("read keychain: %w", err)
 	}
 
-	// try each candidate key against the keychain
 	for _, candidate := range candidates {
 		kc, err := keychainbreaker.Open(keychainbreaker.WithBytes(keychainBuf))
 		if err != nil {
@@ -157,7 +156,6 @@ func scanMasterKeyCandidates(corePath string, regions []addressRange) ([]string,
 			if ptr < region.start || ptr > region.end {
 				continue
 			}
-			// read 24 bytes at the pointer offset
 			offset := ptr - vaddr
 			if offset+0x18 > uint64(len(data)) {
 				continue

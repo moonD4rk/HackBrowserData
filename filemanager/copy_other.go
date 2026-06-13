@@ -6,7 +6,7 @@ import "fmt"
 
 // copyLocked is not supported on non-Windows platforms and always returns an error.
 // File locking is primarily a Windows issue where Chrome holds exclusive
-// locks on Cookie files via SQLite WAL mode.
+// locks on Cookie files via PRAGMA locking_mode=EXCLUSIVE.
 func copyLocked(_, _ string) error {
 	return fmt.Errorf("locked file copy not supported on this platform")
 }

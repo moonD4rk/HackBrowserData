@@ -51,7 +51,7 @@ func extractPasswordsWithQuery(masterKeys masterkey.MasterKeys, path, query stri
 	return logins, nil
 }
 
-// extractYandexPasswords walks Ya Passman Data; protocol in RFC-012 §4.
+// extractYandexPasswords walks Ya Passman Data.
 // Note: URL column is origin_url — it's what the per-row AAD is computed over (not action_url).
 func extractYandexPasswords(masterKeys masterkey.MasterKeys, path string) ([]types.LoginEntry, error) {
 	dataKey, err := loadYandexDataKey(path, masterKeys.V10)

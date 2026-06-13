@@ -33,13 +33,13 @@ Yandex overrides two file names from the standard Chromium layout:
 | Password | `Login Data` | `Ya Passman Data` |
 | CreditCard | `Web Data` | `Ya Credit Cards` |
 
-Yandex also uses `action_url` instead of `origin_url` in its password SQL query.
+Yandex's password query selects extra columns (`username_element`, `password_element`, `signon_realm`) beyond the standard four; these columns are used to construct the per-row AAD for decryption. The URL column is `origin_url`, same as standard Chromium.
 
-**Important limitation**: Yandex passwords and cookies currently cannot be decrypted because Yandex uses its own proprietary encryption algorithm. Only non-encrypted categories (bookmarks, history, downloads, extensions, storage) produce useful results.
+Yandex passwords and credit cards use Yandex's proprietary two-layer encryption (see RFC-012) and are fully supported. Cookie decryption follows standard Chromium v10/v20 paths.
 
 ### 2.2 Opera
 
-Opera differs from standard Chromium in two ways:
+Opera differs from standard Chromium in three ways:
 
 - **Extension key**: Opera stores extension settings under `extensions.opsettings` in Secure Preferences, instead of the standard `extensions.settings`.
 - **Windows path**: Opera uses `AppData/Roaming` rather than `AppData/Local`, unlike most Chromium browsers.
@@ -106,8 +106,8 @@ No encrypted fields. Shares the same `History` SQLite database as browsing histo
 ### 4.6 Credit Cards (Web Data -- SQLite)
 
 ```sql
-SELECT guid, name_on_card, expiration_month, expiration_year,
-    card_number_encrypted, nickname, billing_address_id FROM credit_cards
+SELECT COALESCE(guid, ''), name_on_card, expiration_month, expiration_year,
+    card_number_encrypted, COALESCE(nickname, ''), COALESCE(billing_address_id, '') FROM credit_cards
 ```
 
 The `card_number_encrypted` column contains encrypted bytes.

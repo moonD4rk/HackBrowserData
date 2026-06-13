@@ -5,7 +5,8 @@
 #include <stddef.h>
 
 // BootstrapScratch describes the IPC contract between the C payload running
-// inside chrome.exe and the Go injector in our own process. It squats inside
+// inside the target browser process (chrome.exe, msedge.exe, brave.exe, etc.)
+// and the Go injector in our own process. It squats inside
 // the target DLL's PE DOS header region. Windows' PE loader ignores the DOS
 // stub at 0x40..0x77, and we also borrow a few reserved bytes between 0x28
 // and 0x3B inside IMAGE_DOS_HEADER. The e_lfanew at 0x3C..0x3F MUST be left

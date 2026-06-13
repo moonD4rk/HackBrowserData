@@ -104,6 +104,7 @@ Firefox uses inconsistent timestamp units across data types. All are Unix epoch-
 | Cookies (`expiry`) | Seconds | direct |
 | History (`last_visit_date`) | Microseconds | / 1,000,000 |
 | Downloads (`dateAdded`) | Microseconds | / 1,000,000 |
+| Downloads (`endTime`) | Milliseconds | / 1,000 |
 | Bookmarks (`dateAdded`) | Microseconds | / 1,000,000 |
 | Passwords (`timeCreated`) | Milliseconds | / 1,000 |
 

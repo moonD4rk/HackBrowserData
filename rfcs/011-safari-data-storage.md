@@ -62,6 +62,7 @@ Safari uses two different casings for the same profile UUID across the container
 | Cookie | `Container/Cookies/Cookies.binarycookies`, then `~/Library/Cookies/Cookies.binarycookies` | BinaryCookies |
 | Bookmark | `~/Library/Safari/Bookmarks.plist` | plist |
 | Download | `~/Library/Safari/Downloads.plist` | plist |
+| Extension | `Container/Safari/AppExtensions/Extensions.plist`, `Container/Safari/WebExtensions/Extensions.plist` | plist |
 | LocalStorage | `Container/WebKit/WebsiteData/Default/` | WebKit Origins dir |
 | Password | macOS Keychain | — |
 
@@ -87,9 +88,13 @@ Passwords live in the user-scope Keychain, not on a per-profile basis — only t
 ### 4.1 History (History.db — SQLite)
 
 ```sql
-SELECT url, title, visit_count, visit_time
-FROM history_items
-LEFT JOIN history_visits ON history_items.id = history_visits.history_item
+SELECT hi.url, COALESCE(hv.title, ''), hi.visit_count, COALESCE(hv.visit_time, 0)
+FROM history_items hi
+LEFT JOIN history_visits hv ON hv.id = (
+    SELECT hv2.id FROM history_visits hv2
+    WHERE hv2.history_item = hi.id
+    ORDER BY hv2.visit_time DESC LIMIT 1
+)
 ```
 
 Schema notes:
@@ -99,7 +104,7 @@ Schema notes:
 
 ### 4.2 Cookies (Cookies.binarycookies — binary)
 
-Apple's proprietary BinaryCookies format — not SQLite, not a documented format. Parsed by the [go-binarycookies](https://github.com/moond4rk/go-binarycookies) library.
+Apple's proprietary BinaryCookies format — not SQLite, not a documented format. Parsed by the [binarycookies](https://github.com/moond4rk/binarycookies) library.
 
 High-level layout:
 
@@ -122,7 +127,7 @@ A nested dictionary tree with a `WebBookmarkType` discriminator at each node:
 | `WebBookmarkTypeList` | Folder | `Children` (array) |
 | `WebBookmarkTypeLeaf` | URL entry | `URLString`, `URIDictionary.title` |
 
-The extractor walks the tree recursively, collecting leaf nodes into a flat list. Folder names are not preserved (only URL + title pairs are exported).
+The extractor walks the tree recursively, collecting leaf nodes into a flat list. Folder names are preserved in the `Folder` field of each `BookmarkEntry`.
 
 ### 4.4 Downloads (Downloads.plist — property list)
 
@@ -132,7 +137,7 @@ A flat structure with a `DownloadHistory` array. Relevant keys per entry:
 |-----|---------|
 | `DownloadEntryURL` | Source URL |
 | `DownloadEntryPath` | Local filesystem path |
-| `DownloadEntryBytesReceivedSoFar` | Bytes downloaded |
+| `DownloadEntryProgressTotalToLoad` | Total bytes to download |
 | `DownloadEntryProfileUUIDStringKey` | Owning profile's uppercase UUID, or `"DefaultProfile"` |
 
 The extractor filters by the caller-provided owner UUID so each profile reports its own downloads. MIME type and start/end times are not stored by Safari — `MimeType` is always empty in the output.
@@ -241,7 +246,7 @@ The only encrypted category is passwords. Because they are not stored in Safari'
 - **Full Disk Access (TCC)** is required to read the sandboxed container. Without it, cookies / history / downloads / localStorage reads fail silently with permission errors at stat or open time. Legacy paths under `~/Library/Safari/` sometimes remain readable without FDA, but are mostly empty on modern systems.
 - **Live-file safety** follows a live-vs-temp split:
   - **Live reads** (`SafariTabs.db` during profile discovery in `profiles.go`) use `?mode=ro&immutable=1`, which disables WAL replay and locking so the extractor cannot disturb a running Safari — it sees a consistent snapshot of the main DB as of read time, at the cost of missing any pending WAL content.
-  - **Temp-copy reads** (`History.db`, `localstorage.sqlite3`, etc. via `filemanager.Session.Acquire`) use `?mode=ro` only. `Session.Acquire` copies the `-wal` / `-shm` sidecars alongside the main DB, so SQLite can replay uncommitted transactions on the copy — surfacing entries Safari has written to WAL but not yet checkpointed. Any `-shm` writes SQLite performs during replay land on the ephemeral copy and are deleted with the session.
+  - **Temp-copy reads** (via `filemanager.Session.Acquire`) vary by file: `localstorage.sqlite3` uses `?mode=ro` so SQLite can replay the copied `-wal` sidecar; `History.db` opens with `PRAGMA journal_mode=off` (WAL replay not needed for read-only history queries). `Session.Acquire` copies the `-wal` / `-shm` sidecars alongside the main DB. Any `-shm` writes SQLite performs during replay land on the ephemeral copy and are deleted with the session.
 - **Multi-profile availability**: requires Safari 17 (macOS 14 Sonoma) or newer. Older Safari versions have only the default profile; discovery degrades cleanly via the ReadDir fallback described in §2.1.
 - **File acquisition**: all per-profile files are copied into a `filemanager.Session` temp directory before extraction, except the discovery-time `SafariTabs.db` read which opens the live file directly. See [RFC-008](008-file-acquisition-and-platform-quirks.md) for the general pattern.
 

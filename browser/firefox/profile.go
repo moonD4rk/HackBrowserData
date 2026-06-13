@@ -55,7 +55,6 @@ func (p *profile) extract(categories []types.Category) *types.BrowserData {
 	return data
 }
 
-// count counts entries per category without decryption.
 func (p *profile) count(categories []types.Category) map[types.Category]int {
 	session, err := filemanager.NewSession()
 	if err != nil {
@@ -76,7 +75,6 @@ func (p *profile) count(categories []types.Category) map[types.Category]int {
 	return counts
 }
 
-// acquireFiles copies source files to the session temp directory.
 func (p *profile) acquireFiles(session *filemanager.Session, categories []types.Category) map[types.Category]string {
 	tempPaths := make(map[types.Category]string)
 	for _, cat := range categories {
@@ -114,7 +112,6 @@ func (p *profile) getMasterKey(session *filemanager.Session, tempPaths map[types
 	return retrieveMasterKey(key4Dst, loginsPath)
 }
 
-// extractCategory calls the appropriate extract function for a category.
 func (p *profile) extractCategory(data *types.BrowserData, cat types.Category, masterKey []byte, path string) {
 	var err error
 	switch cat {
@@ -140,7 +137,6 @@ func (p *profile) extractCategory(data *types.BrowserData, cat types.Category, m
 	}
 }
 
-// countCategory calls the appropriate count function for a category.
 func (p *profile) countCategory(cat types.Category, path string) int {
 	var count int
 	var err error

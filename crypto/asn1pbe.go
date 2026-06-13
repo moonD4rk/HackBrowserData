@@ -98,7 +98,7 @@ func (n privateKeyPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
 	return dk[:24], dk[len(dk)-8:]
 }
 
-// MetaPBE Struct
+// passwordCheckPBE Struct
 //
 //	SEQUENCE (2 elem)
 //		OBJECT IDENTIFIER

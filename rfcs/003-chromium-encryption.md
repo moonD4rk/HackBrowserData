@@ -18,6 +18,7 @@ Every encrypted value begins with a 3-byte prefix that identifies the cipher ver
 |--------|---------|---------|
 | `v10` | CipherV10 | Chrome 80+ standard encryption (AES-GCM on Windows, AES-CBC on macOS/Linux) |
 | `v11` | CipherV11 | Linux-only: AES-CBC variant where the key comes from libsecret / kwallet. Same algorithm and parameters as `v10` — only the key source differs |
+| `v12` | CipherV12 | Chromium SecretPortal/Flatpak (xdg-desktop-portal) — recognized by the version detector so a clear error can be returned; not yet implemented |
 | `v20` | CipherV20 | Chrome 127+ App-Bound Encryption |
 | (none) | CipherDPAPI | Pre-Chrome 80 raw DPAPI encryption (Windows only, no prefix) |
 
@@ -92,20 +93,15 @@ Decryption uses AES-128-CBC with a fixed IV of 16 space bytes (`0x20`) and PKCS5
 
 ## 6. v20 App-Bound Encryption (Chrome 127+)
 
-Chrome 127 introduced App-Bound Encryption on Windows, identified by the `v20` prefix. This scheme binds the encryption key to the Chrome application identity, making it harder for external tools to decrypt. After decryption, the payload contains a 32-byte application header before the actual plaintext:
+Chrome 127 introduced App-Bound Encryption on Windows, identified by the `v20` prefix. This scheme binds the encryption key to the Chrome application identity. The key is a 32-byte AES-256 key retrieved via reflective injection into the browser process (`ABERetriever`). Ciphertext layout:
 
 ```
-| v20   | nonce  | AES-GCM payload                    |
+| v20   | nonce  | AES-GCM ciphertext + auth tag       |
 |-------|--------|-------------------------------------|
 | 3B    | 12B    | remaining bytes                     |
-
-After decryption:
-| app-bound header | plaintext                          |
-|------------------|------------------------------------|
-| 32B              | remaining bytes                    |
 ```
 
-**Current status**: v20 decryption is not yet implemented. Encountering a `v20`-prefixed value returns an error. This primarily affects recent Chrome installations on Windows.
+Decryption uses `DecryptChromiumGCM` with the ABE-retrieved key. Note: `DecryptChromiumGCM` strips only the version prefix (3B) and nonce (12B) before passing to AES-GCM; it does not strip any post-decrypt header from the result.
 
 ## 7. Decryption Flow
 
@@ -113,8 +109,9 @@ The high-level decryption path for any encrypted Chromium value:
 
 1. **Detect version** -- inspect the first 3 bytes of the ciphertext
 2. **Route by version**:
-   - `v10` / `v11` -- strip prefix, call platform-specific decryption (AES-CBC on macOS/Linux, AES-GCM on Windows). On Linux, a failed decryption retries once with `kEmptyKey` to recover legacy crbug.com/40055416 data
-   - `v20` -- not yet supported, return error
+   - `v10` / `v11` -- strip prefix, call platform-specific decryption (AES-CBC on macOS/Linux, AES-GCM on Windows). On macOS/Linux, a failed AES-CBC decryption retries once with `kEmptyKey` to recover legacy crbug.com/40055416 data
+   - `v12` -- SecretPortal/Flatpak — recognized, returns known-gap error (not yet implemented)
+   - `v20` -- AES-256-GCM with 32-byte ABE key (retrieved via Windows reflective injection)
    - DPAPI (no prefix) -- call Windows `CryptUnprotectData` directly (Windows only; returns error on other platforms)
 3. **Return plaintext** -- the decrypted bytes are interpreted as a UTF-8 string
 

@@ -62,7 +62,7 @@ key   = dk[:24], iv = dk[32:40]      // 3DES key + IV
 
 ### 3.2 passwordCheckPBE Key Derivation
 
-Uses standard PBKDF2 with SHA-256 and parameters embedded in the ASN1 structure (entry salt, iteration count, key size). The IV is reconstructed by prepending the ASN.1 OCTET STRING header (`0x04 0x0E`) to the 14-byte IV value from the parsed structure, yielding a 16-byte AES IV.
+Uses PBKDF2-SHA-256 with parameters embedded in the ASN1 structure (entry salt, iteration count, key size). The PBKDF2 password is `SHA1(globalSalt)` (a 20-byte digest), not `globalSalt` itself. The IV is reconstructed by prepending the ASN.1 OCTET STRING header (`0x04 0x0E`) to the 14-byte IV value from the parsed structure, yielding a 16-byte AES IV.
 
 ## 4. Password Decryption
 

@@ -43,6 +43,7 @@ Each entry in the result table:
 
 | Field | Size | Description |
 |-------|------|-------------|
+| Object | `uintptr` | Kernel object pointer |
 | UniqueProcessID | `uintptr` | Owning process PID |
 | HandleValue | `uintptr` | Handle value in the owning process |
 | GrantedAccess | `uint32` | Access mask |
@@ -76,13 +77,13 @@ Suffix: google\chrome\...\network\cookies
 Once we have a duplicated handle to the locked file:
 
 ```
-| DuplicateHandle (read access)                   |
+| DuplicateHandle(DUPLICATE_SAME_ACCESS)          |
 |-------------------------------------------------|
                ↓
 | CreateFileMappingW(handle, PAGE_READONLY)       |
 |-------------------------------------------------|
                ↓
-| MapViewOfFile(mapping, FILE_MAP_READ, fileSize) |
+| MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0) |
 |-------------------------------------------------|
                ↓
 | byte slice from kernel file cache               |
@@ -95,7 +96,7 @@ Once we have a duplicated handle to the locked file:
 
 Memory-mapped I/O reads from the OS kernel's **file cache**, which includes data Chrome has written but not yet checkpointed to disk. This produces a more complete snapshot than a raw `ReadFile`.
 
-**Fallback**: if `CreateFileMappingW` fails (e.g., the file is empty or zero-length), falls back to `Seek(0)` + `ReadFile` on the duplicated handle.
+**Fallback**: if `CreateFileMappingW` fails for any reason, falls back to `Seek(0)` + `ReadFile` on the duplicated handle.
 
 ## 4. Why This Works
 
