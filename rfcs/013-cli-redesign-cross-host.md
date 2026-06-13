@@ -1,7 +1,7 @@
 # RFC-013: CLI Redesign — Flat-Verb Surface & Cross-Host Restore
 
 **Author**: moonD4rk
-**Status**: Accepted — `archive` (#607) implemented; cross-platform `restore` (#606) pending
+**Status**: Implemented — `archive` (#610); cross-platform `restore` (#611)
 **Created**: 2026-06-03
 **Revised**: 2026-06-06 (subdir-convention archive, dual-mode restore, Local State, delivery order)
 
@@ -126,4 +126,4 @@ Working backwards from the chosen surface:
 | [RFC-003](003-chromium-encryption.md) | Cipher version dispatch (v10/v11/v20) consumed by restore |
 | [RFC-006](006-key-retrieval-mechanisms.md) | Master-key retrieval the cross-host split externalizes |
 | [RFC-001](001-project-architecture.md) | Browser interface and Extract() orchestration |
-| [RFC-008](008-file-acquisition-and-platform-quirks.md) | Locked-file session and CompressDir used by archive |
+| [RFC-008](008-file-acquisition-and-platform-quirks.md) | Locked-file session and ZipDir used by archive |

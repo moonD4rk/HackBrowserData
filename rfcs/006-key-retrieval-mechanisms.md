@@ -124,7 +124,7 @@ Windows populates two slots of the `masterkey.Retrievers` struct — V10 (legacy
 
 `browser/browser_windows.go::newCredentialInjector` calls `masterkey.DefaultRetrievers()` and wires the resulting struct through `Browser.SetRetrievers(r)`. At extract time `masterkey.NewMasterKeys` runs each slot independently — a failure on one tier does not prevent the other from succeeding, because mixed-tier Chrome profiles (upgraded from pre-127) need partial success to be useful.
 
-**Why not a ChainRetriever?** `ChainRetriever` has first-success semantics: once ABE returns a key, DPAPI is never called. That semantics is wrong for orthogonal tiers — it was the root cause of issue #578, where upgraded profiles' v10-encrypted passwords silently failed because only the v20 key was retrieved. `NewMasterKeys` evaluates each tier independently and returns an `errors.Join` of per-tier failures; log severity is a caller-side decision. `browser/chromium::getMasterKeys` currently logs all tier errors uniformly at `Warnf` — the distinction between "partial" and "total" failure was judged low-value for a short-lived CLI where all warn lines are visible in the default output.
+**Why not a ChainRetriever?** `ChainRetriever` has first-success semantics: once ABE returns a key, DPAPI is never called. That semantics is wrong for orthogonal tiers — it was the root cause of issue #578, where upgraded profiles' v10-encrypted passwords silently failed because only the v20 key was retrieved. `NewMasterKeys` evaluates each tier independently and returns an `errors.Join` of per-tier failures; log severity is a caller-side decision. `browser/chromium.(Browser).masterKeys` currently logs all tier errors uniformly at `Warnf` — the distinction between "partial" and "total" failure was judged low-value for a short-lived CLI where all warn lines are visible in the default output.
 
 **Non-ABE Chromium forks** (Opera, Vivaldi, Yandex, 360, QQ, Sogou) omit `WindowsABE` in `platformBrowsers()` (default false). The caller leaves `Hints.WindowsABEKey` empty, and `ABERetriever` returns `(nil, nil)` for empty `WindowsABEKey`, which `NewMasterKeys` treats silently as "not applicable" — so attempting ABE on these forks is a no-op, not a failure. Their V10 DPAPI key continues to work unchanged.
 
@@ -178,7 +178,7 @@ The authoritative mapping lives in the `KeychainLabel` field of each entry in `p
 | Windows | V10 = DPAPIRetriever; V20 = ABERetriever (Chrome 127+) | No | AES-256 |
 | Linux | V10 = PosixRetriever ("peanuts" kV10Key); V11 = DBusRetriever (keyring kV11Key) | 1 iteration | AES-128 |
 
-\* Only included when `--keychain-pw` is provided.
+\* Only included when a non-empty password resolves — either via `--keychain-pw` flag or an interactive TTY prompt.
 
 ## 7. Safari Credential Extraction
 
@@ -218,10 +218,10 @@ The macOS login password is resolved once at startup by `browser/browser_darwin.
 
 | Consumer | Capability interface | Defined in | Payload |
 |---|---|---|---|
-| Chromium browsers | `keyRetrieversSetter` | `browser/browser.go` | `masterkey.Retrievers` struct (V10 / V11 / V20 slots; unused tiers nil) |
-| Safari | `keychainPasswordSetter` | `browser/browser_darwin.go` | raw `string` |
+| Chromium browsers | `KeyManager` | `browser/browser.go` | `masterkey.Retrievers` struct (V10 / V11 / V20 slots; unused tiers nil) |
+| Safari | `KeychainPasswordReceiver` | `browser/browser.go` | raw `string` |
 
-The two setters are **intentionally not unified**. They carry different abstractions — one hands the browser a pre-assembled retrieval chain, the other hands the browser a credential token to unlock its own access path. Unifying them would create a leaky polymorphic interface with no real shared semantics. Note that `keychainPasswordSetter` is defined in the darwin-only file because Safari (its only implementer) is darwin-only.
+The two interfaces are **intentionally not unified**. They carry different abstractions — one hands the browser a pre-assembled retrieval chain, the other hands the browser a credential token to unlock its own access path. Unifying them would create a leaky polymorphic interface with no real shared semantics.
 
 `resolveKeychainPassword` additionally performs an early `TryUnlock` against `keychainbreaker` before the chain is built, so a bad password surfaces as a startup warning rather than a mid-extraction failure. The small cost of opening the keychain twice (once for validation, once inside `KeychainPasswordRetriever`) buys meaningful UX.
 

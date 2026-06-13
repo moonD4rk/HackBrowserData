@@ -30,7 +30,6 @@ func CompressDir(dir string) error {
 		return fmt.Errorf("read dir error: %w", err)
 	}
 	if len(files) == 0 {
-		// Return an error if no files are found in the directory
 		return fmt.Errorf("no files to compress in: %s", dir)
 	}
 

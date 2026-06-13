@@ -27,8 +27,10 @@ Acquire(src, dst, isDir)
   ├── isDir=true  → copyDir(src, dst, skip="lock")
   │
   └── isDir=false → copyFile(src, dst)
-                      ├── success → copy -wal and -shm companions if present
-                      └── failure + Windows → copyLocked(src, dst) fallback
+                      ├── success  ──┐
+                      └── failure + Windows → copyLocked(src, dst)
+                                      └── success ──┐
+                                             copy -wal and -shm companions if present
 ```
 
 ### SQLite Companion Files

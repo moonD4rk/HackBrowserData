@@ -11,7 +11,7 @@ HackBrowserData is a CLI security research tool that extracts and decrypts brows
 Key constraints:
 
 - **Go 1.20** — the module must build with Go 1.20 to maintain Windows 7 support. Features from Go 1.21+ (`log/slog`, `slices`, `maps`, `cmp`) must not be used.
-- **Supported engines**: Chromium (including Yandex and Opera variants) and Firefox.
+- **Supported engines**: Chromium (including Yandex and Opera variants), Firefox, and Safari.
 - **Supported platforms**: Windows (DPAPI), macOS (Keychain), Linux (D-Bus Secret Service).
 - **No root-level library API** — the CLI calls `browser.DiscoverBrowsersWithKeys()` directly; there is no importable `pkg/` surface.
 
@@ -19,10 +19,11 @@ Key constraints:
 
 ```
 HackBrowserData/
-├── cmd/hack-browser-data/    # CLI entrypoint: cobra root, dump, list, version
+├── cmd/hack-browser-data/    # CLI entrypoint: cobra root, dump, dumpkeys, archive, restore, list, version
 ├── browser/                  # Browser interface, DiscoverBrowsersWithKeys(), platform browser lists
 │   ├── chromium/             # Chromium engine: extraction, decryption, profile discovery
-│   └── firefox/              # Firefox engine: extraction, NSS key derivation
+│   ├── firefox/              # Firefox engine: extraction, NSS key derivation
+│   └── safari/               # Safari engine: Keychain, Bookmark, History, Downloads (macOS only)
 ├── types/                    # Data model: Category enum, Entry structs, BrowserData
 ├── crypto/                   # Encryption primitives, cipher version detection
 ├── masterkey/                # Platform-specific master key retrieval (Keychain/DPAPI/D-Bus)
@@ -59,7 +60,7 @@ Each category has a corresponding Entry struct with `json` and `csv` struct tags
 
 ### 3.3 BrowserData Container
 
-`BrowserData` is the result container returned by `Extract()`. It holds typed slices — one per category. The container is populated field-by-field during extraction. The output layer uses `makeExtractor[T]()` generics to pull the correct slice for serialization.
+`BrowserData` is the per-profile data container holding typed slices — one per category, populated field-by-field during extraction. `Extract()` returns `[]ExtractResult`, where each element pairs a `Profile` identity with a `*BrowserData`. The output layer uses `makeExtractor[T]()` generics to pull the correct slice for serialization.
 
 ## 4. Browser Interface & Registration
 
@@ -91,7 +92,7 @@ DiscoverBrowsersWithKeys(opts)                    // used by `dump` — ready to
           → resolveSourcePaths()        // stat candidates, first match wins
   → newCredentialInjector(opts)          // build-tagged: returns a browserInjector
       → for each browser:               // closure captures retriever + keychain pw lazily
-          inject(b)                     // type-assert retrieverSetter / keychainPasswordSetter
+          inject(b)                     // type-assert KeyManager / KeychainPasswordReceiver
 
 DiscoverBrowsers(opts)                 // used by `list` / `list --detail`
   → discoverFromConfigs(configs, opts)     // same shared discovery core, NO injection
@@ -118,13 +119,13 @@ Adding a new browser is a config-only change in `platformBrowsers()`; this secti
 
 ## 5. Extract() Orchestration
 
-Both Chromium and Firefox engines follow the same extraction pattern:
+Both Chromium and Firefox engines follow the same per-profile extraction pattern (Firefox runs it inside each `profile.extract()` call; for Firefox the master key comes from `key4.db` rather than a platform API):
 
 ```
-Extract(categories)
+Extract(categories)   // per-profile: one invocation per profile
   1. NewSession()               → create isolated temp directory
   2. acquireFiles(session)      → copy source files to temp dir (with dedup and WAL/SHM)
-  3. getMasterKey(session)       → platform-specific key retrieval
+  3. getMasterKey(session)       → platform-specific key retrieval (Firefox: key4.db)
   4. for each category:
        extractCategory(data, cat, masterKey, path)
   5. defer session.Cleanup()    → remove temp directory
@@ -146,7 +147,7 @@ The extraction loop maximizes data recovery. Each category is extracted independ
 
 ### 5.2 Custom Extractors
 
-The `categoryExtractor` interface allows browser-specific extraction logic. Yandex and Opera use custom extractors for passwords and extensions respectively, while all other categories fall through to the default Chromium implementation.
+The `categoryExtractor` interface allows browser-specific extraction logic. Yandex uses custom extractors for passwords and credit cards; Opera uses a custom extractor for extensions. All other categories fall through to the default Chromium implementation.
 
 ## 6. Dependency Constraints
 
@@ -160,7 +161,7 @@ The module is pinned to `go 1.20` in `go.mod`. This is enforced by a CI lint che
 | `github.com/spf13/cobra` | v1.10.2 | CLI framework |
 | `github.com/moond4rk/keychainbreaker` | v0.2.5 | macOS keychain decryption |
 | `github.com/godbus/dbus/v5` | v5.2.2 | Linux D-Bus Secret Service |
-| `golang.org/x/sys` | v0.27.0 | Windows syscalls (DPAPI, DuplicateHandle) |
+| `golang.org/x/sys` | v0.30.0 | Windows syscalls (DPAPI, DuplicateHandle) |
 
 ## Related RFCs
 

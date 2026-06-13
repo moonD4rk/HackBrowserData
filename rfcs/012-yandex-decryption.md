@@ -46,7 +46,7 @@ Deferred to a follow-up RFC / PR:
 ### 3.1 `meta.local_encryptor_data`
 
 ```
-[protobuf preamble bytes...] "v10" [12B nonce] [68B plaintext + 16B GCM tag]
+[protobuf preamble bytes...] "v10" [12B nonce] [68B ciphertext + 16B GCM tag]
 ```
 
 The 68-byte plaintext (decrypted with the Chromium master key, empty AAD) has the shape:

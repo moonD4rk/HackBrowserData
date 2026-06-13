@@ -107,10 +107,9 @@ func resolveSourcePaths(sources map[types.Category][]sourcePath) map[types.Categ
 // Offset from the Core Data epoch (2001-01-01 UTC) to the Unix epoch.
 const coreDataEpochOffset = 978307200
 
-// maxCoreDataSeconds is the largest CFAbsoluteTime that still lands inside
-// time.Time.MarshalJSON's [1, 9999] year window. Also bounds the float →
-// int64 conversion below; Go's spec makes out-of-range conversions return
-// an implementation-dependent int64, which could silently corrupt results.
+// maxCoreDataSeconds guards against CFAbsoluteTime values that would exceed
+// time.Time.MarshalJSON's year-9999 ceiling, and bounds the float→int64
+// conversion below (Go spec: out-of-range result is implementation-dependent).
 const maxCoreDataSeconds = 252423993600
 
 // coredataTimestamp converts Core Data seconds (CFAbsoluteTime) to UTC.

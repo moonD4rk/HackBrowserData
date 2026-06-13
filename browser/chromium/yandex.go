@@ -73,10 +73,10 @@ func yandexCardAAD(guid string, keyID []byte) []byte {
 	return out
 }
 
-// errYandexMasterPasswordSet: caller warns + skips; RSA-OAEP unseal is deferred (RFC-012 §6).
+// errYandexMasterPasswordSet: caller warns + skips; RSA-OAEP unseal is deferred.
 var errYandexMasterPasswordSet = errors.New("yandex: profile protected by master password, skipping")
 
-// loadYandexDataKey honors the master-password gate and returns the per-DB data key. See RFC-012 §4.2.
+// loadYandexDataKey honors the master-password gate and returns the per-DB data key.
 func loadYandexDataKey(dbPath string, masterKey []byte) ([]byte, error) {
 	if len(masterKey) == 0 {
 		return nil, fmt.Errorf("yandex: master key not available")

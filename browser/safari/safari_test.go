@@ -76,7 +76,7 @@ func TestNewBrowsers(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// NewBrowsers — multi-profile (macOS 14+ named profiles)
+// NewBrowser — multi-profile (macOS 14+ named profiles)
 // ---------------------------------------------------------------------------
 
 func TestNewBrowsers_MultiProfile(t *testing.T) {

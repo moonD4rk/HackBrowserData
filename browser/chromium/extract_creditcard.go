@@ -61,7 +61,7 @@ func extractCreditCards(masterKeys masterkey.MasterKeys, path string) ([]types.C
 	return cards, nil
 }
 
-// extractYandexCreditCards reads the records table (not Chromium's credit_cards). AAD = guid. See RFC-012 §4.
+// extractYandexCreditCards reads the records table (not Chromium's credit_cards). AAD = guid.
 func extractYandexCreditCards(masterKeys masterkey.MasterKeys, path string) ([]types.CreditCardEntry, error) {
 	dataKey, err := loadYandexDataKey(path, masterKeys.V10)
 	if err != nil {

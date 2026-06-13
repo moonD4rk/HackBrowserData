@@ -137,7 +137,6 @@ func AESGCMDecryptBlob(key, blob, aad []byte) ([]byte, error) {
 	return aead.Open(nil, blob[:gcmNonceSize], blob[gcmNonceSize:], aad)
 }
 
-// cbcEncrypt adds PKCS5 padding and encrypts plaintext in CBC mode.
 func cbcEncrypt(block cipher.Block, iv, plaintext []byte) ([]byte, error) {
 	if len(iv) != block.BlockSize() {
 		return nil, errInvalidIVLength
@@ -149,7 +148,6 @@ func cbcEncrypt(block cipher.Block, iv, plaintext []byte) ([]byte, error) {
 	return dst, nil
 }
 
-// cbcDecrypt decrypts ciphertext in CBC mode and removes PKCS5 padding.
 func cbcDecrypt(block cipher.Block, iv, ciphertext []byte) ([]byte, error) {
 	bs := block.BlockSize()
 	if len(iv) != bs {
@@ -172,8 +170,7 @@ func cbcDecrypt(block cipher.Block, iv, ciphertext []byte) ([]byte, error) {
 	return dst, nil
 }
 
-// paddingZero pads src with zero bytes to the given length.
-// Returns src unchanged if already long enough; otherwise returns a new slice.
+// paddingZero returns src unchanged if already long enough; otherwise a zero-padded new slice.
 func paddingZero(src []byte, length int) []byte {
 	if len(src) >= length {
 		return src
@@ -195,7 +192,6 @@ func pkcs5Padding(src []byte, blockSize int) []byte {
 	return dst
 }
 
-// pkcs5UnPadding removes PKCS5/PKCS7 padding from src.
 func pkcs5UnPadding(src []byte, blockSize int) ([]byte, error) {
 	length := len(src)
 	if length == 0 {

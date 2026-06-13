@@ -72,7 +72,7 @@ func TestDiscoverSafariProfiles_OrphanUUIDWithoutDBEntry(t *testing.T) {
 	// Profile directory with a History.db exists on disk but is absent from
 	// SafariTabs.db. When the DB is readable and doesn't mention it, we trust
 	// the DB — the orphan stays hidden because production filters profiles
-	// with no resolvable data in NewBrowsers anyway. Here we assert discovery
+	// with no resolvable data in NewBrowser anyway. Here we assert discovery
 	// returns only what the DB declares.
 	const dbUUID = "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE"
 	const orphanUUID = "11111111-2222-3333-4444-555555555555"
@@ -182,7 +182,7 @@ func TestDiscoverSafariProfiles_DefaultProfileSentinelIgnored(t *testing.T) {
 func TestDiscoverSafariProfiles_EmptyProfileDirectoryFiltersOutInNewBrowsers(t *testing.T) {
 	// Matches the real 4E2D8DD0 orphan on the author's Mac: a profile dir
 	// listed in neither SafariTabs.db nor containing any extractable data.
-	// Discovery without the DB surfaces it; NewBrowsers then drops it when
+	// Discovery without the DB surfaces it; NewBrowser then drops it when
 	// resolveSourcePaths yields zero matches.
 	const uuid = "4E2D8DD0-A7D2-4684-939A-898B7675C700"
 	library := t.TempDir()
