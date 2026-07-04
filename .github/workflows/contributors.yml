@@ -18,8 +18,8 @@ jobs:
         uses: actions/create-github-app-token@v3
         id: app-token
         with:
-          app-id: ${{ secrets.HACKBROWSERDATA_BOT_APP_ID }}
-          private-key: ${{ secrets.HACKBROWSERDATA_BOT_PRIVATE_KEY }}
+          client-id: ${{ vars.MOOND4RK_CI_RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.MOOND4RK_CI_RELEASE_APP_PRIVATE_KEY }}
 
       - name: Checkout
         uses: actions/checkout@v7

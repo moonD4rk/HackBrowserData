@@ -101,8 +101,8 @@ brews:
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     commit_author:
-      name: "github-actions[bot]"
-      email: "github-actions[bot]@users.noreply.github.com"
+      name: "moond4rk-ci[bot]"
+      email: "299850723+moond4rk-ci[bot]@users.noreply.github.com"
     commit_msg_template: "brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     install: |
       bin.install "hack-browser-data"
