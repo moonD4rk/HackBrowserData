@@ -53,6 +53,7 @@ jobs:
 
       - name: Mint homebrew-tap token
         id: tap-token
+        if: inputs.mode == 'release'
         uses: actions/create-github-app-token@v3
         with:
           client-id: ${{ vars.MOOND4RK_CI_RELEASE_APP_CLIENT_ID }}
@@ -84,7 +85,6 @@ jobs:
           args: release --snapshot --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ steps.tap-token.outputs.token }}
 
       - name: Run GoReleaser (release)
         if: inputs.mode == 'release'
