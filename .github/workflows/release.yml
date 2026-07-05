@@ -51,6 +51,16 @@ jobs:
       - name: Build ABE payload
         run: make payload
 
+      - name: Mint homebrew-tap token
+        id: tap-token
+        if: inputs.mode == 'release'
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.MOOND4RK_CI_RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.MOOND4RK_CI_RELEASE_APP_PRIVATE_KEY }}
+          owner: moonD4rk
+          repositories: homebrew-tap
+
       - name: Create and push tag
         if: inputs.mode == 'release'
         env:
@@ -75,7 +85,6 @@ jobs:
           args: release --snapshot --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
 
       - name: Run GoReleaser (release)
         if: inputs.mode == 'release'
@@ -85,7 +94,7 @@ jobs:
           args: release --clean ${{ inputs.draft && '--draft' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ steps.tap-token.outputs.token }}
 
       - name: Upload snapshot artifacts
         if: inputs.mode == 'snapshot'
