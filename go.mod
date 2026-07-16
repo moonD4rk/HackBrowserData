@@ -6,7 +6,7 @@ require (
 	github.com/godbus/dbus/v5 v5.2.2
 	github.com/inconshreveable/mousetrap v1.1.0
 	github.com/moond4rk/binarycookies v1.0.3
-	github.com/moond4rk/keychainbreaker v0.2.5
+	github.com/moond4rk/keychainbreaker v0.2.6
 	github.com/moond4rk/plist v1.2.2
 	github.com/otiai10/copy v1.14.1
 	github.com/ppacher/go-dbus-keyring v1.0.1
