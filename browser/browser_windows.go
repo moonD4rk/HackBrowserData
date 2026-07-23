@@ -49,6 +49,12 @@ func platformBrowsers() []types.BrowserConfig {
 			UserDataDir: homeDir + "/AppData/Roaming/Opera Software/Opera GX Stable",
 		},
 		{
+			Key:         "browser-from-vought",
+			Name:        browserFromVoughtName,
+			Kind:        types.ChromiumOpera,
+			UserDataDir: homeDir + "/AppData/Roaming/Browser from Vought",
+		},
+		{
 			Key:         "vivaldi",
 			Name:        vivaldiName,
 			Kind:        types.Chromium,
