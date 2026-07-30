@@ -50,7 +50,7 @@ func platformBrowsers() []types.BrowserConfig {
 		},
 		{
 			Key:         "vought",
-			Name:        browserFromVoughtName,
+			Name:        voughtName,
 			Kind:        types.ChromiumOpera,
 			UserDataDir: homeDir + "/AppData/Roaming/Browser from Vought",
 		},
