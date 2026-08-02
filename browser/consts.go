@@ -15,6 +15,7 @@ const (
 	braveName      = "Brave"
 	operaName      = "Opera"
 	operaGXName    = "OperaGX"
+	voughtName     = "Browser from Vought"
 	vivaldiName    = "Vivaldi"
 	coccocName     = "CocCoc"
 	yandexName     = "Yandex"
