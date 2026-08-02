@@ -34,5 +34,6 @@ jobs:
           image_size: 100
           columns_per_row: 6
           readme_path: README.md
-          auto_detect_branch_protection: false
-          commit_message: 'chore: update contributors list [skip ci]'
+          auto_detect_branch_protection: true
+          commit_message: 'chore: update contributors list'
+          pr_title_on_protected: 'chore: update contributors list'
