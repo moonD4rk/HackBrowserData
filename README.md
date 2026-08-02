@@ -358,6 +358,13 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/mybonesaremorepowerful92">
+                    <img src="https://avatars.githubusercontent.com/u/308560070?v=4" width="100;" alt="mybonesaremorepowerful92"/>
+                    <br />
+                    <sub><b>mybonesaremorepowerful92</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/mirefly">
                     <img src="https://avatars.githubusercontent.com/u/4984681?v=4" width="100;" alt="mirefly"/>
                     <br />
@@ -371,6 +378,8 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
                     <sub><b>LC</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/zhe6652">
                     <img src="https://avatars.githubusercontent.com/u/24725680?v=4" width="100;" alt="zhe6652"/>
@@ -378,8 +387,6 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
                     <sub><b>zhe6652</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/testwill">
                     <img src="https://avatars.githubusercontent.com/u/8717479?v=4" width="100;" alt="testwill"/>
@@ -415,6 +422,8 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
                     <sub><b>a-urth</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/Amir-78">
                     <img src="https://avatars.githubusercontent.com/u/68391526?v=4" width="100;" alt="Amir-78"/>
