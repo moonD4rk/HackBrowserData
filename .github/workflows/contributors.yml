@@ -27,6 +27,7 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
 
       - name: Update contributors list
+        id: contributors
         uses: akhilmhdh/contributors-readme-action@v2.3.11
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -37,3 +38,11 @@ jobs:
           auto_detect_branch_protection: true
           commit_message: 'chore: update contributors list'
           pr_title_on_protected: 'chore: update contributors list'
+
+      - name: Enable auto-merge
+        if: steps.contributors.outputs.pr_id != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR: ${{ steps.contributors.outputs.pr_id }}
+          REPO: ${{ github.repository }}
+        run: gh pr merge "$PR" --squash --auto -R "$REPO"
