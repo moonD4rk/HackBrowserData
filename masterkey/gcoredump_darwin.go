@@ -1,4 +1,4 @@
-//go:build darwin
+//go:build darwin && keychain_gcore
 
 package masterkey
 
