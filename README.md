@@ -416,14 +416,21 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/drogers0">
+                    <img src="https://avatars.githubusercontent.com/u/120214987?v=4" width="100;" alt="drogers0"/>
+                    <br />
+                    <sub><b>David Rogers</b></sub>
+                </a>
+            </td>
+		</tr>
+		<tr>
+            <td align="center">
                 <a href="https://github.com/dexhek">
                     <img src="https://avatars.githubusercontent.com/u/39654918?v=4" width="100;" alt="dexhek"/>
                     <br />
                     <sub><b>Ciprian Conache</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/a-urth">
                     <img src="https://avatars.githubusercontent.com/u/3456803?v=4" width="100;" alt="a-urth"/>
