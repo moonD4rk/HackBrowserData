@@ -106,14 +106,14 @@ func TestWrite_CSV_Cookie(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			"browser", "profile", "host", "path", "name", "value",
-			"is_secure", "is_http_only", "has_expire", "is_persistent", "expire_at", "created_at",
+			"is_secure", "is_http_only", "has_expire", "is_persistent", "expire_at", "created_at", "same_site",
 		},
 		records[0],
 	)
 	assert.Equal(t,
 		[]string{
 			"Chrome", "Default", ".example.com", "/", "session", "abc123",
-			"true", "true", "true", "true", "2026-01-15T10:30:00Z", "2026-01-15T10:30:00Z",
+			"true", "true", "true", "true", "2026-01-15T10:30:00Z", "2026-01-15T10:30:00Z", "",
 		},
 		records[1],
 	)

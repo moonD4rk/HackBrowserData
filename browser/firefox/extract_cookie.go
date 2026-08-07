@@ -10,7 +10,7 @@ import (
 
 const (
 	firefoxCookieQuery = `SELECT name, value, host, path,
-		creationTime, expiry, isSecure, isHttpOnly FROM moz_cookies`
+		creationTime, expiry, isSecure, isHttpOnly, sameSite FROM moz_cookies`
 	firefoxCountCookieQuery = `SELECT COUNT(*) FROM moz_cookies`
 )
 
@@ -21,12 +21,24 @@ func extractCookies(path string) ([]types.CookieEntry, error) {
 				name, value, host, cookiePath string
 				isSecure, isHTTPOnly          int
 				createdAt, expiry             int64
+				sameSite                      int
 			)
 			if err := rows.Scan(&name, &value, &host, &cookiePath,
-				&createdAt, &expiry, &isSecure, &isHTTPOnly); err != nil {
+				&createdAt, &expiry, &isSecure, &isHTTPOnly, &sameSite); err != nil {
 				return types.CookieEntry{}, err
 			}
 			hasExpire := expiry > 0
+			sameSiteStr := "unspecified"
+			switch sameSite {
+			case 0:
+				sameSiteStr = "none"
+			case 1:
+				sameSiteStr = "lax"
+			case 2:
+				sameSiteStr = "strict"
+			case 256:
+				// not specified by Set-Cookie
+			}
 			return types.CookieEntry{
 				Name:         name,
 				Host:         host,
@@ -38,6 +50,7 @@ func extractCookies(path string) ([]types.CookieEntry, error) {
 				IsPersistent: hasExpire,
 				ExpireAt:     firefoxSeconds(expiry),
 				CreatedAt:    firefoxMicros(createdAt),
+				SameSite:     sameSiteStr,
 			}, nil
 		})
 	if err != nil {
