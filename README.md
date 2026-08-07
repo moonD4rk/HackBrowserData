@@ -395,6 +395,13 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/freddy77">
+                    <img src="https://avatars.githubusercontent.com/u/1009640?v=4" width="100;" alt="freddy77"/>
+                    <br />
+                    <sub><b>freddy77</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/BeichenDream">
                     <img src="https://avatars.githubusercontent.com/u/43266206?v=4" width="100;" alt="BeichenDream"/>
                     <br />
@@ -415,6 +422,8 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
                     <sub><b>Ciprian Conache</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/a-urth">
                     <img src="https://avatars.githubusercontent.com/u/3456803?v=4" width="100;" alt="a-urth"/>
@@ -422,8 +431,6 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
                     <sub><b>a-urth</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/Amir-78">
                     <img src="https://avatars.githubusercontent.com/u/68391526?v=4" width="100;" alt="Amir-78"/>
