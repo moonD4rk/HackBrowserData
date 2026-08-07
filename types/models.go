@@ -22,6 +22,7 @@ type CookieEntry struct {
 	IsPersistent bool      `json:"is_persistent" csv:"is_persistent"`
 	ExpireAt     time.Time `json:"expire_at" csv:"expire_at"`
 	CreatedAt    time.Time `json:"created_at" csv:"created_at"`
+	SameSite     string    `json:"same_site" csv:"same_site"`
 }
 
 // BookmarkEntry represents a single browser bookmark.

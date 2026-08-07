@@ -54,7 +54,7 @@ func TestStructCSVHeader(t *testing.T) {
 		expect []string
 	}{
 		{"LoginEntry", types.LoginEntry{}, []string{"url", "username", "password", "created_at"}},
-		{"CookieEntry", types.CookieEntry{}, []string{"host", "path", "name", "value", "is_secure", "is_http_only", "has_expire", "is_persistent", "expire_at", "created_at"}},
+		{"CookieEntry", types.CookieEntry{}, []string{"host", "path", "name", "value", "is_secure", "is_http_only", "has_expire", "is_persistent", "expire_at", "created_at", "same_site"}},
 		{"BookmarkEntry", types.BookmarkEntry{}, []string{"id", "name", "type", "url", "folder", "created_at"}},
 		{"HistoryEntry", types.HistoryEntry{}, []string{"url", "title", "visit_count", "last_visit"}},
 		{"DownloadEntry", types.DownloadEntry{}, []string{"url", "target_path", "mime_type", "total_bytes", "start_time", "end_time"}},
@@ -87,7 +87,7 @@ func TestStructCSVRow(t *testing.T) {
 				IsSecure: true, IsHTTPOnly: true, HasExpire: true, IsPersistent: false,
 				ExpireAt: refTime, CreatedAt: refTime,
 			},
-			[]string{".example.com", "/", "session", "abc", "true", "true", "true", "false", "2026-01-15T10:30:00Z", "2026-01-15T10:30:00Z"},
+			[]string{".example.com", "/", "session", "abc", "true", "true", "true", "false", "2026-01-15T10:30:00Z", "2026-01-15T10:30:00Z", ""},
 		},
 		{
 			"HistoryEntry_int",

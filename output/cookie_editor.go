@@ -3,6 +3,7 @@ package output
 import (
 	"encoding/json"
 	"io"
+	"strings"
 
 	"github.com/moond4rk/hackbrowserdata/types"
 )
@@ -14,6 +15,8 @@ type cookieEditorFormatter struct {
 }
 
 func (f *cookieEditorFormatter) ext() string { return "json" }
+
+var sameSiteNone = "no_restriction"
 
 func (f *cookieEditorFormatter) format(w io.Writer, rows []row) error {
 	if len(rows) == 0 {
@@ -32,6 +35,13 @@ func (f *cookieEditorFormatter) format(w io.Writer, rows []row) error {
 		if !c.ExpireAt.IsZero() {
 			expDate = float64(c.ExpireAt.Unix())
 		}
+		sameSite := &c.SameSite
+		switch c.SameSite {
+		case "none":
+			sameSite = &sameSiteNone
+		case "", "unspecified":
+			sameSite = nil
+		}
 		entries = append(entries, cookieEditorEntry{
 			Domain:         c.Host,
 			ExpirationDate: expDate,
@@ -40,6 +50,9 @@ func (f *cookieEditorFormatter) format(w io.Writer, rows []row) error {
 			Path:           c.Path,
 			Secure:         c.IsSecure,
 			Value:          c.Value,
+			SameSite:       sameSite,
+			Session:        expDate == 0.,
+			HostOnly:       !strings.HasPrefix(c.Host, "."),
 		})
 	}
 
@@ -52,10 +65,13 @@ func (f *cookieEditorFormatter) format(w io.Writer, rows []row) error {
 // cookieEditorEntry matches the CookieEditor browser extension's import format.
 type cookieEditorEntry struct {
 	Domain         string  `json:"domain"`
-	ExpirationDate float64 `json:"expirationDate"`
+	ExpirationDate float64 `json:"expirationDate,omitempty"`
 	HTTPOnly       bool    `json:"httpOnly"`
 	Name           string  `json:"name"`
 	Path           string  `json:"path"`
 	Secure         bool    `json:"secure"`
 	Value          string  `json:"value"`
+	SameSite       *string `json:"sameSite"`
+	Session        bool    `json:"session"`
+	HostOnly       bool    `json:"hostOnly"`
 }
