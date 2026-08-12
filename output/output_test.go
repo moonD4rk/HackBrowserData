@@ -20,7 +20,7 @@ var testTime = time.Date(2026, 1, 15, 10, 30, 0, 0, time.UTC)
 func chromeData() *types.BrowserData {
 	return &types.BrowserData{
 		Passwords: []types.LoginEntry{
-			{URL: "https://example.com", Username: "alice", Password: "secret", CreatedAt: testTime},
+			{URL: "https://example.com", Username: "alice", Password: "secret", CreatedAt: testTime, Store: types.PasswordStoreAccount},
 		},
 		Cookies: []types.CookieEntry{
 			{
@@ -38,7 +38,7 @@ func chromeData() *types.BrowserData {
 func firefoxData() *types.BrowserData {
 	return &types.BrowserData{
 		Passwords: []types.LoginEntry{
-			{URL: "https://reddit.com", Username: "bob", Password: "hunter2", CreatedAt: testTime},
+			{URL: "https://reddit.com", Username: "bob", Password: "hunter2", CreatedAt: testTime, Store: types.PasswordStoreLocal},
 		},
 		Cookies: []types.CookieEntry{
 			{
@@ -88,9 +88,9 @@ func TestWrite_CSV_Password(t *testing.T) {
 	records := readCSV(t, filepath.Join(dir, "password.csv"))
 	require.Len(t, records, 3) // header + 2 rows
 
-	assert.Equal(t, []string{"browser", "profile", "url", "username", "password", "created_at"}, records[0])
-	assert.Equal(t, []string{"Chrome", "Default", "https://example.com", "alice", "secret", "2026-01-15T10:30:00Z"}, records[1])
-	assert.Equal(t, []string{"Firefox", "abc123", "https://reddit.com", "bob", "hunter2", "2026-01-15T10:30:00Z"}, records[2])
+	assert.Equal(t, []string{"browser", "profile", "url", "username", "password", "created_at", "store"}, records[0])
+	assert.Equal(t, []string{"Chrome", "Default", "https://example.com", "alice", "secret", "2026-01-15T10:30:00Z", "account"}, records[1])
+	assert.Equal(t, []string{"Firefox", "abc123", "https://reddit.com", "bob", "hunter2", "2026-01-15T10:30:00Z", "local"}, records[2])
 }
 
 func TestWrite_CSV_Cookie(t *testing.T) {

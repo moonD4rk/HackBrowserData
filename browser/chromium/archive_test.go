@@ -86,3 +86,38 @@ func TestArchiveSources_FlatLayoutNoExtraLevel(t *testing.T) {
 		t.Errorf("expected History at archive root, got %+v", srcs)
 	}
 }
+
+// Restoring an archive must reproduce both password DBs, otherwise account-synced credentials
+// are lost on the round trip even though a live extract would have found them.
+func TestArchiveSources_IncludesBothPasswordDatabases(t *testing.T) {
+	udd := t.TempDir()
+	profileDir := filepath.Join(udd, "Default")
+	if err := os.MkdirAll(profileDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"Preferences", "Login Data", accountLoginData} {
+		if err := os.WriteFile(filepath.Join(profileDir, name), []byte("{}"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	b, err := NewBrowser(types.BrowserConfig{Key: "chrome", Name: "chrome", Kind: types.Chromium, UserDataDir: udd})
+	if err != nil || b == nil {
+		t.Fatalf("NewBrowser: b=%v err=%v", b, err)
+	}
+
+	srcs := b.ArchiveSources([]types.Category{types.Password})
+
+	var gotLocal, gotAccount bool
+	for _, s := range srcs {
+		switch s.LayoutRel {
+		case "Default/Login Data":
+			gotLocal = true
+		case "Default/" + accountLoginData:
+			gotAccount = true
+		}
+	}
+	if !gotLocal || !gotAccount {
+		t.Errorf("expected both password DBs archived (local=%v account=%v), got %+v", gotLocal, gotAccount, srcs)
+	}
+}

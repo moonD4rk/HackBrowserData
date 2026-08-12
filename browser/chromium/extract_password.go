@@ -13,6 +13,7 @@ import (
 )
 
 const (
+	accountLoginData  = `Login Data For Account`
 	defaultLoginQuery = `SELECT origin_url, username_value, password_value, date_created FROM logins`
 	countLoginQuery   = `SELECT COUNT(*) FROM logins`
 
@@ -20,11 +21,25 @@ const (
 		password_element, password_value, signon_realm, date_created FROM logins`
 )
 
-func extractPasswords(masterKeys masterkey.MasterKeys, path string) ([]types.LoginEntry, error) {
-	return extractPasswordsWithQuery(masterKeys, path, defaultLoginQuery)
+// appendPasswords merges another login DB into dst. Entries are kept even when an identical
+// credential already exists — the Store field records which DB each one came from.
+func appendPasswords(masterKeys masterkey.MasterKeys, path, store string, dst []types.LoginEntry) ([]types.LoginEntry, error) {
+	logins, err := extractPasswords(masterKeys, path, store)
+	if err != nil {
+		return dst, err
+	}
+	dst = append(dst, logins...)
+	sort.SliceStable(dst, func(i, j int) bool {
+		return dst[i].CreatedAt.After(dst[j].CreatedAt)
+	})
+	return dst, nil
 }
 
-func extractPasswordsWithQuery(masterKeys masterkey.MasterKeys, path, query string) ([]types.LoginEntry, error) {
+func extractPasswords(masterKeys masterkey.MasterKeys, path, store string) ([]types.LoginEntry, error) {
+	return extractPasswordsWithQuery(masterKeys, path, store, defaultLoginQuery)
+}
+
+func extractPasswordsWithQuery(masterKeys masterkey.MasterKeys, path, store, query string) ([]types.LoginEntry, error) {
 	logins, err := sqliteutil.QueryRows(path, false, query,
 		func(rows *sql.Rows) (types.LoginEntry, error) {
 			var url, username string
@@ -39,6 +54,7 @@ func extractPasswordsWithQuery(masterKeys masterkey.MasterKeys, path, query stri
 				Username:  username,
 				Password:  string(password),
 				CreatedAt: timeEpoch(created),
+				Store:     store,
 			}, nil
 		})
 	if err != nil {
@@ -75,6 +91,7 @@ func extractYandexPasswords(masterKeys masterkey.MasterKeys, path string) ([]typ
 				URL:       originURL,
 				Username:  usernameVal,
 				CreatedAt: timeEpoch(created),
+				Store:     types.PasswordStoreLocal,
 			}
 			aad := yandexLoginAAD(originURL, usernameElem, usernameVal, passwordElem, signonRealm, nil)
 			plaintext, err := crypto.AESGCMDecryptBlob(dataKey, passwordValue, aad)

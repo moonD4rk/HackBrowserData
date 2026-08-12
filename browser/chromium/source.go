@@ -21,7 +21,7 @@ func dir(rel string) sourcePath  { return sourcePath{rel: rel, isDir: true} }
 // Each category maps to one or more candidate paths tried in priority order;
 // the first existing path wins.
 var chromiumSources = map[types.Category][]sourcePath{
-	types.Password:       {file("Login Data")},
+	types.Password:       {file("Login Data"), file(accountLoginData)},
 	types.Cookie:         {file("Network/Cookies"), file("Cookies")},
 	types.History:        {file("History")},
 	types.Download:       {file("History")},

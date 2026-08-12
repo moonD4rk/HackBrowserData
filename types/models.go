@@ -2,12 +2,21 @@ package types
 
 import "time"
 
+// Chromium keeps profile-local credentials in "Login Data" and account-synced ones in
+// "Login Data For Account". The same credential may exist in both, so exported entries
+// carry their origin instead of being silently merged.
+const (
+	PasswordStoreLocal   = "local"
+	PasswordStoreAccount = "account"
+)
+
 // LoginEntry represents a single saved login credential.
 type LoginEntry struct {
 	URL       string    `json:"url" csv:"url"`
 	Username  string    `json:"username" csv:"username"`
 	Password  string    `json:"password" csv:"password"`
 	CreatedAt time.Time `json:"created_at" csv:"created_at"`
+	Store     string    `json:"store" csv:"store"`
 }
 
 // CookieEntry represents a single browser cookie.
