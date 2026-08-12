@@ -48,7 +48,7 @@ func TestDetectPEArch_EmptyInput(t *testing.T) {
 }
 
 // TestFindExportFileOffset_KnownExports walks a handful of kernel32 exports
-// that Bootstrap also relies on via pre-resolved import patching. Passing
+// that Bootstrap also relies on via its remote parameter block. Passing
 // here means both the export-table walker and the RVA→file-offset converter
 // work against a real Windows PE — not just against fixtures we control.
 func TestFindExportFileOffset_KnownExports(t *testing.T) {

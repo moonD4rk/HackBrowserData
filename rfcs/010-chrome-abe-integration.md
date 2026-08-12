@@ -1,13 +1,10 @@
 # RFC-010: Chrome App-Bound Encryption Integration
 
-**Author**: moonD4rk
-**Status**: Living Document
-**Created**: 2026-04-17
-**Last updated**: 2026-04-19
+**Author**: moonD4rk **Status**: Living Document **Created**: 2026-04-17 **Last updated**: 2026-04-19
 
 ## 1. Overview
 
-Chrome 127+ introduced **App-Bound Encryption (ABE)** on Windows. The `Local State` key that decrypts `v10`-era cookies/passwords is no longer a user-bound DPAPI blob; it is now an *app-bound* blob that only a legitimate `chrome.exe` / `msedge.exe` / `brave.exe` process can unwrap via the `elevation_service` COM RPC (`IElevator::DecryptData`).
+Chrome 127+ introduced **App-Bound Encryption (ABE)** on Windows. The `Local State` key that decrypts `v10`-era cookies/passwords is no longer a user-bound DPAPI blob; it is now an _app-bound_ blob that only a legitimate `chrome.exe` / `msedge.exe` / `brave.exe` process can unwrap via the `elevation_service` COM RPC (`IElevator::DecryptData`).
 
 This RFC documents how HackBrowserData integrates ABE support end-to-end while keeping the project **pure Go by default, cross-platform, zero disk footprint at runtime, and zero cost for non-Windows contributors.**
 
@@ -19,13 +16,13 @@ Related RFCs:
 
 ### 1.1 Compatibility contract
 
-| Component | Contract |
-|---|---|
-| Go toolchain | **1.20** (pinned; Go 1.21+ drops Win7) |
-| Windows host | Any Win10 1909+ (PE loader + UCRT) |
-| Chrome family | Any v127+ (ABE introduced) |
-| zig toolchain | 0.13+ (for `make payload`) |
-| Target arch | x86_64 only (x86 / ARM64 reserved) |
+| Component     | Contract                               |
+| ------------- | -------------------------------------- |
+| Go toolchain  | **1.20** (pinned; Go 1.21+ drops Win7) |
+| Windows host  | Any Win10 1909+ (PE loader + UCRT)     |
+| Chrome family | Any v127+ (ABE introduced)             |
+| zig toolchain | 0.13+ (for `make payload`)             |
+| Target arch   | x86_64 only (x86 / ARM64 reserved)     |
 
 ## 2. The constraint that shapes the design
 
@@ -56,33 +53,38 @@ browser/chromium.Extract()
 **Stage 2 — Payload preparation** (still our process)
 
 1. Read the embedded payload via `//go:embed abe_extractor_amd64.bin` (~75 KB).
-2. Patch 5 × `uintptr` function pointers into the payload's DOS stub (see §4.4).
+2. Prepare a remote Bootstrap parameter block with the scratch pointer and 5 × `uintptr` function pointers (see §4.4).
 3. Look up `Bootstrap`'s **raw file offset** (not RVA) via `debug/pe`.
 
 **Stage 3 — Spawn + inject** (still our process, target is newly spawned)
 
 ```
 CreateProcessW(browser.exe, CREATE_SUSPENDED)
-VirtualAllocEx(target, RWX, sizeOf(payload))
-WriteProcessMemory(patched bytes)
-ResumeThread(mainThread) + Sleep(500ms)      // let ntdll finish loader init
-CreateRemoteThread(target, remoteBase + bootstrapFileOffset)
+VirtualAllocEx(target, RW, sizeOf(payload))
+WriteProcessMemory(payload bytes)
+VirtualProtectEx(target, payload, RX)
+FlushInstructionCache(target, payload)       // required before the region is executed
+VirtualAllocEx(target, RW, sizeof(BootstrapScratch))
+VirtualAllocEx(target, RW, sizeof(BootstrapParams))
+CreateRemoteThread(target, remoteBase + bootstrapFileOffset, paramsBase)
 ```
+
+The browser's own primary thread is created suspended and never resumed — only our remote thread runs, so no Chromium UI is ever created and no `--user-data-dir` isolation is needed to survive `ProcessSingleton`. Process-wide loader init still happens, because the first thread to run in the process goes through `LdrInitializeThunk`.
 
 **Stage 4 — Inside the remote `browser.exe`**
 
-The hijacked thread runs `Bootstrap` (C), our self-written reflective DLL loader. On return it calls the payload's `DllMain`:
+The remote thread runs `Bootstrap` (C), our self-written reflective DLL loader. On return it calls the payload's `DllMain`:
 
 ```
 Bootstrap                     → see §4.1 (7 helpers + orchestrator)
-  ↓ calls DllMain(DLL_PROCESS_ATTACH, imageBase)
+  ↓ calls DllMain(DLL_PROCESS_ATTACH, scratchBase)
 DoExtractKey                  → see §4.2
   CoCreateInstance(CLSID, IID_v2 | fallback IID_v1)
   CoSetProxyBlanket(PKT_PRIVACY + IMPERSONATE)
   vtbl[slot]->DecryptData(bstrEnc)
     ↓ COM RPC
   elevation_service (SYSTEM) → returns 32-byte plaintext key
-  publish_key()  → imageBase[0x40..0x5F]  (success)
+  publish_key()  → scratchBase[0x40..0x5F]  (success)
   publish_error(code, hr, comErr)         (failure)
 ```
 
@@ -105,16 +107,16 @@ Three translation units, ~500 lines of pure C. No C++, no assembly, no direct sy
 Structure after refactor: **one ~30-line orchestrator + seven single-purpose static helpers**:
 
 | Helper | Responsibility |
-|---|---|
+| --- | --- |
 | `locate_own_image_base` | Backward-scan from `__builtin_return_address(0)` for MZ/PE magic (must stay `noinline`) |
-| `read_preresolved_imports` | Read 5 function pointers the Go injector patched into DOS stub (§4.4) |
+| `read_bootstrap_params` | Read the standalone scratch pointer and 5 function pointers from the remote parameter block (§4.4) |
 | `allocate_and_copy_image` | `VirtualAlloc(SizeOfImage, RW)` + copy headers/sections |
 | `apply_base_relocations` | Walk `IMAGE_DIRECTORY_ENTRY_BASERELOC`, fix `IMAGE_REL_BASED_DIR64` |
-| `link_iat` | Resolve each imported DLL + fill IAT via pre-resolved `LoadLibraryA` / `GetProcAddress` |
+| `link_iat` | Resolve each imported DLL + fill IAT via parameter-supplied `LoadLibraryA` / `GetProcAddress` |
 | `set_section_protections` | `.text → RX`, `.rdata → R`, `.data → RW` per `Characteristics` |
-| `invoke_dllmain` | Call mapped `DllMain(DLL_PROCESS_ATTACH, imageBase)` — `imageBase` is the scratch handoff pointer |
+| `invoke_dllmain` | Call mapped `DllMain(DLL_PROCESS_ATTACH, scratchBase)` |
 
-Progress markers: after each major step the orchestrator writes one byte to `imageBase + BOOTSTRAP_MARKER_OFFSET` (0x28, inside `IMAGE_DOS_HEADER.e_res2`). The Go injector reads this back on failure to pinpoint the stage.
+Progress markers: after each major step the orchestrator writes one byte to `scratchBase + BOOTSTRAP_MARKER_OFFSET` (0x28). The Go injector reads this back on failure to pinpoint the stage.
 
 ### 4.2 COM extractor — `abe_extractor.c`
 
@@ -151,11 +153,11 @@ Static table mapping `exe_basename → { CLSID, IID_v1, IID_v2, kind }`. `kind` 
 
 Current coverage: Chrome Stable/Beta, Brave, Edge, Avast Secure Browser, CocCoc. Source file `crypto/windows/abe_native/com_iid.c` is the authoritative list — see §10 for how to add a new fork.
 
-### 4.4 Pre-resolved imports (non-obvious design)
+### 4.4 Bootstrap parameter block (non-obvious design)
 
 The original plan had `Bootstrap` walk the PEB's `InMemoryOrderModuleList` to find kernel32 / ntdll and resolve `LoadLibraryA` etc. via export-table parsing. It worked in test processes but **crashed reproducibly in Chrome 147's broker process** — `resolve_export` returned NULL for every LDR entry. Root cause was never fully pinpointed (Chrome-specific process state + Windows 10 LDR layout interaction).
 
-Workaround: **Go resolves the 5 required functions in its own process** (via `windows.LazyProc.Addr()` in `utils/injector/winapi_windows.go`) and **patches the raw u64 values into the payload's DOS stub** at fixed offsets before `WriteProcessMemory`. `Bootstrap` just reads them; no PEB walk, no export parsing.
+Workaround: **Go resolves the 5 required functions in its own process** (via `windows.LazyProc.Addr()` in `utils/winapi/process_windows.go`) and writes those raw u64 values into a dedicated `BootstrapParams` block in the target process. `Bootstrap` reads the remote-thread parameter; no PEB walk, no export parsing, and no mutation of the payload bytes.
 
 Validity relies on Windows **KnownDlls + session-consistent ASLR** — `kernel32.dll` and `ntdll.dll` load at the same virtual address in all processes of a boot session.
 
@@ -166,8 +168,8 @@ Validity relies on Windows **KnownDlls + session-consistent ASLR** — `kernel32
 Four files collaborate:
 
 | File | Role |
-|---|---|
-| `reflective_windows.go` | `Reflective.Inject(exePath, payload, env) ([]byte, error)` — the orchestrator. Win32 calls (`VirtualAllocEx`, `CreateRemoteThread`, `NtFlushIC`, import-address lookups) delegate to `utils/winapi/` via `CallBoolErr`. |
+| --- | --- |
+| `reflective_windows.go` | `Reflective.Inject(exePath, payload, env) ([]byte, error)` — the orchestrator. Win32 calls (`VirtualAllocEx`, `VirtualProtectEx`, `CreateRemoteThread`, import-address lookups) delegate to `utils/winapi/` via `CallBoolErr`. |
 | `errors_windows.go` | `formatABEError(scratchResult) string` — renders the C-side diag channel into human-readable strings via two lookup maps (`ABE_ERR_*` names + known HRESULT names like `E_ACCESSDENIED`). |
 | `pe_windows.go` | `FindExportFileOffset(dllBytes, "Bootstrap")` — raw-file offset via `debug/pe`. |
 | `arch_windows.go` | Architecture validation (amd64-only today). |
@@ -176,12 +178,12 @@ Four files collaborate:
 
 ### 5.2 Scratch layout codegen
 
-The C payload and Go injector communicate through a byte-level protocol inside the target process's DOS stub region. The layout is defined **once** as a `BootstrapScratch` struct + `offsetof`-based macros in `crypto/windows/abe_native/bootstrap_layout.h`. `_Static_assert`s in the same header guarantee compile-time detection of layout drift:
+The C payload and Go injector communicate through a byte-level protocol in a standalone RW scratch allocation inside the target process. The layout is defined **once** as a `BootstrapScratch` struct + `offsetof`-based macros in `crypto/windows/abe_native/bootstrap_layout.h`. `_Static_assert`s in the same header guarantee compile-time detection of layout drift:
 
 ```c
 _Static_assert(offsetof(struct BootstrapScratch, marker) == 0x28, "marker offset");
 _Static_assert(offsetof(struct BootstrapScratch, hresult) == 0x2C, "hresult offset");
-_Static_assert(offsetof(struct BootstrapScratch, shared) == 0x40, "shared offset");
+_Static_assert(offsetof(struct BootstrapScratch, key) == 0x40, "key offset");
 ```
 
 Go consumes the same constants via **`go tool cgo -godefs`** (a development-time tool, not a runtime dependency). `make gen-layout` regenerates `crypto/windows/abe_native/bootstrap/layout.go` from `bootstrap_layout.h` using `CC="zig cc"` for bit-identical results across host OSes. `make gen-layout-verify` can be run locally to verify the committed `layout.go` matches the current header.
@@ -205,14 +207,14 @@ On extraction success, logs at `Info` level (`abe: retrieved <browser> master ke
 ## 6. Build chain
 
 - **Default build** (any host, no zig): `go build ./cmd/hack-browser-data/` succeeds; ABE is stubbed out. Legacy v10/v11 cookies still decrypt via DPAPI.
-- **Windows release with ABE**: `make build-windows` = `make payload` (zig cc → `crypto/windows/payload/abe_extractor_amd64.bin`) + `GOOS=windows go build -tags abe_embed`. The `abe_embed` tag activates `//go:embed` on the compiled binary.
-- **Layout regen**: `make gen-layout` after any change to `bootstrap_layout.h`.
+- **Windows release with ABE**: `make build-windows` = `make payload` (zig cc → `crypto/windows/payload/abe_extractor_amd64.bin`) + `GOOS=windows go build -tags abe_embed`. The `abe_embed` tag activates `//go:embed` on the compiled binary, so the payload is always built from the C sources in the same run and cannot go stale.
+- **Layout regen**: `make gen-layout` after any change to `bootstrap_layout.h`. This also covers the `BootstrapParams` field offsets the Go injector serializes by hand.
 - **`go.mod` unchanged** — no new dependencies. `zig` is the only external toolchain, and only when actually rebuilding the payload.
 
 ## 7. Impact on non-Windows contributors — zero
 
 | Scenario | Requires zig? | Requires CGO? | Default `go build ./...` succeeds? |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | macOS / Linux feature work | no | no | yes |
 | Windows non-ABE (v10/DPAPI) | no | no | yes (stub path) |
 | Windows release with ABE | **yes** | no | `make build-windows` |
@@ -227,49 +229,46 @@ All ABE-specific Go code is behind `//go:build windows` (plus `&& abe_embed` for
 - Payload DLL exists only as:
   1. Build artifact on the developer machine (`crypto/windows/payload/abe_extractor_amd64.bin`, git-ignored)
   2. `.rdata` section of `hack-browser-data.exe` (`//go:embed`)
-  3. Go `[]byte` in our process memory (one `copy()` for import patching)
-  4. `VirtualAllocEx`'d region in the target browser during injection; released on `TerminateProcess`
+  3. Go `[]byte` in our process memory
+  4. `VirtualAllocEx`'d RX payload region in the target browser during injection; released on `TerminateProcess`
 
-No `%TEMP%\*.dll` or `%TEMP%\*.txt`. The master key is handed back via `ReadProcessMemory` on the target's scratch region at `remoteBase + 0x40` (32 bytes). Everything stays in RAM.
+No `%TEMP%\*.dll` or `%TEMP%\*.txt`. The master key is handed back via `ReadProcessMemory` on the target's standalone scratch region at `scratchBase + 0x40` (32 bytes). Everything stays in RAM.
 
 ### 8.1 Scratch layout
 
 ```
-imageBase + 0x00  MZ header (untouched by us)
-imageBase + 0x28  marker (1 B)              ← Bootstrap progress
-imageBase + 0x29  key_status (1 B; 0x01 = ready)
-imageBase + 0x2A  extract_err_code (1 B)    ← ABE_ERR_* category on failure
-imageBase + 0x2C  hresult (4 B LE)          ← COM HRESULT on failure (0 on success)
-imageBase + 0x30  com_err (4 B LE)          ← IElevator out DWORD on failure
-imageBase + 0x3C  e_lfanew (PE header ptr, MUST NOT overwrite)
-imageBase + 0x40..0x67  shared region (union):
-                  pre-Bootstrap: 5 × uintptr (LoadLibraryA, GetProcAddress,
-                                 VirtualAlloc, VirtualProtect, NtFlushIC)
-                  post-DllMain : 32-byte master key at 0x40..0x5F
+scratchBase + 0x28  marker (1 B)              ← Bootstrap progress
+scratchBase + 0x29  key_status (1 B; 0x01 = ready)
+scratchBase + 0x2A  extract_err_code (1 B)    ← ABE_ERR_* category on failure
+scratchBase + 0x2C  hresult (4 B LE)          ← COM HRESULT on failure (0 on success)
+scratchBase + 0x30  com_err (4 B LE)          ← IElevator out DWORD on failure
+scratchBase + 0x40..0x5F  32-byte master key
 ```
 
-`0x40..0x5F` is **time-shared**: Go writes import pointers pre-injection; Bootstrap reads them once at function start; then DllMain overwrites the same bytes with the key. No concurrent readers.
+Import pointers live in the separate `BootstrapParams` block passed as the remote thread parameter; the scratch block is only diagnostics plus key material.
 
 ## 9. Comparison with reference implementations
 
 Three implementations of "extract Chrome v20 master key via reflective injection" exist in the ecosystem.
 
 | Dimension | **This project** | **injector-old** (local C++ fork) | **xaitax/Chrome-App-Bound-Encryption-Decryption** |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Top-level language | Go + C | Go + C++ | C++ end-to-end |
 | Injector runtime | Go, `CGO_ENABLED=0` | Go, `CGO_ENABLED=0` | C++ standalone exe |
 | Reflective loader | **Self-written C**, ~280 lines | Stephen Fewer 2012 `ReflectiveLoader` (vendored C, ~500) | Self-written C++, ~400 |
-| kernel32 resolution | **Pre-resolved by Go, patched into DOS stub** | PEB walk + `_rotr` hash | PEB walk + `_rotr` hash |
+| kernel32 resolution | **Pre-resolved by Go, passed in BootstrapParams** | PEB walk + `_rotr` hash | PEB walk + `_rotr` hash |
 | Syscall mechanism | Win32 APIs | Win32 APIs | Direct syscall via ASM trampoline |
 | COM DecryptData dispatch | Vtable slot by browser kind (5/8/13) | Full interface via `ComPtr` | Same as injector-old |
 | IPC payload → injector | **env var in, scratch-region read out** | Named pipe (full duplex) | Named pipe (full duplex) |
 | Build toolchain for payload | `zig cc` | MSVC / clang-cl | MSVC |
 | Runtime disk footprint | **0 bytes** | 1 temp file + pipe | Pipe |
-| EDR evasion posture | None (Win32 APIs visible) | Partial (optional Nt*) | Strong (direct syscalls) |
+| EDR evasion posture | None (Win32 APIs visible) | Partial (optional Nt\*) | Strong (direct syscalls) |
 
 ### 9.1 Why we didn't vendor xaitax's Bootstrap
 
 Tempting — it's known-good. But: C++ in an otherwise pure-C/Go repo; ASM trampolines + direct syscalls add a second toolchain leg; pipe-based IPC is 300+ lines of C we don't need; browser termination is a product-policy decision we skipped.
+
+Comparisons in this section were made against [xaitax/Chrome-App-Bound-Encryption-Decryption @ `63b719f`](https://github.com/xaitax/Chrome-App-Bound-Encryption-Decryption/commit/63b719f2ab3dbf8573fd9228a9c028526e9eb1db). It is a reference for reading only — nothing from it is vendored, and it is deliberately not a submodule.
 
 ### 9.2 Why we abandoned Stephen Fewer's loader
 
@@ -278,7 +277,7 @@ Tempting — it's known-good. But: C++ in an otherwise pure-C/Go repo; ASM tramp
 ## 10. Browser coverage
 
 | Browser class | Behavior |
-|---|---|
+| --- | --- |
 | Chrome Stable/Beta, Brave, CocCoc | ABE v20 via `CHROME_BASE` slot (5) |
 | Microsoft Edge | ABE v20 via `EDGE` slot (8); v2 `E_NOINTERFACE` → v1 fallback succeeds |
 | Avast Secure Browser | ABE v20 via `AVAST` slot (13) |
@@ -318,7 +317,7 @@ Edit `crypto/windows/abe_native/com_iid.c` (add the entry), `utils/winutil/brows
 ## 13. Related RFCs
 
 | RFC | Relation |
-|---|---|
+| --- | --- |
 | [RFC-003 Chromium Encryption](003-chromium-encryption.md) | v10/v11/v20 cipher format reference; v20 now implemented on Windows per this RFC |
 | [RFC-006 Key Retrieval](006-key-retrieval-mechanisms.md) | `masterkey.Retrievers` taxonomy; Windows populates V10 (DPAPI) + V20 (ABE) as independent tier slots |
 | [RFC-009 Windows Locked Files](009-windows-locked-file-bypass.md) | Sibling Windows-specific workaround (handle duplication for locked DBs) |

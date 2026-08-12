@@ -13,11 +13,13 @@ const (
 	KeyOffset            = 0x40
 	KeyLen               = 0x20
 
-	ImpLoadLibraryAOffset   = 0x40
-	ImpGetProcAddressOffset = 0x48
-	ImpVirtualAllocOffset   = 0x50
-	ImpVirtualProtectOffset = 0x58
-	ImpNtFlushICOffset      = 0x60
+	ParamsSize          = 0x30
+	ParamScratchBase    = 0x0
+	ParamLoadLibraryA   = 0x8
+	ParamGetProcAddress = 0x10
+	ParamVirtualAlloc   = 0x18
+	ParamVirtualProtect = 0x20
+	ParamNtFlushIC      = 0x28
 
 	MarkMZFound      = 0x2
 	MarkImportsOK    = 0x5

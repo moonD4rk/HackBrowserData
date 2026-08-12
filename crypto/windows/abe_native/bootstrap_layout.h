@@ -6,11 +6,8 @@
 
 // BootstrapScratch describes the IPC contract between the C payload running
 // inside the target browser process (chrome.exe, msedge.exe, brave.exe, etc.)
-// and the Go injector in our own process. It squats inside
-// the target DLL's PE DOS header region. Windows' PE loader ignores the DOS
-// stub at 0x40..0x77, and we also borrow a few reserved bytes between 0x28
-// and 0x3B inside IMAGE_DOS_HEADER. The e_lfanew at 0x3C..0x3F MUST be left
-// untouched so the PE loader can still find the NT headers.
+// and the Go injector in our own process. The injector allocates this as a
+// standalone RW block in the target process and passes its address to Bootstrap.
 //
 // This header is deliberately free of <windows.h> so cgo -godefs can read it
 // on macOS / Linux to regenerate the Go-side constants.
@@ -26,22 +23,18 @@ typedef struct __attribute__((packed)) BootstrapScratch {
     uint32_t hresult;           // 0x2C: COM HRESULT on failure (0 otherwise)
     uint32_t com_err;           // 0x30: IElevator.DecryptData out DWORD on failure
 
-    uint8_t  dos_header_tail[0x40 - 0x34];  // 0x34..0x3F, includes e_lfanew @ 0x3C
-
-    // 0x40..0x67: time-shared region
-    //   pre-Bootstrap: 5 pre-resolved kernel32/ntdll function pointers
-    //   post-DllMain : 32-byte master key at 0x40..0x5F
-    union {
-        struct {
-            uintptr_t LoadLibraryA;             // 0x40
-            uintptr_t GetProcAddress;           // 0x48
-            uintptr_t VirtualAlloc;             // 0x50
-            uintptr_t VirtualProtect;           // 0x58
-            uintptr_t NtFlushInstructionCache;  // 0x60
-        } imports;
-        uint8_t key[32];                        // 0x40..0x5F
-    } shared;
+    uint8_t  _reserved_34[0x40 - 0x34];  // 0x34..0x3F
+    uint8_t  key[32];                    // 0x40..0x5F
 } BootstrapScratch;
+
+typedef struct __attribute__((packed)) BootstrapParams {
+    uintptr_t scratch_base;
+    uintptr_t LoadLibraryA;
+    uintptr_t GetProcAddress;
+    uintptr_t VirtualAlloc;
+    uintptr_t VirtualProtect;
+    uintptr_t NtFlushInstructionCache;
+} BootstrapParams;
 
 // Byte offsets derived from the struct. These are the ONLY place raw numeric
 // offsets appear; every C and Go consumer uses these names (or the Go-side
@@ -52,14 +45,18 @@ typedef struct __attribute__((packed)) BootstrapScratch {
 #define BOOTSTRAP_EXTRACT_ERR_CODE_OFFSET   offsetof(struct BootstrapScratch, extract_err_code)
 #define BOOTSTRAP_HRESULT_OFFSET            offsetof(struct BootstrapScratch, hresult)
 #define BOOTSTRAP_COMERR_OFFSET             offsetof(struct BootstrapScratch, com_err)
-#define BOOTSTRAP_KEY_OFFSET                offsetof(struct BootstrapScratch, shared.key)
+#define BOOTSTRAP_KEY_OFFSET                offsetof(struct BootstrapScratch, key)
 #define BOOTSTRAP_KEY_LEN                   32
 
-#define BOOTSTRAP_IMPORT_LOADLIBRARYA_OFFSET   offsetof(struct BootstrapScratch, shared.imports.LoadLibraryA)
-#define BOOTSTRAP_IMPORT_GETPROCADDRESS_OFFSET offsetof(struct BootstrapScratch, shared.imports.GetProcAddress)
-#define BOOTSTRAP_IMPORT_VIRTUALALLOC_OFFSET   offsetof(struct BootstrapScratch, shared.imports.VirtualAlloc)
-#define BOOTSTRAP_IMPORT_VIRTUALPROTECT_OFFSET offsetof(struct BootstrapScratch, shared.imports.VirtualProtect)
-#define BOOTSTRAP_IMPORT_NTFLUSHIC_OFFSET      offsetof(struct BootstrapScratch, shared.imports.NtFlushInstructionCache)
+// The Go injector serializes BootstrapParams by hand, so every field offset is generated
+// here too — adding or reordering a field then changes layout.go and breaks gen-layout-verify.
+#define BOOTSTRAP_PARAMS_SIZE               sizeof(struct BootstrapParams)
+#define BOOTSTRAP_PARAM_SCRATCH_BASE        offsetof(struct BootstrapParams, scratch_base)
+#define BOOTSTRAP_PARAM_LOAD_LIBRARY_A      offsetof(struct BootstrapParams, LoadLibraryA)
+#define BOOTSTRAP_PARAM_GET_PROC_ADDRESS    offsetof(struct BootstrapParams, GetProcAddress)
+#define BOOTSTRAP_PARAM_VIRTUAL_ALLOC       offsetof(struct BootstrapParams, VirtualAlloc)
+#define BOOTSTRAP_PARAM_VIRTUAL_PROTECT     offsetof(struct BootstrapParams, VirtualProtect)
+#define BOOTSTRAP_PARAM_NT_FLUSH_IC         offsetof(struct BootstrapParams, NtFlushInstructionCache)
 
 // Progress markers written by Bootstrap itself (enum-like, not offsets).
 #define BOOTSTRAP_MARK_MZ_FOUND        0x02
@@ -94,7 +91,8 @@ _Static_assert(offsetof(struct BootstrapScratch, key_status)       == 0x29, "key
 _Static_assert(offsetof(struct BootstrapScratch, extract_err_code) == 0x2A, "extract_err_code offset");
 _Static_assert(offsetof(struct BootstrapScratch, hresult)          == 0x2C, "hresult offset");
 _Static_assert(offsetof(struct BootstrapScratch, com_err)          == 0x30, "com_err offset");
-_Static_assert(offsetof(struct BootstrapScratch, shared)           == 0x40, "shared offset");
-_Static_assert(sizeof(((struct BootstrapScratch *)0)->shared.key) == 32, "key length");
+_Static_assert(offsetof(struct BootstrapScratch, key)              == 0x40, "key offset");
+_Static_assert(sizeof(((struct BootstrapScratch *)0)->key)         == 32, "key length");
+_Static_assert(sizeof(struct BootstrapParams)                      == 48, "bootstrap params size");
 
 #endif // HBD_ABE_BOOTSTRAP_LAYOUT_H

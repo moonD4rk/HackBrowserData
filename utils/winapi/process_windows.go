@@ -11,8 +11,10 @@ import (
 
 // Call-style procs used by the typed wrappers below.
 var (
-	procVirtualAllocEx     = Kernel32.NewProc("VirtualAllocEx")
-	procCreateRemoteThread = Kernel32.NewProc("CreateRemoteThread")
+	procVirtualAllocEx        = Kernel32.NewProc("VirtualAllocEx")
+	procVirtualProtectEx      = Kernel32.NewProc("VirtualProtectEx")
+	procFlushInstructionCache = Kernel32.NewProc("FlushInstructionCache")
+	procCreateRemoteThread    = Kernel32.NewProc("CreateRemoteThread")
 
 	// K32EnumProcesses is the kernel32-embedded twin of psapi!EnumProcesses
 	// introduced in Windows 7 — using it lets us skip the psapi.dll handle.
@@ -21,8 +23,8 @@ var (
 )
 
 // Address-style procs. The injector reads their raw addresses via .Addr()
-// and patches them into the reflective loader's DOS stub. We never Call
-// these from our own process.
+// and passes them to the reflective loader in its remote parameter block.
+// We never Call these from our own process.
 var (
 	procLoadLibraryA   = Kernel32.NewProc("LoadLibraryA")
 	procGetProcAddress = Kernel32.NewProc("GetProcAddress")
@@ -41,6 +43,25 @@ func VirtualAllocEx(proc windows.Handle, size uintptr, flAllocType, flProtect ui
 	)
 }
 
+// VirtualProtectEx wraps kernel32!VirtualProtectEx and returns the previous
+// protection for the region.
+func VirtualProtectEx(proc windows.Handle, addr, size uintptr, flNewProtect uint32) (uint32, error) {
+	var oldProtect uint32
+	_, err := CallBoolErr(procVirtualProtectEx,
+		uintptr(proc), addr, size,
+		uintptr(flNewProtect), uintptr(unsafe.Pointer(&oldProtect)),
+	)
+	return oldProtect, err
+}
+
+// FlushInstructionCache wraps kernel32!FlushInstructionCache. Windows requires this after
+// writing bytes that are about to be executed as code; pass addr=0, size=0 to flush the
+// whole process. amd64 caches happen to be coherent, but the API contract is not.
+func FlushInstructionCache(proc windows.Handle, addr, size uintptr) error {
+	_, err := CallBoolErr(procFlushInstructionCache, uintptr(proc), addr, size)
+	return err
+}
+
 // CreateRemoteThread wraps kernel32!CreateRemoteThread. Returns the new
 // thread's handle, which the caller must CloseHandle.
 func CreateRemoteThread(proc windows.Handle, startAddr, param uintptr) (windows.Handle, error) {
@@ -54,10 +75,9 @@ func CreateRemoteThread(proc windows.Handle, startAddr, param uintptr) (windows.
 	return windows.Handle(h), nil
 }
 
-// Addr* functions expose raw function pointers for the reflective
-// loader's DOS-stub patching. KnownDlls + session-consistent ASLR
-// guarantees these addresses are valid in every process spawned in
-// the same boot session.
+// Addr* functions expose raw function pointers for the reflective loader's
+// BootstrapParams block. KnownDlls + session-consistent ASLR guarantees these
+// addresses are valid in every process spawned in the same boot session.
 
 func AddrLoadLibraryA() uintptr            { return procLoadLibraryA.Addr() }
 func AddrGetProcAddress() uintptr          { return procGetProcAddress.Addr() }

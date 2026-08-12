@@ -17,7 +17,8 @@ ABE_C_SRCS = $(ABE_SRC_DIR)/abe_extractor.c \
              $(ABE_SRC_DIR)/bootstrap.c
 
 ABE_HDRS = $(ABE_SRC_DIR)/com_iid.h \
-           $(ABE_SRC_DIR)/bootstrap.h
+           $(ABE_SRC_DIR)/bootstrap.h \
+           $(ABE_SRC_DIR)/bootstrap_layout.h
 
 $(ABE_BIN): $(ABE_C_SRCS) $(ABE_HDRS)
 	@mkdir -p $(ABE_BIN_DIR)
