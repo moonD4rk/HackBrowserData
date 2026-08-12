@@ -451,7 +451,7 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
 <!-- readme: collaborators,contributors -end -->
 
 ## Stargazers over time
-[![Star History Chart](https://api.star-history.com/svg?repos=moond4rk/hackbrowserdata&type=Date)](https://github.com/moond4rk/HackBrowserData)
+[![Star History Chart](https://star-history.dera.page/svg?repos=moond4rk/hackbrowserdata&type=Date)](https://github.com/moond4rk/HackBrowserData)
 
 
 ## 404StarLink 2.0 - Galaxy
