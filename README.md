@@ -344,6 +344,13 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/drogers0">
+                    <img src="https://avatars.githubusercontent.com/u/120214987?v=4" width="100;" alt="drogers0"/>
+                    <br />
+                    <sub><b>David Rogers</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/ac0d3r">
                     <img src="https://avatars.githubusercontent.com/u/26270009?v=4" width="100;" alt="ac0d3r"/>
                     <br />
@@ -371,6 +378,8 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
                     <sub><b>mirefly</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/lc6464">
                     <img src="https://avatars.githubusercontent.com/u/64722907?v=4" width="100;" alt="lc6464"/>
@@ -378,8 +387,6 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
                     <sub><b>LC</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/zhe6652">
                     <img src="https://avatars.githubusercontent.com/u/24725680?v=4" width="100;" alt="zhe6652"/>
@@ -413,13 +420,6 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
                     <img src="https://avatars.githubusercontent.com/u/94815926?v=4" width="100;" alt="SantiiRepair"/>
                     <br />
                     <sub><b>Santiago Ramirez</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/drogers0">
-                    <img src="https://avatars.githubusercontent.com/u/120214987?v=4" width="100;" alt="drogers0"/>
-                    <br />
-                    <sub><b>David Rogers</b></sub>
                 </a>
             </td>
 		</tr>
