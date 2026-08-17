@@ -5,8 +5,17 @@ import "fmt"
 // defaultLogger is the default logger used by the package-level functions.
 var defaultLogger = NewLogger(nil)
 
+// SetLevel sets the minimum level of the package-level logger; messages below v
+// are suppressed. Consumers embedding HackBrowserData as a library use it to
+// quiet output, e.g. SetLevel(FatalLevel) to silence everything short of a fatal
+// error. It panics if v is less than DebugLevel or greater than FatalLevel.
+func SetLevel(v Level) {
+	defaultLogger.SetLevel(v)
+}
+
+// SetVerbose lowers the package-level logger to DebugLevel.
 func SetVerbose() {
-	defaultLogger.SetLevel(DebugLevel)
+	SetLevel(DebugLevel)
 }
 
 func Debug(args ...any) {
