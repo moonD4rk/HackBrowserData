@@ -19,11 +19,18 @@ ABE_C_SRCS = $(ABE_SRC_DIR)/abe_extractor.c \
 ABE_HDRS = $(ABE_SRC_DIR)/com_iid.h \
            $(ABE_SRC_DIR)/bootstrap.h
 
+ifeq ($(OS),Windows_NT)
+ABE_MKDIR_CMD = if not exist "$(subst /,\,$(ABE_BIN_DIR))" mkdir "$(subst /,\,$(ABE_BIN_DIR))"
+ABE_REPORT_CMD = for %%I in ("$@") do @echo built $@ - %%~zI bytes
+else
+ABE_MKDIR_CMD = mkdir -p $(ABE_BIN_DIR)
+ABE_REPORT_CMD = printf "built %s (%s bytes)\n" "$@" "$$(wc -c < $@ | tr -d ' ')"
+endif
+
 $(ABE_BIN): $(ABE_C_SRCS) $(ABE_HDRS)
-	@mkdir -p $(ABE_BIN_DIR)
-	$(ZIG) cc -target $(ABE_TARGET) $(ABE_CFLAGS) $(ABE_LDFLAGS) \
-	    $(ABE_C_SRCS) -o $@ $(ABE_LDLIBS)
-	@printf "built %s (%s bytes)\n" "$@" "$$(wc -c < $@ | tr -d ' ')"
+	@$(ABE_MKDIR_CMD)
+	$(ZIG) cc -target $(ABE_TARGET) $(ABE_CFLAGS) $(ABE_LDFLAGS) $(ABE_C_SRCS) -o $@ $(ABE_LDLIBS)
+	@$(ABE_REPORT_CMD)
 
 .PHONY: payload payload-verify payload-clean
 
