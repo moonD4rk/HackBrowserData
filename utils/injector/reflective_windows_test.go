@@ -47,7 +47,7 @@ func TestEncodeBootstrapParams(t *testing.T) {
 }
 
 // Every field must land inside the struct and none may overlap — a stale offset constant
-// would otherwise corrupt a neighbouring pointer instead of failing loudly.
+// would otherwise corrupt a neighboring pointer instead of failing loudly.
 func TestBootstrapParamOffsetsAreDisjoint(t *testing.T) {
 	offsets := []int{
 		bootstrap.ParamScratchBase,
