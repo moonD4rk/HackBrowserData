@@ -328,19 +328,19 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
                 </a>
             </td>
             <td align="center">
-                <a href="https://github.com/camandel">
-                    <img src="https://avatars.githubusercontent.com/u/5462153?v=4" width="100;" alt="camandel"/>
+                <a href="https://github.com/slimwang">
+                    <img src="https://avatars.githubusercontent.com/u/14370794?v=4" width="100;" alt="slimwang"/>
                     <br />
-                    <sub><b>Carlo Mandelli</b></sub>
+                    <sub><b>slimwang</b></sub>
                 </a>
             </td>
 		</tr>
 		<tr>
             <td align="center">
-                <a href="https://github.com/slimwang">
-                    <img src="https://avatars.githubusercontent.com/u/14370794?v=4" width="100;" alt="slimwang"/>
+                <a href="https://github.com/camandel">
+                    <img src="https://avatars.githubusercontent.com/u/5462153?v=4" width="100;" alt="camandel"/>
                     <br />
-                    <sub><b>slimwang</b></sub>
+                    <sub><b>Carlo Mandelli</b></sub>
                 </a>
             </td>
             <td align="center">
