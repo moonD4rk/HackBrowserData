@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"runtime"
 	"syscall"
 	"time"
 	"unsafe"
@@ -23,8 +24,9 @@ type Reflective struct {
 const (
 	exportName = "Bootstrap"
 	// 30s covers GoogleChromeElevationService cold-start on first call after boot.
-	defaultWait   = 30 * time.Second
-	terminateWait = 2 * time.Second
+	defaultWait             = 30 * time.Second
+	terminateWait           = 2 * time.Second
+	bootstrapParamFieldSize = 8
 )
 
 func (r *Reflective) Inject(exePath string, payload []byte, env map[string]string) ([]byte, error) {
@@ -33,6 +35,9 @@ func (r *Reflective) Inject(exePath string, payload []byte, env map[string]strin
 	}
 	if exePath == "" {
 		return nil, fmt.Errorf("injector: empty exePath")
+	}
+	if runtime.GOARCH != "amd64" {
+		return nil, fmt.Errorf("injector: only amd64 is supported (got %s)", runtime.GOARCH)
 	}
 
 	loaderRVA, err := validateAndLocateLoader(payload)
@@ -215,9 +220,19 @@ func encodeBootstrapParams(scratchBase uintptr) ([]byte, error) {
 		if f.addr == 0 {
 			return nil, fmt.Errorf("injector: failed to resolve one or more bootstrap params")
 		}
-		binary.LittleEndian.PutUint64(params[f.offset:f.offset+8], uint64(f.addr))
+		if err := putBootstrapParam(params, f.offset, f.addr); err != nil {
+			return nil, err
+		}
 	}
 	return params, nil
+}
+
+func putBootstrapParam(params []byte, offset int, addr uintptr) error {
+	if offset < 0 || offset > len(params)-bootstrapParamFieldSize {
+		return fmt.Errorf("injector: bootstrap param offset %d out of bounds for %d-byte block", offset, len(params))
+	}
+	binary.LittleEndian.PutUint64(params[offset:offset+bootstrapParamFieldSize], uint64(addr))
+	return nil
 }
 
 func writeBootstrapParams(proc windows.Handle, scratchBase uintptr) (uintptr, error) {

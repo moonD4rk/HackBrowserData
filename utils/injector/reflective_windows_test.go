@@ -1,4 +1,4 @@
-//go:build windows
+//go:build windows && amd64
 
 package injector
 
@@ -46,6 +46,41 @@ func TestEncodeBootstrapParams(t *testing.T) {
 	}
 }
 
+func TestPutBootstrapParamBounds(t *testing.T) {
+	const want = uintptr(0x0123456789ABCDEF)
+	tests := []struct {
+		name    string
+		size    int
+		offset  int
+		wantErr bool
+	}{
+		{name: "last valid field", size: 16, offset: 8},
+		{name: "negative offset", size: 8, offset: -1, wantErr: true},
+		{name: "short block", size: 7, offset: 0, wantErr: true},
+		{name: "one past end", size: 8, offset: 1, wantErr: true},
+		{name: "maximum offset", size: 8, offset: int(^uint(0) >> 1), wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := make([]byte, tt.size)
+			err := putBootstrapParam(params, tt.offset, want)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("putBootstrapParam returned nil error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("putBootstrapParam: %v", err)
+			}
+			if got := binary.LittleEndian.Uint64(params[tt.offset:]); got != uint64(want) {
+				t.Errorf("encoded value = %#x, want %#x", got, want)
+			}
+		})
+	}
+}
+
 // Every field must land inside the struct and none may overlap — a stale offset constant
 // would otherwise corrupt a neighboring pointer instead of failing loudly.
 func TestBootstrapParamOffsetsAreDisjoint(t *testing.T) {
@@ -62,7 +97,7 @@ func TestBootstrapParamOffsetsAreDisjoint(t *testing.T) {
 		if off%8 != 0 {
 			t.Errorf("offset 0x%x is not 8-byte aligned", off)
 		}
-		if off+8 > bootstrap.ParamsSize {
+		if off < 0 || off > bootstrap.ParamsSize-bootstrapParamFieldSize {
 			t.Errorf("offset 0x%x overruns params block of %d bytes", off, bootstrap.ParamsSize)
 		}
 		if seen[off] {
@@ -70,8 +105,8 @@ func TestBootstrapParamOffsetsAreDisjoint(t *testing.T) {
 		}
 		seen[off] = true
 	}
-	if len(seen)*8 != bootstrap.ParamsSize {
+	if len(seen)*bootstrapParamFieldSize != bootstrap.ParamsSize {
 		t.Errorf("%d fields cover %d bytes, but C sizeof(BootstrapParams) is %d",
-			len(seen), len(seen)*8, bootstrap.ParamsSize)
+			len(seen), len(seen)*bootstrapParamFieldSize, bootstrap.ParamsSize)
 	}
 }
