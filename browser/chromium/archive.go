@@ -59,6 +59,13 @@ func (b *Browser) ArchiveSources(categories []types.Category) []ArchiveSource {
 				IsDir:     rp.isDir,
 			})
 		}
+		if accountPath, ok := p.accountPasswordPath(categories); ok {
+			out = append(out, ArchiveSource{
+				AbsPath:   accountPath,
+				LayoutRel: path.Join(profileRel, accountLoginData),
+				IsDir:     false,
+			})
+		}
 	}
 	return out
 }

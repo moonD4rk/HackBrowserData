@@ -1,6 +1,7 @@
 package chromium
 
 import (
+	"os"
 	"path/filepath"
 
 	"github.com/moond4rk/hackbrowserdata/filemanager"
@@ -47,6 +48,14 @@ func (p *profile) extract(masterKeys masterkey.MasterKeys, categories []types.Ca
 		}
 		p.extractCategory(data, cat, masterKeys, path)
 	}
+	if accountDB, ok := p.acquireAccountPasswords(session, categories); ok {
+		passwords, err := appendPasswords(masterKeys, accountDB, types.PasswordStoreAccount, data.Passwords)
+		if err != nil {
+			log.Debugf("extract account passwords for %s: %v", p.label(), err)
+		} else {
+			data.Passwords = passwords
+		}
+	}
 	return data
 }
 
@@ -68,7 +77,57 @@ func (p *profile) count(categories []types.Category) map[types.Category]int {
 		}
 		counts[cat] = p.countCategory(cat, path)
 	}
+	if accountDB, ok := p.acquireAccountPasswords(session, categories); ok {
+		if count, err := countPasswords(accountDB); err != nil {
+			log.Debugf("count account passwords for %s: %v", p.label(), err)
+		} else {
+			counts[types.Password] += count
+		}
+	}
 	return counts
+}
+
+// acquireAccountPasswords copies the account-synced password DB into the session, when the
+// profile has one alongside the local DB.
+func (p *profile) acquireAccountPasswords(session *filemanager.Session, categories []types.Category) (string, bool) {
+	accountPath, ok := p.accountPasswordPath(categories)
+	if !ok {
+		return "", false
+	}
+	dst := filepath.Join(session.TempDir(), "password_account")
+	if err := session.Acquire(accountPath, dst, false); err != nil {
+		log.Debugf("acquire account passwords for %s: %v", p.label(), err)
+		return "", false
+	}
+	return dst, true
+}
+
+// primaryPasswordStore labels the resolved primary login DB: a profile that only ever synced
+// passwords has no local Login Data, so the account DB wins candidate resolution.
+func (p *profile) primaryPasswordStore() string {
+	if primary, ok := p.sourcePaths[types.Password]; ok && primary.rel == accountLoginData {
+		return types.PasswordStoreAccount
+	}
+	return types.PasswordStoreLocal
+}
+
+// accountPasswordPath returns the account-synced password DB when the primary source resolved to
+// the local Login Data DB. If only Login Data For Account exists, it is already the primary source.
+func (p *profile) accountPasswordPath(categories []types.Category) (string, bool) {
+	requested := false
+	for _, cat := range categories {
+		if cat == types.Password {
+			requested = true
+			break
+		}
+	}
+	primary, ok := p.sourcePaths[types.Password]
+	if !requested || !ok || primary.rel == accountLoginData || p.kind == types.ChromiumYandex {
+		return "", false
+	}
+	path := filepath.Join(p.profileDir, accountLoginData)
+	info, err := os.Stat(path)
+	return path, err == nil && !info.IsDir()
 }
 
 // acquireFiles copies source files to the session temp directory.
@@ -102,7 +161,7 @@ func (p *profile) extractCategory(data *types.BrowserData, cat types.Category, m
 	var err error
 	switch cat {
 	case types.Password:
-		data.Passwords, err = extractPasswords(masterKeys, path)
+		data.Passwords, err = extractPasswords(masterKeys, path, p.primaryPasswordStore())
 	case types.Cookie:
 		data.Cookies, err = extractCookies(masterKeys, path)
 	case types.History:

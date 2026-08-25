@@ -69,6 +69,7 @@ func extractPasswords(masterKey []byte, path string) ([]types.LoginEntry, error)
 			Username:  string(user),
 			Password:  string(pwd),
 			CreatedAt: firefoxMillis(v.Get("timeCreated").Int()),
+			Store:     types.PasswordStoreLocal,
 		})
 	}
 	if decryptFails > 0 {
