@@ -321,17 +321,17 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
                 </a>
             </td>
             <td align="center">
-                <a href="https://github.com/VMpc">
-                    <img src="https://avatars.githubusercontent.com/u/50967051?v=4" width="100;" alt="VMpc"/>
-                    <br />
-                    <sub><b>Cyrus</b></sub>
-                </a>
-            </td>
-            <td align="center">
                 <a href="https://github.com/stevenlele">
                     <img src="https://avatars.githubusercontent.com/u/15964380?v=4" width="100;" alt="stevenlele"/>
                     <br />
                     <sub><b>stevenlele</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/VMpc">
+                    <img src="https://avatars.githubusercontent.com/u/50967051?v=4" width="100;" alt="VMpc"/>
+                    <br />
+                    <sub><b>Cyrus</b></sub>
                 </a>
             </td>
 		</tr>
