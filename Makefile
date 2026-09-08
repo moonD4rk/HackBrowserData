@@ -14,8 +14,7 @@ build-windows: export GOOS := windows
 build-windows: export GOARCH := amd64
 build-windows: export CGO_ENABLED := 0
 build-windows: $(ABE_BIN)
-	$(GO) build -tags abe_embed -trimpath -ldflags="-s -w" \
-	  -o $(GOEXE).exe ./cmd/hack-browser-data
+	$(GO) build -tags abe_embed -trimpath -ldflags="-s -w" -o $(GOEXE).exe ./cmd/hack-browser-data
 
 clean: payload-clean
 	rm -f $(GOEXE) $(GOEXE).exe
