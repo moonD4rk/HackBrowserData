@@ -32,6 +32,9 @@ func NewBrowser(cfg types.BrowserConfig) (*Browser, error) {
 
 	var profiles []*profile
 	for _, profileDir := range discoverProfiles(cfg.UserDataDir, sources) {
+		if cfg.ProfileFilter != "" && filepath.Base(profileDir) != cfg.ProfileFilter {
+			continue
+		}
 		sourcePaths := resolveSourcePaths(sources, profileDir)
 		if len(sourcePaths) == 0 {
 			continue

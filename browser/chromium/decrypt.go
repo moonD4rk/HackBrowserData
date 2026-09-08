@@ -26,6 +26,9 @@ func decryptValue(masterKeys masterkey.MasterKeys, ciphertext []byte) ([]byte, e
 	version := crypto.DetectVersion(ciphertext)
 	switch version {
 	case crypto.CipherV10:
+		if len(masterKeys.V10) == 0 {
+			return nil, fmt.Errorf("v10 ciphertext but no v10 master key")
+		}
 		// v10's cipher depends on the platform that sealed it: a 32-byte AES-256 key means GCM
 		// (Windows), a 16-byte AES-128 key means CBC (macOS/Linux). Dispatching on key length keeps
 		// cross-host decryption OS-independent: a 32-byte key dumped on Windows decrypts here on macOS.
@@ -36,9 +39,15 @@ func decryptValue(masterKeys masterkey.MasterKeys, ciphertext []byte) ([]byte, e
 	case crypto.CipherV11:
 		// v11 is Linux-only AES-CBC; same algorithm as Linux v10 but the key comes from the keyring
 		// (kV11Key) rather than peanuts (kV10Key), so both tiers need distinct keys.
+		if len(masterKeys.V11) == 0 {
+			return nil, fmt.Errorf("v11 ciphertext but no keyring key (Secret Service unavailable; use dumpkeys on the origin host for offline copies)")
+		}
 		return crypto.DecryptChromiumCBC(masterKeys.V11, ciphertext)
 	case crypto.CipherV20:
 		// v20 is cross-platform AES-GCM (Chrome 127+ ABE); same wire layout as Windows v10.
+		if len(masterKeys.V20) == 0 {
+			return nil, fmt.Errorf("v20 ciphertext but no ABE master key (build with make build-windows, or use dumpkeys on the origin host)")
+		}
 		return crypto.DecryptChromiumGCM(masterKeys.V20, ciphertext)
 	case crypto.CipherV12:
 		// Chromium's SecretPortalKeyProvider (Flatpak / xdg-desktop-portal) — HKDF-SHA256 +

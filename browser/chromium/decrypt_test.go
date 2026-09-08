@@ -64,6 +64,10 @@ func TestDecryptValue_V11(t *testing.T) {
 	got, err := decryptValue(masterkey.MasterKeys{V11: testAESKey}, v11Ciphertext)
 	require.NoError(t, err)
 	assert.Equal(t, plaintext, got)
+
+	_, err = decryptValue(masterkey.MasterKeys{}, v11Ciphertext)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no keyring key")
 }
 
 // TestDecryptValue_V10_V11_SlotSeparation is the Linux analog of the #578 regression test: a

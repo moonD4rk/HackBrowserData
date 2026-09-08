@@ -12,6 +12,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/log"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
 // Browser is one installation: a UserDataDir holding profiles that (for Chromium) share one master key.
@@ -68,11 +69,7 @@ func discoverFromConfigs(configs []types.BrowserConfig, opts DiscoverOptions) ([
 		}
 
 		if opts.ProfilePath != "" && name != "all" {
-			if cfg.Kind == types.Firefox {
-				cfg.UserDataDir = filepath.Dir(filepath.Clean(opts.ProfilePath))
-			} else {
-				cfg.UserDataDir = opts.ProfilePath
-			}
+			applyProfilePath(&cfg, opts.ProfilePath)
 		}
 
 		b, err := newBrowser(cfg)
@@ -88,6 +85,37 @@ func discoverFromConfigs(configs []types.BrowserConfig, opts DiscoverOptions) ([
 		browsers = append(browsers, b)
 	}
 	return browsers, nil
+}
+
+// applyProfilePath rewrites cfg.UserDataDir (and optionally ProfileFilter) from a -p path.
+// Chromium accepts either the User Data root or a profile subdirectory (e.g. .../Default);
+// Firefox accepts a profile directory and keeps only that profile under its Profiles root.
+func applyProfilePath(cfg *types.BrowserConfig, profilePath string) {
+	clean := filepath.Clean(profilePath)
+	if cfg.Kind == types.Firefox {
+		cfg.UserDataDir = filepath.Dir(clean)
+		cfg.ProfileFilter = filepath.Base(clean)
+		return
+	}
+	udd, filter := resolveChromiumUserDataDir(clean)
+	cfg.UserDataDir = udd
+	cfg.ProfileFilter = filter
+}
+
+// resolveChromiumUserDataDir maps a -p path to the installation root and an optional profile filter.
+//
+//   - path contains "Local State" → treat as User Data (or Opera flat root); no filter
+//   - parent contains "Local State" → treat parent as User Data; filter to basename(path)
+//   - otherwise keep path as-is (incomplete copies, or trees without Local State yet)
+func resolveChromiumUserDataDir(path string) (userDataDir, profileFilter string) {
+	if fileutil.FileExists(filepath.Join(path, "Local State")) {
+		return path, ""
+	}
+	parent := filepath.Dir(path)
+	if parent != "." && parent != path && fileutil.FileExists(filepath.Join(parent, "Local State")) {
+		return parent, filepath.Base(path)
+	}
+	return path, ""
 }
 
 // KeyManager is implemented by installations accepting external master-key retrievers (Chromium only).

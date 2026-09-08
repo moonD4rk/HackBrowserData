@@ -58,7 +58,9 @@ It can also decrypt data **across machines and operating systems**: export the m
 >
 > ² On Windows, decrypting Chromium 127+ cookies (Chrome / Chrome Beta / Edge / Brave / CocCoc) requires the App-Bound Encryption payload built via `make build-windows` — see [Building from source](#building-from-source) below.
 >
-> ³ These browsers ship only on Windows, but their data is **decryptable on any OS**: pull the files with `archive`, export the keys with `dumpkeys`, then decrypt on macOS or Linux with `restore` — see [Cross-host decryption](#cross-host-decryption).
+> ³ These browsers ship only on Windows, but their data is **decryptable on any OS**: pull the files with `archive`, export the keys with `dumpkeys`, then decrypt on macOS or Linux with `restore` — see [Cross-host decryption](#cross-host-decryption). Some 360 Speed / 360 Safe ciphertext uses proprietary encryption beyond Chromium DPAPI; those blobs are not decryptable yet.
+>
+> ⁴ Under Windows SYSTEM (or any account other than the profile owner), DPAPI cannot unwrap Chromium master keys. Run as the interactive user, or use `dumpkeys` as that user then `restore` offline. Linux copies encrypted with the desktop keyring (v11) likewise need `dumpkeys` on the origin host when Secret Service / KWallet is unavailable.
 
 ## Getting Started
 
@@ -136,7 +138,7 @@ Flags:
   -f, --format string         output format: csv|json|cookie-editor (default "json")
   -h, --help                  help for hack-browser-data
       --keychain-pw string    macOS keychain password
-  -p, --profile-path string   custom profile dir path, get with chrome://version
+  -p, --profile-path string   User Data dir or profile dir (e.g. .../User Data/Default)
   -v, --verbose               enable debug logging
       --zip                   compress output to zip
 
@@ -153,7 +155,7 @@ Running `hack-browser-data` without a subcommand defaults to `dump`.
 | `--category`     | `-c`  | `all`     | Data categories, comma-separated (all\|password\|cookie\|bookmark\|history\|download\|creditcard\|extension\|localstorage\|sessionstorage) |
 | `--format`       | `-f`  | `json`    | Output format (csv\|json\|cookie-editor)                                                                                                   |
 | `--dir`          | `-d`  | `results` | Output directory                                                                                                                           |
-| `--profile-path` | `-p`  |           | Custom profile dir path, get with chrome://version                                                                                         |
+| `--profile-path` | `-p`  |           | User Data directory or a profile subdirectory (e.g. `.../User Data/Default` from `chrome://version`)                                      |
 | `--keychain-pw`  |       |           | macOS keychain password                                                                                                                    |
 | `--zip`          |       | `false`   | Compress output to zip                                                                                                                     |
 
@@ -275,8 +277,10 @@ hack-browser-data list
 # List with per-category entry counts
 hack-browser-data list --detail
 
-# Use custom profile path
+# Use custom profile path (User Data root or a profile subdirectory both work)
+hack-browser-data dump -b chrome -p "/path/to/User Data"
 hack-browser-data dump -b chrome -p "/path/to/User Data/Default"
+hack-browser-data dump -b brave -p "/path/to/Brave-Browser/Default"
 ```
 
 ## Contributing
