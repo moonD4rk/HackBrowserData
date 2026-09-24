@@ -112,7 +112,7 @@ func resolveChromiumUserDataDir(path string) (userDataDir, profileFilter string)
 		return path, ""
 	}
 	parent := filepath.Dir(path)
-	if parent != "." && parent != path && fileutil.FileExists(filepath.Join(parent, "Local State")) {
+	if parent != path && fileutil.FileExists(filepath.Join(parent, "Local State")) {
 		return parent, filepath.Base(path)
 	}
 	return path, ""
