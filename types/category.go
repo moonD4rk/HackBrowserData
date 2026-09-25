@@ -108,6 +108,7 @@ type BrowserConfig struct {
 	KeychainLabel string      // macOS Keychain account / Linux D-Bus Secret Service label; "" = none
 	WindowsABE    bool        // enable Windows App-Bound Encryption v20 (reflective injection)
 	UserDataDir   string      // base browser directory
+	ProfileFilter string      // if non-empty, only keep the profile whose basename matches (set by -p)
 }
 
 // BrowserData holds all extracted browser data with typed slices.
