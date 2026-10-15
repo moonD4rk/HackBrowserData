@@ -3,7 +3,7 @@ module github.com/moond4rk/hackbrowserdata
 go 1.20
 
 require (
-	github.com/godbus/dbus/v5 v5.2.2
+	github.com/godbus/dbus/v5 v5.2.3
 	github.com/inconshreveable/mousetrap v1.1.0
 	github.com/moond4rk/binarycookies v1.0.3
 	github.com/moond4rk/keychainbreaker v0.2.6
