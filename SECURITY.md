@@ -1,6 +1,17 @@
 # Security Policy
 
-HackBrowserData is a security research tool whose purpose is to decrypt and export browser data that the account running it can already access. This policy covers vulnerabilities in HackBrowserData itself — flaws that put the person running the tool, or the host it runs on, at risk.
+## Purpose and Responsible Use
+
+HackBrowserData is an offensive security tool built for defense. It reproduces the browser credential-access techniques used by real-world attackers — decrypting the passwords, cookies, and other data that browsers store for the current user — so that defenders can test against them and harden their systems in a controlled setting. Typical uses:
+
+- Authorized penetration tests and red-team engagements that measure how exposed browser-stored credentials are on a host
+- Building and validating detections for these techniques, such as MITRE ATT&CK [T1555.003](https://attack.mitre.org/techniques/T1555/003/) (Credentials from Web Browsers) and [T1539](https://attack.mitre.org/techniques/T1539/) (Steal Web Session Cookie)
+- Digital forensics and incident response, including offline analysis of collected profiles with the cross-host `restore` workflow
+- Research into how browser and OS protections (DPAPI, the macOS Keychain, Chrome App-Bound Encryption) work and where their limits are
+
+Only run HackBrowserData on systems and accounts you own or are explicitly authorized to test. Users are responsible for complying with applicable laws; see the disclaimer in the [README](README.md).
+
+This policy covers vulnerabilities in HackBrowserData itself — flaws that put the person running the tool, or the host it runs on, at risk. The tool doing what it is designed to do is not a vulnerability; see [Scope](#scope).
 
 ## Supported Versions
 
