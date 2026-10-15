@@ -425,6 +425,13 @@ Please see the [Contribution Guide](CONTRIBUTING.md) before contributing.
 		</tr>
 		<tr>
             <td align="center">
+                <a href="https://github.com/DUptain1993">
+                    <img src="https://avatars.githubusercontent.com/u/220633839?v=4" width="100;" alt="DUptain1993"/>
+                    <br />
+                    <sub><b>Daniel Uptain </b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/dexhek">
                     <img src="https://avatars.githubusercontent.com/u/39654918?v=4" width="100;" alt="dexhek"/>
                     <br />

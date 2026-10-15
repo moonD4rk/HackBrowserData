@@ -20,11 +20,24 @@ ABE_HDRS = $(ABE_SRC_DIR)/com_iid.h \
            $(ABE_SRC_DIR)/bootstrap.h \
            $(ABE_SRC_DIR)/bootstrap_layout.h
 
+# Detect cmd.exe vs POSIX sh. OS=Windows_NT is set under MSYS2/Git Bash too,
+# but those use sh — so shell detection is what matters for recipe syntax.
+# cmd echoes the quotes back; POSIX sh strips them.
+ifeq ($(shell echo "x"),"x")
+WIN_CMD_SHELL := 1
+endif
+
+ifdef WIN_CMD_SHELL
+ABE_REPORT_CMD = for %%I in ("$@") do @echo built $@ (%%~zI bytes)
+else
+ABE_REPORT_CMD = printf "built %s (%s bytes)\n" "$@" "$$(wc -c < $@ | tr -d ' ')"
+endif
+
+# crypto/windows/payload/ is tracked in git, so no mkdir is required.
 $(ABE_BIN): $(ABE_C_SRCS) $(ABE_HDRS)
-	@mkdir -p $(ABE_BIN_DIR)
 	$(ZIG) cc -target $(ABE_TARGET) $(ABE_CFLAGS) $(ABE_LDFLAGS) \
 	    $(ABE_C_SRCS) -o $@ $(ABE_LDLIBS)
-	@printf "built %s (%s bytes)\n" "$@" "$$(wc -c < $@ | tr -d ' ')"
+	@$(ABE_REPORT_CMD)
 
 .PHONY: payload payload-verify payload-clean
 
