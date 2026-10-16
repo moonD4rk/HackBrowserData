@@ -16,6 +16,10 @@ import (
 type DPAPIRetriever struct{}
 
 func (r *DPAPIRetriever) RetrieveKey(hints Hints) ([]byte, error) {
+	if hints.LocalStatePath == "" {
+		return nil, fmt.Errorf("Local State path is empty: pass -p to the User Data directory or a profile under it (e.g. .../User Data/Default)")
+	}
+
 	data, err := os.ReadFile(hints.LocalStatePath)
 	if err != nil {
 		return nil, fmt.Errorf("read Local State: %w", err)
@@ -41,7 +45,10 @@ func (r *DPAPIRetriever) RetrieveKey(hints Hints) ([]byte, error) {
 
 	masterKey, err := crypto.DecryptDPAPI(keyBytes[len(dpapiPrefix):])
 	if err != nil {
-		return nil, fmt.Errorf("DPAPI decrypt: %w", err)
+		// DPAPI blobs are bound to the Windows user (and machine) that sealed them. SYSTEM,
+		// another interactive user, or a profile copied from another host cannot unwrap them
+		// in-process — use dumpkeys as the origin user, then restore offline.
+		return nil, fmt.Errorf("DPAPI decrypt: %w (key is bound to the Windows user that created it; run as that user, or dumpkeys on the origin host then restore)", err)
 	}
 	return masterKey, nil
 }

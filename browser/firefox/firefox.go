@@ -25,6 +25,9 @@ type Browser struct {
 func NewBrowser(cfg types.BrowserConfig) (*Browser, error) {
 	var profiles []*profile
 	for _, profileDir := range discoverProfiles(cfg.UserDataDir, firefoxSources) {
+		if cfg.ProfileFilter != "" && filepath.Base(profileDir) != cfg.ProfileFilter {
+			continue
+		}
 		sourcePaths := resolveSourcePaths(firefoxSources, profileDir)
 		if len(sourcePaths) == 0 {
 			continue

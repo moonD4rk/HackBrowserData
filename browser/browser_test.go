@@ -53,6 +53,7 @@ func TestPickFromConfigs(t *testing.T) {
 
 	// --- fixtures: multi-profile chromium ---
 	chromeDir := t.TempDir()
+	mkFile(t, chromeDir, "Local State")
 	mkFile(t, chromeDir, "Default", "Preferences")
 	mkFile(t, chromeDir, "Default", "Login Data")
 	mkFile(t, chromeDir, "Default", "History")
@@ -158,7 +159,7 @@ func TestPickFromConfigs(t *testing.T) {
 	t.Run("ProfilePath", func(t *testing.T) {
 		runPickTests(t, []pickTest{
 			{
-				name: "chromium uses path directly",
+				name: "chromium profile dir resolves parent User Data and filters",
 				configs: []types.BrowserConfig{
 					{Key: "chrome", Name: "Chrome", Kind: types.Chromium, UserDataDir: "/wrong"},
 				},
@@ -167,7 +168,16 @@ func TestPickFromConfigs(t *testing.T) {
 				wantProfiles: []string{"Default"},
 			},
 			{
-				name: "firefox uses parent dir",
+				name: "chromium User Data root keeps all profiles",
+				configs: []types.BrowserConfig{
+					{Key: "chrome", Name: "Chrome", Kind: types.Chromium, UserDataDir: "/wrong"},
+				},
+				opts:         DiscoverOptions{Name: "chrome", ProfilePath: chromeDir},
+				wantNames:    []string{"Chrome", "Chrome"},
+				wantProfiles: []string{"Default", "Profile 1"},
+			},
+			{
+				name: "firefox uses parent dir and filters to named profile",
 				configs: []types.BrowserConfig{
 					{Key: "firefox", Name: "Firefox", Kind: types.Firefox, UserDataDir: "/wrong"},
 				},
@@ -412,6 +422,27 @@ func TestNewBrowserDispatch(t *testing.T) {
 			assert.Equal(t, tt.wantProfile, profiles[0].Name)
 		})
 	}
+}
+
+func TestResolveChromiumUserDataDir(t *testing.T) {
+	root := t.TempDir()
+	mkFile(t, root, "Local State")
+	mkFile(t, root, "Default", "Preferences")
+
+	udd, filter := resolveChromiumUserDataDir(filepath.Join(root, "Default"))
+	assert.Equal(t, root, udd)
+	assert.Equal(t, "Default", filter)
+
+	udd, filter = resolveChromiumUserDataDir(root)
+	assert.Equal(t, root, udd)
+	assert.Empty(t, filter)
+
+	// No Local State anywhere — keep the path (Opera flat / incomplete copy).
+	orphan := t.TempDir()
+	mkFile(t, orphan, "Login Data")
+	udd, filter = resolveChromiumUserDataDir(orphan)
+	assert.Equal(t, orphan, udd)
+	assert.Empty(t, filter)
 }
 
 // assertBrowsers flattens installations into (browser, profile) pairs and

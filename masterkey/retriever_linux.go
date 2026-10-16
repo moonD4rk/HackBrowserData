@@ -30,7 +30,9 @@ func (r *DBusRetriever) RetrieveKey(hints Hints) ([]byte, error) {
 
 	svc, err := keyring.GetSecretService(conn)
 	if err != nil {
-		return nil, fmt.Errorf("secret service: %w", err)
+		// Chromium v11 needs org.freedesktop.secrets. Pure KWallet without the Secret Service
+		// bridge is tracked separately (#572); offline copies should use dumpkeys on the origin.
+		return nil, fmt.Errorf("secret service: %w (v11 needs org.freedesktop.secrets; native KWallet-only desktops are not supported yet — use dumpkeys on the origin host for offline copies)", err)
 	}
 
 	session, err := svc.OpenSession()
