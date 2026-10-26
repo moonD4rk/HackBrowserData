@@ -33,6 +33,7 @@ Internal Go names are free to change; anything the user can see — commands, fl
 | `app` stages and values                                                                                  | `Validate`, `Discover`, `NewPlan`, `Execute`, `Report`; `Request`, `Discovery`, `Plan`, `Extraction`, `Summary`.                                                |
 | `snapshot.Dir` / `snapshot.Snapshot`                                                                     | A snapshot directory and one user data dir's snapshot inside it, a snapshot being one user data dir's copy as in Chromium; not `FS`, `Tree`, or `Copy`.         |
 | `winapi`, `abe`; `log` and `crypto` kept                                                                 | Windows-only packages; not `platform/windows`.                                                                                                                  |
+| `timeconv` and `sqlitex` functions                                                                       | `timeconv.Chromium`, `UnixMicro`, `UnixMilli`, `Unix`, `CoreData`, each named for the encoding it reads; `sqlitex` exports `CountRows` and `QueryRows` only.    |
 | CLI names unchanged                                                                                      | `-c/--category` selects `category.Category` values; `-p/--profile-path` and `dumpkeys` stay. [RFC-009](009-cli-surface.md).                                     |
 
 ## Item-by-item detail
@@ -229,6 +230,12 @@ A category says what kind of data is meant; a record is one row of that data. Th
 | `keychain.Login`                               | collides with `record.Login`, a saved login.                                                                                           |
 | `masterkey.Keychain`                           | `masterkey` holds Chromium keys; Safari's saved logins are not keys.                                                                   |
 
+### 9. Leaf helpers — `timeconv` and `sqlitex`
+
+**`timeconv`: one function per stored encoding, named for what the caller holds.** `Chromium` reads `base::Time`, microseconds since 1601; `CoreData` reads `CFAbsoluteTime`, seconds since 2001; `UnixMicro`, `UnixMilli`, and `Unix` read the three Unix units Firefox stores, named after the `time` functions they wrap. Not `WebKit`: in this tool WebKit is Safari's engine, and Safari's timestamps are Core Data's.
+
+**`sqlitex` exports `CountRows` and `QueryRows` only.** The row-callback helper behind them, today's `sqliteutil.QuerySQLite`, has no other caller, and as an export it would read `sqlitex.QuerySQLite`.
+
 ## Summary table
 
 | Concept                 | Decision                                                                | Rejected                                                                                                         |
@@ -248,5 +255,6 @@ A category says what kind of data is meant; a record is one row of that data. Th
 | Unit of work            | `app.Extraction{DirID, Profile, Category}`                              | `Job`, `Task`, `Target`, `Unit`                                                                                  |
 | Snapshot                | `snapshot.Dir` + `snapshot.Snapshot`, returned by `Dir.Snapshot(dirID)` | `snapshot.FS`, `snapshot.Tree`, `snapshot.Copy`, `snapshot.Files`, `Dir.CopyOf`, `type Dir string`               |
 | Windows packages        | `winapi`, `abe`                                                         | `platform/windows`                                                                                               |
+| Leaf helpers            | `timeconv.Chromium`…`CoreData`; `sqlitex.CountRows`, `QueryRows`        | `timeconv.WebKit`, an exported `sqlitex.QuerySQLite`                                                             |
 
 The only cross-row couplings: the `category` package and the bare record names are one decision, and the flat `Browser`/`Profile` source replaces every mention of `Origin`.

@@ -4,8 +4,9 @@ import (
 	"database/sql"
 	"sort"
 
+	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
+	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 	"github.com/moond4rk/hackbrowserdata/types"
-	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
 const (
@@ -15,7 +16,7 @@ const (
 )
 
 func extractDownloads(path string) ([]types.DownloadEntry, error) {
-	downloads, err := sqliteutil.QueryRows(path, false, defaultDownloadQuery,
+	downloads, err := sqlitex.QueryRows(path, false, defaultDownloadQuery,
 		func(rows *sql.Rows) (types.DownloadEntry, error) {
 			var targetPath, url, mimeType string
 			var totalBytes, startTime, endTime int64
@@ -27,8 +28,8 @@ func extractDownloads(path string) ([]types.DownloadEntry, error) {
 				TargetPath: targetPath,
 				MimeType:   mimeType,
 				TotalBytes: totalBytes,
-				StartTime:  timeEpoch(startTime),
-				EndTime:    timeEpoch(endTime),
+				StartTime:  timeconv.Chromium(startTime),
+				EndTime:    timeconv.Chromium(endTime),
 			}, nil
 		})
 	if err != nil {
@@ -42,5 +43,5 @@ func extractDownloads(path string) ([]types.DownloadEntry, error) {
 }
 
 func countDownloads(path string) (int, error) {
-	return sqliteutil.CountRows(path, false, countDownloadQuery)
+	return sqlitex.CountRows(path, false, countDownloadQuery)
 }

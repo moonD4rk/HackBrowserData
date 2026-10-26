@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/types"
-	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
 const (
@@ -15,7 +15,7 @@ const (
 )
 
 func extractLocalStorage(path string) ([]types.StorageEntry, error) {
-	return sqliteutil.QueryRows(path, true, firefoxLocalStorageQuery,
+	return sqlitex.QueryRows(path, true, firefoxLocalStorageQuery,
 		func(rows *sql.Rows) (types.StorageEntry, error) {
 			var originKey, key, value string
 			if err := rows.Scan(&originKey, &key, &value); err != nil {
@@ -30,7 +30,7 @@ func extractLocalStorage(path string) ([]types.StorageEntry, error) {
 }
 
 func countLocalStorage(path string) (int, error) {
-	return sqliteutil.CountRows(path, true, firefoxCountLocalStorageQuery)
+	return sqlitex.CountRows(path, true, firefoxCountLocalStorageQuery)
 }
 
 func reverseString(s string) string {

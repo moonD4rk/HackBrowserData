@@ -7,8 +7,9 @@ import (
 
 	"github.com/tidwall/gjson"
 
+	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
+	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 	"github.com/moond4rk/hackbrowserdata/types"
-	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
 const (
@@ -22,7 +23,7 @@ const (
 )
 
 func extractDownloads(path string) ([]types.DownloadEntry, error) {
-	downloads, err := sqliteutil.QueryRows(path, true, firefoxDownloadQuery,
+	downloads, err := sqlitex.QueryRows(path, true, firefoxDownloadQuery,
 		func(rows *sql.Rows) (types.DownloadEntry, error) {
 			var placeID, dateAdded int64
 			var content, url string
@@ -32,7 +33,7 @@ func extractDownloads(path string) ([]types.DownloadEntry, error) {
 
 			entry := types.DownloadEntry{
 				URL:       url,
-				StartTime: firefoxMicros(dateAdded),
+				StartTime: timeconv.UnixMicro(dateAdded),
 			}
 
 			// Firefox stores download metadata as: "target_path,{json}"
@@ -42,7 +43,7 @@ func extractDownloads(path string) ([]types.DownloadEntry, error) {
 				entry.TargetPath = contentList[0]
 				json := "{" + contentList[1]
 				entry.TotalBytes = gjson.Get(json, "fileSize").Int()
-				entry.EndTime = firefoxMillis(gjson.Get(json, "endTime").Int())
+				entry.EndTime = timeconv.UnixMilli(gjson.Get(json, "endTime").Int())
 			} else {
 				entry.TargetPath = content
 			}
@@ -60,5 +61,5 @@ func extractDownloads(path string) ([]types.DownloadEntry, error) {
 }
 
 func countDownloads(path string) (int, error) {
-	return sqliteutil.CountRows(path, true, firefoxCountDownloadQuery)
+	return sqlitex.CountRows(path, true, firefoxCountDownloadQuery)
 }

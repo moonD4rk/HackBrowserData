@@ -12,7 +12,7 @@ import (
 	_ "modernc.org/sqlite"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
 // key4DB holds the parsed contents of Firefox's key4.db NSS key storage.

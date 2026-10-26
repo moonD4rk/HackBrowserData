@@ -6,10 +6,11 @@ import (
 	"sort"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/internal/log"
+	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
+	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
-	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
 const (
@@ -40,7 +41,7 @@ func extractPasswords(masterKeys masterkey.MasterKeys, path, store string) ([]ty
 }
 
 func extractPasswordsWithQuery(masterKeys masterkey.MasterKeys, path, store, query string) ([]types.LoginEntry, error) {
-	logins, err := sqliteutil.QueryRows(path, false, query,
+	logins, err := sqlitex.QueryRows(path, false, query,
 		func(rows *sql.Rows) (types.LoginEntry, error) {
 			var url, username string
 			var pwd []byte
@@ -53,7 +54,7 @@ func extractPasswordsWithQuery(masterKeys masterkey.MasterKeys, path, store, que
 				URL:       url,
 				Username:  username,
 				Password:  string(password),
-				CreatedAt: timeEpoch(created),
+				CreatedAt: timeconv.Chromium(created),
 				Store:     store,
 			}, nil
 		})
@@ -79,7 +80,7 @@ func extractYandexPasswords(masterKeys masterkey.MasterKeys, path string) ([]typ
 		return nil, err
 	}
 
-	logins, err := sqliteutil.QueryRows(path, false, yandexLoginQuery,
+	logins, err := sqlitex.QueryRows(path, false, yandexLoginQuery,
 		func(rows *sql.Rows) (types.LoginEntry, error) {
 			var originURL, usernameElem, usernameVal, passwordElem, signonRealm string
 			var passwordValue []byte
@@ -90,7 +91,7 @@ func extractYandexPasswords(masterKeys masterkey.MasterKeys, path string) ([]typ
 			entry := types.LoginEntry{
 				URL:       originURL,
 				Username:  usernameVal,
-				CreatedAt: timeEpoch(created),
+				CreatedAt: timeconv.Chromium(created),
 				Store:     types.PasswordStoreLocal,
 			}
 			aad := yandexLoginAAD(originURL, usernameElem, usernameVal, passwordElem, signonRealm, nil)
@@ -113,5 +114,5 @@ func extractYandexPasswords(masterKeys masterkey.MasterKeys, path string) ([]typ
 }
 
 func countPasswords(path string) (int, error) {
-	return sqliteutil.CountRows(path, false, countLoginQuery)
+	return sqlitex.CountRows(path, false, countLoginQuery)
 }

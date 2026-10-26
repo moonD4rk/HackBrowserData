@@ -62,6 +62,7 @@ Leaves first, bottom-up along the dependency arrows ([RFC-002](002-package-layou
 ### Phase 8 — Delete & document
 
 - Remove the superseded top-level packages — `browser/`, `crypto/` except the ABE unit's `crypto/windows/`, `filemanager/`, `log/`, `masterkey/`, `output/`, `types/`, and `utils/` except `utils/injector` — once nothing references them.
+- Move the compatibility tests out of `cmd/hack-browser-data` into the packages they cover — the export goldens into `export`, `keys.json` into `masterkey`, the archive into `snapshot`, the extract goldens into `browser/chromium`, and `restore` into `app` — each with its goldens in its own `testdata/`; `cmd` keeps only the flag-surface test, and the root `testdata/` goes away.
 - Update CLAUDE.md (the new paths), the README (Safari, the `cookie-editor` behavior), and the root help text.
 - Bring the RFCs to their finished state: the format and technique RFCs (013–021) move from today's type names — `BrowserConfig`, `WindowsABE`, `winutil.Table`, `Hints`, the `Retrievers` struct — to the names in [RFC-004](004-naming-decisions.md); the design RFCs describe the code as it is instead of comparing it with today's; and this roadmap is removed.
 - Final `go mod tidy` under go@1.20; confirm the `go` directive is still `1.20` and `otiai10/copy` and `mint` are gone.

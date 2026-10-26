@@ -6,10 +6,10 @@ import (
 	"errors"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/internal/log"
+	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
-	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
 const (
@@ -37,7 +37,7 @@ type yandexPrivateData struct {
 }
 
 func extractCreditCards(masterKeys masterkey.MasterKeys, path string) ([]types.CreditCardEntry, error) {
-	cards, err := sqliteutil.QueryRows(path, false, defaultCreditCardQuery,
+	cards, err := sqlitex.QueryRows(path, false, defaultCreditCardQuery,
 		func(rows *sql.Rows) (types.CreditCardEntry, error) {
 			var guid, name, month, year, nickname, address string
 			var encNumber []byte
@@ -72,7 +72,7 @@ func extractYandexCreditCards(masterKeys masterkey.MasterKeys, path string) ([]t
 		return nil, err
 	}
 
-	return sqliteutil.QueryRows(path, false, yandexCreditCardQuery,
+	return sqlitex.QueryRows(path, false, yandexCreditCardQuery,
 		func(rows *sql.Rows) (types.CreditCardEntry, error) {
 			var guid, publicData string
 			var privateData []byte
@@ -113,9 +113,9 @@ func extractYandexCreditCards(masterKeys masterkey.MasterKeys, path string) ([]t
 }
 
 func countCreditCards(path string) (int, error) {
-	return sqliteutil.CountRows(path, false, countCreditCardQuery)
+	return sqlitex.CountRows(path, false, countCreditCardQuery)
 }
 
 func countYandexCreditCards(path string) (int, error) {
-	return sqliteutil.CountRows(path, false, yandexCreditCardCountQuery)
+	return sqlitex.CountRows(path, false, yandexCreditCardCountQuery)
 }

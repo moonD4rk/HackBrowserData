@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -199,80 +198,4 @@ func TestCountEntries(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	assert.Equal(t, 3, results[0].Counts[types.History])
-}
-
-// Anchor: 2024-01-15T10:30:00Z.
-const anchorUnixSeconds = int64(1705314600)
-
-func TestFirefoxMicros_AnchorDate(t *testing.T) {
-	got := firefoxMicros(anchorUnixSeconds * 1_000_000)
-	want := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
-	assert.Equal(t, want, got)
-}
-
-func TestFirefoxMicros_PrecisionPreserved(t *testing.T) {
-	got := firefoxMicros(anchorUnixSeconds*1_000_000 + 123456)
-	assert.Equal(t, 123456*int64(time.Microsecond), int64(got.Nanosecond()))
-}
-
-func TestFirefoxMillis_AnchorDate(t *testing.T) {
-	got := firefoxMillis(anchorUnixSeconds * 1_000)
-	want := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
-	assert.Equal(t, want, got)
-}
-
-func TestFirefoxMillis_PrecisionPreserved(t *testing.T) {
-	got := firefoxMillis(anchorUnixSeconds*1_000 + 789)
-	assert.Equal(t, 789*int64(time.Millisecond), int64(got.Nanosecond()))
-}
-
-func TestFirefoxSeconds_AnchorDate(t *testing.T) {
-	got := firefoxSeconds(anchorUnixSeconds)
-	want := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
-	assert.Equal(t, want, got)
-}
-
-func TestFirefoxHelpers_ZeroReturnsZeroTime(t *testing.T) {
-	assert.True(t, firefoxMicros(0).IsZero(), "micros")
-	assert.True(t, firefoxMillis(0).IsZero(), "millis")
-	assert.True(t, firefoxSeconds(0).IsZero(), "seconds")
-}
-
-func TestFirefoxHelpers_NegativeReturnsZeroTime(t *testing.T) {
-	assert.True(t, firefoxMicros(-1).IsZero(), "micros")
-	assert.True(t, firefoxMillis(-1).IsZero(), "millis")
-	assert.True(t, firefoxSeconds(-1).IsZero(), "seconds")
-}
-
-func TestFirefoxHelpers_AlwaysUTC(t *testing.T) {
-	// assert.Same: pointer equality reliably catches any helper that
-	// leaks time.Local, independent of the runner's configured TZ.
-	assert.Same(t, time.UTC, firefoxMicros(anchorUnixSeconds*1_000_000).Location())
-	assert.Same(t, time.UTC, firefoxMillis(anchorUnixSeconds*1_000).Location())
-	assert.Same(t, time.UTC, firefoxSeconds(anchorUnixSeconds).Location())
-}
-
-func TestFirefoxHelpers_SameMomentAcrossUnits(t *testing.T) {
-	us := firefoxMicros(anchorUnixSeconds * 1_000_000)
-	ms := firefoxMillis(anchorUnixSeconds * 1_000)
-	s := firefoxSeconds(anchorUnixSeconds)
-	assert.True(t, us.Equal(ms))
-	assert.True(t, ms.Equal(s))
-}
-
-func TestFirefoxHelpers_OutOfJSONRangeReturnsZero(t *testing.T) {
-	for _, tc := range []struct {
-		name string
-		got  time.Time
-	}{
-		{"seconds", firefoxSeconds(1 << 50)},
-		{"millis", firefoxMillis(1 << 60)},
-		{"micros", firefoxMicros(1 << 62)},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			b, err := tc.got.MarshalJSON()
-			require.NoError(t, err)
-			assert.JSONEq(t, `"0001-01-01T00:00:00Z"`, string(b))
-		})
-	}
 }

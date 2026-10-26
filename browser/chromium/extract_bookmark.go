@@ -6,6 +6,7 @@ import (
 
 	"github.com/tidwall/gjson"
 
+	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -38,7 +39,7 @@ func walkBookmarks(node gjson.Result, folder string, out *[]types.BookmarkEntry)
 			Type:      nodeType,
 			URL:       node.Get("url").String(),
 			Folder:    folder,
-			CreatedAt: timeEpoch(node.Get("date_added").Int()),
+			CreatedAt: timeconv.Chromium(node.Get("date_added").Int()),
 		})
 	}
 

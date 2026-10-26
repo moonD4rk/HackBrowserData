@@ -1,4 +1,4 @@
-package sqliteutil
+package sqlitex
 
 import (
 	"database/sql"
@@ -7,7 +7,7 @@ import (
 )
 
 // CountRows runs a scalar count query (e.g. SELECT COUNT(*) FROM ...) and
-// returns the integer result. Unlike QuerySQLite (which swallows per-row scan
+// returns the integer result. Unlike eachRow (which swallows per-row scan
 // errors), CountRows uses QueryRow for fail-fast behavior on scan failures.
 func CountRows(dbPath string, journalOff bool, query string) (int, error) {
 	if _, err := os.Stat(dbPath); err != nil {
@@ -32,14 +32,14 @@ func CountRows(dbPath string, journalOff bool, query string) (int, error) {
 	return count, nil
 }
 
-// QueryRows is a generic helper (Go 1.18+) that wraps QuerySQLite and collects
+// QueryRows is a generic helper (Go 1.18+) that wraps eachRow and collects
 // results into a typed slice. Each extract method only needs to provide the
 // scan function that converts one database row into a typed value.
 //
-// Rows that fail to scan are skipped (logged at debug level by QuerySQLite).
+// Rows that fail to scan are skipped (logged at debug level by eachRow).
 func QueryRows[T any](dbPath string, journalOff bool, query string, scanRow func(*sql.Rows) (T, error)) ([]T, error) {
 	var items []T
-	err := QuerySQLite(dbPath, journalOff, query, func(rows *sql.Rows) error {
+	err := eachRow(dbPath, journalOff, query, func(rows *sql.Rows) error {
 		item, err := scanRow(rows)
 		if err != nil {
 			return err
