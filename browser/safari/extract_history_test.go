@@ -93,14 +93,3 @@ func TestExtractHistories_NullTitle(t *testing.T) {
 	assert.Equal(t, "https://null.test", got[0].URL)
 	assert.Empty(t, got[0].Title)
 }
-
-func TestCoredataTimestamp(t *testing.T) {
-	// A zero Core Data value is treated as "no timestamp" and returns
-	// the zero time.Time rather than literal 2001-01-01 — matches the
-	// convention used by the Chromium and Firefox helpers.
-	assert.True(t, coredataTimestamp(0).IsZero())
-
-	// Known value: 700000000 Core Data = 1678307200 Unix
-	ts2 := coredataTimestamp(700000000)
-	assert.Equal(t, int64(1678307200), ts2.Unix())
-}

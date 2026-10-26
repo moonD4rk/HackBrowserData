@@ -1,4 +1,4 @@
-package sqliteutil
+package sqlitex
 
 import (
 	"database/sql"
@@ -8,10 +8,10 @@ import (
 	// sqlite3 driver for database/sql
 	_ "modernc.org/sqlite"
 
-	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
-// QuerySQLite opens a SQLite database, optionally disables journal mode (required
+// eachRow opens a SQLite database, optionally disables journal mode (required
 // for Firefox databases), runs the query, and calls scanFn for each row.
 //
 // It validates the database file exists before opening to prevent sql.Open from
@@ -19,7 +19,7 @@ import (
 //
 // scanFn should return nil to continue iteration, or an error to skip the current
 // row (the error is logged at debug level and iteration continues).
-func QuerySQLite(dbPath string, journalOff bool, query string, scanFn func(*sql.Rows) error) error {
+func eachRow(dbPath string, journalOff bool, query string, scanFn func(*sql.Rows) error) error {
 	if _, err := os.Stat(dbPath); err != nil {
 		return fmt.Errorf("database file: %w", err)
 	}

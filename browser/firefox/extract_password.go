@@ -9,7 +9,8 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/internal/log"
+	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -68,7 +69,7 @@ func extractPasswords(masterKey []byte, path string) ([]types.LoginEntry, error)
 			URL:       url,
 			Username:  string(user),
 			Password:  string(pwd),
-			CreatedAt: firefoxMillis(v.Get("timeCreated").Int()),
+			CreatedAt: timeconv.UnixMilli(v.Get("timeCreated").Int()),
 			Store:     types.PasswordStoreLocal,
 		})
 	}

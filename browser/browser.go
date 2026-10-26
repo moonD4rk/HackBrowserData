@@ -9,7 +9,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/browser/chromium"
 	"github.com/moond4rk/hackbrowserdata/browser/firefox"
 	"github.com/moond4rk/hackbrowserdata/browser/safari"
-	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )

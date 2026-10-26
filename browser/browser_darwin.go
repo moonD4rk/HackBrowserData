@@ -9,7 +9,7 @@ import (
 	"github.com/moond4rk/keychainbreaker"
 	"golang.org/x/term"
 
-	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )

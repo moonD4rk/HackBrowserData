@@ -4,8 +4,9 @@ import (
 	"database/sql"
 	"sort"
 
+	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
+	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 	"github.com/moond4rk/hackbrowserdata/types"
-	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
 const (
@@ -15,7 +16,7 @@ const (
 )
 
 func extractHistories(path string) ([]types.HistoryEntry, error) {
-	histories, err := sqliteutil.QueryRows(path, true, firefoxHistoryQuery,
+	histories, err := sqlitex.QueryRows(path, true, firefoxHistoryQuery,
 		func(rows *sql.Rows) (types.HistoryEntry, error) {
 			var url, title string
 			var visitCount int
@@ -27,7 +28,7 @@ func extractHistories(path string) ([]types.HistoryEntry, error) {
 				URL:        url,
 				Title:      title,
 				VisitCount: visitCount,
-				LastVisit:  firefoxMicros(lastVisit),
+				LastVisit:  timeconv.UnixMicro(lastVisit),
 			}, nil
 		})
 	if err != nil {
@@ -41,5 +42,5 @@ func extractHistories(path string) ([]types.HistoryEntry, error) {
 }
 
 func countHistories(path string) (int, error) {
-	return sqliteutil.CountRows(path, true, firefoxCountHistoryQuery)
+	return sqlitex.CountRows(path, true, firefoxCountHistoryQuery)
 }

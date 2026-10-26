@@ -4,8 +4,9 @@ import (
 	"database/sql"
 	"sort"
 
+	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
+	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 	"github.com/moond4rk/hackbrowserdata/types"
-	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
 const (
@@ -16,7 +17,7 @@ const (
 )
 
 func extractBookmarks(path string) ([]types.BookmarkEntry, error) {
-	bookmarks, err := sqliteutil.QueryRows(path, true, firefoxBookmarkQuery,
+	bookmarks, err := sqlitex.QueryRows(path, true, firefoxBookmarkQuery,
 		func(rows *sql.Rows) (types.BookmarkEntry, error) {
 			var id, dateAdded int64
 			var url, title string
@@ -28,7 +29,7 @@ func extractBookmarks(path string) ([]types.BookmarkEntry, error) {
 				Name:      title,
 				URL:       url,
 				Folder:    bookmarkType(bt),
-				CreatedAt: firefoxMicros(dateAdded),
+				CreatedAt: timeconv.UnixMicro(dateAdded),
 			}, nil
 		})
 	if err != nil {
@@ -51,5 +52,5 @@ func bookmarkType(bt int64) string {
 }
 
 func countBookmarks(path string) (int, error) {
-	return sqliteutil.CountRows(path, true, firefoxCountBookmarkQuery)
+	return sqlitex.CountRows(path, true, firefoxCountBookmarkQuery)
 }

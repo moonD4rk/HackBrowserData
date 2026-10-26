@@ -1,4 +1,4 @@
-package sqliteutil
+package sqlitex
 
 import (
 	"database/sql"
@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestQuerySQLite(t *testing.T) {
+func TestEachRow(t *testing.T) {
 	// Create a temp SQLite database
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "test.db")
@@ -25,7 +25,7 @@ func TestQuerySQLite(t *testing.T) {
 
 	// Query using our helper
 	var names []string
-	err = QuerySQLite(dbPath, false, "SELECT name FROM items ORDER BY id", func(rows *sql.Rows) error {
+	err = eachRow(dbPath, false, "SELECT name FROM items ORDER BY id", func(rows *sql.Rows) error {
 		var name string
 		if err := rows.Scan(&name); err != nil {
 			return err
@@ -38,7 +38,7 @@ func TestQuerySQLite(t *testing.T) {
 	assert.Equal(t, []string{"alpha", "beta", "gamma"}, names)
 }
 
-func TestQuerySQLite_JournalOff(t *testing.T) {
+func TestEachRow_JournalOff(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "test.db")
 
@@ -51,7 +51,7 @@ func TestQuerySQLite_JournalOff(t *testing.T) {
 	require.NoError(t, db.Close())
 
 	var values []string
-	err = QuerySQLite(dbPath, true, "SELECT v FROM t", func(rows *sql.Rows) error {
+	err = eachRow(dbPath, true, "SELECT v FROM t", func(rows *sql.Rows) error {
 		var v string
 		if err := rows.Scan(&v); err != nil {
 			return err
@@ -63,14 +63,14 @@ func TestQuerySQLite_JournalOff(t *testing.T) {
 	assert.Equal(t, []string{"ok"}, values)
 }
 
-func TestQuerySQLite_FileNotFound(t *testing.T) {
-	err := QuerySQLite("/nonexistent/path.db", false, "SELECT 1", func(rows *sql.Rows) error {
+func TestEachRow_FileNotFound(t *testing.T) {
+	err := eachRow("/nonexistent/path.db", false, "SELECT 1", func(rows *sql.Rows) error {
 		return nil
 	})
 	require.Error(t, err)
 }
 
-func TestQuerySQLite_BadQuery(t *testing.T) {
+func TestEachRow_BadQuery(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "test.db")
 
@@ -80,7 +80,7 @@ func TestQuerySQLite_BadQuery(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, db.Close())
 
-	err = QuerySQLite(dbPath, false, "SELECT nonexistent FROM t", func(rows *sql.Rows) error {
+	err = eachRow(dbPath, false, "SELECT nonexistent FROM t", func(rows *sql.Rows) error {
 		return nil
 	})
 	require.Error(t, err)

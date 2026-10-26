@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/moond4rk/hackbrowserdata/browser"
-	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
 func dumpKeysCmd() *cobra.Command {

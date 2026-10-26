@@ -4,8 +4,9 @@ import (
 	"database/sql"
 	"sort"
 
+	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
+	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 	"github.com/moond4rk/hackbrowserdata/types"
-	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
 const (
@@ -15,7 +16,7 @@ const (
 )
 
 func extractCookies(path string) ([]types.CookieEntry, error) {
-	cookies, err := sqliteutil.QueryRows(path, true, firefoxCookieQuery,
+	cookies, err := sqlitex.QueryRows(path, true, firefoxCookieQuery,
 		func(rows *sql.Rows) (types.CookieEntry, error) {
 			var (
 				name, value, host, cookiePath string
@@ -48,8 +49,8 @@ func extractCookies(path string) ([]types.CookieEntry, error) {
 				IsHTTPOnly:   isHTTPOnly != 0,
 				HasExpire:    hasExpire,
 				IsPersistent: hasExpire,
-				ExpireAt:     firefoxSeconds(expiry),
-				CreatedAt:    firefoxMicros(createdAt),
+				ExpireAt:     timeconv.Unix(expiry),
+				CreatedAt:    timeconv.UnixMicro(createdAt),
 				SameSite:     sameSiteStr,
 			}, nil
 		})
@@ -64,5 +65,5 @@ func extractCookies(path string) ([]types.CookieEntry, error) {
 }
 
 func countCookies(path string) (int, error) {
-	return sqliteutil.CountRows(path, true, firefoxCountCookieQuery)
+	return sqlitex.CountRows(path, true, firefoxCountCookieQuery)
 }

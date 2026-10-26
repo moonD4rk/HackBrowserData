@@ -12,7 +12,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/moond4rk/hackbrowserdata/crypto/windows/payload"
-	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/utils/injector"
 	"github.com/moond4rk/hackbrowserdata/utils/winutil"
 )

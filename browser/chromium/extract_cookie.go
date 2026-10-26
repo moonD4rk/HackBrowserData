@@ -6,9 +6,10 @@ import (
 	"database/sql"
 	"sort"
 
+	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
+	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
-	"github.com/moond4rk/hackbrowserdata/utils/sqliteutil"
 )
 
 const (
@@ -19,7 +20,7 @@ const (
 )
 
 func extractCookies(masterKeys masterkey.MasterKeys, path string) ([]types.CookieEntry, error) {
-	cookies, err := sqliteutil.QueryRows(path, false, defaultCookieQuery,
+	cookies, err := sqlitex.QueryRows(path, false, defaultCookieQuery,
 		func(rows *sql.Rows) (types.CookieEntry, error) {
 			var (
 				name, host, cookiePath  string
@@ -57,8 +58,8 @@ func extractCookies(masterKeys masterkey.MasterKeys, path string) ([]types.Cooki
 				IsHTTPOnly:   isHTTPOnly != 0,
 				HasExpire:    hasExpire != 0,
 				IsPersistent: isPersistent != 0,
-				ExpireAt:     timeEpoch(expireAt),
-				CreatedAt:    timeEpoch(createdAt),
+				ExpireAt:     timeconv.Chromium(expireAt),
+				CreatedAt:    timeconv.Chromium(createdAt),
 				SameSite:     sameSiteStr,
 			}, nil
 		})
@@ -73,7 +74,7 @@ func extractCookies(masterKeys masterkey.MasterKeys, path string) ([]types.Cooki
 }
 
 func countCookies(path string) (int, error) {
-	return sqliteutil.CountRows(path, false, countCookieQuery)
+	return sqlitex.CountRows(path, false, countCookieQuery)
 }
 
 // stripCookieHash removes the SHA256(host_key) prefix from a decrypted cookie value. Chrome 130+

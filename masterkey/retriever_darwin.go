@@ -15,7 +15,7 @@ import (
 
 	"github.com/moond4rk/keychainbreaker"
 
-	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
 // https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157

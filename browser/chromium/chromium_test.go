@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -681,48 +680,4 @@ func TestSetRetrievers_SatisfiesInterface(t *testing.T) {
 	var _ interface {
 		SetRetrievers(masterkey.Retrievers)
 	} = (*Browser)(nil)
-}
-
-// Anchor: 2024-01-15T10:30:00Z as Chromium microseconds since 1601 UTC.
-const anchorUnixSeconds = int64(1705314600)
-
-var anchorChromiumMicros = (anchorUnixSeconds + 11644473600) * 1_000_000
-
-func TestTimeEpoch_AnchorDate(t *testing.T) {
-	got := timeEpoch(anchorChromiumMicros)
-	want := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
-	assert.Equal(t, want, got)
-	assert.Equal(t, anchorUnixSeconds, got.Unix())
-}
-
-func TestTimeEpoch_ZeroReturnsZeroTime(t *testing.T) {
-	assert.True(t, timeEpoch(0).IsZero())
-}
-
-func TestTimeEpoch_NegativeReturnsZeroTime(t *testing.T) {
-	assert.True(t, timeEpoch(-1).IsZero())
-}
-
-func TestTimeEpoch_AlwaysUTC(t *testing.T) {
-	// assert.Same checks pointer equality: time.UTC and time.Local are
-	// distinct *Location globals, so this catches any regression that
-	// drops .UTC() even when the runner's TZ happens to be UTC.
-	got := timeEpoch(anchorChromiumMicros)
-	assert.Same(t, time.UTC, got.Location())
-}
-
-func TestTimeEpoch_MicrosecondPrecisionPreserved(t *testing.T) {
-	got := timeEpoch(anchorChromiumMicros + 123456)
-	assert.Equal(t, 123456*int64(time.Microsecond), int64(got.Nanosecond()))
-}
-
-func TestTimeEpoch_UnixEpochBoundary(t *testing.T) {
-	got := timeEpoch(chromiumEpochOffsetMicros)
-	assert.Equal(t, time.Unix(0, 0).UTC(), got)
-}
-
-func TestTimeEpoch_OutOfJSONRangeReturnsZero(t *testing.T) {
-	jsonBytes, err := timeEpoch(1 << 62).MarshalJSON()
-	require.NoError(t, err)
-	assert.JSONEq(t, `"0001-01-01T00:00:00Z"`, string(jsonBytes))
 }

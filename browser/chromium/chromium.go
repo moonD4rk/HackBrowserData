@@ -4,10 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/moond4rk/hackbrowserdata/filemanager"
-	"github.com/moond4rk/hackbrowserdata/log"
+	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
@@ -255,21 +254,4 @@ func isSkippedDir(name string) bool {
 		return true
 	}
 	return false
-}
-
-// Offset from the Chromium epoch (1601-01-01 UTC) to the Unix epoch,
-// matching base::Time::kTimeTToMicrosecondsOffset in Chromium.
-const chromiumEpochOffsetMicros int64 = 11644473600000000
-
-// timeEpoch converts a Chromium base::Time (μs since 1601 UTC) to UTC.
-// Returns zero for non-positive input or out-of-JSON-range values.
-func timeEpoch(epoch int64) time.Time {
-	if epoch <= 0 {
-		return time.Time{}
-	}
-	t := time.UnixMicro(epoch - chromiumEpochOffsetMicros).UTC()
-	if t.Year() < 1 || t.Year() > 9999 {
-		return time.Time{}
-	}
-	return t
 }
