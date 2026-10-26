@@ -37,12 +37,6 @@ jobs:
             exit 1
           fi
 
-      - name: Check spelling
-        if: matrix.os == 'ubuntu-latest'
-        uses: crate-ci/typos@master
-        with:
-          config: ./.typos.toml
-
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:

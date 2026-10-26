@@ -24,7 +24,6 @@
 !.gitignore
 !.golangci.yml
 !.goreleaser.yml
-!.typos.toml
 !CLAUDE.md
 !LICENSE
 

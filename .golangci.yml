@@ -73,7 +73,8 @@ linters:
               desc: Deprecated since Go 1.16. Use io and os packages instead.
             - pkg: "github.com/instana/testify"
               desc: Use github.com/stretchr/testify instead.
-        # lax: stdlib and third-party stay allowed, and a longer allow entry beats the module deny ($ = exact package)
+        # One lax rule per import-table row: deny the module, then allow only the packages that row may import.
+        # lax keeps stdlib and third-party allowed; the trailing $ matches that exact package, not its subtree.
         internal/app:
           list-mode: lax
           files:
@@ -85,43 +86,11 @@ linters:
             - "github.com/moond4rk/hackbrowserdata/internal/"
             - "github.com/moond4rk/hackbrowserdata/utils/injector$"
             - "github.com/moond4rk/hackbrowserdata/crypto/windows/payload$"
-        internal/browser/chromium:
+        "internal/browser/{chromium,firefox,safari}":
           list-mode: lax
           files:
             - "**/internal/browser/chromium/**"
-          deny:
-            - pkg: "github.com/moond4rk/hackbrowserdata"
-              desc: not in this package's allow list in .golangci.yml
-          allow:
-            - "github.com/moond4rk/hackbrowserdata/internal/browser$"
-            - "github.com/moond4rk/hackbrowserdata/internal/category$"
-            - "github.com/moond4rk/hackbrowserdata/internal/record$"
-            - "github.com/moond4rk/hackbrowserdata/internal/masterkey$"
-            - "github.com/moond4rk/hackbrowserdata/internal/crypto$"
-            - "github.com/moond4rk/hackbrowserdata/internal/snapshot$"
-            - "github.com/moond4rk/hackbrowserdata/internal/sqlitex$"
-            - "github.com/moond4rk/hackbrowserdata/internal/timeconv$"
-            - "github.com/moond4rk/hackbrowserdata/internal/log$"
-        internal/browser/firefox:
-          list-mode: lax
-          files:
             - "**/internal/browser/firefox/**"
-          deny:
-            - pkg: "github.com/moond4rk/hackbrowserdata"
-              desc: not in this package's allow list in .golangci.yml
-          allow:
-            - "github.com/moond4rk/hackbrowserdata/internal/browser$"
-            - "github.com/moond4rk/hackbrowserdata/internal/category$"
-            - "github.com/moond4rk/hackbrowserdata/internal/record$"
-            - "github.com/moond4rk/hackbrowserdata/internal/masterkey$"
-            - "github.com/moond4rk/hackbrowserdata/internal/crypto$"
-            - "github.com/moond4rk/hackbrowserdata/internal/snapshot$"
-            - "github.com/moond4rk/hackbrowserdata/internal/sqlitex$"
-            - "github.com/moond4rk/hackbrowserdata/internal/timeconv$"
-            - "github.com/moond4rk/hackbrowserdata/internal/log$"
-        internal/browser/safari:
-          list-mode: lax
-          files:
             - "**/internal/browser/safari/**"
           deny:
             - pkg: "github.com/moond4rk/hackbrowserdata"
@@ -192,55 +161,23 @@ linters:
               desc: not in this package's allow list in .golangci.yml
           allow:
             - "github.com/moond4rk/hackbrowserdata/internal/category$"
-        internal/sqlitex:
+        "internal/{sqlitex,winapi}":
           list-mode: lax
           files:
             - "**/internal/sqlitex/**"
-          deny:
-            - pkg: "github.com/moond4rk/hackbrowserdata"
-              desc: not in this package's allow list in .golangci.yml
-          allow:
-            - "github.com/moond4rk/hackbrowserdata/internal/log$"
-        internal/winapi:
-          list-mode: lax
-          files:
             - "**/internal/winapi/**"
           deny:
             - pkg: "github.com/moond4rk/hackbrowserdata"
               desc: not in this package's allow list in .golangci.yml
           allow:
             - "github.com/moond4rk/hackbrowserdata/internal/log$"
-        internal/category:
+        "internal/{category,crypto,timeconv,keychain,log}":
           list-mode: lax
           files:
             - "**/internal/category/**"
-          deny:
-            - pkg: "github.com/moond4rk/hackbrowserdata"
-              desc: not in this package's allow list in .golangci.yml
-        internal/crypto:
-          list-mode: lax
-          files:
             - "**/internal/crypto/**"
-          deny:
-            - pkg: "github.com/moond4rk/hackbrowserdata"
-              desc: not in this package's allow list in .golangci.yml
-        internal/timeconv:
-          list-mode: lax
-          files:
             - "**/internal/timeconv/**"
-          deny:
-            - pkg: "github.com/moond4rk/hackbrowserdata"
-              desc: not in this package's allow list in .golangci.yml
-        internal/keychain:
-          list-mode: lax
-          files:
             - "**/internal/keychain/**"
-          deny:
-            - pkg: "github.com/moond4rk/hackbrowserdata"
-              desc: not in this package's allow list in .golangci.yml
-        internal/log:
-          list-mode: lax
-          files:
             - "**/internal/log/**"
           deny:
             - pkg: "github.com/moond4rk/hackbrowserdata"

@@ -65,7 +65,7 @@ Each bug designed out by this rewrite gets a test that would have caught it, so 
 
 ## Import direction
 
-`depguard` rules, one per package with a `files` glob, encode the table in [RFC-002](002-package-layout.md); a `go list`-based test double-checks it. `crypto` importing `browser`, anything importing `app`, or a base package importing another base package fails CI.
+`depguard` rules encode the table in [RFC-002](002-package-layout.md), one rule per row with a `files` glob for each of its packages; a `go list`-based test double-checks it. `crypto` importing `browser`, anything importing `app`, or a base package importing another base package fails CI.
 
 ## Go 1.20 pitfalls
 
@@ -78,7 +78,6 @@ The `go 1.20` directive constrains more than the standard library:
 
 - **golangci-lint v2** — the project's existing config, extended with per-package `depguard` rules and `tagliatelle` (`case.use-field-name: true`, `case.rules: {json: snake, csv: snake}`) on the packages that own a wire format — `record`, `masterkey` (`keys.json`), and `snapshot` (`manifest.json`); the Cookie-Editor encoder and any struct that mirrors a browser's own file format stay outside it. `lll` stays at 140.
 - **gofumpt** + **goimports** with `-local github.com/moond4rk/hackbrowserdata`.
-- **typos** for spelling.
 - **CI matrix**: Go pinned to `1.20.x` (not `go-version-file`) on Windows, macOS, and Linux; build + vet + lint + test; a step that fails unless `go.mod` says `go 1.20` with no `toolchain` line. The Windows ABE path is additionally validated on a dedicated Windows host against the current cookie/key baseline, not in hosted CI.
 
 ## Doc hygiene

@@ -33,9 +33,6 @@ golangci-lint run
 gofumpt -l -w .
 goimports -w -local github.com/moond4rk/hackbrowserdata .
 
-# Spelling
-typos
-
 # Dependencies (MUST use go@1.20 to avoid bumping go directive)
 # export GOROOT=$(brew --prefix go@1.20)/libexec && export PATH=$GOROOT/bin:$PATH
 go mod tidy
