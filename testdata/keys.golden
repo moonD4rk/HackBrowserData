@@ -1,0 +1,71 @@
+{
+  "version": "2",
+  "created_at": "2026-05-16T08:30:15.123456789Z",
+  "host": {
+    "os": "windows",
+    "arch": "amd64",
+    "hostname": "GOLDEN-PC",
+    "user": "GOLDEN-PC\\Jürgen"
+  },
+  "vaults": [
+    {
+      "browser": "chrome",
+      "kind": "chromium",
+      "user_data_dir": "C:\\Users\\Jürgen\\AppData\\Local\\Google\\Chrome\\User Data",
+      "profiles": [
+        "Default",
+        "Profile 1"
+      ],
+      "keys": {
+        "v10": "chrome+v10/os+crypt+key/AAAAAAAAAAAAAAAAAAA=",
+        "v20": "chrome+v20/app+bound+key/AAAAAAAAAAAAAAAAAA="
+      }
+    },
+    {
+      "browser": "edge",
+      "kind": "chromium",
+      "user_data_dir": "C:\\Users\\Jürgen\\AppData\\Local\\Microsoft\\Edge\\User Data",
+      "profiles": [
+        "Default"
+      ],
+      "keys": {
+        "v10": "edge+v10/os+crypt+key/AAAAAAAAAAAAAAAAAAAAA=",
+        "v20": "edge+v20/app+bound+key/AAAAAAAAAAAAAAAAAAAA="
+      }
+    },
+    {
+      "browser": "opera",
+      "kind": "chromium-opera",
+      "user_data_dir": "/home/r\u0026d/.config/opera",
+      "profiles": [
+        "Default"
+      ],
+      "keys": {
+        "v10": "opera+v10/peanuts+AAAA==",
+        "v11": "opera+v11/keyring+AAAA=="
+      }
+    },
+    {
+      "browser": "yandex",
+      "kind": "chromium-yandex",
+      "user_data_dir": "/Users/r\u0026d/Library/Application Support/Yandex/YandexBrowser",
+      "profiles": [
+        "Default"
+      ],
+      "keys": {
+        "v10": "yandex+v10/keychain+AA=="
+      }
+    },
+    {
+      "browser": "brave",
+      "kind": "chromium",
+      "user_data_dir": "C:\\Users\\Jürgen\\AppData\\Local\\BraveSoftware\\Brave-Browser\\User Data",
+      "profiles": [
+        "Default"
+      ],
+      "keys": {
+        "v10": "brave+v10/os+crypt+key/AAAAAAAAAAAAAAAAAAAA="
+      }
+    }
+  ]
+}

@@ -31,6 +31,8 @@ These guard the contract; a failure means the rewrite changed something users ca
 
 Export and extractor tests compare against checked-in golden outputs. Deterministic ordering is what makes goldens stable — without it, goldens would flap. A `-update` flag regenerates them on intentional changes. Goldens double as documentation of the exact output shape, useful for the README and for talks.
 
+The compatibility goldens — the flag sets, every output format, `keys.json`, and the archive layout — live in the repository-root `testdata/` and are read by the tests in `cmd/hack-browser-data`, the one package that never moves, so every phase compares its output against the same files. A golden holds what no other golden already implies: the Cookie-Editor golden holds only `cookie.json`, because every other category is asserted to match the json output byte for byte, and `restore` is asserted to match the extract output except for its `browser` stamp.
+
 ## Regression tests for the known bugs
 
 Each bug designed out by this rewrite gets a test that would have caught it, so it can never silently return:

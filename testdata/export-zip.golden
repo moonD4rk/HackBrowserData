@@ -1,0 +1,9 @@
+bookmark.csv method=8 modified=1979-11-30T00:00:00Z size=465 crc32=8a226a78
+cookie.csv method=8 modified=1979-11-30T00:00:00Z size=951 crc32=d8142c2c
+creditcard.csv method=8 modified=1979-11-30T00:00:00Z size=421 crc32=b70d4fbd
+download.csv method=8 modified=1979-11-30T00:00:00Z size=503 crc32=93bf2f68
+extension.csv method=8 modified=1979-11-30T00:00:00Z size=457 crc32=9db54ddb
+history.csv method=8 modified=1979-11-30T00:00:00Z size=508 crc32=ca7cbdf4
+localstorage.csv method=8 modified=1979-11-30T00:00:00Z size=380 crc32=e5224819
+password.csv method=8 modified=1979-11-30T00:00:00Z size=630 crc32=057af35e
+sessionstorage.csv method=8 modified=1979-11-30T00:00:00Z size=271 crc32=5a8632b3
