@@ -2,14 +2,13 @@ package firefox
 
 import (
 	"database/sql"
-	"sort"
 	"strings"
 
 	"github.com/tidwall/gjson"
 
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
-	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 const (
@@ -22,16 +21,16 @@ const (
 		GROUP BY place_id)`
 )
 
-func extractDownloads(path string) ([]types.DownloadEntry, error) {
+func extractDownloads(path string) ([]record.Download, error) {
 	downloads, err := sqlitex.QueryRows(path, true, firefoxDownloadQuery,
-		func(rows *sql.Rows) (types.DownloadEntry, error) {
+		func(rows *sql.Rows) (record.Download, error) {
 			var placeID, dateAdded int64
 			var content, url string
 			if err := rows.Scan(&placeID, &content, &url, &dateAdded); err != nil {
-				return types.DownloadEntry{}, err
+				return record.Download{}, err
 			}
 
-			entry := types.DownloadEntry{
+			entry := record.Download{
 				URL:       url,
 				StartTime: timeconv.UnixMicro(dateAdded),
 			}
@@ -53,10 +52,6 @@ func extractDownloads(path string) ([]types.DownloadEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	sort.Slice(downloads, func(i, j int) bool {
-		return downloads[i].StartTime.After(downloads[j].StartTime)
-	})
 	return downloads, nil
 }
 

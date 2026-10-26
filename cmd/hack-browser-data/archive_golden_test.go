@@ -14,6 +14,7 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/browser"
 	"github.com/moond4rk/hackbrowserdata/browser/chromium"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -89,10 +90,10 @@ func TestArchiveGolden(t *testing.T) {
 	tests := []struct {
 		name       string
 		golden     string
-		categories []types.Category
+		categories []category.Category
 	}{
-		{name: "all", golden: "archive-all.golden", categories: types.AllCategories},
-		{name: "cookie", golden: "archive-cookie.golden", categories: []types.Category{types.Cookie}},
+		{name: "all", golden: "archive-all.golden", categories: category.All()},
+		{name: "cookie", golden: "archive-cookie.golden", categories: []category.Category{category.Cookie}},
 	}
 	for _, tt := range tests {
 		tt := tt

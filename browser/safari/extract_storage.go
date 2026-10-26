@@ -11,7 +11,7 @@ import (
 	_ "modernc.org/sqlite"
 
 	"github.com/moond4rk/hackbrowserdata/internal/log"
-	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 // Modern WebKit (Safari 17+) stores localStorage under a nested, partitioned layout rooted at
@@ -52,13 +52,13 @@ const (
 	originPortExplicitFlag  = 0x01
 )
 
-func extractLocalStorage(root string) ([]types.StorageEntry, error) {
+func extractLocalStorage(root string) ([]record.LocalStorage, error) {
 	dirs, err := findOriginDataDirs(root)
 	if err != nil {
 		return nil, err
 	}
 
-	var entries []types.StorageEntry
+	var entries []record.LocalStorage
 	for _, od := range dirs {
 		origin, err := readOriginFile(filepath.Join(od, webkitOriginFile))
 		if err != nil {
@@ -72,7 +72,7 @@ func extractLocalStorage(root string) ([]types.StorageEntry, error) {
 			continue
 		}
 		for _, it := range items {
-			entries = append(entries, types.StorageEntry{
+			entries = append(entries, record.LocalStorage{
 				URL:   origin,
 				Key:   it.key,
 				Value: it.value,

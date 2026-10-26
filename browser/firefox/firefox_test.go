@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -147,19 +148,19 @@ func TestResolveSourcePaths(t *testing.T) {
 	resolved := resolveSourcePaths(firefoxSources, profileDir)
 
 	// All categories should be resolved
-	for _, cat := range []types.Category{
-		types.Password, types.Cookie, types.History,
-		types.Download, types.Bookmark, types.Extension, types.LocalStorage,
+	for _, cat := range []category.Category{
+		category.Password, category.Cookie, category.History,
+		category.Download, category.Bookmark, category.Extension, category.LocalStorage,
 	} {
 		assert.Contains(t, resolved, cat, "should resolve %s", cat)
 	}
 
 	// History, Download, Bookmark share places.sqlite
-	assert.Equal(t, resolved[types.History].absPath, resolved[types.Download].absPath)
-	assert.Equal(t, resolved[types.History].absPath, resolved[types.Bookmark].absPath)
+	assert.Equal(t, resolved[category.History].absPath, resolved[category.Download].absPath)
+	assert.Equal(t, resolved[category.History].absPath, resolved[category.Bookmark].absPath)
 
 	// Password is a different file
-	assert.NotEqual(t, resolved[types.Password].absPath, resolved[types.History].absPath)
+	assert.NotEqual(t, resolved[category.Password].absPath, resolved[category.History].absPath)
 }
 
 func TestResolveSourcePaths_Partial(t *testing.T) {
@@ -167,14 +168,14 @@ func TestResolveSourcePaths_Partial(t *testing.T) {
 	resolved := resolveSourcePaths(firefoxSources, profileDir)
 
 	// Only places.sqlite exists → History, Download, Bookmark resolved
-	assert.Contains(t, resolved, types.History)
-	assert.Contains(t, resolved, types.Download)
-	assert.Contains(t, resolved, types.Bookmark)
+	assert.Contains(t, resolved, category.History)
+	assert.Contains(t, resolved, category.Download)
+	assert.Contains(t, resolved, category.Bookmark)
 
 	// No logins.json, cookies.sqlite, etc.
-	assert.NotContains(t, resolved, types.Password)
-	assert.NotContains(t, resolved, types.Cookie)
-	assert.NotContains(t, resolved, types.Extension)
+	assert.NotContains(t, resolved, category.Password)
+	assert.NotContains(t, resolved, category.Cookie)
+	assert.NotContains(t, resolved, category.Extension)
 }
 
 // ---------------------------------------------------------------------------
@@ -194,8 +195,8 @@ func TestCountEntries(t *testing.T) {
 	require.NotNil(t, b)
 
 	// CountEntries works without master key.
-	results, err := b.CountEntries([]types.Category{types.History})
+	results, err := b.CountEntries([]category.Category{category.History})
 	require.NoError(t, err)
 	require.Len(t, results, 1)
-	assert.Equal(t, 3, results[0].Counts[types.History])
+	assert.Equal(t, 3, results[0].Counts[category.History])
 }

@@ -24,14 +24,14 @@ func TestExtractBookmarks(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
-	// Verify sort order: dateAdded descending
-	assert.Equal(t, "GitHub", got[0].Name)
-	assert.Equal(t, "Go Website", got[1].Name)
+	// Rows keep the database's order; the exporter sorts them.
+	assert.Equal(t, "Go Website", got[0].Name)
+	assert.Equal(t, "GitHub", got[1].Name)
 
 	// Verify field mapping
-	assert.Equal(t, "https://github.com", got[0].URL)
-	assert.Equal(t, "url", got[0].Folder) // type=1 → "url"
-	assert.False(t, got[0].CreatedAt.IsZero())
+	assert.Equal(t, "https://github.com", got[1].URL)
+	assert.Equal(t, "url", got[1].Folder) // type=1 → "url"
+	assert.False(t, got[1].CreatedAt.IsZero())
 }
 
 func TestCountBookmarks(t *testing.T) {

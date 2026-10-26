@@ -67,7 +67,7 @@ Each bug designed out by this rewrite gets a test that would have caught it, so 
 
 ## Import direction
 
-The table in [RFC-002](002-package-layout.md) is kept by review, not by a linter or a test: every new import edge is either in the table or added to it in the same pull request. The compiler still rejects cycles.
+The table in [RFC-002](002-package-layout.md) is kept by review, not by a linter or a test: every new import edge is either in the table or added to it in the same pull request. The compiler still rejects cycles. Until the switch-over, today's packages — and `cmd`, which still drives them — also import the new packages they are moving onto; those edges leave with the old code ([RFC-012](012-migration-roadmap.md)).
 
 ## Go 1.20 pitfalls
 

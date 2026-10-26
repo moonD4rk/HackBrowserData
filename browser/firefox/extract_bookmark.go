@@ -2,11 +2,10 @@ package firefox
 
 import (
 	"database/sql"
-	"sort"
 
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
-	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 const (
@@ -16,16 +15,16 @@ const (
 		INNER JOIN moz_places ON moz_bookmarks.fk=moz_places.id`
 )
 
-func extractBookmarks(path string) ([]types.BookmarkEntry, error) {
+func extractBookmarks(path string) ([]record.Bookmark, error) {
 	bookmarks, err := sqlitex.QueryRows(path, true, firefoxBookmarkQuery,
-		func(rows *sql.Rows) (types.BookmarkEntry, error) {
+		func(rows *sql.Rows) (record.Bookmark, error) {
 			var id, dateAdded int64
 			var url, title string
 			var bt int64
 			if err := rows.Scan(&id, &url, &bt, &dateAdded, &title); err != nil {
-				return types.BookmarkEntry{}, err
+				return record.Bookmark{}, err
 			}
-			return types.BookmarkEntry{
+			return record.Bookmark{
 				Name:      title,
 				URL:       url,
 				Folder:    bookmarkType(bt),
@@ -35,10 +34,6 @@ func extractBookmarks(path string) ([]types.BookmarkEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	sort.Slice(bookmarks, func(i, j int) bool {
-		return bookmarks[i].CreatedAt.After(bookmarks[j].CreatedAt)
-	})
 	return bookmarks, nil
 }
 

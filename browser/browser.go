@@ -9,6 +9,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/browser/chromium"
 	"github.com/moond4rk/hackbrowserdata/browser/firefox"
 	"github.com/moond4rk/hackbrowserdata/browser/safari"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
@@ -19,8 +20,8 @@ type Browser interface {
 	BrowserName() string
 	UserDataDir() string
 	Profiles() []types.Profile
-	Extract(categories []types.Category) ([]types.ExtractResult, error)
-	CountEntries(categories []types.Category) ([]types.CountResult, error)
+	Extract(categories []category.Category) ([]types.ExtractResult, error)
+	CountEntries(categories []category.Category) ([]types.CountResult, error)
 }
 
 type DiscoverOptions struct {

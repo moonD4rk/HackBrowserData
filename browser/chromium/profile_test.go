@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moond4rk/hackbrowserdata/filemanager"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
@@ -33,20 +35,20 @@ func TestExtractCategory_CustomExtractor(t *testing.T) {
 	// Create a profile with a custom extractor that records it was called
 	called := false
 	testExtractor := extensionExtractor{
-		fn: func(path string) ([]types.ExtensionEntry, error) {
+		fn: func(path string) ([]record.Extension, error) {
 			called = true
-			return []types.ExtensionEntry{{Name: "custom", ID: "test-id"}}, nil
+			return []record.Extension{{Name: "custom", ID: "test-id"}}, nil
 		},
 	}
 
 	p := &profile{
-		extractors: map[types.Category]categoryExtractor{
-			types.Extension: testExtractor,
+		extractors: map[category.Category]categoryExtractor{
+			category.Extension: testExtractor,
 		},
 	}
 
 	data := &types.BrowserData{}
-	p.extractCategory(data, types.Extension, masterkey.MasterKeys{}, "unused-path")
+	p.extractCategory(data, category.Extension, masterkey.MasterKeys{}, "unused-path")
 
 	assert.True(t, called, "custom extractor should be called")
 	require.Len(t, data.Extensions, 1)
@@ -65,7 +67,7 @@ func TestExtractCategory_DefaultFallback(t *testing.T) {
 	}
 
 	data := &types.BrowserData{}
-	p.extractCategory(data, types.History, masterkey.MasterKeys{}, path)
+	p.extractCategory(data, category.History, masterkey.MasterKeys{}, path)
 
 	require.Len(t, data.Histories, 1)
 	assert.Equal(t, "Example", data.Histories[0].Title)
@@ -85,7 +87,7 @@ func TestAcquireFiles(t *testing.T) {
 	require.NoError(t, err)
 	defer session.Cleanup()
 
-	cats := []types.Category{types.History, types.Cookie, types.Bookmark}
+	cats := []category.Category{category.History, category.Cookie, category.Bookmark}
 	paths := p.acquireFiles(session, cats)
 
 	assert.Len(t, paths, len(cats))
@@ -109,13 +111,14 @@ func TestExtractAndCountPasswords_MergesLocalAndAccountDatabases(t *testing.T) {
 		kind:        types.Chromium,
 		sourcePaths: resolveSourcePaths(chromiumSources, profileDir),
 	}
-	data := p.extract(masterkey.MasterKeys{}, []types.Category{types.Password})
+	data := p.extract(masterkey.MasterKeys{}, []category.Category{category.Password})
 	require.Len(t, data.Passwords, 2)
-	assert.Equal(t, "account-user", data.Passwords[0].Username)
-	assert.Equal(t, types.PasswordStoreAccount, data.Passwords[0].Store)
-	assert.Equal(t, "local-user", data.Passwords[1].Username)
-	assert.Equal(t, types.PasswordStoreLocal, data.Passwords[1].Store)
-	assert.Equal(t, 2, p.count([]types.Category{types.Password})[types.Password])
+	// Account rows are emitted after local ones; the exporter's stable sort relies on that when timestamps tie.
+	assert.Equal(t, "local-user", data.Passwords[0].Username)
+	assert.Equal(t, record.StoreLocal, data.Passwords[0].Store)
+	assert.Equal(t, "account-user", data.Passwords[1].Username)
+	assert.Equal(t, record.StoreAccount, data.Passwords[1].Store)
+	assert.Equal(t, 2, p.count([]category.Category{category.Password})[category.Password])
 }
 
 // A credential synced to both stores is reported twice; the Store field is what tells them
@@ -133,12 +136,12 @@ func TestExtractPasswords_IdenticalCredentialInBothStoresKeepsBoth(t *testing.T)
 		kind:        types.Chromium,
 		sourcePaths: resolveSourcePaths(chromiumSources, profileDir),
 	}
-	data := p.extract(masterkey.MasterKeys{}, []types.Category{types.Password})
+	data := p.extract(masterkey.MasterKeys{}, []category.Category{category.Password})
 
 	require.Len(t, data.Passwords, 2)
-	stores := []string{data.Passwords[0].Store, data.Passwords[1].Store}
-	assert.ElementsMatch(t, []string{types.PasswordStoreLocal, types.PasswordStoreAccount}, stores)
-	assert.Equal(t, 2, p.count([]types.Category{types.Password})[types.Password])
+	stores := []record.Store{data.Passwords[0].Store, data.Passwords[1].Store}
+	assert.ElementsMatch(t, []record.Store{record.StoreLocal, record.StoreAccount}, stores)
+	assert.Equal(t, 2, p.count([]category.Category{category.Password})[category.Password])
 }
 
 // A profile that only ever synced passwords has no local DB, so the account DB wins candidate
@@ -155,31 +158,31 @@ func TestExtractAndCountPasswords_AccountDatabaseOnly(t *testing.T) {
 		kind:        types.Chromium,
 		sourcePaths: resolveSourcePaths(chromiumSources, profileDir),
 	}
-	data := p.extract(masterkey.MasterKeys{}, []types.Category{types.Password})
+	data := p.extract(masterkey.MasterKeys{}, []category.Category{category.Password})
 
 	require.Len(t, data.Passwords, 1)
 	assert.Equal(t, "account-user", data.Passwords[0].Username)
-	assert.Equal(t, types.PasswordStoreAccount, data.Passwords[0].Store)
-	assert.Equal(t, 1, p.count([]types.Category{types.Password})[types.Password])
+	assert.Equal(t, record.StoreAccount, data.Passwords[0].Store)
+	assert.Equal(t, 1, p.count([]category.Category{category.Password})[category.Password])
 }
 
 func TestCountCategory(t *testing.T) {
 	t.Run("History", func(t *testing.T) {
 		path := setupHistoryDB(t)
 		p := &profile{kind: types.Chromium}
-		assert.Equal(t, 3, p.countCategory(types.History, path))
+		assert.Equal(t, 3, p.countCategory(category.History, path))
 	})
 
 	t.Run("Cookie", func(t *testing.T) {
 		path := setupCookieDB(t)
 		p := &profile{kind: types.Chromium}
-		assert.Equal(t, 2, p.countCategory(types.Cookie, path))
+		assert.Equal(t, 2, p.countCategory(category.Cookie, path))
 	})
 
 	t.Run("Bookmark", func(t *testing.T) {
 		path := setupBookmarkJSON(t)
 		p := &profile{kind: types.Chromium}
-		assert.Equal(t, 3, p.countCategory(types.Bookmark, path))
+		assert.Equal(t, 3, p.countCategory(category.Bookmark, path))
 	})
 
 	t.Run("Extension_Opera", func(t *testing.T) {
@@ -191,11 +194,11 @@ func TestCountCategory(t *testing.T) {
 			}
 		}`)
 		p := &profile{kind: types.ChromiumOpera}
-		assert.Equal(t, 1, p.countCategory(types.Extension, path))
+		assert.Equal(t, 1, p.countCategory(category.Extension, path))
 	})
 
 	t.Run("FileNotFound", func(t *testing.T) {
 		p := &profile{kind: types.Chromium}
-		assert.Equal(t, 0, p.countCategory(types.History, "/nonexistent/path"))
+		assert.Equal(t, 0, p.countCategory(category.History, "/nonexistent/path"))
 	})
 }

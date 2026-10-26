@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
 func TestExtractGolden(t *testing.T) {
@@ -38,6 +38,6 @@ func TestExtractGolden(t *testing.T) {
 func extractGoldenRun(t *testing.T, root, format string) string {
 	t.Helper()
 	out := t.TempDir()
-	require.NoError(t, extractAndWrite(chromiumFixtureBrowsers(t, root), types.AllCategories, out, format, false))
+	require.NoError(t, extractAndWrite(chromiumFixtureBrowsers(t, root), category.All(), out, format, false))
 	return out
 }

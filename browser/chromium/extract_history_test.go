@@ -23,15 +23,15 @@ func TestExtractHistories(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 3)
 
-	// Verify sort order: visit count descending
-	assert.Equal(t, 200, got[0].VisitCount)
-	assert.Equal(t, 100, got[1].VisitCount)
-	assert.Equal(t, 50, got[2].VisitCount)
+	// Rows keep the database's order; the exporter sorts them.
+	assert.Equal(t, 100, got[0].VisitCount)
+	assert.Equal(t, 50, got[1].VisitCount)
+	assert.Equal(t, 200, got[2].VisitCount)
 
 	// Verify field mapping
-	assert.Equal(t, "https://example.com", got[0].URL)
-	assert.Equal(t, "Example", got[0].Title)
-	assert.False(t, got[0].LastVisit.IsZero())
+	assert.Equal(t, "https://example.com", got[2].URL)
+	assert.Equal(t, "Example", got[2].Title)
+	assert.False(t, got[2].LastVisit.IsZero())
 }
 
 func TestCountHistories(t *testing.T) {

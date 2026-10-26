@@ -3,14 +3,13 @@ package chromium
 import (
 	"database/sql"
 	"errors"
-	"sort"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
-	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 const (
@@ -24,33 +23,29 @@ const (
 
 // appendPasswords merges another login DB into dst. Entries are kept even when an identical
 // credential already exists — the Store field records which DB each one came from.
-func appendPasswords(masterKeys masterkey.MasterKeys, path, store string, dst []types.LoginEntry) ([]types.LoginEntry, error) {
+func appendPasswords(masterKeys masterkey.MasterKeys, path string, store record.Store, dst []record.Login) ([]record.Login, error) {
 	logins, err := extractPasswords(masterKeys, path, store)
 	if err != nil {
 		return dst, err
 	}
-	dst = append(dst, logins...)
-	sort.SliceStable(dst, func(i, j int) bool {
-		return dst[i].CreatedAt.After(dst[j].CreatedAt)
-	})
-	return dst, nil
+	return append(dst, logins...), nil
 }
 
-func extractPasswords(masterKeys masterkey.MasterKeys, path, store string) ([]types.LoginEntry, error) {
+func extractPasswords(masterKeys masterkey.MasterKeys, path string, store record.Store) ([]record.Login, error) {
 	return extractPasswordsWithQuery(masterKeys, path, store, defaultLoginQuery)
 }
 
-func extractPasswordsWithQuery(masterKeys masterkey.MasterKeys, path, store, query string) ([]types.LoginEntry, error) {
+func extractPasswordsWithQuery(masterKeys masterkey.MasterKeys, path string, store record.Store, query string) ([]record.Login, error) {
 	logins, err := sqlitex.QueryRows(path, false, query,
-		func(rows *sql.Rows) (types.LoginEntry, error) {
+		func(rows *sql.Rows) (record.Login, error) {
 			var url, username string
 			var pwd []byte
 			var created int64
 			if err := rows.Scan(&url, &username, &pwd, &created); err != nil {
-				return types.LoginEntry{}, err
+				return record.Login{}, err
 			}
 			password, _ := decryptValue(masterKeys, pwd)
-			return types.LoginEntry{
+			return record.Login{
 				URL:       url,
 				Username:  username,
 				Password:  string(password),
@@ -61,16 +56,12 @@ func extractPasswordsWithQuery(masterKeys masterkey.MasterKeys, path, store, que
 	if err != nil {
 		return nil, err
 	}
-
-	sort.Slice(logins, func(i, j int) bool {
-		return logins[i].CreatedAt.After(logins[j].CreatedAt)
-	})
 	return logins, nil
 }
 
 // extractYandexPasswords walks Ya Passman Data.
 // Note: URL column is origin_url — it's what the per-row AAD is computed over (not action_url).
-func extractYandexPasswords(masterKeys masterkey.MasterKeys, path string) ([]types.LoginEntry, error) {
+func extractYandexPasswords(masterKeys masterkey.MasterKeys, path string) ([]record.Login, error) {
 	dataKey, err := loadYandexDataKey(path, masterKeys.V10)
 	if err != nil {
 		if errors.Is(err, errYandexMasterPasswordSet) {
@@ -81,18 +72,18 @@ func extractYandexPasswords(masterKeys masterkey.MasterKeys, path string) ([]typ
 	}
 
 	logins, err := sqlitex.QueryRows(path, false, yandexLoginQuery,
-		func(rows *sql.Rows) (types.LoginEntry, error) {
+		func(rows *sql.Rows) (record.Login, error) {
 			var originURL, usernameElem, usernameVal, passwordElem, signonRealm string
 			var passwordValue []byte
 			var created int64
 			if err := rows.Scan(&originURL, &usernameElem, &usernameVal, &passwordElem, &passwordValue, &signonRealm, &created); err != nil {
-				return types.LoginEntry{}, err
+				return record.Login{}, err
 			}
-			entry := types.LoginEntry{
+			entry := record.Login{
 				URL:       originURL,
 				Username:  usernameVal,
 				CreatedAt: timeconv.Chromium(created),
-				Store:     types.PasswordStoreLocal,
+				Store:     record.StoreLocal,
 			}
 			aad := yandexLoginAAD(originURL, usernameElem, usernameVal, passwordElem, signonRealm, nil)
 			plaintext, err := crypto.AESGCMDecryptBlob(dataKey, passwordValue, aad)
@@ -106,10 +97,6 @@ func extractYandexPasswords(masterKeys masterkey.MasterKeys, path string) ([]typ
 	if err != nil {
 		return nil, err
 	}
-
-	sort.Slice(logins, func(i, j int) bool {
-		return logins[i].CreatedAt.After(logins[j].CreatedAt)
-	})
 	return logins, nil
 }
 

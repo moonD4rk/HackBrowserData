@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/moond4rk/hackbrowserdata/browser/chromium"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
@@ -34,7 +35,7 @@ func TestWriteArchive_RoundTrip(t *testing.T) {
 	}
 
 	zipPath := filepath.Join(t.TempDir(), "data.zip")
-	n, err := WriteArchive([]Browser{b}, []types.Category{types.History}, zipPath)
+	n, err := WriteArchive([]Browser{b}, []category.Category{category.History}, zipPath)
 	if err != nil {
 		t.Fatalf("WriteArchive: %v", err)
 	}

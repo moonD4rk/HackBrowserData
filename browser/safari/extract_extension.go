@@ -10,7 +10,7 @@ import (
 
 	"github.com/moond4rk/plist"
 
-	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 // Safari keeps extensions in two sibling plists under the container's Safari dir:
@@ -32,7 +32,7 @@ const (
 var extensionKeyPattern = regexp.MustCompile(`^(\S+)\s+\(([^)]+)\)$`)
 
 // safariExtension mirrors the per-extension dict value in Extensions.plist.
-// Only fields that map onto types.ExtensionEntry are decoded; richer fields
+// Only fields that map onto record.Extension are decoded; richer fields
 // (Permissions, AccessibleOrigins, …) are intentionally ignored for the
 // minimum implementation.
 type safariExtension struct {
@@ -43,15 +43,15 @@ type safariExtension struct {
 // WebExtensions/Extensions.plist from the profile's Safari container and
 // returns the merged list, sorted by key for deterministic output.
 // A missing plist on either side is skipped silently.
-func extractExtensions(container string) ([]types.ExtensionEntry, error) {
+func extractExtensions(container string) ([]record.Extension, error) {
 	records, err := readSafariExtensions(container)
 	if err != nil {
 		return nil, err
 	}
 
-	extensions := make([]types.ExtensionEntry, 0, len(records))
+	extensions := make([]record.Extension, 0, len(records))
 	for _, r := range records {
-		extensions = append(extensions, types.ExtensionEntry{
+		extensions = append(extensions, record.Extension{
 			Name:    r.bundleID,
 			ID:      r.key,
 			Enabled: r.enabled,

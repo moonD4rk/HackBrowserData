@@ -11,18 +11,18 @@ import (
 	_ "modernc.org/sqlite"
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
 // yandexSourceOverrides contains only the entries that differ from chromiumSources.
-var yandexSourceOverrides = map[types.Category][]sourcePath{
-	types.Password:   {file("Ya Passman Data")},
-	types.CreditCard: {file("Ya Credit Cards")},
+var yandexSourceOverrides = map[category.Category][]sourcePath{
+	category.Password:   {file("Ya Passman Data")},
+	category.CreditCard: {file("Ya Credit Cards")},
 }
 
 // yandexSources returns chromiumSources with Yandex-specific overrides applied.
-func yandexSources() map[types.Category][]sourcePath {
-	sources := make(map[types.Category][]sourcePath, len(chromiumSources))
+func yandexSources() map[category.Category][]sourcePath {
+	sources := make(map[category.Category][]sourcePath, len(chromiumSources))
 	for k, v := range chromiumSources {
 		sources[k] = v
 	}
@@ -34,9 +34,9 @@ func yandexSources() map[types.Category][]sourcePath {
 
 // yandexExtractors overrides Password and CreditCard extraction for Yandex, which wraps its data-encryption key inside
 // meta.local_encryptor_data, binds per-row AAD to GCM, and stores cards as JSON blobs in a records table.
-var yandexExtractors = map[types.Category]categoryExtractor{
-	types.Password:   passwordExtractor{fn: extractYandexPasswords},
-	types.CreditCard: creditCardExtractor{fn: extractYandexCreditCards},
+var yandexExtractors = map[category.Category]categoryExtractor{
+	category.Password:   passwordExtractor{fn: extractYandexPasswords},
+	category.CreditCard: creditCardExtractor{fn: extractYandexCreditCards},
 }
 
 // yandexLoginAAD is SHA1(origin_url \x00 username_element \x00 username_value \x00 password_element \x00 signon_realm),

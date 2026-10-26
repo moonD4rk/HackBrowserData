@@ -2,11 +2,10 @@ package safari
 
 import (
 	"database/sql"
-	"sort"
 
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
-	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 const (
@@ -24,18 +23,18 @@ const (
 	safariCountHistoryQuery = `SELECT COUNT(*) FROM history_items`
 )
 
-func extractHistories(path string) ([]types.HistoryEntry, error) {
+func extractHistories(path string) ([]record.History, error) {
 	histories, err := sqlitex.QueryRows(path, true, safariHistoryQuery,
-		func(rows *sql.Rows) (types.HistoryEntry, error) {
+		func(rows *sql.Rows) (record.History, error) {
 			var (
 				url, title string
 				visitCount int
 				visitTime  float64
 			)
 			if err := rows.Scan(&url, &title, &visitCount, &visitTime); err != nil {
-				return types.HistoryEntry{}, err
+				return record.History{}, err
 			}
-			return types.HistoryEntry{
+			return record.History{
 				URL:        url,
 				Title:      title,
 				VisitCount: visitCount,
@@ -45,10 +44,6 @@ func extractHistories(path string) ([]types.HistoryEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	sort.Slice(histories, func(i, j int) bool {
-		return histories[i].VisitCount > histories[j].VisitCount
-	})
 	return histories, nil
 }
 

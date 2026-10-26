@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
@@ -136,7 +137,7 @@ func TestNewBrowsers(t *testing.T) {
 		kind         types.BrowserKind
 		wantProfiles []string            // expected profile base names
 		wantCats     map[string][]string // profile → expected category base names (spot check)
-		wantDirs     []types.Category    // categories that should be isDir=true
+		wantDirs     []category.Category // categories that should be isDir=true
 		skipProfiles []string            // should NOT appear
 	}{
 		{
@@ -147,7 +148,7 @@ func TestNewBrowsers(t *testing.T) {
 			wantCats: map[string][]string{
 				"Default": {"Login Data", "Cookies", "History", "Bookmarks", "Web Data", "Secure Preferences", "leveldb", "Session Storage"},
 			},
-			wantDirs:     []types.Category{types.LocalStorage, types.SessionStorage},
+			wantDirs:     []category.Category{category.LocalStorage, category.SessionStorage},
 			skipProfiles: []string{"System Profile", "Guest Profile", "Snapshot"},
 		},
 		{
@@ -194,14 +195,14 @@ func TestNewBrowsers(t *testing.T) {
 			dir:          fixture.leveldb,
 			kind:         types.Chromium,
 			wantProfiles: []string{"Default"},
-			wantDirs:     []types.Category{types.LocalStorage, types.SessionStorage},
+			wantDirs:     []category.Category{category.LocalStorage, category.SessionStorage},
 		},
 		{
 			name:         "leveldb only",
 			dir:          fixture.leveldbOnly,
 			kind:         types.Chromium,
 			wantProfiles: []string{"Default"},
-			wantDirs:     []types.Category{types.LocalStorage, types.SessionStorage},
+			wantDirs:     []category.Category{category.LocalStorage, category.SessionStorage},
 		},
 		{
 			name: "empty dir",
@@ -323,7 +324,7 @@ func assertCategories(t *testing.T, nameMap map[string]*profile, wantCats map[st
 	}
 }
 
-func assertDirCategories(t *testing.T, profiles []*profile, cats []types.Category) {
+func assertDirCategories(t *testing.T, profiles []*profile, cats []category.Category) {
 	t.Helper()
 	for _, cat := range cats {
 		for _, p := range profiles {
@@ -340,15 +341,15 @@ func assertDirCategories(t *testing.T, profiles []*profile, cats []types.Categor
 
 func TestCookiePriority(t *testing.T) {
 	resolved := resolveSourcePaths(chromiumSources, filepath.Join(fixture.bothCookies, "Default"))
-	require.Contains(t, resolved, types.Cookie)
-	assert.Contains(t, resolved[types.Cookie].absPath, "Network",
+	require.Contains(t, resolved, category.Cookie)
+	assert.Contains(t, resolved[category.Cookie].absPath, "Network",
 		"Network/Cookies should win over root Cookies")
 }
 
 func TestCookieFallback(t *testing.T) {
 	resolved := resolveSourcePaths(chromiumSources, filepath.Join(fixture.oldCookies, "Default"))
-	require.Contains(t, resolved, types.Cookie)
-	assert.NotContains(t, resolved[types.Cookie].absPath, "Network",
+	require.Contains(t, resolved, category.Cookie)
+	assert.NotContains(t, resolved[category.Cookie].absPath, "Network",
 		"should fallback to root Cookies when Network/Cookies missing")
 }
 
@@ -358,7 +359,7 @@ func TestCookieFallback(t *testing.T) {
 
 func TestSharedSourceFile(t *testing.T) {
 	resolved := resolveSourcePaths(chromiumSources, filepath.Join(fixture.chrome, "Default"))
-	assert.Equal(t, resolved[types.History].absPath, resolved[types.Download].absPath)
+	assert.Equal(t, resolved[category.History].absPath, resolved[category.Download].absPath)
 }
 
 // ---------------------------------------------------------------------------
@@ -369,10 +370,10 @@ func TestSourcesForKind(t *testing.T) {
 	chromium := sourcesForKind(types.Chromium)
 	yandex := sourcesForKind(types.ChromiumYandex)
 
-	assert.Equal(t, "Login Data", chromium[types.Password][0].rel)
-	assert.Equal(t, "Ya Passman Data", yandex[types.Password][0].rel)
+	assert.Equal(t, "Login Data", chromium[category.Password][0].rel)
+	assert.Equal(t, "Ya Passman Data", yandex[category.Password][0].rel)
 	// Yandex inherits non-overridden categories
-	assert.Equal(t, chromium[types.History][0].rel, yandex[types.History][0].rel)
+	assert.Equal(t, chromium[category.History][0].rel, yandex[category.History][0].rel)
 }
 
 func TestExtractorsForKind(t *testing.T) {
@@ -380,12 +381,12 @@ func TestExtractorsForKind(t *testing.T) {
 
 	yandexExt := extractorsForKind(types.ChromiumYandex)
 	require.NotNil(t, yandexExt)
-	assert.Contains(t, yandexExt, types.Password)
-	assert.Contains(t, yandexExt, types.CreditCard)
+	assert.Contains(t, yandexExt, category.Password)
+	assert.Contains(t, yandexExt, category.CreditCard)
 
 	operaExt := extractorsForKind(types.ChromiumOpera)
 	require.NotNil(t, operaExt)
-	assert.Contains(t, operaExt, types.Extension)
+	assert.Contains(t, operaExt, category.Extension)
 }
 
 // ---------------------------------------------------------------------------
@@ -608,13 +609,12 @@ func TestExtract(t *testing.T) {
 				b.SetRetrievers(masterkey.Retrievers{V10: tt.retriever})
 			}
 
-			results, err := b.Extract([]types.Category{types.History})
+			results, err := b.Extract([]category.Category{category.History})
 			require.NoError(t, err)
 			require.Len(t, results, 1)
 			require.NotNil(t, results[0].Data)
 			require.Len(t, results[0].Data.Histories, 3)
-			// setupHistoryDB: Example(200) > GitHub(100) > Go Dev(50)
-			assert.Equal(t, "Example", results[0].Data.Histories[0].Title)
+			assert.Equal(t, "GitHub", results[0].Data.Histories[0].Title)
 
 			if tt.wantRetriever {
 				mock, ok := tt.retriever.(*mockRetriever)
@@ -641,15 +641,15 @@ func TestCountEntries(t *testing.T) {
 	require.NotNil(t, b)
 
 	// No retriever set — CountEntries should still work (no decryption needed).
-	results, err := b.CountEntries([]types.Category{types.History, types.Download})
+	results, err := b.CountEntries([]category.Category{category.History, category.Download})
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 
-	assert.Equal(t, 3, results[0].Counts[types.History])
+	assert.Equal(t, 3, results[0].Counts[category.History])
 	// Download uses a different table in the same file; since we only
 	// created the urls table (not downloads), the count query will fail
 	// gracefully and return 0.
-	assert.Equal(t, 0, results[0].Counts[types.Download])
+	assert.Equal(t, 0, results[0].Counts[category.Download])
 }
 
 func TestCountEntries_NoRetrieverNeeded(t *testing.T) {
@@ -665,10 +665,10 @@ func TestCountEntries_NoRetrieverNeeded(t *testing.T) {
 	require.NotNil(t, b)
 
 	// No retriever set — CountEntries succeeds without master key.
-	results, err := b.CountEntries([]types.Category{types.Password})
+	results, err := b.CountEntries([]category.Category{category.Password})
 	require.NoError(t, err)
 	require.Len(t, results, 1)
-	assert.Equal(t, 2, results[0].Counts[types.Password])
+	assert.Equal(t, 2, results[0].Counts[category.Password])
 }
 
 // ---------------------------------------------------------------------------

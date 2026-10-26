@@ -1,5 +1,7 @@
 package types
 
+import "github.com/moond4rk/hackbrowserdata/internal/category"
+
 // Profile identifies one browser profile — a leaf under an installation.
 type Profile struct {
 	Name string
@@ -15,5 +17,5 @@ type ExtractResult struct {
 // CountResult pairs a profile with its per-category entry counts.
 type CountResult struct {
 	Profile
-	Counts map[Category]int
+	Counts map[category.Category]int
 }

@@ -30,7 +30,8 @@ Leaves first, bottom-up along the dependency arrows ([RFC-002](002-package-layou
 - Introduce `internal/category` — `Category` with bare values numbered from 1, today's `String()` values, `All` and `Parse` — and `internal/record`: `Login`, `Cookie`, and the other record types with flat `Browser` + `Profile` fields followed by today's field names and order, set through `record.Stamp` ([RFC-003](003-core-types.md)).
 - Apply the naming in [RFC-004](004-naming-decisions.md) verbatim: `types.Category` → `category.Category`, `types.LoginEntry` → `record.Login` and every other `…Entry` → its bare name, no `Category` prefix, no `Owner`/`Origin` umbrella.
 - Move `output` to `internal/export` — `Writer` and the `csv`, `json`, and `cookie-editor` encoders — on the new record types ([RFC-008](008-output-and-export.md)). It depends only on `category`, `record`, and `log`.
-- No output change: `tagliatelle` and the parity suite must stay green.
+- Move the row order out of the extractors into the exporter ([RFC-008](008-output-and-export.md)), so an extractor emits rows in source order. This lands the Firefox history order fix with its regression test.
+- No other output change: `tagliatelle` and the parity suite must stay green.
 
 ### Phase 3 — `crypto`, `masterkey`, `keychain`, `winapi`
 
@@ -52,7 +53,7 @@ Leaves first, bottom-up along the dependency arrows ([RFC-002](002-package-layou
 ### Phase 6 — Widen: Firefox and Safari
 
 - Port the Firefox and Safari bases one category at a time, each with a `testdata/` fixture and golden.
-- Land the listed output fixes here — Firefox history order and bookmark fields, Safari bookmark IDs — each with its regression test and as an expected diff in the parity suite.
+- Land the remaining listed output fixes here — Firefox bookmark fields and Safari bookmark IDs — each with its regression test and as an expected diff in the parity suite.
 
 ### Phase 7 — Switch over
 

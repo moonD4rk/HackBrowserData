@@ -4,7 +4,7 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
@@ -23,7 +23,7 @@ var installationFiles = []string{"Local State"}
 // ArchiveSources lists the files an archive must capture for the given categories: the User Data root
 // files (Local State), every resolved category source per profile, plus each profile's Preferences
 // marker so a restore can rediscover the profile. LayoutRel is forward-slash, relative to the root.
-func (b *Browser) ArchiveSources(categories []types.Category) []ArchiveSource {
+func (b *Browser) ArchiveSources(categories []category.Category) []ArchiveSource {
 	var out []ArchiveSource
 	for _, name := range installationFiles {
 		abs := filepath.Join(b.cfg.UserDataDir, name)

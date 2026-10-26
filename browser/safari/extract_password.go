@@ -2,39 +2,34 @@ package safari
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/moond4rk/keychainbreaker"
 
 	"github.com/moond4rk/hackbrowserdata/internal/log"
-	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-func extractPasswords(keychainPassword string) ([]types.LoginEntry, error) {
+func extractPasswords(keychainPassword string) ([]record.Login, error) {
 	passwords, err := getInternetPasswords(keychainPassword)
 	if err != nil {
 		return nil, err
 	}
 
-	var logins []types.LoginEntry
+	var logins []record.Login
 	for _, p := range passwords {
 		url := buildURL(p.Protocol, p.Server, p.Port, p.Path)
 		if url == "" || p.Account == "" {
 			continue
 		}
-		logins = append(logins, types.LoginEntry{
+		logins = append(logins, record.Login{
 			URL:       url,
 			Username:  p.Account,
 			Password:  p.PlainPassword,
 			CreatedAt: p.Created.UTC(),
-			Store:     types.PasswordStoreLocal,
+			Store:     record.StoreLocal,
 		})
 	}
-
-	sort.Slice(logins, func(i, j int) bool {
-		return logins[i].CreatedAt.After(logins[j].CreatedAt)
-	})
 	return logins, nil
 }
 

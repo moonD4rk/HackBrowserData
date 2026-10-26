@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -13,31 +14,31 @@ func TestCountCategory(t *testing.T) {
 	t.Run("History", func(t *testing.T) {
 		path := setupMozHistoryDB(t)
 		p := &profile{}
-		assert.Equal(t, 3, p.countCategory(types.History, path))
+		assert.Equal(t, 3, p.countCategory(category.History, path))
 	})
 
 	t.Run("Cookie", func(t *testing.T) {
 		path := setupMozCookieDB(t)
 		p := &profile{}
-		assert.Equal(t, 2, p.countCategory(types.Cookie, path))
+		assert.Equal(t, 2, p.countCategory(category.Cookie, path))
 	})
 
 	t.Run("Bookmark", func(t *testing.T) {
 		path := setupMozBookmarkDB(t)
 		p := &profile{}
-		assert.Equal(t, 2, p.countCategory(types.Bookmark, path))
+		assert.Equal(t, 2, p.countCategory(category.Bookmark, path))
 	})
 
 	t.Run("Extension", func(t *testing.T) {
 		path := setupMozExtensionJSON(t)
 		p := &profile{}
-		assert.Equal(t, 2, p.countCategory(types.Extension, path))
+		assert.Equal(t, 2, p.countCategory(category.Extension, path))
 	})
 
 	t.Run("UnsupportedCategory", func(t *testing.T) {
 		p := &profile{}
-		assert.Equal(t, 0, p.countCategory(types.CreditCard, "unused"))
-		assert.Equal(t, 0, p.countCategory(types.SessionStorage, "unused"))
+		assert.Equal(t, 0, p.countCategory(category.CreditCard, "unused"))
+		assert.Equal(t, 0, p.countCategory(category.SessionStorage, "unused"))
 	})
 }
 
@@ -55,12 +56,10 @@ func TestExtractCategory(t *testing.T) {
 		)
 		p := &profile{}
 		data := &types.BrowserData{}
-		p.extractCategory(data, types.History, nil, path)
+		p.extractCategory(data, category.History, nil, path)
 
 		require.Len(t, data.Histories, 2)
-		// Firefox sorts by visit count ascending
-		assert.Equal(t, 1, data.Histories[0].VisitCount)
-		assert.Equal(t, 3, data.Histories[1].VisitCount)
+		assert.ElementsMatch(t, []int{3, 1}, []int{data.Histories[0].VisitCount, data.Histories[1].VisitCount})
 	})
 
 	t.Run("Cookie", func(t *testing.T) {
@@ -70,7 +69,7 @@ func TestExtractCategory(t *testing.T) {
 		)
 		p := &profile{}
 		data := &types.BrowserData{}
-		p.extractCategory(data, types.Cookie, nil, path)
+		p.extractCategory(data, category.Cookie, nil, path)
 
 		require.Len(t, data.Cookies, 1)
 		assert.Equal(t, "session", data.Cookies[0].Name)
@@ -85,7 +84,7 @@ func TestExtractCategory(t *testing.T) {
 		)
 		p := &profile{}
 		data := &types.BrowserData{}
-		p.extractCategory(data, types.Bookmark, nil, path)
+		p.extractCategory(data, category.Bookmark, nil, path)
 
 		require.Len(t, data.Bookmarks, 1)
 		assert.Equal(t, "GitHub", data.Bookmarks[0].Name)
@@ -110,7 +109,7 @@ func TestExtractCategory(t *testing.T) {
 		}`)
 		p := &profile{}
 		data := &types.BrowserData{}
-		p.extractCategory(data, types.Extension, nil, path)
+		p.extractCategory(data, category.Extension, nil, path)
 
 		require.Len(t, data.Extensions, 1) // system extension skipped
 		assert.Equal(t, "uBlock Origin", data.Extensions[0].Name)
@@ -120,8 +119,8 @@ func TestExtractCategory(t *testing.T) {
 		p := &profile{}
 		data := &types.BrowserData{}
 		// CreditCard and SessionStorage are not supported by Firefox
-		p.extractCategory(data, types.CreditCard, nil, "unused")
-		p.extractCategory(data, types.SessionStorage, nil, "unused")
+		p.extractCategory(data, category.CreditCard, nil, "unused")
+		p.extractCategory(data, category.SessionStorage, nil, "unused")
 		assert.Empty(t, data.CreditCards)
 		assert.Empty(t, data.SessionStorage)
 	})

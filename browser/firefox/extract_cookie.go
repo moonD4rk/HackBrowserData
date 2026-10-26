@@ -2,11 +2,10 @@ package firefox
 
 import (
 	"database/sql"
-	"sort"
 
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
-	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 const (
@@ -15,9 +14,9 @@ const (
 	firefoxCountCookieQuery = `SELECT COUNT(*) FROM moz_cookies`
 )
 
-func extractCookies(path string) ([]types.CookieEntry, error) {
+func extractCookies(path string) ([]record.Cookie, error) {
 	cookies, err := sqlitex.QueryRows(path, true, firefoxCookieQuery,
-		func(rows *sql.Rows) (types.CookieEntry, error) {
+		func(rows *sql.Rows) (record.Cookie, error) {
 			var (
 				name, value, host, cookiePath string
 				isSecure, isHTTPOnly          int
@@ -26,7 +25,7 @@ func extractCookies(path string) ([]types.CookieEntry, error) {
 			)
 			if err := rows.Scan(&name, &value, &host, &cookiePath,
 				&createdAt, &expiry, &isSecure, &isHTTPOnly, &sameSite); err != nil {
-				return types.CookieEntry{}, err
+				return record.Cookie{}, err
 			}
 			hasExpire := expiry > 0
 			sameSiteStr := "unspecified"
@@ -40,7 +39,7 @@ func extractCookies(path string) ([]types.CookieEntry, error) {
 			case 256:
 				// not specified by Set-Cookie
 			}
-			return types.CookieEntry{
+			return record.Cookie{
 				Name:         name,
 				Host:         host,
 				Path:         cookiePath,
@@ -57,10 +56,6 @@ func extractCookies(path string) ([]types.CookieEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	sort.Slice(cookies, func(i, j int) bool {
-		return cookies[i].CreatedAt.After(cookies[j].CreatedAt)
-	})
 	return cookies, nil
 }
 

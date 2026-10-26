@@ -5,7 +5,9 @@ import (
 	"path/filepath"
 
 	"github.com/moond4rk/hackbrowserdata/filemanager"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
@@ -16,8 +18,8 @@ type profile struct {
 	profileDir  string
 	browserName string
 	kind        types.BrowserKind
-	extractors  map[types.Category]categoryExtractor
-	sourcePaths map[types.Category]resolvedPath
+	extractors  map[category.Category]categoryExtractor
+	sourcePaths map[category.Category]resolvedPath
 }
 
 func (p *profile) name() string {
@@ -31,7 +33,7 @@ func (p *profile) label() string { return p.browserName + "/" + p.name() }
 
 // extract copies the profile's source files to a temp directory and extracts the
 // requested categories, decrypting with the installation's master keys.
-func (p *profile) extract(masterKeys masterkey.MasterKeys, categories []types.Category) *types.BrowserData {
+func (p *profile) extract(masterKeys masterkey.MasterKeys, categories []category.Category) *types.BrowserData {
 	session, err := filemanager.NewSession()
 	if err != nil {
 		log.Debugf("new session for %s: %v", p.label(), err)
@@ -49,7 +51,7 @@ func (p *profile) extract(masterKeys masterkey.MasterKeys, categories []types.Ca
 		p.extractCategory(data, cat, masterKeys, path)
 	}
 	if accountDB, ok := p.acquireAccountPasswords(session, categories); ok {
-		passwords, err := appendPasswords(masterKeys, accountDB, types.PasswordStoreAccount, data.Passwords)
+		passwords, err := appendPasswords(masterKeys, accountDB, record.StoreAccount, data.Passwords)
 		if err != nil {
 			log.Debugf("extract account passwords for %s: %v", p.label(), err)
 		} else {
@@ -60,7 +62,7 @@ func (p *profile) extract(masterKeys masterkey.MasterKeys, categories []types.Ca
 }
 
 // count counts entries per category without decryption.
-func (p *profile) count(categories []types.Category) map[types.Category]int {
+func (p *profile) count(categories []category.Category) map[category.Category]int {
 	session, err := filemanager.NewSession()
 	if err != nil {
 		log.Debugf("new session for %s: %v", p.label(), err)
@@ -69,7 +71,7 @@ func (p *profile) count(categories []types.Category) map[types.Category]int {
 	defer session.Cleanup()
 
 	tempPaths := p.acquireFiles(session, categories)
-	counts := make(map[types.Category]int)
+	counts := make(map[category.Category]int)
 	for _, cat := range categories {
 		path, ok := tempPaths[cat]
 		if !ok {
@@ -81,7 +83,7 @@ func (p *profile) count(categories []types.Category) map[types.Category]int {
 		if count, err := countPasswords(accountDB); err != nil {
 			log.Debugf("count account passwords for %s: %v", p.label(), err)
 		} else {
-			counts[types.Password] += count
+			counts[category.Password] += count
 		}
 	}
 	return counts
@@ -89,7 +91,7 @@ func (p *profile) count(categories []types.Category) map[types.Category]int {
 
 // acquireAccountPasswords copies the account-synced password DB into the session, when the
 // profile has one alongside the local DB.
-func (p *profile) acquireAccountPasswords(session *filemanager.Session, categories []types.Category) (string, bool) {
+func (p *profile) acquireAccountPasswords(session *filemanager.Session, categories []category.Category) (string, bool) {
 	accountPath, ok := p.accountPasswordPath(categories)
 	if !ok {
 		return "", false
@@ -104,24 +106,24 @@ func (p *profile) acquireAccountPasswords(session *filemanager.Session, categori
 
 // primaryPasswordStore labels the resolved primary login DB: a profile that only ever synced
 // passwords has no local Login Data, so the account DB wins candidate resolution.
-func (p *profile) primaryPasswordStore() string {
-	if primary, ok := p.sourcePaths[types.Password]; ok && primary.rel == accountLoginData {
-		return types.PasswordStoreAccount
+func (p *profile) primaryPasswordStore() record.Store {
+	if primary, ok := p.sourcePaths[category.Password]; ok && primary.rel == accountLoginData {
+		return record.StoreAccount
 	}
-	return types.PasswordStoreLocal
+	return record.StoreLocal
 }
 
 // accountPasswordPath returns the account-synced password DB when the primary source resolved to
 // the local Login Data DB. If only Login Data For Account exists, it is already the primary source.
-func (p *profile) accountPasswordPath(categories []types.Category) (string, bool) {
+func (p *profile) accountPasswordPath(categories []category.Category) (string, bool) {
 	requested := false
 	for _, cat := range categories {
-		if cat == types.Password {
+		if cat == category.Password {
 			requested = true
 			break
 		}
 	}
-	primary, ok := p.sourcePaths[types.Password]
+	primary, ok := p.sourcePaths[category.Password]
 	if !requested || !ok || primary.rel == accountLoginData || p.kind == types.ChromiumYandex {
 		return "", false
 	}
@@ -131,8 +133,8 @@ func (p *profile) accountPasswordPath(categories []types.Category) (string, bool
 }
 
 // acquireFiles copies source files to the session temp directory.
-func (p *profile) acquireFiles(session *filemanager.Session, categories []types.Category) map[types.Category]string {
-	tempPaths := make(map[types.Category]string)
+func (p *profile) acquireFiles(session *filemanager.Session, categories []category.Category) map[category.Category]string {
+	tempPaths := make(map[category.Category]string)
 	for _, cat := range categories {
 		rp, ok := p.sourcePaths[cat]
 		if !ok {
@@ -150,7 +152,7 @@ func (p *profile) acquireFiles(session *filemanager.Session, categories []types.
 
 // extractCategory calls the appropriate extract function for a category. A custom
 // extractor (registered via extractorsForKind) takes precedence over the switch.
-func (p *profile) extractCategory(data *types.BrowserData, cat types.Category, masterKeys masterkey.MasterKeys, path string) {
+func (p *profile) extractCategory(data *types.BrowserData, cat category.Category, masterKeys masterkey.MasterKeys, path string) {
 	if ext, ok := p.extractors[cat]; ok {
 		if err := ext.extract(masterKeys, path, data); err != nil {
 			log.Debugf("extract %s for %s: %v", cat, p.label(), err)
@@ -160,23 +162,23 @@ func (p *profile) extractCategory(data *types.BrowserData, cat types.Category, m
 
 	var err error
 	switch cat {
-	case types.Password:
+	case category.Password:
 		data.Passwords, err = extractPasswords(masterKeys, path, p.primaryPasswordStore())
-	case types.Cookie:
+	case category.Cookie:
 		data.Cookies, err = extractCookies(masterKeys, path)
-	case types.History:
+	case category.History:
 		data.Histories, err = extractHistories(path)
-	case types.Download:
+	case category.Download:
 		data.Downloads, err = extractDownloads(path)
-	case types.Bookmark:
+	case category.Bookmark:
 		data.Bookmarks, err = extractBookmarks(path)
-	case types.CreditCard:
+	case category.CreditCard:
 		data.CreditCards, err = extractCreditCards(masterKeys, path)
-	case types.Extension:
+	case category.Extension:
 		data.Extensions, err = extractExtensions(path)
-	case types.LocalStorage:
+	case category.LocalStorage:
 		data.LocalStorage, err = extractLocalStorage(path)
-	case types.SessionStorage:
+	case category.SessionStorage:
 		data.SessionStorage, err = extractSessionStorage(path)
 	}
 	if err != nil {
@@ -185,35 +187,35 @@ func (p *profile) extractCategory(data *types.BrowserData, cat types.Category, m
 }
 
 // countCategory calls the appropriate count function for a category.
-func (p *profile) countCategory(cat types.Category, path string) int {
+func (p *profile) countCategory(cat category.Category, path string) int {
 	var count int
 	var err error
 	switch cat {
-	case types.Password:
+	case category.Password:
 		count, err = countPasswords(path)
-	case types.Cookie:
+	case category.Cookie:
 		count, err = countCookies(path)
-	case types.History:
+	case category.History:
 		count, err = countHistories(path)
-	case types.Download:
+	case category.Download:
 		count, err = countDownloads(path)
-	case types.Bookmark:
+	case category.Bookmark:
 		count, err = countBookmarks(path)
-	case types.CreditCard:
+	case category.CreditCard:
 		if p.kind == types.ChromiumYandex {
 			count, err = countYandexCreditCards(path)
 		} else {
 			count, err = countCreditCards(path)
 		}
-	case types.Extension:
+	case category.Extension:
 		if p.kind == types.ChromiumOpera {
 			count, err = countOperaExtensions(path)
 		} else {
 			count, err = countExtensions(path)
 		}
-	case types.LocalStorage:
+	case category.LocalStorage:
 		count, err = countLocalStorage(path)
-	case types.SessionStorage:
+	case category.SessionStorage:
 		count, err = countSessionStorage(path)
 	}
 	if err != nil {

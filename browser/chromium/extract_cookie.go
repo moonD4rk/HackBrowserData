@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"database/sql"
-	"sort"
 
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
-	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 const (
@@ -19,9 +18,9 @@ const (
 	countCookieQuery = `SELECT COUNT(*) FROM cookies`
 )
 
-func extractCookies(masterKeys masterkey.MasterKeys, path string) ([]types.CookieEntry, error) {
+func extractCookies(masterKeys masterkey.MasterKeys, path string) ([]record.Cookie, error) {
 	cookies, err := sqlitex.QueryRows(path, false, defaultCookieQuery,
-		func(rows *sql.Rows) (types.CookieEntry, error) {
+		func(rows *sql.Rows) (record.Cookie, error) {
 			var (
 				name, host, cookiePath  string
 				isSecure, isHTTPOnly    int
@@ -33,7 +32,7 @@ func extractCookies(masterKeys masterkey.MasterKeys, path string) ([]types.Cooki
 			if err := rows.Scan(&name, &encryptedValue, &host, &cookiePath,
 				&createdAt, &expireAt, &isSecure, &isHTTPOnly,
 				&hasExpire, &isPersistent, &sameSite); err != nil {
-				return types.CookieEntry{}, err
+				return record.Cookie{}, err
 			}
 
 			value, _ := decryptValue(masterKeys, encryptedValue)
@@ -49,7 +48,7 @@ func extractCookies(masterKeys masterkey.MasterKeys, path string) ([]types.Cooki
 			case -1:
 				// not specified by Set-Cookie
 			}
-			return types.CookieEntry{
+			return record.Cookie{
 				Name:         name,
 				Host:         host,
 				Path:         cookiePath,
@@ -66,10 +65,6 @@ func extractCookies(masterKeys masterkey.MasterKeys, path string) ([]types.Cooki
 	if err != nil {
 		return nil, err
 	}
-
-	sort.Slice(cookies, func(i, j int) bool {
-		return cookies[i].CreatedAt.After(cookies[j].CreatedAt)
-	})
 	return cookies, nil
 }
 

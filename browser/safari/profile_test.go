@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -16,7 +17,7 @@ func TestCountCategory(t *testing.T) {
 			insertHistoryItem(1, "https://example.com", "example.com", 1),
 		)
 		p := &profile{}
-		assert.Equal(t, 1, p.countCategory(types.History, path, ""))
+		assert.Equal(t, 1, p.countCategory(category.History, path, ""))
 	})
 
 	t.Run("Cookie", func(t *testing.T) {
@@ -25,7 +26,7 @@ func TestCountCategory(t *testing.T) {
 			{domain: ".go.dev", name: "b", path: "/", value: "2", expires: 2000000000.0, creation: 700000000.0},
 		})
 		p := &profile{}
-		assert.Equal(t, 2, p.countCategory(types.Cookie, path, ""))
+		assert.Equal(t, 2, p.countCategory(category.Cookie, path, ""))
 	})
 
 	t.Run("Bookmark", func(t *testing.T) {
@@ -37,7 +38,7 @@ func TestCountCategory(t *testing.T) {
 			},
 		})
 		p := &profile{}
-		assert.Equal(t, 2, p.countCategory(types.Bookmark, path, ""))
+		assert.Equal(t, 2, p.countCategory(category.Bookmark, path, ""))
 	})
 
 	t.Run("Download", func(t *testing.T) {
@@ -47,7 +48,7 @@ func TestCountCategory(t *testing.T) {
 			},
 		})
 		p := &profile{}
-		assert.Equal(t, 1, p.countCategory(types.Download, path, ""))
+		assert.Equal(t, 1, p.countCategory(category.Download, path, ""))
 	})
 
 	t.Run("LocalStorage", func(t *testing.T) {
@@ -56,13 +57,13 @@ func TestCountCategory(t *testing.T) {
 			"https://go.dev":      {{Key: "theme", Value: "dark"}},
 		})
 		p := &profile{}
-		assert.Equal(t, 3, p.countCategory(types.LocalStorage, dir, ""))
+		assert.Equal(t, 3, p.countCategory(category.LocalStorage, dir, ""))
 	})
 
 	t.Run("UnsupportedCategory", func(t *testing.T) {
 		p := &profile{}
-		assert.Equal(t, 0, p.countCategory(types.CreditCard, "unused", ""))
-		assert.Equal(t, 0, p.countCategory(types.SessionStorage, "unused", ""))
+		assert.Equal(t, 0, p.countCategory(category.CreditCard, "unused", ""))
+		assert.Equal(t, 0, p.countCategory(category.SessionStorage, "unused", ""))
 	})
 }
 
@@ -77,12 +78,10 @@ func TestExtractCategory(t *testing.T) {
 		)
 		p := &profile{}
 		data := &types.BrowserData{}
-		p.extractCategory(data, types.History, path, "")
+		p.extractCategory(data, category.History, path, "")
 
 		require.Len(t, data.Histories, 2)
-		// Sorted by visit count descending
-		assert.Equal(t, 3, data.Histories[0].VisitCount)
-		assert.Equal(t, 1, data.Histories[1].VisitCount)
+		assert.ElementsMatch(t, []int{3, 1}, []int{data.Histories[0].VisitCount, data.Histories[1].VisitCount})
 	})
 
 	t.Run("Cookie", func(t *testing.T) {
@@ -94,7 +93,7 @@ func TestExtractCategory(t *testing.T) {
 		})
 		p := &profile{}
 		data := &types.BrowserData{}
-		p.extractCategory(data, types.Cookie, path, "")
+		p.extractCategory(data, category.Cookie, path, "")
 
 		require.Len(t, data.Cookies, 1)
 		assert.Equal(t, ".example.com", data.Cookies[0].Host)
@@ -112,7 +111,7 @@ func TestExtractCategory(t *testing.T) {
 		})
 		p := &profile{}
 		data := &types.BrowserData{}
-		p.extractCategory(data, types.Bookmark, path, "")
+		p.extractCategory(data, category.Bookmark, path, "")
 
 		require.Len(t, data.Bookmarks, 1)
 		assert.Equal(t, "GitHub", data.Bookmarks[0].Name)
@@ -127,7 +126,7 @@ func TestExtractCategory(t *testing.T) {
 		})
 		p := &profile{}
 		data := &types.BrowserData{}
-		p.extractCategory(data, types.Download, path, "")
+		p.extractCategory(data, category.Download, path, "")
 
 		require.Len(t, data.Downloads, 1)
 		assert.Equal(t, "https://example.com/file.zip", data.Downloads[0].URL)
@@ -140,7 +139,7 @@ func TestExtractCategory(t *testing.T) {
 		})
 		p := &profile{}
 		data := &types.BrowserData{}
-		p.extractCategory(data, types.LocalStorage, dir, "")
+		p.extractCategory(data, category.LocalStorage, dir, "")
 
 		require.Len(t, data.LocalStorage, 1)
 		assert.Equal(t, "https://github.com", data.LocalStorage[0].URL)
@@ -151,7 +150,7 @@ func TestExtractCategory(t *testing.T) {
 	t.Run("UnsupportedCategory", func(t *testing.T) {
 		p := &profile{}
 		data := &types.BrowserData{}
-		p.extractCategory(data, types.CreditCard, "unused", "")
+		p.extractCategory(data, category.CreditCard, "unused", "")
 		assert.Empty(t, data.CreditCards)
 	})
 }

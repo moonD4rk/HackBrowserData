@@ -1,14 +1,10 @@
 package main
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/spf13/cobra"
 
 	"github.com/moond4rk/hackbrowserdata/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
-	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 func dumpCmd() *cobra.Command {
@@ -60,43 +56,4 @@ func dumpCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&compress, "zip", false, "compress output to zip")
 
 	return cmd
-}
-
-// parseCategories converts a comma-separated string into a Category slice.
-// "all" returns all categories.
-func parseCategories(s string) ([]types.Category, error) {
-	s = strings.TrimSpace(s)
-	if strings.EqualFold(s, "all") {
-		return types.AllCategories, nil
-	}
-
-	categoryMap := make(map[string]types.Category, len(types.AllCategories))
-	for _, c := range types.AllCategories {
-		categoryMap[c.String()] = c
-	}
-
-	var categories []types.Category
-	for _, name := range strings.Split(s, ",") {
-		name = strings.TrimSpace(strings.ToLower(name))
-		if name == "" {
-			continue
-		}
-		c, ok := categoryMap[name]
-		if !ok {
-			return nil, fmt.Errorf("unknown category: %q, available: all|%s", name, categoryNames())
-		}
-		categories = append(categories, c)
-	}
-	if len(categories) == 0 {
-		return nil, fmt.Errorf("no categories specified")
-	}
-	return categories, nil
-}
-
-func categoryNames() string {
-	names := make([]string, len(types.AllCategories))
-	for i, c := range types.AllCategories {
-		names[i] = c.String()
-	}
-	return strings.Join(names, ",")
 }

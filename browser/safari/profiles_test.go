@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
 // containerPaths returns (legacyHome, container) for a fake ~/Library tree
@@ -223,12 +223,12 @@ func TestBuildSources_DefaultProfile(t *testing.T) {
 	p := profileContext{legacyHome: legacyHome, container: container}
 	sources := buildSources(p)
 
-	assert.Equal(t, filepath.Join(legacyHome, "History.db"), sources[types.History][0].abs)
-	assert.Equal(t, filepath.Join(legacyHome, "Bookmarks.plist"), sources[types.Bookmark][0].abs)
-	assert.Equal(t, filepath.Join(legacyHome, "Downloads.plist"), sources[types.Download][0].abs)
-	require.Len(t, sources[types.Cookie], 2)
-	assert.Equal(t, filepath.Join(container, "Cookies", "Cookies.binarycookies"), sources[types.Cookie][0].abs)
-	assert.Equal(t, filepath.Join(library, "Cookies", "Cookies.binarycookies"), sources[types.Cookie][1].abs)
+	assert.Equal(t, filepath.Join(legacyHome, "History.db"), sources[category.History][0].abs)
+	assert.Equal(t, filepath.Join(legacyHome, "Bookmarks.plist"), sources[category.Bookmark][0].abs)
+	assert.Equal(t, filepath.Join(legacyHome, "Downloads.plist"), sources[category.Download][0].abs)
+	require.Len(t, sources[category.Cookie], 2)
+	assert.Equal(t, filepath.Join(container, "Cookies", "Cookies.binarycookies"), sources[category.Cookie][0].abs)
+	assert.Equal(t, filepath.Join(library, "Cookies", "Cookies.binarycookies"), sources[category.Cookie][1].abs)
 }
 
 func TestBuildSources_NamedProfile(t *testing.T) {
@@ -247,13 +247,13 @@ func TestBuildSources_NamedProfile(t *testing.T) {
 
 	assert.Equal(t,
 		filepath.Join(container, "Safari", "Profiles", uuid, "History.db"),
-		sources[types.History][0].abs)
+		sources[category.History][0].abs)
 	assert.Equal(t,
 		filepath.Join(container, "WebKit", "WebsiteDataStore", strings.ToLower(uuid), "Cookies", "Cookies.binarycookies"),
-		sources[types.Cookie][0].abs)
+		sources[category.Cookie][0].abs)
 	// Download points at the shared plist — filtering by DownloadEntryProfileUUIDStringKey
 	// happens inside extractDownloads, not at the path layer.
-	assert.Equal(t, filepath.Join(legacyHome, "Downloads.plist"), sources[types.Download][0].abs)
+	assert.Equal(t, filepath.Join(legacyHome, "Downloads.plist"), sources[category.Download][0].abs)
 	// Bookmark is still shared with no per-entry profile tag, so it's attributed to default only.
-	assert.NotContains(t, sources, types.Bookmark)
+	assert.NotContains(t, sources, category.Bookmark)
 }

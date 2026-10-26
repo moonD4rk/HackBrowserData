@@ -3,26 +3,25 @@ package safari
 import (
 	"fmt"
 	"os"
-	"sort"
 
 	"github.com/moond4rk/binarycookies"
 
-	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-func extractCookies(path string) ([]types.CookieEntry, error) {
+func extractCookies(path string) ([]record.Cookie, error) {
 	pages, err := decodeBinaryCookies(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var cookies []types.CookieEntry
+	var cookies []record.Cookie
 	for _, page := range pages {
 		for _, c := range page.Cookies {
 			hasExpire := !c.Expires.IsZero()
 			// binarycookies returns time.Time in Local; normalize to UTC
 			// so exported JSON matches Chromium/Firefox cookie output.
-			cookies = append(cookies, types.CookieEntry{
+			cookies = append(cookies, record.Cookie{
 				Host:         string(c.Domain),
 				Path:         string(c.Path),
 				Name:         string(c.Name),
@@ -36,10 +35,6 @@ func extractCookies(path string) ([]types.CookieEntry, error) {
 			})
 		}
 	}
-
-	sort.Slice(cookies, func(i, j int) bool {
-		return cookies[i].CreatedAt.After(cookies[j].CreatedAt)
-	})
 	return cookies, nil
 }
 
