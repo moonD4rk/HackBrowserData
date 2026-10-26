@@ -11,7 +11,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/browser/safari"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
-	"github.com/moond4rk/hackbrowserdata/masterkey"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -94,8 +94,9 @@ func discoverFromConfigs(configs []types.BrowserConfig, opts DiscoverOptions) ([
 // KeyManager is implemented by installations accepting external master-key retrievers (Chromium only).
 // BrowserKey/Kind expose the identity a portable dump needs to rebuild the engine off the platform table.
 type KeyManager interface {
-	SetRetrievers(masterkey.Retrievers)
-	ExportKeys() (masterkey.MasterKeys, error)
+	SetLocator(masterkey.Locator) // live: the run's cross-cutting key sources (macOS keychain, Windows ABE exe)
+	SetKeys(masterkey.Set)        // restore: keys already known from a dump
+	ExportKeys() (masterkey.Set, error)
 	BrowserKey() string
 	Kind() types.BrowserKind
 }

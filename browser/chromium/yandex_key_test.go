@@ -1,4 +1,4 @@
-package crypto
+package chromium
 
 import (
 	"bytes"
@@ -49,7 +49,7 @@ func TestDecryptYandexIntermediateKey_RoundTrip(t *testing.T) {
 	dataKey := bytes.Repeat([]byte{0x22}, yandexDataKeyLen)
 	blob := buildLocalEncryptorBlob(t, masterKey, dataKey)
 
-	got, err := DecryptYandexIntermediateKey(masterKey, blob)
+	got, err := decryptYandexIntermediateKey(masterKey, blob)
 	if err != nil {
 		t.Fatalf("DecryptYandexIntermediateKey: %v", err)
 	}
@@ -59,7 +59,7 @@ func TestDecryptYandexIntermediateKey_RoundTrip(t *testing.T) {
 }
 
 func TestDecryptYandexIntermediateKey_MissingMarker(t *testing.T) {
-	_, err := DecryptYandexIntermediateKey(bytes.Repeat([]byte{0x11}, 32), []byte("no marker here"))
+	_, err := decryptYandexIntermediateKey(bytes.Repeat([]byte{0x11}, 32), []byte("no marker here"))
 	if !errors.Is(err, errYandexMarkerNotFound) {
 		t.Fatalf("expected errYandexMarkerNotFound, got %v", err)
 	}
@@ -68,7 +68,7 @@ func TestDecryptYandexIntermediateKey_MissingMarker(t *testing.T) {
 func TestDecryptYandexIntermediateKey_Truncated(t *testing.T) {
 	blob := append([]byte{0x00, 0x00}, localEncryptorPrefix...)
 	blob = append(blob, bytes.Repeat([]byte{0x55}, yandexIntKeyBlobLen-1)...)
-	_, err := DecryptYandexIntermediateKey(bytes.Repeat([]byte{0x11}, 32), blob)
+	_, err := decryptYandexIntermediateKey(bytes.Repeat([]byte{0x11}, 32), blob)
 	if !errors.Is(err, errYandexBlobShort) {
 		t.Fatalf("expected errYandexBlobShort, got %v", err)
 	}
@@ -84,7 +84,7 @@ func TestDecryptYandexIntermediateKey_BadSignature(t *testing.T) {
 	blob = append(blob, nonce...)
 	blob = append(blob, ciphertext...)
 
-	_, err := DecryptYandexIntermediateKey(masterKey, blob)
+	_, err := decryptYandexIntermediateKey(masterKey, blob)
 	if !errors.Is(err, errYandexBadSignature) {
 		t.Fatalf("expected errYandexBadSignature, got %v", err)
 	}
@@ -103,7 +103,7 @@ func TestDecryptYandexIntermediateKey_TrailingDataIgnored(t *testing.T) {
 	blob = append(blob, nonce...)
 	blob = append(blob, ciphertext...)
 
-	got, err := DecryptYandexIntermediateKey(masterKey, blob)
+	got, err := decryptYandexIntermediateKey(masterKey, blob)
 	if err != nil {
 		t.Fatalf("DecryptYandexIntermediateKey: %v", err)
 	}
@@ -111,40 +111,5 @@ func TestDecryptYandexIntermediateKey_TrailingDataIgnored(t *testing.T) {
 	want = append(want, make([]byte, 16)...)
 	if !bytes.Equal(got, want) {
 		t.Errorf("key mismatch: got %x want %x", got, want)
-	}
-}
-
-func TestAESGCMDecryptBlob_RoundTrip(t *testing.T) {
-	key := bytes.Repeat([]byte{0x55}, 32)
-	nonce := bytes.Repeat([]byte{0x66}, gcmNonceSize)
-	aad := []byte("row-aad")
-	plaintext := []byte("row-plaintext")
-	blob := append([]byte{}, nonce...)
-	blob = append(blob, encryptAESGCM(t, key, nonce, plaintext, aad)...)
-
-	got, err := AESGCMDecryptBlob(key, blob, aad)
-	if err != nil {
-		t.Fatalf("AESGCMDecryptBlob: %v", err)
-	}
-	if !bytes.Equal(got, plaintext) {
-		t.Errorf("plaintext mismatch: got %q want %q", got, plaintext)
-	}
-}
-
-func TestAESGCMDecryptBlob_BadAAD(t *testing.T) {
-	key := bytes.Repeat([]byte{0x55}, 32)
-	nonce := bytes.Repeat([]byte{0x66}, gcmNonceSize)
-	blob := append([]byte{}, nonce...)
-	blob = append(blob, encryptAESGCM(t, key, nonce, []byte("x"), []byte("aad-A"))...)
-
-	if _, err := AESGCMDecryptBlob(key, blob, []byte("aad-B")); err == nil {
-		t.Fatal("expected authentication failure with mismatched AAD")
-	}
-}
-
-func TestAESGCMDecryptBlob_TooShort(t *testing.T) {
-	_, err := AESGCMDecryptBlob(bytes.Repeat([]byte{0x55}, 32), []byte{0x01, 0x02}, nil)
-	if !errors.Is(err, errShortCiphertext) {
-		t.Fatalf("expected errShortCiphertext, got %v", err)
 	}
 }

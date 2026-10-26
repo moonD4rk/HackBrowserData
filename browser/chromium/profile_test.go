@@ -11,8 +11,8 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/filemanager"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
-	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -48,7 +48,7 @@ func TestExtractCategory_CustomExtractor(t *testing.T) {
 	}
 
 	data := &types.BrowserData{}
-	p.extractCategory(data, category.Extension, masterkey.MasterKeys{}, "unused-path")
+	p.extractCategory(data, category.Extension, masterkey.Set{}, "unused-path")
 
 	assert.True(t, called, "custom extractor should be called")
 	require.Len(t, data.Extensions, 1)
@@ -67,7 +67,7 @@ func TestExtractCategory_DefaultFallback(t *testing.T) {
 	}
 
 	data := &types.BrowserData{}
-	p.extractCategory(data, category.History, masterkey.MasterKeys{}, path)
+	p.extractCategory(data, category.History, masterkey.Set{}, path)
 
 	require.Len(t, data.Histories, 1)
 	assert.Equal(t, "Example", data.Histories[0].Title)
@@ -111,7 +111,7 @@ func TestExtractAndCountPasswords_MergesLocalAndAccountDatabases(t *testing.T) {
 		kind:        types.Chromium,
 		sourcePaths: resolveSourcePaths(chromiumSources, profileDir),
 	}
-	data := p.extract(masterkey.MasterKeys{}, []category.Category{category.Password})
+	data := p.extract(masterkey.Set{}, []category.Category{category.Password})
 	require.Len(t, data.Passwords, 2)
 	// Account rows are emitted after local ones; the exporter's stable sort relies on that when timestamps tie.
 	assert.Equal(t, "local-user", data.Passwords[0].Username)
@@ -136,7 +136,7 @@ func TestExtractPasswords_IdenticalCredentialInBothStoresKeepsBoth(t *testing.T)
 		kind:        types.Chromium,
 		sourcePaths: resolveSourcePaths(chromiumSources, profileDir),
 	}
-	data := p.extract(masterkey.MasterKeys{}, []category.Category{category.Password})
+	data := p.extract(masterkey.Set{}, []category.Category{category.Password})
 
 	require.Len(t, data.Passwords, 2)
 	stores := []record.Store{data.Passwords[0].Store, data.Passwords[1].Store}
@@ -158,7 +158,7 @@ func TestExtractAndCountPasswords_AccountDatabaseOnly(t *testing.T) {
 		kind:        types.Chromium,
 		sourcePaths: resolveSourcePaths(chromiumSources, profileDir),
 	}
-	data := p.extract(masterkey.MasterKeys{}, []category.Category{category.Password})
+	data := p.extract(masterkey.Set{}, []category.Category{category.Password})
 
 	require.Len(t, data.Passwords, 1)
 	assert.Equal(t, "account-user", data.Passwords[0].Username)

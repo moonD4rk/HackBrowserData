@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moond4rk/hackbrowserdata/internal/category"
-	"github.com/moond4rk/hackbrowserdata/masterkey"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -419,158 +419,29 @@ func TestLocalStatePath(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// getMasterKeys
+// Keys
 // ---------------------------------------------------------------------------
 
-// mockRetriever records the arguments passed to RetrieveKey.
-type mockRetriever struct {
-	hints  masterkey.Hints
-	key    []byte
-	err    error
-	called bool
-}
+// Live key retrieval (per-version first-key-wins, ABE dispatch) is tested in the masterkey package;
+// here the Browser only has to carry the keys a dump hands it and surface an empty Set when it has none.
 
-func (m *mockRetriever) RetrieveKey(hints masterkey.Hints) ([]byte, error) {
-	m.called = true
-	m.hints = hints
-	return m.key, m.err
-}
-
-func TestGetMasterKeys(t *testing.T) {
-	// getMasterKeys routes through masterkey.NewMasterKeys on every platform — the V10 mock
-	// wired via SetRetrievers(Retrievers{V10: mock}) is consulted cross-platform.
-
-	// Profile directory without Local State file.
-	dirNoLocalState := t.TempDir()
-	mkFile(dirNoLocalState, "Default", "Preferences")
-	mkFile(dirNoLocalState, "Default", "History")
-
-	tests := []struct {
-		name              string
-		dir               string
-		keychainLabel     string
-		retriever         masterkey.Retriever // nil → don't call SetRetrievers
-		wantV10           []byte
-		wantKeychainLabel string
-		wantLocalState    bool // whether localStatePath passed to retriever is non-empty
-	}{
-		{
-			name: "nil retriever yields empty keys",
-			dir:  fixture.chrome,
-		},
-		{
-			name:              "with Local State passes path to retriever",
-			dir:               fixture.chrome,
-			keychainLabel:     "Chrome",
-			retriever:         &mockRetriever{key: []byte("fake-master-key")},
-			wantV10:           []byte("fake-master-key"),
-			wantKeychainLabel: "Chrome",
-			wantLocalState:    true,
-		},
-		{
-			name:              "without Local State passes empty path",
-			dir:               dirNoLocalState,
-			keychainLabel:     "Chromium",
-			retriever:         &mockRetriever{key: []byte("derived-key")},
-			wantV10:           []byte("derived-key"),
-			wantKeychainLabel: "Chromium",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			b, err := NewBrowser(types.BrowserConfig{
-				Name: "Test", Kind: types.Chromium, UserDataDir: tt.dir, KeychainLabel: tt.keychainLabel,
-			})
-			require.NoError(t, err)
-			require.NotNil(t, b)
-
-			if tt.retriever != nil {
-				b.SetRetrievers(masterkey.Retrievers{V10: tt.retriever})
-			}
-
-			mk := b.masterKeys()
-			assert.Equal(t, tt.wantV10, mk.V10)
-			assert.Nil(t, mk.V11, "V11 stays nil when no v11 retriever is wired")
-			assert.Nil(t, mk.V20, "V20 stays nil when no v20 retriever is wired")
-
-			if tt.retriever == nil {
-				return
-			}
-			mock, ok := tt.retriever.(*mockRetriever)
-			require.True(t, ok)
-			assert.True(t, mock.called)
-			assert.Equal(t, tt.wantKeychainLabel, mock.hints.KeychainLabel)
-			if tt.wantLocalState {
-				assert.NotEmpty(t, mock.hints.LocalStatePath)
-			} else {
-				assert.Empty(t, mock.hints.LocalStatePath)
-			}
-		})
-	}
-}
-
-// TestGetMasterKeys_AllTiersInvoked is the mixed-tier regression test at the getMasterKeys layer.
-// Before the refactor a Windows-only bypass meant only one tier's retriever was consulted, so a
-// profile mixing prefixes silently lost the un-retrieved tier. After the refactor every
-// configured tier must be called exactly once and its key must land in the matching MasterKeys
-// slot. This catches any future "bypass the masterkey package for a faster path" regression and covers the
-// analogous Linux v10/v11 case — no platform silently drops a tier any more.
-func TestGetMasterKeys_AllTiersInvoked(t *testing.T) {
-	v10mock := &mockRetriever{key: []byte("fake-v10-key")}
-	v11mock := &mockRetriever{key: []byte("fake-v11-key")}
-	v20mock := &mockRetriever{key: []byte("fake-v20-key")}
-
-	b, err := NewBrowser(types.BrowserConfig{
-		Name: "Test", Kind: types.Chromium, UserDataDir: fixture.chrome, KeychainLabel: "Chrome",
-	})
+func TestMasterKeys_StaticFromDump(t *testing.T) {
+	keys := masterkey.Set{masterkey.V10: []byte("k10"), masterkey.V20: []byte("k20")}
+	b, err := NewBrowser(types.BrowserConfig{Name: "Test", Kind: types.Chromium, UserDataDir: fixture.chrome})
 	require.NoError(t, err)
 	require.NotNil(t, b)
 
-	b.SetRetrievers(masterkey.Retrievers{V10: v10mock, V11: v11mock, V20: v20mock})
-
-	mk := b.masterKeys()
-	assert.Equal(t, []byte("fake-v10-key"), mk.V10, "V10 slot must be populated")
-	assert.Equal(t, []byte("fake-v11-key"), mk.V11, "V11 slot must be populated")
-	assert.Equal(t, []byte("fake-v20-key"), mk.V20, "V20 slot must be populated")
-	assert.True(t, v10mock.called, "V10 retriever must be called — no silent bypass")
-	assert.True(t, v11mock.called, "V11 retriever must be called — no silent bypass")
-	assert.True(t, v20mock.called, "V20 retriever must be called — no silent bypass")
-	for _, m := range []*mockRetriever{v10mock, v11mock, v20mock} {
-		assert.Equal(t, "Chrome", m.hints.KeychainLabel)
-		assert.NotEmpty(t, m.hints.LocalStatePath, "Local State path must be passed to every retriever")
-	}
+	b.SetKeys(keys)
+	assert.Equal(t, keys, b.masterKeys())
 }
 
-// TestGetMasterKeys_WindowsABEThreading pins cfg.WindowsABE → hints.WindowsABEKey threading. A
-// regression here silently disables Windows ABE decryption with no dev-box-test signal — only the
-// windows-tunnel sandbox 574-cookie regression would catch it — so it must be pinned at unit level.
-func TestGetMasterKeys_WindowsABEThreading(t *testing.T) {
-	tests := []struct {
-		name       string
-		key        string
-		windowsABE bool
-		wantABEKey string
-	}{
-		{"WindowsABE=true threads cfg.Key into hints.WindowsABEKey", "chrome", true, "chrome"},
-		{"WindowsABE=false leaves hints.WindowsABEKey empty", "opera", false, ""},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mock := &mockRetriever{key: []byte("k")}
-			b, err := NewBrowser(types.BrowserConfig{
-				Key: tt.key, Name: "Test", Kind: types.Chromium,
-				UserDataDir: fixture.chrome, WindowsABE: tt.windowsABE,
-			})
-			require.NoError(t, err)
-			require.NotNil(t, b)
+func TestMasterKeys_EmptyDumpYieldsEmptySet(t *testing.T) {
+	b, err := NewBrowser(types.BrowserConfig{Name: "Test", Kind: types.Chromium, UserDataDir: fixture.chrome})
+	require.NoError(t, err)
+	require.NotNil(t, b)
 
-			b.SetRetrievers(masterkey.Retrievers{V20: mock})
-
-			b.masterKeys()
-			assert.Equal(t, tt.wantABEKey, mock.hints.WindowsABEKey)
-		})
-	}
+	b.SetKeys(masterkey.Set{})
+	assert.Empty(t, b.masterKeys(), "a dump with no keys for this browser decrypts nothing, rather than crashing")
 }
 
 // ---------------------------------------------------------------------------
@@ -583,18 +454,11 @@ func TestExtract(t *testing.T) {
 	installFile(t, filepath.Join(dir, "Default"), setupHistoryDB(t), "History")
 
 	tests := []struct {
-		name          string
-		retriever     masterkey.Retriever // nil → don't call SetRetriever
-		wantRetriever bool                // whether retriever should be called
+		name string
+		keys masterkey.Set
 	}{
-		{
-			name: "without retriever extracts unencrypted data",
-		},
-		{
-			name:          "with mock retriever",
-			retriever:     &mockRetriever{key: []byte("test-key-16bytes")},
-			wantRetriever: true,
-		},
+		{name: "without keys extracts unencrypted data", keys: masterkey.Set{}},
+		{name: "with dump keys", keys: masterkey.Set{masterkey.V10: []byte("test-key-16byte0")}},
 	}
 
 	for _, tt := range tests {
@@ -605,9 +469,8 @@ func TestExtract(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, b)
 
-			if tt.retriever != nil {
-				b.SetRetrievers(masterkey.Retrievers{V10: tt.retriever})
-			}
+			// Even an empty Set is needed: without SetKeys, Extract queries the host's real secret stores.
+			b.SetKeys(tt.keys)
 
 			results, err := b.Extract([]category.Category{category.History})
 			require.NoError(t, err)
@@ -615,12 +478,6 @@ func TestExtract(t *testing.T) {
 			require.NotNil(t, results[0].Data)
 			require.Len(t, results[0].Data.Histories, 3)
 			assert.Equal(t, "GitHub", results[0].Data.Histories[0].Title)
-
-			if tt.wantRetriever {
-				mock, ok := tt.retriever.(*mockRetriever)
-				require.True(t, ok)
-				assert.True(t, mock.called)
-			}
 		})
 	}
 }
@@ -671,13 +528,11 @@ func TestCountEntries_NoRetrieverNeeded(t *testing.T) {
 	assert.Equal(t, 2, results[0].Counts[category.Password])
 }
 
-// ---------------------------------------------------------------------------
-// SetRetrievers: verify *Browser satisfies the interface used by
-// browser.discoverFromConfigs for post-construction retriever injection.
-// ---------------------------------------------------------------------------
-
-func TestSetRetrievers_SatisfiesInterface(t *testing.T) {
+// *Browser must satisfy the key-injection shape app uses after construction (live Locator or dump keys).
+func TestBrowser_SatisfiesKeyManager(t *testing.T) {
 	var _ interface {
-		SetRetrievers(masterkey.Retrievers)
+		SetLocator(masterkey.Locator)
+		SetKeys(masterkey.Set)
+		ExportKeys() (masterkey.Set, error)
 	} = (*Browser)(nil)
 }

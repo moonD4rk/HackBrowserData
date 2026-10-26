@@ -10,7 +10,6 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/moond4rk/hackbrowserdata/crypto"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
@@ -99,7 +98,7 @@ func loadYandexDataKey(dbPath string, masterKey []byte) ([]byte, error) {
 		return nil, fmt.Errorf("read local_encryptor_data: %w", err)
 	}
 
-	dataKey, err := crypto.DecryptYandexIntermediateKey(masterKey, blob)
+	dataKey, err := decryptYandexIntermediateKey(masterKey, blob)
 	if err != nil {
 		return nil, fmt.Errorf("derive yandex data key: %w", err)
 	}

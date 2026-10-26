@@ -14,7 +14,7 @@ import (
 	"golang.org/x/sys/windows"
 
 	"github.com/moond4rk/hackbrowserdata/crypto/windows/abe_native/bootstrap"
-	"github.com/moond4rk/hackbrowserdata/utils/winapi"
+	"github.com/moond4rk/hackbrowserdata/internal/winapi"
 )
 
 type Reflective struct {

@@ -34,7 +34,7 @@ func (k BrowserKind) String() string {
 
 // BrowserConfig holds the declarative configuration for a browser installation.
 type BrowserConfig struct {
-	Key           string      // lookup key; doubles as the Windows ABE / winutil.Table key when WindowsABE is true
+	Key           string      // lookup key; doubles as the Windows ABE / abeTargets key when WindowsABE is true
 	Name          string      // display name
 	Kind          BrowserKind // engine type
 	KeychainLabel string      // macOS Keychain account / Linux D-Bus Secret Service label; "" = none

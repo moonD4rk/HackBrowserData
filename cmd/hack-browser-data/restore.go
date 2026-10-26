@@ -9,7 +9,7 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
-	"github.com/moond4rk/hackbrowserdata/masterkey"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 

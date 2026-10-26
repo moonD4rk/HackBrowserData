@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"github.com/moond4rk/hackbrowserdata/utils/winapi"
+	"github.com/moond4rk/hackbrowserdata/internal/winapi"
 )
 
 // copyLocked copies a file that is locked by another process (e.g., Chrome's

@@ -20,15 +20,15 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/browser"
 	"github.com/moond4rk/hackbrowserdata/browser/chromium"
-	"github.com/moond4rk/hackbrowserdata/crypto"
-	"github.com/moond4rk/hackbrowserdata/masterkey"
+	"github.com/moond4rk/hackbrowserdata/internal/crypto"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 // Only GCM-sealed values (v10 under a 32-byte key, v20) decrypt identically on every OS.
-var chromiumFixtureKeys = masterkey.MasterKeys{
-	V10: []byte("0123456789abcdef0123456789abcdef"),
-	V20: []byte("0123456789abcdef"),
+var chromiumFixtureKeys = masterkey.Set{
+	masterkey.V10: []byte("0123456789abcdef0123456789abcdef"),
+	masterkey.V20: []byte("0123456789abcdef"),
 }
 
 var chromiumFixtureInstalls = []struct {
@@ -68,25 +68,10 @@ func chromiumFixtureBrowsers(t *testing.T, root string) []browser.Browser {
 		})
 		require.NoError(t, err)
 		require.NotNil(t, b)
-		b.SetRetrievers(chromiumFixtureRetrievers(chromiumFixtureKeys))
+		b.SetKeys(chromiumFixtureKeys)
 		browsers = append(browsers, b)
 	}
 	return browsers
-}
-
-func chromiumFixtureRetrievers(keys masterkey.MasterKeys) masterkey.Retrievers {
-	return masterkey.Retrievers{
-		V10: chromiumFixtureStaticRetriever(keys.V10),
-		V11: chromiumFixtureStaticRetriever(keys.V11),
-		V20: chromiumFixtureStaticRetriever(keys.V20),
-	}
-}
-
-func chromiumFixtureStaticRetriever(key []byte) masterkey.Retriever {
-	if len(key) == 0 {
-		return nil
-	}
-	return masterkey.NewStaticRetriever(key)
 }
 
 func chromiumFixtureUserData(t *testing.T, userDataDir, browserKey string) {
@@ -103,10 +88,10 @@ func chromiumFixtureProfile(t *testing.T, dir, site string, start time.Time, acc
 	at := func(offset time.Duration) int64 { return chromiumFixtureMicros(start.Add(offset)) }
 	link := func(host, path string) string { return "https://" + host + "." + site + path }
 	v10 := func(plaintext string) string {
-		return chromiumFixtureSeal(t, "v10", chromiumFixtureKeys.V10, plaintext)
+		return chromiumFixtureSeal(t, "v10", chromiumFixtureKeys[masterkey.V10], plaintext)
 	}
 	v20 := func(plaintext string) string {
-		return chromiumFixtureSeal(t, "v20", chromiumFixtureKeys.V20, plaintext)
+		return chromiumFixtureSeal(t, "v20", chromiumFixtureKeys[masterkey.V20], plaintext)
 	}
 	// Chrome 130+ seals SHA256(host_key) ahead of the cookie value, which extraction must strip again.
 	hostBound := func(host, value string) string {

@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
-	"github.com/moond4rk/hackbrowserdata/masterkey"
 )
 
 func setupLoginDB(t *testing.T) string {
@@ -23,7 +23,7 @@ func setupLoginDB(t *testing.T) string {
 func TestExtractPasswords(t *testing.T) {
 	path := setupLoginDB(t)
 
-	got, err := extractPasswords(masterkey.MasterKeys{}, path, record.StoreLocal)
+	got, err := extractPasswords(masterkey.Set{}, path, record.StoreLocal)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -46,7 +46,7 @@ func TestExtractPasswords_UndecryptableBlobStillListed(t *testing.T) {
 		insertLogin("https://enc.com", "https://enc.com/login", "carol", "763130deadbeef", 13350000000000000),
 	)
 
-	got, err := extractPasswords(masterkey.MasterKeys{}, path, record.StoreAccount)
+	got, err := extractPasswords(masterkey.Set{}, path, record.StoreAccount)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 
@@ -88,7 +88,7 @@ func TestExtractYandexPasswords(t *testing.T) {
 		},
 	)
 
-	got, err := extractYandexPasswords(masterkey.MasterKeys{V10: masterKey}, path)
+	got, err := extractYandexPasswords(masterkey.Set{masterkey.V10: masterKey}, path)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -111,7 +111,7 @@ func TestExtractYandexPasswords_MasterPasswordSkipped(t *testing.T) {
 		},
 	)
 
-	got, err := extractYandexPasswords(masterkey.MasterKeys{V10: masterKey}, path)
+	got, err := extractYandexPasswords(masterkey.Set{masterkey.V10: masterKey}, path)
 	require.NoError(t, err)
 	assert.Empty(t, got, "master-password profiles should be skipped in v1")
 }
@@ -130,7 +130,7 @@ func TestExtractYandexPasswords_WrongMasterKey(t *testing.T) {
 
 	// A wrong master key fails at the intermediate step, surfacing as an error
 	// from the extractor.
-	_, err := extractYandexPasswords(masterkey.MasterKeys{V10: wrongKey}, path)
+	_, err := extractYandexPasswords(masterkey.Set{masterkey.V10: wrongKey}, path)
 	require.Error(t, err)
 }
 

@@ -33,11 +33,11 @@ type Host struct {
 // Browser is the lookup key (e.g. "chrome"); Kind is the engine ("chromium"|"chromium-yandex"|
 // "chromium-opera") so a consumer can rebuild the engine without the local browser table.
 type Vault struct {
-	Browser     string     `json:"browser"`
-	Kind        string     `json:"kind"`
-	UserDataDir string     `json:"user_data_dir"`
-	Profiles    []string   `json:"profiles"`
-	Keys        MasterKeys `json:"keys"`
+	Browser     string   `json:"browser"`
+	Kind        string   `json:"kind"`
+	UserDataDir string   `json:"user_data_dir"`
+	Profiles    []string `json:"profiles"`
+	Keys        Set      `json:"keys"`
 }
 
 func NewDump() Dump {

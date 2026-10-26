@@ -4,12 +4,12 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/moond4rk/hackbrowserdata/crypto"
+	"github.com/moond4rk/hackbrowserdata/internal/crypto"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
-	"github.com/moond4rk/hackbrowserdata/masterkey"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 
 // appendPasswords merges another login DB into dst. Entries are kept even when an identical
 // credential already exists — the Store field records which DB each one came from.
-func appendPasswords(masterKeys masterkey.MasterKeys, path string, store record.Store, dst []record.Login) ([]record.Login, error) {
+func appendPasswords(masterKeys masterkey.Set, path string, store record.Store, dst []record.Login) ([]record.Login, error) {
 	logins, err := extractPasswords(masterKeys, path, store)
 	if err != nil {
 		return dst, err
@@ -31,11 +31,11 @@ func appendPasswords(masterKeys masterkey.MasterKeys, path string, store record.
 	return append(dst, logins...), nil
 }
 
-func extractPasswords(masterKeys masterkey.MasterKeys, path string, store record.Store) ([]record.Login, error) {
+func extractPasswords(masterKeys masterkey.Set, path string, store record.Store) ([]record.Login, error) {
 	return extractPasswordsWithQuery(masterKeys, path, store, defaultLoginQuery)
 }
 
-func extractPasswordsWithQuery(masterKeys masterkey.MasterKeys, path string, store record.Store, query string) ([]record.Login, error) {
+func extractPasswordsWithQuery(masterKeys masterkey.Set, path string, store record.Store, query string) ([]record.Login, error) {
 	logins, err := sqlitex.QueryRows(path, false, query,
 		func(rows *sql.Rows) (record.Login, error) {
 			var url, username string
@@ -61,8 +61,8 @@ func extractPasswordsWithQuery(masterKeys masterkey.MasterKeys, path string, sto
 
 // extractYandexPasswords walks Ya Passman Data.
 // Note: URL column is origin_url — it's what the per-row AAD is computed over (not action_url).
-func extractYandexPasswords(masterKeys masterkey.MasterKeys, path string) ([]record.Login, error) {
-	dataKey, err := loadYandexDataKey(path, masterKeys.V10)
+func extractYandexPasswords(masterKeys masterkey.Set, path string) ([]record.Login, error) {
+	dataKey, err := loadYandexDataKey(path, masterKeys[masterkey.V10])
 	if err != nil {
 		if errors.Is(err, errYandexMasterPasswordSet) {
 			log.Warnf("%s: %v", path, err)

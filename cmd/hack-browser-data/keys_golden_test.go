@@ -16,7 +16,7 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
-	"github.com/moond4rk/hackbrowserdata/masterkey"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -55,13 +55,15 @@ type keysFakeChromium struct {
 	keysFakeBrowser
 	key       string
 	kind      types.BrowserKind
-	keys      masterkey.MasterKeys
+	keys      masterkey.Set
 	exportErr error
 }
 
-func (c *keysFakeChromium) SetRetrievers(_ masterkey.Retrievers) {}
+func (c *keysFakeChromium) SetLocator(masterkey.Locator) {}
 
-func (c *keysFakeChromium) ExportKeys() (masterkey.MasterKeys, error) { return c.keys, c.exportErr }
+func (c *keysFakeChromium) SetKeys(masterkey.Set) {}
+
+func (c *keysFakeChromium) ExportKeys() (masterkey.Set, error) { return c.keys, c.exportErr }
 
 func (c *keysFakeChromium) BrowserKey() string { return c.key }
 
@@ -86,9 +88,9 @@ func keysFakeBrowsers(t *testing.T) []browser.Browser {
 			},
 			key:  "chrome",
 			kind: types.Chromium,
-			keys: masterkey.MasterKeys{
-				V10: keysFakeKey(t, "chrome+v10/os+crypt+key/AAAAAAAAAAAAAAAAAAA="),
-				V20: keysFakeKey(t, "chrome+v20/app+bound+key/AAAAAAAAAAAAAAAAAA="),
+			keys: masterkey.Set{
+				masterkey.V10: keysFakeKey(t, "chrome+v10/os+crypt+key/AAAAAAAAAAAAAAAAAAA="),
+				masterkey.V20: keysFakeKey(t, "chrome+v20/app+bound+key/AAAAAAAAAAAAAAAAAA="),
 			},
 		},
 		&keysFakeBrowser{
@@ -104,9 +106,9 @@ func keysFakeBrowsers(t *testing.T) []browser.Browser {
 			},
 			key:  "edge",
 			kind: types.Chromium,
-			keys: masterkey.MasterKeys{
-				V10: keysFakeKey(t, "edge+v10/os+crypt+key/AAAAAAAAAAAAAAAAAAAAA="),
-				V20: keysFakeKey(t, "edge+v20/app+bound+key/AAAAAAAAAAAAAAAAAAAA="),
+			keys: masterkey.Set{
+				masterkey.V10: keysFakeKey(t, "edge+v10/os+crypt+key/AAAAAAAAAAAAAAAAAAAAA="),
+				masterkey.V20: keysFakeKey(t, "edge+v20/app+bound+key/AAAAAAAAAAAAAAAAAAAA="),
 			},
 		},
 		&keysFakeChromium{
@@ -117,9 +119,9 @@ func keysFakeBrowsers(t *testing.T) []browser.Browser {
 			},
 			key:  "opera",
 			kind: types.ChromiumOpera,
-			keys: masterkey.MasterKeys{
-				V10: keysFakeKey(t, "opera+v10/peanuts+AAAA=="),
-				V11: keysFakeKey(t, "opera+v11/keyring+AAAA=="),
+			keys: masterkey.Set{
+				masterkey.V10: keysFakeKey(t, "opera+v10/peanuts+AAAA=="),
+				masterkey.V11: keysFakeKey(t, "opera+v11/keyring+AAAA=="),
 			},
 		},
 		&keysFakeChromium{
@@ -140,7 +142,7 @@ func keysFakeBrowsers(t *testing.T) []browser.Browser {
 			},
 			key:  "yandex",
 			kind: types.ChromiumYandex,
-			keys: masterkey.MasterKeys{V10: keysFakeKey(t, "yandex+v10/keychain+AA==")},
+			keys: masterkey.Set{masterkey.V10: keysFakeKey(t, "yandex+v10/keychain+AA==")},
 		},
 		&keysFakeChromium{
 			keysFakeBrowser: keysFakeBrowser{
@@ -150,7 +152,7 @@ func keysFakeBrowsers(t *testing.T) []browser.Browser {
 			},
 			key:       "brave",
 			kind:      types.Chromium,
-			keys:      masterkey.MasterKeys{V10: keysFakeKey(t, "brave+v10/os+crypt+key/AAAAAAAAAAAAAAAAAAAA=")},
+			keys:      masterkey.Set{masterkey.V10: keysFakeKey(t, "brave+v10/os+crypt+key/AAAAAAAAAAAAAAAAAAAA=")},
 			exportErr: errors.New("v20: elevation service unavailable"),
 		},
 	}

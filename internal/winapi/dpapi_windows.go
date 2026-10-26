@@ -33,7 +33,7 @@ func (b *dataBlob) bytes() []byte {
 
 // DecryptDPAPI decrypts a DPAPI-protected blob using the current user's
 // master key. It is the Windows counterpart to macOS/Linux os_crypt
-// fallbacks and is called by crypto.DecryptDPAPI.
+// fallbacks and is called by masterkey.
 func DecryptDPAPI(ciphertext []byte) ([]byte, error) {
 	var out dataBlob
 	r, _, err := procCryptUnprotectData.Call(

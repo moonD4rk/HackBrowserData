@@ -5,10 +5,10 @@ import (
 	"crypto/sha256"
 	"database/sql"
 
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
-	"github.com/moond4rk/hackbrowserdata/masterkey"
 )
 
 const (
@@ -18,7 +18,7 @@ const (
 	countCookieQuery = `SELECT COUNT(*) FROM cookies`
 )
 
-func extractCookies(masterKeys masterkey.MasterKeys, path string) ([]record.Cookie, error) {
+func extractCookies(masterKeys masterkey.Set, path string) ([]record.Cookie, error) {
 	cookies, err := sqlitex.QueryRows(path, false, defaultCookieQuery,
 		func(rows *sql.Rows) (record.Cookie, error) {
 			var (

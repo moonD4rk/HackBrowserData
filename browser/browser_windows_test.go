@@ -5,16 +5,13 @@ package browser
 import (
 	"testing"
 
-	"github.com/moond4rk/hackbrowserdata/utils/winutil"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
-// TestWinUtilTableCoversABEBrowsers verifies that the set of Windows browsers
-// with WindowsABE: true in platformBrowsers() exactly matches the set of
-// winutil.Table entries that declare ABE support (keyed by BrowserConfig.Key ==
-// winutil.Entry.Key). A mismatch means adding a new Chromium fork was
-// incomplete: either a BrowserConfig row is missing WindowsABE: true, or
-// winutil.Table has a stale/missing entry.
-func TestWinUtilTableCoversABEBrowsers(t *testing.T) {
+// TestABETargetsCoverABEBrowsers verifies that the browsers with WindowsABE: true in platformBrowsers()
+// are exactly the keys in abeTargets. A mismatch means adding a Chromium fork was incomplete: either a
+// BrowserConfig row is missing WindowsABE: true, or abeTargets has a stale or missing entry.
+func TestABETargetsCoverABEBrowsers(t *testing.T) {
 	abeConfigs := make(map[string]struct{})
 	for _, b := range platformBrowsers() {
 		if b.WindowsABE {
@@ -22,24 +19,48 @@ func TestWinUtilTableCoversABEBrowsers(t *testing.T) {
 		}
 	}
 
-	abeTable := make(map[string]struct{})
-	for key, entry := range winutil.Table {
-		if entry.Key != key {
-			t.Errorf("winutil.Table[%q].Key = %q; map key and Entry.Key must match (winutil.Entry doc invariant)", key, entry.Key)
+	for key, target := range abeTargets {
+		if target.exe == "" {
+			t.Errorf("abeTargets[%q] has no executable name", key)
 		}
-		if entry.ABE != winutil.ABENone {
-			abeTable[key] = struct{}{}
+		if target.kind == masterkey.ABENone {
+			t.Errorf("abeTargets[%q] declares no ABE kind", key)
 		}
-	}
-
-	for key := range abeTable {
 		if _, ok := abeConfigs[key]; !ok {
-			t.Errorf("winutil.Table[%q] declares ABE support but no BrowserConfig with Key %q sets WindowsABE: true — either fix the table or set WindowsABE: true in platformBrowsers()", key, key)
+			t.Errorf("abeTargets[%q] has an entry but no BrowserConfig with Key %q sets WindowsABE: true", key, key)
 		}
 	}
 	for key := range abeConfigs {
-		if _, ok := abeTable[key]; !ok {
-			t.Errorf("BrowserConfig with Key %q sets WindowsABE: true but winutil.Table[%q] is missing or declares no ABE — add the table entry", key, key)
+		if _, ok := abeTargets[key]; !ok {
+			t.Errorf("BrowserConfig with Key %q sets WindowsABE: true but abeTargets[%q] is missing", key, key)
 		}
+	}
+}
+
+type locatorRecorder struct {
+	mockChromiumBrowser
+	got *masterkey.Locator
+}
+
+func (r *locatorRecorder) SetLocator(loc masterkey.Locator) { r.got = &loc }
+
+// A lost ABE hand-off silently disables v20 decryption on Windows, so the injector's wiring is pinned here.
+func TestCredentialInjector_HandsABEBrowsersTheirTarget(t *testing.T) {
+	inject := newCredentialInjector(DiscoverOptions{})
+
+	chrome := &locatorRecorder{mockChromiumBrowser: mockChromiumBrowser{key: "chrome"}}
+	inject(chrome)
+	if chrome.got == nil {
+		t.Fatal("chrome got no Locator")
+	}
+	want := abeTargets["chrome"]
+	if chrome.got.Exe != want.exe || chrome.got.ABE != want.kind || len(chrome.got.ExeFallbacks) != len(want.fallbacks) {
+		t.Errorf("chrome Locator = %+v, want exe %q, kind %v, %d fallbacks", *chrome.got, want.exe, want.kind, len(want.fallbacks))
+	}
+
+	opera := &locatorRecorder{mockChromiumBrowser: mockChromiumBrowser{key: "opera"}}
+	inject(opera)
+	if opera.got != nil {
+		t.Errorf("opera has no ABE, so it keeps DPAPI only; got Locator %+v", *opera.got)
 	}
 }

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/moond4rk/hackbrowserdata/internal/log"
-	"github.com/moond4rk/hackbrowserdata/masterkey"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -24,12 +24,12 @@ func BuildDump(browsers []Browser) masterkey.Dump {
 		mk, err := km.ExportKeys()
 		if err != nil {
 			status := "partial"
-			if !mk.HasAny() {
+			if len(mk) == 0 {
 				status = "failed"
 			}
 			log.Warnf("dump-keys: %s %s: %v", b.BrowserName(), status, err)
 		}
-		if !mk.HasAny() {
+		if len(mk) == 0 {
 			continue
 		}
 		kind, err := kindToDump(km.Kind())
@@ -124,7 +124,7 @@ func BuildFromDump(dump masterkey.Dump, dataDir, filter string) ([]Browser, erro
 			continue
 		}
 		if km, ok := b.(KeyManager); ok {
-			km.SetRetrievers(retrieversFromKeys(v.Keys))
+			km.SetKeys(v.Keys)
 		}
 		browsers = append(browsers, b)
 	}
@@ -153,25 +153,6 @@ func vaultKeys(dump masterkey.Dump) string {
 func dirExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
-}
-
-// maybeStaticRetriever wraps non-empty key bytes as a StaticRetriever; an empty/nil key returns nil
-// to preserve the "tier not applicable" signal NewMasterKeys expects.
-func maybeStaticRetriever(key []byte) masterkey.Retriever {
-	if len(key) == 0 {
-		return nil
-	}
-	return masterkey.NewStaticRetriever(key)
-}
-
-// retrieversFromKeys maps a vault's per-tier key bytes to static retrievers; an absent tier stays nil
-// so NewMasterKeys keeps treating it as "not applicable".
-func retrieversFromKeys(mk masterkey.MasterKeys) masterkey.Retrievers {
-	return masterkey.Retrievers{
-		V10: maybeStaticRetriever(mk.V10),
-		V11: maybeStaticRetriever(mk.V11),
-		V20: maybeStaticRetriever(mk.V20),
-	}
 }
 
 // dumpableKinds are the engine kinds a vault may carry; kindToDump/kindFromDump translate to and from

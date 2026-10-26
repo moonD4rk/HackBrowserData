@@ -3,7 +3,7 @@
 package browser
 
 import (
-	"github.com/moond4rk/hackbrowserdata/masterkey"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -131,13 +131,16 @@ func platformBrowsers() []types.BrowserConfig {
 	}
 }
 
-// newCredentialInjector wires the Windows Chromium retrievers: v10 (DPAPI) and v20 (ABE). The two tiers are orthogonal
-// — a pre-127-upgraded profile carries v20 cookies alongside v10 passwords — so both run independently, not as a chain.
+// newCredentialInjector hands each ABE browser its executable and dialect; RetrieveAll runs v10 (DPAPI) and,
+// when the Locator carries an ABE kind, v20 (reflective injection) — both, since an upgraded profile mixes them.
 func newCredentialInjector(_ DiscoverOptions) browserInjector {
-	retrievers := masterkey.DefaultRetrievers()
 	return func(b Browser) {
-		if km, ok := b.(KeyManager); ok {
-			km.SetRetrievers(retrievers)
+		km, ok := b.(KeyManager)
+		if !ok {
+			return
+		}
+		if target, ok := abeTargets[km.BrowserKey()]; ok {
+			km.SetLocator(masterkey.Locator{Exe: target.exe, ExeFallbacks: target.fallbacks, ABE: target.kind})
 		}
 	}
 }
