@@ -1,0 +1,61 @@
+-- bookmark.csv (465 bytes) --
+﻿browser,profile,id,name,type,url,folder,created_at
+Chrome,Default,7,Docs & <Specs>,url,https://docs.example.com/search?a=1&b=<2>,Bookmarks bar,2026-02-02T02:02:02Z
+Chrome,Default,4294967298,日本語 📚,url,https://例え.jp/,Other bookmarks,
+Chrome,Profile 1,1,"Quote ""this"", please",url,"https://example.org/a,b","multi
+line folder",2025-03-03T03:03:03Z
+Microsoft Edge,Default,12,C:\Shares\docs,url,https://edge.example/,Favorites bar,2024-04-04T04:04:04Z
+-- cookie.csv (951 bytes) --
+﻿browser,profile,host,path,name,value,is_secure,is_http_only,has_expire,is_persistent,expire_at,created_at,same_site
+Chrome,Default,.example.com,/,return_to,https://shop.example.com/cart?item=42&qty=<3>,true,true,true,true,2027-06-30T12:34:56Z,2026-03-14T15:09:27Z,lax
+Chrome,Default,www.example.com,/account,session_id,"{""user"":""日本語 🍪"",""dir"":""C:\Temp""}",false,true,false,false,,2026-01-01T00:00:00Z,strict
+Chrome,Profile 1,.tracker.example,/,_ga,GA1.2.1234567890.1700000000,true,false,true,true,2028-02-29T23:59:59Z,2025-05-05T05:05:05Z,none
+Chrome,Profile 1,.dev.example,/dev,multi_line,"line one
+line two, with comma",false,false,false,false,,,unspecified
+Microsoft Edge,Default,.edge.example,/,epoch_expiry,"back\slash ""quoted"" <b>&amp;</b>",true,true,true,true,1970-01-01T00:00:00Z,2024-12-24T18:00:00Z,
+Microsoft Edge,Default,edge.example,/,host_only,v,false,false,true,true,2026-12-31T23:59:59Z,2024-06-15T09:30:00Z,strict
+-- creditcard.csv (421 bytes) --
+﻿browser,profile,guid,name,number,exp_month,exp_year,nick_name,address,cvc,comment
+Chrome,Default,00000000-0000-4000-8000-000000000001,山田 太郎,4111111111111111,12,2030,"Work ""primary"", 💳","1-2-3 Chiyoda,
+Tokyo 100-0001",,
+Chrome,Profile 1,00000000-0000-4000-8000-000000000002,Alice O'Brien,5555555555554444,1,2027,,,123,note <b>&</b> \ end
+Microsoft Edge,Default,00000000-0000-4000-8000-000000000003,,,,,,,,
+-- download.csv (503 bytes) --
+﻿browser,profile,url,target_path,mime_type,total_bytes,start_time,end_time
+Chrome,Default,https://dl.example.com/files/big.iso?token=a&sig=<x>,"C:\Users\Alice\Downloads\Ubuntu ""final"", v2.iso",application/x-iso9660-image,5368709121,2026-03-14T15:00:00Z,2026-03-14T15:30:00Z
+Chrome,Profile 1,https://例え.jp/資料.pdf,/home/alice/Downloads/資料 📄.pdf,application/pdf,0,2025-08-01T08:00:00Z,
+Microsoft Edge,Default,blob:https://app.example/1234,\\fileserver\share\Q3 summary.csv,,4294967296,,
+-- extension.csv (457 bytes) --
+﻿browser,profile,name,id,description,version,homepage_url,enabled
+Chrome,Default,Ad Blocker,abcdefghijklmnopabcdefghijklmnop,"Blocks ads & trackers, ""fast"" <b>",1.58.0,https://adblock.example/?a=1&b=<2>,true
+Chrome,Profile 1,日本語拡張 🧩,ponmlkjihgfedcbaponmlkjihgfedcba,"line one
+line two",0.0.1,,false
+Microsoft Edge,Default,Edge Helper,aaaabbbbccccddddeeeeffffgggghhhh,Installed under C:\Program Files\Helper,2.0,https://helper.example/,true
+-- history.csv (508 bytes) --
+﻿browser,profile,url,title,visit_count,last_visit
+Chrome,Default,https://shop.example.com/cart?item=42&qty=<3>,"Cart ""deals"" <b>&</b>, 日本語 🛒",42,2026-03-14T15:10:00Z
+Chrome,Default,file:///C:/Users/Alice/notes.html,"multi
+line title",3,
+Chrome,Profile 1,https://search.example.com/?q=a%26b&lang=日本語,,1000000,2025-07-07T07:07:07Z
+Chrome,Profile 1,about:blank," leading space",0,2025-01-01T00:00:00Z
+Microsoft Edge,Default,edge://settings/?a=1&b=2,C:\Windows\System32,7,2024-07-04T00:00:00Z
+-- localstorage.csv (380 bytes) --
+﻿browser,profile,is_meta,url,key,value
+Chrome,Default,false,https://app.example.com,prefs,"{""theme"":""dark"",""greeting"":""こんにちは 👋"",""dir"":""C:\Temp""}"
+Chrome,Default,true,https://app.example.com,,"meta data, value bytes is [8 128 1]"
+Chrome,Profile 1,false,https://example.org,a&b<c>,"multi
+line"
+Microsoft Edge,Default,false,https://edge.example,日本語,
+-- password.csv (630 bytes) --
+﻿browser,profile,url,username,password,created_at,store
+Chrome,Default,https://accounts.example.com/signin?continue=/mail&hl=ja,alice@example.com,"pa$$ ""quoted"", comma\backslash
+newline",2026-03-14T15:09:26Z,account
+Chrome,Default,https://例え.jp/ログイン,日本語ユーザー,🔑 emoji,2025-11-05T06:07:08Z,local
+Chrome,Profile 1,http://192.168.0.1:8080/admin,admin," leading space",2025-06-01T00:00:00Z,local
+Chrome,Profile 1,android://hash@com.example.app/,,,,local
+Microsoft Edge,Default,https://login.example.org/<tenant>/authorize?client=a&scope=b,CORP\jdoe,日本語パスワード,2024-02-29T12:00:00Z,account
+-- sessionstorage.csv (271 bytes) --
+﻿browser,profile,is_meta,url,key,value
+Chrome,Default,false,https://app.example.com,tab-id,42
+Chrome,Profile 1,false,https://example.org/?x=1&y=<2>,draft,"He said ""hi"", then left \"
+Microsoft Edge,Default,true,https://edge.example,,"meta data, value bytes is [16 2]"

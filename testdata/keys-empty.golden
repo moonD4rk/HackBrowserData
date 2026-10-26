@@ -1,0 +1,9 @@
+{
+  "version": "2",
+  "created_at": "2026-05-16T08:30:15.123456789Z",
+  "host": {
+    "os": "linux",
+    "arch": "arm64"
+  },
+  "vaults": []
+}

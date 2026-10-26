@@ -1,0 +1,8 @@
+entries=5
+chrome/Default/Network/Cookies method=8 modified=1979-11-30T00:00:00Z size=23 crc32=b51bbd79
+chrome/Default/Network/Cookies-shm method=8 modified=1979-11-30T00:00:00Z size=27 crc32=72008c70
+chrome/Default/Network/Cookies-wal method=8 modified=1979-11-30T00:00:00Z size=27 crc32=d3ccaf73
+chrome/Default/Preferences method=8 modified=1979-11-30T00:00:00Z size=19 crc32=b990cd74
+chrome/Local State method=8 modified=1979-11-30T00:00:00Z size=11 crc32=015c5138
+chrome/Profile 1/Network/Cookies method=8 modified=1979-11-30T00:00:00Z size=25 crc32=184f7580
+chrome/Profile 1/Preferences method=8 modified=1979-11-30T00:00:00Z size=21 crc32=be2429c4

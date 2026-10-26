@@ -1,9 +1,6 @@
 package main
 
 import (
-	"flag"
-	"os"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -11,22 +8,10 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-var update = flag.Bool("update", false, "rewrite testdata/flags.golden from the current command tree")
-
 func TestFlagSurface(t *testing.T) {
-	golden := filepath.Join("testdata", "flags.golden")
-	got := flagSurface(rootCmd())
-	if *update {
-		require.NoError(t, os.MkdirAll(filepath.Dir(golden), 0o755))
-		require.NoError(t, os.WriteFile(golden, []byte(got), 0o644))
-	}
-	want, err := os.ReadFile(golden)
-	require.NoError(t, err)
-	assert.Equal(t, string(want), got, "regenerate with: go test ./cmd/hack-browser-data -run TestFlagSurface -update")
+	assertGolden(t, "flags.golden", flagSurface(rootCmd()))
 }
 
 func flagSurface(root *cobra.Command) string {
