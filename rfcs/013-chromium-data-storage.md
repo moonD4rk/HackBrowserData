@@ -1,24 +1,24 @@
-# RFC-002: Chromium Data Storage
+# RFC-013: Chromium Data Storage
 
-**Author**: moonD4rk
-**Status**: Living Document
+**Author**: moonD4rk\
+**Status**: Living Document\
 **Created**: 2026-04-05
 
 ## 1. Data File Locations
 
 All paths are relative to the profile directory (e.g. `~/.config/google-chrome/Default/`).
 
-| Category | Candidate Paths (priority order) | Format |
-|----------|----------------------------------|--------|
-| Password | `Login Data` | SQLite |
-| Cookie | `Network/Cookies`, `Cookies` | SQLite |
-| History | `History` | SQLite |
-| Download | `History` (same file) | SQLite |
-| Bookmark | `Bookmarks` | JSON |
-| CreditCard | `Web Data` | SQLite |
-| Extension | `Secure Preferences` | JSON |
-| LocalStorage | `Local Storage/leveldb/` | LevelDB dir |
-| SessionStorage | `Session Storage/` | LevelDB dir |
+| Category       | Candidate Paths (priority order) | Format      |
+| -------------- | -------------------------------- | ----------- |
+| Password       | `Login Data`                     | SQLite      |
+| Cookie         | `Network/Cookies`, `Cookies`     | SQLite      |
+| History        | `History`                        | SQLite      |
+| Download       | `History` (same file)            | SQLite      |
+| Bookmark       | `Bookmarks`                      | JSON        |
+| CreditCard     | `Web Data`                       | SQLite      |
+| Extension      | `Secure Preferences`             | JSON        |
+| LocalStorage   | `Local Storage/leveldb/`         | LevelDB dir |
+| SessionStorage | `Session Storage/`               | LevelDB dir |
 
 Cookies have two candidate paths because older Chromium versions stored cookies at `<profile>/Cookies`, while newer versions moved them to `<profile>/Network/Cookies`. The first existing path wins.
 
@@ -28,14 +28,14 @@ Cookies have two candidate paths because older Chromium versions stored cookies 
 
 Yandex overrides two file names from the standard Chromium layout:
 
-| Category | Standard Chromium | Yandex |
-|----------|-------------------|--------|
-| Password | `Login Data` | `Ya Passman Data` |
-| CreditCard | `Web Data` | `Ya Credit Cards` |
+| Category   | Standard Chromium | Yandex            |
+| ---------- | ----------------- | ----------------- |
+| Password   | `Login Data`      | `Ya Passman Data` |
+| CreditCard | `Web Data`        | `Ya Credit Cards` |
 
 Yandex's password query selects extra columns (`username_element`, `password_element`, `signon_realm`) beyond the standard four; these columns are used to construct the per-row AAD for decryption. The URL column is `origin_url`, same as standard Chromium.
 
-Yandex passwords and credit cards use Yandex's proprietary two-layer encryption (see RFC-012) and are fully supported. Cookie decryption follows standard Chromium v10/v20 paths.
+Yandex passwords and credit cards use Yandex's proprietary two-layer encryption (see RFC-017) and are fully supported. Cookie decryption follows standard Chromium v10/v20 paths.
 
 ### 2.2 Opera
 
@@ -63,7 +63,7 @@ Certain directories are always skipped: `System Profile`, `Guest Profile`, and `
 SELECT origin_url, username_value, password_value, date_created FROM logins
 ```
 
-The `password_value` column contains encrypted bytes. See [RFC-003](003-chromium-encryption.md) for decryption.
+The `password_value` column contains encrypted bytes. See [RFC-014](014-chromium-encryption.md) for decryption.
 
 ### 4.2 Cookies (Cookies -- SQLite)
 
@@ -132,8 +132,8 @@ Chromium uses WebKit epoch timestamps: microseconds since 1601-01-01 00:00:00 UT
 
 ## Related RFCs
 
-| RFC | Topic |
-|-----|-------|
-| [RFC-003](003-chromium-encryption.md) | Chromium encryption mechanisms per platform |
-| [RFC-006](006-key-retrieval-mechanisms.md) | Platform-specific master key retrieval |
-| [RFC-008](008-file-acquisition-and-platform-quirks.md) | File acquisition and platform quirks |
+| RFC                                        | Topic                                       |
+| ------------------------------------------ | ------------------------------------------- |
+| [RFC-014](014-chromium-encryption.md)      | Chromium encryption mechanisms per platform |
+| [RFC-015](015-key-retrieval-mechanisms.md) | Platform-specific master key retrieval      |
+| [RFC-007](007-snapshot-and-acquisition.md) | Snapshot-first file acquisition             |

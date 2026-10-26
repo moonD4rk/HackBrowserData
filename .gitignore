@@ -24,7 +24,6 @@
 !.gitignore
 !.golangci.yml
 !.goreleaser.yml
-!.typos.toml
 !CLAUDE.md
 !LICENSE
 
@@ -44,6 +43,9 @@
 
 # === RFCs ===
 !rfcs/*.md
+
+# === Test goldens ===
+!**/testdata/*.golden
 
 # === Always ignore (override !*/) ===
 .git/

@@ -1,7 +1,7 @@
-# RFC-003: Chromium Encryption
+# RFC-014: Chromium Encryption
 
-**Author**: moonD4rk
-**Status**: Living Document
+**Author**: moonD4rk\
+**Status**: Living Document\
 **Created**: 2026-04-05
 
 ## 1. Overview
@@ -14,13 +14,13 @@ Non-sensitive categories (history, bookmarks, downloads, extensions, storage) ar
 
 Every encrypted value begins with a 3-byte prefix that identifies the cipher version:
 
-| Prefix | Version | Meaning |
-|--------|---------|---------|
-| `v10` | CipherV10 | Chrome 80+ standard encryption (AES-GCM on Windows, AES-CBC on macOS/Linux) |
-| `v11` | CipherV11 | Linux-only: AES-CBC variant where the key comes from libsecret / kwallet. Same algorithm and parameters as `v10` — only the key source differs |
-| `v12` | CipherV12 | Chromium SecretPortal/Flatpak (xdg-desktop-portal) — recognized by the version detector so a clear error can be returned; not yet implemented |
-| `v20` | CipherV20 | Chrome 127+ App-Bound Encryption |
-| (none) | CipherDPAPI | Pre-Chrome 80 raw DPAPI encryption (Windows only, no prefix) |
+| Prefix | Version     | Meaning                                                                                                                                        |
+| ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `v10`  | CipherV10   | Chrome 80+ standard encryption (AES-GCM on Windows, AES-CBC on macOS/Linux)                                                                    |
+| `v11`  | CipherV11   | Linux-only: AES-CBC variant where the key comes from libsecret / kwallet. Same algorithm and parameters as `v10` — only the key source differs |
+| `v12`  | CipherV12   | Chromium SecretPortal/Flatpak (xdg-desktop-portal) — recognized by the version detector so a clear error can be returned; not yet implemented  |
+| `v20`  | CipherV20   | Chrome 127+ App-Bound Encryption                                                                                                               |
+| (none) | CipherDPAPI | Pre-Chrome 80 raw DPAPI encryption (Windows only, no prefix)                                                                                   |
 
 If the ciphertext is shorter than 3 bytes or the prefix is unrecognized, it is treated as legacy DPAPI.
 
@@ -28,11 +28,11 @@ If the ciphertext is shorter than 3 bytes or the prefix is unrecognized, it is t
 
 Chromium on macOS stores a per-browser secret in the macOS Keychain (e.g. "Chrome Safe Storage", "Brave Safe Storage"). The master key is derived from this secret via PBKDF2:
 
-| Parameter | Value |
-|-----------|-------|
-| Hash | SHA-1 |
-| Salt | `saltysalt` |
-| Iterations | 1003 |
+| Parameter  | Value              |
+| ---------- | ------------------ |
+| Hash       | SHA-1              |
+| Salt       | `saltysalt`        |
+| Iterations | 1003               |
 | Key length | 16 bytes (AES-128) |
 
 Decryption uses AES-128-CBC with a fixed IV of 16 space bytes (`0x20`). The ciphertext layout:
@@ -43,7 +43,7 @@ Decryption uses AES-128-CBC with a fixed IV of 16 space bytes (`0x20`). The ciph
 | 3B    | remaining bytes                     |
 ```
 
-There are three retrieval strategies, tried in order: (1) gcoredump exploit for securityd process memory, (2) direct keychain unlock with user's login password, (3) `security` CLI command (may trigger a GUI prompt). See [RFC-006](006-key-retrieval-mechanisms.md) for details.
+There are three retrieval strategies, tried in order: (1) gcoredump exploit for securityd process memory, (2) direct keychain unlock with user's login password, (3) `security` CLI command (may trigger a GUI prompt). See [RFC-015](015-key-retrieval-mechanisms.md) for details.
 
 ## 4. Windows Encryption
 
@@ -78,11 +78,11 @@ Chromium on Linux has two obfuscation prefixes that share the same AES-128-CBC a
 
 Both prefixes are derived through the same PBKDF2 parameters:
 
-| Parameter | Value |
-|-----------|-------|
-| Hash | SHA-1 |
-| Salt | `saltysalt` |
-| Iterations | 1 |
+| Parameter  | Value              |
+| ---------- | ------------------ |
+| Hash       | SHA-1              |
+| Salt       | `saltysalt`        |
+| Iterations | 1                  |
 | Key length | 16 bytes (AES-128) |
 
 Decryption uses AES-128-CBC with a fixed IV of 16 space bytes (`0x20`) and PKCS5 padding — identical to macOS except for the PBKDF2 iteration count.
@@ -119,7 +119,7 @@ Each record is decrypted independently. A failure to decrypt one value does not 
 
 ## Related RFCs
 
-| RFC | Topic |
-|-----|-------|
-| [RFC-002](002-chromium-data-storage.md) | Chromium data file locations and storage formats |
-| [RFC-006](006-key-retrieval-mechanisms.md) | Platform-specific master key retrieval |
+| RFC                                        | Topic                                            |
+| ------------------------------------------ | ------------------------------------------------ |
+| [RFC-013](013-chromium-data-storage.md)    | Chromium data file locations and storage formats |
+| [RFC-015](015-key-retrieval-mechanisms.md) | Platform-specific master key retrieval           |

@@ -1,6 +1,9 @@
-# RFC-010: Chrome App-Bound Encryption Integration
+# RFC-016: Chrome App-Bound Encryption Integration
 
-**Author**: moonD4rk **Status**: Living Document **Created**: 2026-04-17 **Last updated**: 2026-04-19
+**Author**: moonD4rk\
+**Status**: Living Document\
+**Created**: 2026-04-17\
+**Last updated**: 2026-04-19
 
 ## 1. Overview
 
@@ -10,9 +13,9 @@ This RFC documents how HackBrowserData integrates ABE support end-to-end while k
 
 Related RFCs:
 
-- [RFC-003](003-chromium-encryption.md) — cipher versions (v10, v11, v20)
-- [RFC-006](006-key-retrieval-mechanisms.md) — `Retriever` / `ChainRetriever`
-- [RFC-009](009-windows-locked-file-bypass.md) — other Windows-specific handling
+- [RFC-014](014-chromium-encryption.md) — cipher versions (v10, v11, v20)
+- [RFC-015](015-key-retrieval-mechanisms.md) — `Retriever` / `ChainRetriever`
+- [RFC-021](021-windows-locked-file-bypass.md) — other Windows-specific handling
 
 ### 1.1 Compatibility contract
 
@@ -106,15 +109,15 @@ Three translation units, ~500 lines of pure C. No C++, no assembly, no direct sy
 
 Structure after refactor: **one ~30-line orchestrator + seven single-purpose static helpers**:
 
-| Helper | Responsibility |
-| --- | --- |
-| `locate_own_image_base` | Backward-scan from `__builtin_return_address(0)` for MZ/PE magic (must stay `noinline`) |
-| `read_bootstrap_params` | Read the standalone scratch pointer and 5 function pointers from the remote parameter block (§4.4) |
-| `allocate_and_copy_image` | `VirtualAlloc(SizeOfImage, RW)` + copy headers/sections |
-| `apply_base_relocations` | Walk `IMAGE_DIRECTORY_ENTRY_BASERELOC`, fix `IMAGE_REL_BASED_DIR64` |
-| `link_iat` | Resolve each imported DLL + fill IAT via parameter-supplied `LoadLibraryA` / `GetProcAddress` |
-| `set_section_protections` | `.text → RX`, `.rdata → R`, `.data → RW` per `Characteristics` |
-| `invoke_dllmain` | Call mapped `DllMain(DLL_PROCESS_ATTACH, scratchBase)` |
+| Helper                    | Responsibility                                                                                     |
+| ------------------------- | -------------------------------------------------------------------------------------------------- |
+| `locate_own_image_base`   | Backward-scan from `__builtin_return_address(0)` for MZ/PE magic (must stay `noinline`)            |
+| `read_bootstrap_params`   | Read the standalone scratch pointer and 5 function pointers from the remote parameter block (§4.4) |
+| `allocate_and_copy_image` | `VirtualAlloc(SizeOfImage, RW)` + copy headers/sections                                            |
+| `apply_base_relocations`  | Walk `IMAGE_DIRECTORY_ENTRY_BASERELOC`, fix `IMAGE_REL_BASED_DIR64`                                |
+| `link_iat`                | Resolve each imported DLL + fill IAT via parameter-supplied `LoadLibraryA` / `GetProcAddress`      |
+| `set_section_protections` | `.text → RX`, `.rdata → R`, `.data → RW` per `Characteristics`                                     |
+| `invoke_dllmain`          | Call mapped `DllMain(DLL_PROCESS_ATTACH, scratchBase)`                                             |
 
 Progress markers: after each major step the orchestrator writes one byte to `scratchBase + BOOTSTRAP_MARKER_OFFSET` (0x28). The Go injector reads this back on failure to pinpoint the stage.
 
@@ -167,12 +170,12 @@ Validity relies on Windows **KnownDlls + session-consistent ASLR** — `kernel32
 
 Four files collaborate:
 
-| File | Role |
-| --- | --- |
+| File                    | Role                                                                                                                                                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `reflective_windows.go` | `Reflective.Inject(exePath, payload, env) ([]byte, error)` — the orchestrator. Win32 calls (`VirtualAllocEx`, `VirtualProtectEx`, `CreateRemoteThread`, import-address lookups) delegate to `utils/winapi/` via `CallBoolErr`. |
-| `errors_windows.go` | `formatABEError(scratchResult) string` — renders the C-side diag channel into human-readable strings via two lookup maps (`ABE_ERR_*` names + known HRESULT names like `E_ACCESSDENIED`). |
-| `pe_windows.go` | `FindExportFileOffset(dllBytes, "Bootstrap")` — raw-file offset via `debug/pe`. |
-| `arch_windows.go` | Architecture validation (amd64-only today). |
+| `errors_windows.go`     | `formatABEError(scratchResult) string` — renders the C-side diag channel into human-readable strings via two lookup maps (`ABE_ERR_*` names + known HRESULT names like `E_ACCESSDENIED`).                                      |
+| `pe_windows.go`         | `FindExportFileOffset(dllBytes, "Bootstrap")` — raw-file offset via `debug/pe`.                                                                                                                                                |
+| `arch_windows.go`       | Architecture validation (amd64-only today).                                                                                                                                                                                    |
 
 `scratchResult` is the Go mirror of the remote process's 12-byte diagnostic header: `Marker / Status / ErrCode / HResult / ComErr` + optional 32-byte `Key`. One `ReadProcessMemory` covers the header; a second reads the key only when `Status == KeyStatusReady`.
 
@@ -192,7 +195,7 @@ Go consumes the same constants via **`go tool cgo -godefs`** (a development-time
 
 ### 5.3 Retriever wiring & v20 routing
 
-`masterkey.DefaultRetrievers()` on Windows returns a `Retrievers` struct with `V10 = &DPAPIRetriever{}` and `V20 = &ABERetriever{}`. The two tiers are wired independently — not in a ChainRetriever — because a single Chrome profile upgraded from pre-127 can carry mixed v10+v20 ciphertexts, and both keys must be available for `decryptValue` to route each ciphertext to its matching tier (see [RFC-006](006-key-retrieval-mechanisms.md) §4.4 and issue #578). `ABERetriever.RetrieveKey`:
+`masterkey.DefaultRetrievers()` on Windows returns a `Retrievers` struct with `V10 = &DPAPIRetriever{}` and `V20 = &ABERetriever{}`. The two tiers are wired independently — not in a ChainRetriever — because a single Chrome profile upgraded from pre-127 can carry mixed v10+v20 ciphertexts, and both keys must be available for `decryptValue` to route each ciphertext to its matching tier (see [RFC-015](015-key-retrieval-mechanisms.md) §4.4 and issue #578). `ABERetriever.RetrieveKey`:
 
 1. Reads `Local State` → extracts `os_crypt.app_bound_encrypted_key` → strips `APPB` prefix. If the field is missing, `ABERetriever` returns `(nil, nil)`, `V20` remains empty, and the independently-wired `V10` DPAPI tier still runs.
 2. Resolves browser executable via `utils/winutil/browser_path_windows.go` (registry App Paths → hardcoded fallback).
@@ -213,12 +216,12 @@ On extraction success, logs at `Info` level (`abe: retrieved <browser> master ke
 
 ## 7. Impact on non-Windows contributors — zero
 
-| Scenario | Requires zig? | Requires CGO? | Default `go build ./...` succeeds? |
-| --- | --- | --- | --- |
-| macOS / Linux feature work | no | no | yes |
-| Windows non-ABE (v10/DPAPI) | no | no | yes (stub path) |
-| Windows release with ABE | **yes** | no | `make build-windows` |
-| CI on any host (non-release) | no | no | yes |
+| Scenario                     | Requires zig? | Requires CGO? | Default `go build ./...` succeeds? |
+| ---------------------------- | ------------- | ------------- | ---------------------------------- |
+| macOS / Linux feature work   | no            | no            | yes                                |
+| Windows non-ABE (v10/DPAPI)  | no            | no            | yes (stub path)                    |
+| Windows release with ABE     | **yes**       | no            | `make build-windows`               |
+| CI on any host (non-release) | no            | no            | yes                                |
 
 All ABE-specific Go code is behind `//go:build windows` (plus `&& abe_embed` for the payload embed).
 
@@ -251,18 +254,18 @@ Import pointers live in the separate `BootstrapParams` block passed as the remot
 
 Three implementations of "extract Chrome v20 master key via reflective injection" exist in the ecosystem.
 
-| Dimension | **This project** | **injector-old** (local C++ fork) | **xaitax/Chrome-App-Bound-Encryption-Decryption** |
-| --- | --- | --- | --- |
-| Top-level language | Go + C | Go + C++ | C++ end-to-end |
-| Injector runtime | Go, `CGO_ENABLED=0` | Go, `CGO_ENABLED=0` | C++ standalone exe |
-| Reflective loader | **Self-written C**, ~280 lines | Stephen Fewer 2012 `ReflectiveLoader` (vendored C, ~500) | Self-written C++, ~400 |
-| kernel32 resolution | **Pre-resolved by Go, passed in BootstrapParams** | PEB walk + `_rotr` hash | PEB walk + `_rotr` hash |
-| Syscall mechanism | Win32 APIs | Win32 APIs | Direct syscall via ASM trampoline |
-| COM DecryptData dispatch | Vtable slot by browser kind (5/8/13) | Full interface via `ComPtr` | Same as injector-old |
-| IPC payload → injector | **env var in, scratch-region read out** | Named pipe (full duplex) | Named pipe (full duplex) |
-| Build toolchain for payload | `zig cc` | MSVC / clang-cl | MSVC |
-| Runtime disk footprint | **0 bytes** | 1 temp file + pipe | Pipe |
-| EDR evasion posture | None (Win32 APIs visible) | Partial (optional Nt\*) | Strong (direct syscalls) |
+| Dimension                   | **This project**                                  | **injector-old** (local C++ fork)                        | **xaitax/Chrome-App-Bound-Encryption-Decryption** |
+| --------------------------- | ------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------- |
+| Top-level language          | Go + C                                            | Go + C++                                                 | C++ end-to-end                                    |
+| Injector runtime            | Go, `CGO_ENABLED=0`                               | Go, `CGO_ENABLED=0`                                      | C++ standalone exe                                |
+| Reflective loader           | **Self-written C**, ~280 lines                    | Stephen Fewer 2012 `ReflectiveLoader` (vendored C, ~500) | Self-written C++, ~400                            |
+| kernel32 resolution         | **Pre-resolved by Go, passed in BootstrapParams** | PEB walk + `_rotr` hash                                  | PEB walk + `_rotr` hash                           |
+| Syscall mechanism           | Win32 APIs                                        | Win32 APIs                                               | Direct syscall via ASM trampoline                 |
+| COM DecryptData dispatch    | Vtable slot by browser kind (5/8/13)              | Full interface via `ComPtr`                              | Same as injector-old                              |
+| IPC payload → injector      | **env var in, scratch-region read out**           | Named pipe (full duplex)                                 | Named pipe (full duplex)                          |
+| Build toolchain for payload | `zig cc`                                          | MSVC / clang-cl                                          | MSVC                                              |
+| Runtime disk footprint      | **0 bytes**                                       | 1 temp file + pipe                                       | Pipe                                              |
+| EDR evasion posture         | None (Win32 APIs visible)                         | Partial (optional Nt\*)                                  | Strong (direct syscalls)                          |
 
 ### 9.1 Why we didn't vendor xaitax's Bootstrap
 
@@ -276,11 +279,11 @@ Comparisons in this section were made against [xaitax/Chrome-App-Bound-Encryptio
 
 ## 10. Browser coverage
 
-| Browser class | Behavior |
-| --- | --- |
-| Chrome Stable/Beta, Brave, CocCoc | ABE v20 via `CHROME_BASE` slot (5) |
-| Microsoft Edge | ABE v20 via `EDGE` slot (8); v2 `E_NOINTERFACE` → v1 fallback succeeds |
-| Avast Secure Browser | ABE v20 via `AVAST` slot (13) |
+| Browser class                                               | Behavior                                                                           |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Chrome Stable/Beta, Brave, CocCoc                           | ABE v20 via `CHROME_BASE` slot (5)                                                 |
+| Microsoft Edge                                              | ABE v20 via `EDGE` slot (8); v2 `E_NOINTERFACE` → v1 fallback succeeds             |
+| Avast Secure Browser                                        | ABE v20 via `AVAST` slot (13)                                                      |
 | Opera / OperaGX / Vivaldi / Yandex / Arc / 360 / QQ / Sogou | Not in `com_iid.c`; legacy v10 cookies still decrypt via DPAPI, v20 cookies do not |
 
 Authoritative CLSID/IID table: `crypto/windows/abe_native/com_iid.c`.
@@ -316,8 +319,8 @@ Edit `crypto/windows/abe_native/com_iid.c` (add the entry), `utils/winutil/brows
 
 ## 13. Related RFCs
 
-| RFC | Relation |
-| --- | --- |
-| [RFC-003 Chromium Encryption](003-chromium-encryption.md) | v10/v11/v20 cipher format reference; v20 now implemented on Windows per this RFC |
-| [RFC-006 Key Retrieval](006-key-retrieval-mechanisms.md) | `masterkey.Retrievers` taxonomy; Windows populates V10 (DPAPI) + V20 (ABE) as independent tier slots |
-| [RFC-009 Windows Locked Files](009-windows-locked-file-bypass.md) | Sibling Windows-specific workaround (handle duplication for locked DBs) |
+| RFC                                                               | Relation                                                                                             |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| [RFC-014 Chromium Encryption](014-chromium-encryption.md)         | v10/v11/v20 cipher format reference; v20 now implemented on Windows per this RFC                     |
+| [RFC-015 Key Retrieval](015-key-retrieval-mechanisms.md)          | `masterkey.Retrievers` taxonomy; Windows populates V10 (DPAPI) + V20 (ABE) as independent tier slots |
+| [RFC-021 Windows Locked Files](021-windows-locked-file-bypass.md) | Sibling Windows-specific workaround (handle duplication for locked DBs)                              |

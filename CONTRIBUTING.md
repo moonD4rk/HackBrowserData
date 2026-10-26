@@ -30,9 +30,6 @@ golangci-lint run
 # Format
 gofumpt -l -w .
 goimports -w -local github.com/moond4rk/hackbrowserdata .
-
-# Spelling check
-typos
 ```
 
 ## Pull Requests

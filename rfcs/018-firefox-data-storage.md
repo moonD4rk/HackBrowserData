@@ -1,7 +1,7 @@
-# RFC-004: Firefox Data Storage
+# RFC-018: Firefox Data Storage
 
-**Author**: moonD4rk
-**Status**: Living Document
+**Author**: moonD4rk\
+**Status**: Living Document\
 **Created**: 2026-04-05
 
 ## 1. Profile Structure
@@ -14,19 +14,19 @@ Profile discovery enumerates subdirectories of the root and accepts any director
 
 All paths are relative to the profile directory.
 
-| Category | File | Format |
-|----------|------|--------|
-| Password | `logins.json` | JSON |
-| Cookie | `cookies.sqlite` | SQLite |
-| History | `places.sqlite` | SQLite |
-| Download | `places.sqlite` | SQLite |
-| Bookmark | `places.sqlite` | SQLite |
-| Extension | `extensions.json` | JSON |
+| Category     | File                  | Format |
+| ------------ | --------------------- | ------ |
+| Password     | `logins.json`         | JSON   |
+| Cookie       | `cookies.sqlite`      | SQLite |
+| History      | `places.sqlite`       | SQLite |
+| Download     | `places.sqlite`       | SQLite |
+| Bookmark     | `places.sqlite`       | SQLite |
+| Extension    | `extensions.json`     | JSON   |
 | LocalStorage | `webappsstore.sqlite` | SQLite |
 
 History, Download, and Bookmark all share `places.sqlite` but query different tables within it. Firefox does not support CreditCard or SessionStorage extraction.
 
-The master encryption key is stored separately in `key4.db` (see [RFC-005](005-firefox-encryption.md)).
+The master encryption key is stored separately in `key4.db` (see [RFC-019](019-firefox-encryption.md)).
 
 ## 3. Data Storage Formats
 
@@ -98,33 +98,33 @@ The `originKey` column uses a **reversed-host format**: `moc.buhtig.:https:443` 
 
 Firefox uses inconsistent timestamp units across data types. All are Unix epoch-based.
 
-| Data Type | Unit | Conversion |
-|-----------|------|------------|
-| Cookies (`creationTime`) | Microseconds | / 1,000,000 |
-| Cookies (`expiry`) | Seconds | direct |
+| Data Type                   | Unit         | Conversion  |
+| --------------------------- | ------------ | ----------- |
+| Cookies (`creationTime`)    | Microseconds | / 1,000,000 |
+| Cookies (`expiry`)          | Seconds      | direct      |
 | History (`last_visit_date`) | Microseconds | / 1,000,000 |
-| Downloads (`dateAdded`) | Microseconds | / 1,000,000 |
-| Downloads (`endTime`) | Milliseconds | / 1,000 |
-| Bookmarks (`dateAdded`) | Microseconds | / 1,000,000 |
-| Passwords (`timeCreated`) | Milliseconds | / 1,000 |
+| Downloads (`dateAdded`)     | Microseconds | / 1,000,000 |
+| Downloads (`endTime`)       | Milliseconds | / 1,000     |
+| Bookmarks (`dateAdded`)     | Microseconds | / 1,000,000 |
+| Passwords (`timeCreated`)   | Milliseconds | / 1,000     |
 
 ## 5. Key Differences from Chromium
 
-| Aspect | Chromium | Firefox |
-|--------|----------|---------|
-| Profile naming | Named directories (`Default`, `Profile 1`) | Random-prefix (`97nszz88.default-release`) |
-| Profile detection | `Preferences` sentinel file | Any known source file present |
-| Password storage | SQLite (`Login Data`) | JSON (`logins.json`) |
-| Cookie encryption | Encrypted with master key | **Plaintext** |
-| Shared database | Separate files per category | `places.sqlite` shared by History/Download/Bookmark |
-| LocalStorage | LevelDB | SQLite (`webappsstore.sqlite`) |
-| CreditCard support | Yes | No |
-| SessionStorage support | Yes | No |
-| Encryption scope | Passwords, cookies, credit cards | **Passwords only** (see [RFC-005](005-firefox-encryption.md)) |
+| Aspect                 | Chromium                                   | Firefox                                                       |
+| ---------------------- | ------------------------------------------ | ------------------------------------------------------------- |
+| Profile naming         | Named directories (`Default`, `Profile 1`) | Random-prefix (`97nszz88.default-release`)                    |
+| Profile detection      | `Preferences` sentinel file                | Any known source file present                                 |
+| Password storage       | SQLite (`Login Data`)                      | JSON (`logins.json`)                                          |
+| Cookie encryption      | Encrypted with master key                  | **Plaintext**                                                 |
+| Shared database        | Separate files per category                | `places.sqlite` shared by History/Download/Bookmark           |
+| LocalStorage           | LevelDB                                    | SQLite (`webappsstore.sqlite`)                                |
+| CreditCard support     | Yes                                        | No                                                            |
+| SessionStorage support | Yes                                        | No                                                            |
+| Encryption scope       | Passwords, cookies, credit cards           | **Passwords only** (see [RFC-019](019-firefox-encryption.md)) |
 
 ## Related RFCs
 
-| RFC | Topic |
-|-----|-------|
-| [RFC-005](005-firefox-encryption.md) | Firefox NSS encryption and master key derivation |
-| [RFC-008](008-file-acquisition-and-platform-quirks.md) | File acquisition and platform quirks |
+| RFC                                        | Topic                                            |
+| ------------------------------------------ | ------------------------------------------------ |
+| [RFC-019](019-firefox-encryption.md)       | Firefox NSS encryption and master key derivation |
+| [RFC-007](007-snapshot-and-acquisition.md) | Snapshot-first file acquisition                  |

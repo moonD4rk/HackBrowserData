@@ -2,3 +2,6 @@
 # Prevents gofmt/gofumpt/goimports CRLF false positives on Windows CI.
 # See: golangci/golangci-lint#580, golang/go#16355
 * text=auto eol=lf
+
+# Goldens are compared byte for byte, so git must never rewrite their line endings.
+*.golden -text
