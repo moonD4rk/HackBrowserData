@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moond4rk/hackbrowserdata/browser"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
@@ -42,11 +43,11 @@ func (b *keysFakeBrowser) Profiles() []types.Profile {
 	return out
 }
 
-func (b *keysFakeBrowser) Extract(_ []types.Category) ([]types.ExtractResult, error) {
+func (b *keysFakeBrowser) Extract(_ []category.Category) ([]types.ExtractResult, error) {
 	return nil, nil
 }
 
-func (b *keysFakeBrowser) CountEntries(_ []types.Category) ([]types.CountResult, error) {
+func (b *keysFakeBrowser) CountEntries(_ []category.Category) ([]types.CountResult, error) {
 	return nil, nil
 }
 

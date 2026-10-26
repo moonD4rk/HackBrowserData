@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
-	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 const (
@@ -14,14 +14,14 @@ const (
 	firefoxCountLocalStorageQuery = `SELECT COUNT(*) FROM webappsstore2`
 )
 
-func extractLocalStorage(path string) ([]types.StorageEntry, error) {
+func extractLocalStorage(path string) ([]record.LocalStorage, error) {
 	return sqlitex.QueryRows(path, true, firefoxLocalStorageQuery,
-		func(rows *sql.Rows) (types.StorageEntry, error) {
+		func(rows *sql.Rows) (record.LocalStorage, error) {
 			var originKey, key, value string
 			if err := rows.Scan(&originKey, &key, &value); err != nil {
-				return types.StorageEntry{}, err
+				return record.LocalStorage{}, err
 			}
-			return types.StorageEntry{
+			return record.LocalStorage{
 				URL:   parseOriginKey(originKey),
 				Key:   key,
 				Value: value,

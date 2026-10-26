@@ -3,7 +3,7 @@ package safari
 import (
 	"path/filepath"
 
-	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
 type sourcePath struct {
@@ -21,7 +21,7 @@ func dir(abs string) sourcePath  { return sourcePath{abs: abs, isDir: true} }
 //   - Download:         shared plist, filtered by DownloadEntryProfileUUIDStringKey at extract time
 //   - Bookmark:         shared plist, attributed to default only (no per-entry UUID available)
 //   - Password:         macOS Keychain (shared, not listed)
-func buildSources(p profileContext) map[types.Category][]sourcePath {
+func buildSources(p profileContext) map[category.Category][]sourcePath {
 	if p.isDefault() {
 		return defaultSources(p)
 	}
@@ -31,18 +31,18 @@ func buildSources(p profileContext) map[types.Category][]sourcePath {
 // defaultSources: cookies try macOS 14+ container first, then the ≤13 legacy path.
 // LocalStorage for the default profile lives under WebsiteData/Default — the pre-profile-era
 // WebKit store that stays readable even after profiles are introduced.
-func defaultSources(p profileContext) map[types.Category][]sourcePath {
+func defaultSources(p profileContext) map[category.Category][]sourcePath {
 	home := p.legacyHome
 	containerCookies := filepath.Join(p.container, "Cookies", "Cookies.binarycookies")
 	legacyCookies := filepath.Join(filepath.Dir(home), "Cookies", "Cookies.binarycookies")
 	defaultLocalStorage := filepath.Join(p.container, "WebKit", "WebsiteData", "Default")
 
-	return map[types.Category][]sourcePath{
-		types.History:      {file(filepath.Join(home, "History.db"))},
-		types.Cookie:       {file(containerCookies), file(legacyCookies)},
-		types.Bookmark:     {file(filepath.Join(home, "Bookmarks.plist"))},
-		types.Download:     {file(filepath.Join(home, "Downloads.plist"))},
-		types.LocalStorage: {dir(defaultLocalStorage)},
+	return map[category.Category][]sourcePath{
+		category.History:      {file(filepath.Join(home, "History.db"))},
+		category.Cookie:       {file(containerCookies), file(legacyCookies)},
+		category.Bookmark:     {file(filepath.Join(home, "Bookmarks.plist"))},
+		category.Download:     {file(filepath.Join(home, "Downloads.plist"))},
+		category.LocalStorage: {dir(defaultLocalStorage)},
 	}
 }
 
@@ -52,14 +52,14 @@ func defaultSources(p profileContext) map[types.Category][]sourcePath {
 // LocalStorage lives under WebKit/WebsiteDataStore/<uuidLower>/Origins — Safari 17+ uses a nested
 // <top-frame-hash>/<frame-hash>/LocalStorage/localstorage.sqlite3 layout; the flat
 // WebsiteDataStore/<uuid>/LocalStorage directory from older builds is empty on modern Safari.
-func namedSources(p profileContext) map[types.Category][]sourcePath {
+func namedSources(p profileContext) map[category.Category][]sourcePath {
 	profileDir := filepath.Join(p.container, "Safari", "Profiles", p.uuidUpper)
 	webkitStore := filepath.Join(p.container, "WebKit", "WebsiteDataStore", p.uuidLower)
 
-	return map[types.Category][]sourcePath{
-		types.History:      {file(filepath.Join(profileDir, "History.db"))},
-		types.Cookie:       {file(filepath.Join(webkitStore, "Cookies", "Cookies.binarycookies"))},
-		types.Download:     {file(filepath.Join(p.legacyHome, "Downloads.plist"))},
-		types.LocalStorage: {dir(filepath.Join(webkitStore, "Origins"))},
+	return map[category.Category][]sourcePath{
+		category.History:      {file(filepath.Join(profileDir, "History.db"))},
+		category.Cookie:       {file(filepath.Join(webkitStore, "Cookies", "Cookies.binarycookies"))},
+		category.Download:     {file(filepath.Join(p.legacyHome, "Downloads.plist"))},
+		category.LocalStorage: {dir(filepath.Join(webkitStore, "Origins"))},
 	}
 }

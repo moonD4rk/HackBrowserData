@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/moond4rk/hackbrowserdata/browser"
-	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
 func listCmd() *cobra.Command {
@@ -54,16 +54,16 @@ func printDetail(out io.Writer, browsers []browser.Browser) error {
 	// Build header: Browser  Profile  Password  Cookie  ...
 	w := tabwriter.NewWriter(out, 0, 0, 3, ' ', 0)
 	fmt.Fprint(w, "Browser\tProfile")
-	for _, c := range types.AllCategories {
+	for _, c := range category.All() {
 		fmt.Fprintf(w, "\t%s", c.String())
 	}
 	fmt.Fprintln(w)
 
 	for _, b := range browsers {
-		results, _ := b.CountEntries(types.AllCategories)
+		results, _ := b.CountEntries(category.All())
 		for _, r := range results {
 			fmt.Fprintf(w, "%s\t%s", b.BrowserName(), r.Name)
-			for _, c := range types.AllCategories {
+			for _, c := range category.All() {
 				fmt.Fprintf(w, "\t%d", r.Counts[c])
 			}
 			fmt.Fprintln(w)

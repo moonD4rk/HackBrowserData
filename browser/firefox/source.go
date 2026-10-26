@@ -3,7 +3,7 @@ package firefox
 import (
 	"path/filepath"
 
-	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
 // sourcePath describes a single candidate location for browser data,
@@ -19,12 +19,12 @@ func file(rel string) sourcePath { return sourcePath{rel: filepath.FromSlash(rel
 // Each category maps to one or more candidate paths tried in priority order;
 // the first existing path wins.
 // Firefox does not support SessionStorage or CreditCard extraction.
-var firefoxSources = map[types.Category][]sourcePath{
-	types.Password:     {file("logins.json")},
-	types.Cookie:       {file("cookies.sqlite")},
-	types.History:      {file("places.sqlite")},
-	types.Download:     {file("places.sqlite")},
-	types.Bookmark:     {file("places.sqlite")},
-	types.Extension:    {file("extensions.json")},
-	types.LocalStorage: {file("webappsstore.sqlite")},
+var firefoxSources = map[category.Category][]sourcePath{
+	category.Password:     {file("logins.json")},
+	category.Cookie:       {file("cookies.sqlite")},
+	category.History:      {file("places.sqlite")},
+	category.Download:     {file("places.sqlite")},
+	category.Bookmark:     {file("places.sqlite")},
+	category.Extension:    {file("extensions.json")},
+	category.LocalStorage: {file("webappsstore.sqlite")},
 }

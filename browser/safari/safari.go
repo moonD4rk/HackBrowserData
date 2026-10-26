@@ -3,6 +3,7 @@ package safari
 import (
 	"os"
 
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -53,7 +54,7 @@ func (b *Browser) Profiles() []types.Profile {
 }
 
 // Extract extracts every profile, threading the installation's keychain password.
-func (b *Browser) Extract(categories []types.Category) ([]types.ExtractResult, error) {
+func (b *Browser) Extract(categories []category.Category) ([]types.ExtractResult, error) {
 	results := make([]types.ExtractResult, 0, len(b.profiles))
 	for _, p := range b.profiles {
 		results = append(results, types.ExtractResult{
@@ -65,7 +66,7 @@ func (b *Browser) Extract(categories []types.Category) ([]types.ExtractResult, e
 }
 
 // CountEntries counts entries per category for every profile.
-func (b *Browser) CountEntries(categories []types.Category) ([]types.CountResult, error) {
+func (b *Browser) CountEntries(categories []category.Category) ([]types.CountResult, error) {
 	results := make([]types.CountResult, 0, len(b.profiles))
 	for _, p := range b.profiles {
 		results = append(results, types.CountResult{
@@ -76,7 +77,7 @@ func (b *Browser) CountEntries(categories []types.Category) ([]types.CountResult
 	return results, nil
 }
 
-func resolveProfilePaths(p profileContext) map[types.Category]resolvedPath {
+func resolveProfilePaths(p profileContext) map[category.Category]resolvedPath {
 	return resolveSourcePaths(buildSources(p))
 }
 
@@ -86,8 +87,8 @@ type resolvedPath struct {
 }
 
 // resolveSourcePaths returns only paths that exist; first matching candidate wins per category.
-func resolveSourcePaths(sources map[types.Category][]sourcePath) map[types.Category]resolvedPath {
-	resolved := make(map[types.Category]resolvedPath)
+func resolveSourcePaths(sources map[category.Category][]sourcePath) map[category.Category]resolvedPath {
+	resolved := make(map[category.Category]resolvedPath)
 	for cat, candidates := range sources {
 		for _, sp := range candidates {
 			info, err := os.Stat(sp.abs)

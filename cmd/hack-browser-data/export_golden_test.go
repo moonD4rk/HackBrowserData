@@ -14,7 +14,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moond4rk/hackbrowserdata/output"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
+	"github.com/moond4rk/hackbrowserdata/internal/export"
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
@@ -73,7 +75,7 @@ func TestExportGolden(t *testing.T) {
 				got = bundleFiles(t, dir, "cookie.json")
 			}
 			assertGolden(t, "export-"+tc.format+".golden", got)
-			assert.Equal(t, exportCategoryFiles(tc.ext, types.AllCategories...), exportDirFiles(t, dir))
+			assert.Equal(t, exportCategoryFiles(tc.ext, category.All()...), exportDirFiles(t, dir))
 			exportAssertFileContract(t, dir)
 			for _, form := range tc.urlForms {
 				exportAssertURLForm(t, dir, form)
@@ -81,7 +83,7 @@ func TestExportGolden(t *testing.T) {
 
 			sparse := filepath.Join(t.TempDir(), "sparse")
 			exportWrite(t, sparse, tc.format, exportSparseStamps())
-			assert.Equal(t, exportCategoryFiles(tc.ext, types.Password, types.LocalStorage), exportDirFiles(t, sparse))
+			assert.Equal(t, exportCategoryFiles(tc.ext, category.Password, category.LocalStorage), exportDirFiles(t, sparse))
 		})
 	}
 
@@ -100,15 +102,17 @@ func TestExportGolden(t *testing.T) {
 
 func exportWrite(t *testing.T, dir, format string, stamps []exportStamp) {
 	t.Helper()
-	w, err := output.NewWriter(dir, format)
+	f, err := export.ParseFormat(format)
+	require.NoError(t, err)
+	w, err := export.NewWriter(dir, f)
 	require.NoError(t, err)
 	for _, s := range stamps {
-		w.Add(s.browser, s.profile, s.data)
+		require.NoError(t, writeResult(w, s.browser, types.ExtractResult{Profile: types.Profile{Name: s.profile}, Data: s.data}))
 	}
-	require.NoError(t, w.Write())
+	require.NoError(t, w.Close())
 }
 
-func exportCategoryFiles(ext string, categories ...types.Category) []string {
+func exportCategoryFiles(ext string, categories ...category.Category) []string {
 	names := make([]string, 0, len(categories))
 	for _, c := range categories {
 		names = append(names, c.String()+"."+ext)
@@ -192,18 +196,18 @@ func exportAssertURLForm(t *testing.T, dir string, form exportURLForm) {
 func exportStamps() []exportStamp {
 	return []exportStamp{
 		{browser: "Chrome", profile: "Default", data: &types.BrowserData{
-			Passwords: []types.LoginEntry{
+			Passwords: []record.Login{
 				{
 					URL: "https://accounts.example.com/signin?continue=/mail&hl=ja", Username: "alice@example.com",
 					Password:  "pa$$ \"quoted\", comma\\backslash\nnewline",
-					CreatedAt: time.Date(2026, 3, 14, 15, 9, 26, 535897932, time.UTC), Store: types.PasswordStoreAccount,
+					CreatedAt: time.Date(2026, 3, 14, 15, 9, 26, 535897932, time.UTC), Store: record.StoreAccount,
 				},
 				{
 					URL: "https://例え.jp/ログイン", Username: "日本語ユーザー", Password: "🔑 emoji",
-					CreatedAt: time.Date(2025, 11, 5, 6, 7, 8, 0, time.UTC), Store: types.PasswordStoreLocal,
+					CreatedAt: time.Date(2025, 11, 5, 6, 7, 8, 0, time.UTC), Store: record.StoreLocal,
 				},
 			},
-			Cookies: []types.CookieEntry{
+			Cookies: []record.Cookie{
 				{
 					Host: ".example.com", Path: "/", Name: "return_to", Value: exportURLWithHTMLChars,
 					IsSecure: true, IsHTTPOnly: true, HasExpire: true, IsPersistent: true,
@@ -215,14 +219,14 @@ func exportStamps() []exportStamp {
 					IsHTTPOnly: true, CreatedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), SameSite: "strict",
 				},
 			},
-			Histories: []types.HistoryEntry{
+			Histories: []record.History{
 				{
 					URL: exportURLWithHTMLChars, Title: `Cart "deals" <b>&</b>, 日本語 🛒`, VisitCount: 42,
 					LastVisit: time.Date(2026, 3, 14, 15, 10, 0, 1000, time.UTC),
 				},
 				{URL: "file:///C:/Users/Alice/notes.html", Title: "multi\nline title", VisitCount: 3},
 			},
-			Downloads: []types.DownloadEntry{
+			Downloads: []record.Download{
 				{
 					URL:        "https://dl.example.com/files/big.iso?token=a&sig=<x>",
 					TargetPath: `C:\Users\Alice\Downloads\Ubuntu "final", v2.iso`,
@@ -231,42 +235,42 @@ func exportStamps() []exportStamp {
 					EndTime:   time.Date(2026, 3, 14, 15, 30, 0, 750000000, time.UTC),
 				},
 			},
-			Bookmarks: []types.BookmarkEntry{
+			Bookmarks: []record.Bookmark{
 				{
 					ID: 7, Name: "Docs & <Specs>", Type: "url", URL: "https://docs.example.com/search?a=1&b=<2>", Folder: "Bookmarks bar",
 					CreatedAt: time.Date(2026, 2, 2, 2, 2, 2, 20202020, time.UTC),
 				},
 				{ID: 4294967298, Name: "日本語 📚", Type: "url", URL: "https://例え.jp/", Folder: "Other bookmarks"},
 			},
-			CreditCards: []types.CreditCardEntry{
+			CreditCards: []record.CreditCard{
 				{
 					GUID: "00000000-0000-4000-8000-000000000001", Name: "山田 太郎", Number: "4111111111111111",
 					ExpMonth: "12", ExpYear: "2030", NickName: `Work "primary", 💳`, Address: "1-2-3 Chiyoda,\nTokyo 100-0001",
 				},
 			},
-			Extensions: []types.ExtensionEntry{
+			Extensions: []record.Extension{
 				{
 					Name: "Ad Blocker", ID: "abcdefghijklmnopabcdefghijklmnop", Description: `Blocks ads & trackers, "fast" <b>`,
 					Version: "1.58.0", HomepageURL: "https://adblock.example/?a=1&b=<2>", Enabled: true,
 				},
 			},
-			LocalStorage: []types.StorageEntry{
+			LocalStorage: []record.LocalStorage{
 				{URL: "https://app.example.com", Key: "prefs", Value: `{"theme":"dark","greeting":"こんにちは 👋","dir":"C:\Temp"}`},
 				{IsMeta: true, URL: "https://app.example.com", Value: "meta data, value bytes is [8 128 1]"},
 			},
-			SessionStorage: []types.StorageEntry{
+			SessionStorage: []record.SessionStorage{
 				{URL: "https://app.example.com", Key: "tab-id", Value: "42"},
 			},
 		}},
 		{browser: "Chrome", profile: "Profile 1", data: &types.BrowserData{
-			Passwords: []types.LoginEntry{
+			Passwords: []record.Login{
 				{
 					URL: "http://192.168.0.1:8080/admin", Username: "admin", Password: " leading space",
-					CreatedAt: time.Date(2025, 6, 1, 0, 0, 0, 1, time.UTC), Store: types.PasswordStoreLocal,
+					CreatedAt: time.Date(2025, 6, 1, 0, 0, 0, 1, time.UTC), Store: record.StoreLocal,
 				},
-				{URL: "android://hash@com.example.app/", Store: types.PasswordStoreLocal},
+				{URL: "android://hash@com.example.app/", Store: record.StoreLocal},
 			},
-			Cookies: []types.CookieEntry{
+			Cookies: []record.Cookie{
 				{
 					Host: ".tracker.example", Path: "/", Name: "_ga", Value: "GA1.2.1234567890.1700000000",
 					IsSecure: true, HasExpire: true, IsPersistent: true,
@@ -275,49 +279,49 @@ func exportStamps() []exportStamp {
 				},
 				{Host: ".dev.example", Path: "/dev", Name: "multi_line", Value: "line one\nline two, with comma", SameSite: "unspecified"},
 			},
-			Histories: []types.HistoryEntry{
+			Histories: []record.History{
 				{
 					URL: "https://search.example.com/?q=a%26b&lang=日本語", VisitCount: 1000000,
 					LastVisit: time.Date(2025, 7, 7, 7, 7, 7, 700000000, time.UTC),
 				},
 				{URL: "about:blank", Title: " leading space", LastVisit: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
 			},
-			Downloads: []types.DownloadEntry{
+			Downloads: []record.Download{
 				{
 					URL: "https://例え.jp/資料.pdf", TargetPath: "/home/alice/Downloads/資料 📄.pdf", MimeType: "application/pdf",
 					StartTime: time.Date(2025, 8, 1, 8, 0, 0, 0, time.UTC),
 				},
 			},
-			Bookmarks: []types.BookmarkEntry{
+			Bookmarks: []record.Bookmark{
 				{
 					ID: 1, Name: `Quote "this", please`, Type: "url", URL: "https://example.org/a,b", Folder: "multi\nline folder",
 					CreatedAt: time.Date(2025, 3, 3, 3, 3, 3, 0, time.UTC),
 				},
 			},
-			CreditCards: []types.CreditCardEntry{
+			CreditCards: []record.CreditCard{
 				{
 					GUID: "00000000-0000-4000-8000-000000000002", Name: "Alice O'Brien", Number: "5555555555554444",
 					ExpMonth: "1", ExpYear: "2027", CVC: "123", Comment: `note <b>&</b> \ end`,
 				},
 			},
-			Extensions: []types.ExtensionEntry{
+			Extensions: []record.Extension{
 				{Name: "日本語拡張 🧩", ID: "ponmlkjihgfedcbaponmlkjihgfedcba", Description: "line one\nline two", Version: "0.0.1"},
 			},
-			LocalStorage: []types.StorageEntry{
+			LocalStorage: []record.LocalStorage{
 				{URL: "https://example.org", Key: "a&b<c>", Value: "multi\nline"},
 			},
-			SessionStorage: []types.StorageEntry{
+			SessionStorage: []record.SessionStorage{
 				{URL: "https://example.org/?x=1&y=<2>", Key: "draft", Value: `He said "hi", then left \`},
 			},
 		}},
 		{browser: "Microsoft Edge", profile: "Default", data: &types.BrowserData{
-			Passwords: []types.LoginEntry{
+			Passwords: []record.Login{
 				{
 					URL: "https://login.example.org/<tenant>/authorize?client=a&scope=b", Username: `CORP\jdoe`, Password: "日本語パスワード",
-					CreatedAt: time.Date(2024, 2, 29, 12, 0, 0, 500000000, time.UTC), Store: types.PasswordStoreAccount,
+					CreatedAt: time.Date(2024, 2, 29, 12, 0, 0, 500000000, time.UTC), Store: record.StoreAccount,
 				},
 			},
-			Cookies: []types.CookieEntry{
+			Cookies: []record.Cookie{
 				{
 					Host: ".edge.example", Path: "/", Name: "epoch_expiry", Value: `back\slash "quoted" <b>&amp;</b>`,
 					IsSecure: true, IsHTTPOnly: true, HasExpire: true, IsPersistent: true,
@@ -329,34 +333,34 @@ func exportStamps() []exportStamp {
 					CreatedAt: time.Date(2024, 6, 15, 9, 30, 0, 0, time.UTC), SameSite: "strict",
 				},
 			},
-			Histories: []types.HistoryEntry{
+			Histories: []record.History{
 				{
 					URL: "edge://settings/?a=1&b=2", Title: `C:\Windows\System32`, VisitCount: 7,
 					LastVisit: time.Date(2024, 7, 4, 0, 0, 0, 500000000, time.UTC),
 				},
 			},
-			Downloads: []types.DownloadEntry{
+			Downloads: []record.Download{
 				{URL: "blob:https://app.example/1234", TargetPath: `\\fileserver\share\Q3 summary.csv`, TotalBytes: 4294967296},
 			},
-			Bookmarks: []types.BookmarkEntry{
+			Bookmarks: []record.Bookmark{
 				{
 					ID: 12, Name: `C:\Shares\docs`, Type: "url", URL: "https://edge.example/", Folder: "Favorites bar",
 					CreatedAt: time.Date(2024, 4, 4, 4, 4, 4, 400000000, time.UTC),
 				},
 			},
-			CreditCards: []types.CreditCardEntry{
+			CreditCards: []record.CreditCard{
 				{GUID: "00000000-0000-4000-8000-000000000003"},
 			},
-			Extensions: []types.ExtensionEntry{
+			Extensions: []record.Extension{
 				{
 					Name: "Edge Helper", ID: "aaaabbbbccccddddeeeeffffgggghhhh", Description: `Installed under C:\Program Files\Helper`,
 					Version: "2.0", HomepageURL: "https://helper.example/", Enabled: true,
 				},
 			},
-			LocalStorage: []types.StorageEntry{
+			LocalStorage: []record.LocalStorage{
 				{URL: "https://edge.example", Key: "日本語"},
 			},
-			SessionStorage: []types.StorageEntry{
+			SessionStorage: []record.SessionStorage{
 				{IsMeta: true, URL: "https://edge.example", Value: "meta data, value bytes is [16 2]"},
 			},
 		}},
@@ -366,13 +370,13 @@ func exportStamps() []exportStamp {
 func exportSparseStamps() []exportStamp {
 	return []exportStamp{
 		{browser: "Chrome", profile: "Default", data: &types.BrowserData{
-			Passwords: []types.LoginEntry{{URL: "https://example.com/", Username: "alice", Store: types.PasswordStoreLocal}},
-			Cookies:   []types.CookieEntry{},
+			Passwords: []record.Login{{URL: "https://example.com/", Username: "alice", Store: record.StoreLocal}},
+			Cookies:   []record.Cookie{},
 		}},
 		{browser: "Chrome", profile: "Profile 1"},
 		{browser: "Microsoft Edge", profile: "Default", data: &types.BrowserData{
-			Histories:    []types.HistoryEntry{},
-			LocalStorage: []types.StorageEntry{{URL: "https://example.com", Key: "k", Value: "v"}},
+			Histories:    []record.History{},
+			LocalStorage: []record.LocalStorage{{URL: "https://example.com", Key: "k", Value: "v"}},
 		}},
 	}
 }

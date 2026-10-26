@@ -1,4 +1,4 @@
-package output
+package export
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ var timeType = reflect.TypeOf(time.Time{})
 
 // structCSVHeader extracts CSV column names from a struct's csv tags.
 func structCSVHeader(v any) []string {
-	t := reflect.TypeOf(v)
+	t := reflect.Indirect(reflect.ValueOf(v)).Type()
 	headers := make([]string, 0, t.NumField())
 	for i := 0; i < t.NumField(); i++ {
 		name := tagName(t.Field(i), "csv")
@@ -27,7 +27,7 @@ func structCSVHeader(v any) []string {
 // structCSVRow converts a struct's field values to CSV string values,
 // including only fields that have a csv tag.
 func structCSVRow(v any) []string {
-	val := reflect.ValueOf(v)
+	val := reflect.Indirect(reflect.ValueOf(v))
 	t := val.Type()
 	row := make([]string, 0, t.NumField())
 	for i := 0; i < t.NumField(); i++ {

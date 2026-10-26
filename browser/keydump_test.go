@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
@@ -37,11 +38,11 @@ func (m *mockBrowser) Profiles() []types.Profile {
 	return out
 }
 
-func (m *mockBrowser) Extract(_ []types.Category) ([]types.ExtractResult, error) {
+func (m *mockBrowser) Extract(_ []category.Category) ([]types.ExtractResult, error) {
 	return nil, nil
 }
 
-func (m *mockBrowser) CountEntries(_ []types.Category) ([]types.CountResult, error) {
+func (m *mockBrowser) CountEntries(_ []category.Category) ([]types.CountResult, error) {
 	return nil, nil
 }
 

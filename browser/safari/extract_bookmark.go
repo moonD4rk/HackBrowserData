@@ -7,7 +7,7 @@ import (
 
 	"github.com/moond4rk/plist"
 
-	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 // safariBookmark mirrors the plist structure of Safari's Bookmarks.plist.
@@ -28,7 +28,7 @@ const (
 	bookmarkTypeList = "WebBookmarkTypeList"
 )
 
-func extractBookmarks(path string) ([]types.BookmarkEntry, error) {
+func extractBookmarks(path string) ([]record.Bookmark, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("open bookmarks: %w", err)
@@ -40,13 +40,13 @@ func extractBookmarks(path string) ([]types.BookmarkEntry, error) {
 		return nil, fmt.Errorf("decode bookmarks: %w", err)
 	}
 
-	var bookmarks []types.BookmarkEntry
+	var bookmarks []record.Bookmark
 	walkBookmarks(root.Children, "", &bookmarks)
 	return bookmarks, nil
 }
 
 // walkBookmarks recursively traverses the bookmark tree, collecting leaf entries.
-func walkBookmarks(nodes []safariBookmark, folder string, out *[]types.BookmarkEntry) {
+func walkBookmarks(nodes []safariBookmark, folder string, out *[]record.Bookmark) {
 	for i, node := range nodes {
 		switch node.Type {
 		case bookmarkTypeLeaf:
@@ -57,7 +57,7 @@ func walkBookmarks(nodes []safariBookmark, folder string, out *[]types.BookmarkE
 			if node.URLString == "" {
 				continue
 			}
-			*out = append(*out, types.BookmarkEntry{
+			*out = append(*out, record.Bookmark{
 				ID:        int64(i),
 				Name:      title,
 				URL:       node.URLString,

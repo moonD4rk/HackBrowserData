@@ -133,12 +133,12 @@ func TestExtractCookies(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, cookies, 2)
 
-	// Sorted by CreatedAt descending (newest first)
-	assert.Equal(t, ".go.dev", cookies[0].Host)
-	assert.Equal(t, ".example.com", cookies[1].Host)
+	// Cookies keep the file's order; the exporter sorts them.
+	assert.Equal(t, ".example.com", cookies[0].Host)
+	assert.Equal(t, ".go.dev", cookies[1].Host)
 
 	// Verify field mapping
-	c := cookies[1] // .example.com cookie
+	c := cookies[0] // .example.com cookie
 	assert.Equal(t, "session", c.Name)
 	assert.Equal(t, "abc123", c.Value)
 	assert.Equal(t, "/", c.Path)

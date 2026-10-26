@@ -44,18 +44,19 @@ Every record starts with two flat source fields — `Browser` and `Profile` ([RF
 
 ## Deterministic ordering
 
-Output order is defined once per category, in the exporter, for every browser. Files list extractions in plan order — the browser table's order (one merged list whose per-OS projections equal today's `platformBrowsers()` orders), then user data dir ID, then profiles in discovery order (directory order for Chromium and Firefox, the default profile first for Safari) — which matches today's order. Within an extraction, records are sorted by today's key, with tie-breakers added and a stable sort (`sort.SliceStable`; Go 1.20 has no `slices`), so two runs over the same snapshot produce byte-identical files:
+Output order is defined once per category, in the exporter, for every browser. Files list extractions in plan order — the browser table's order (one merged list whose per-OS projections equal today's `platformBrowsers()` orders), then user data dir ID, then profiles in discovery order (directory order for Chromium and Firefox, the default profile first for Safari) — which matches today's order. Within an extraction, records are sorted by today's key with a stable sort (`sort.SliceStable`; Go 1.20 has no `slices`), and ties keep the order the extractor emitted them in — the source order, which a snapshot fixes — so two runs over the same snapshot produce byte-identical files:
 
-| Category                                            | Order                                                                                  |
-| --------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| password                                            | `created_at` descending, then `store` (local before account), `url`, `username`        |
-| cookie                                              | `created_at` descending, then `host`, `name`, `path`                                   |
-| history                                             | `visit_count` descending, then `last_visit` descending, `url`                          |
-| download                                            | `start_time` descending, then `url`                                                    |
-| bookmark                                            | `created_at` descending, then `id` ascending                                           |
-| creditcard, extension, localstorage, sessionstorage | source order, made explicit (`ORDER BY rowid`, LevelDB key order, JSON document order) |
+| Category                                            | Order                                                                                                             |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| password                                            | `created_at` descending; on a tie, local before account, the order the Chromium extractor reads its two stores in |
+| cookie, bookmark                                    | `created_at` descending                                                                                           |
+| history                                             | `visit_count` descending                                                                                          |
+| download                                            | `start_time` descending                                                                                           |
+| creditcard, extension, localstorage, sessionstorage | source order (row order, LevelDB key order, JSON document order)                                                  |
 
-Today the order is decided in each extractor with an unstable `sort.Slice`, so ties come out in arbitrary order — and Firefox history sorts _ascending_ by visit count (`browser/firefox/extract_history.go`) while Chromium and Safari sort descending. The table above keeps today's keys and fixes Firefox to match the others.
+Ties are not broken by a second key, because some sources lack the first: Safari bookmarks carry no creation time and Safari downloads no start time, so a tie-breaker such as `id` or `url` would replace their file order with an order nobody chose. A stable sort leaves them as the browser stored them.
+
+Today the order is decided in each extractor with an unstable `sort.Slice`, so ties come out in an order nobody chose — and Firefox history sorts _ascending_ by visit count (`browser/firefox/extract_history.go`) while Chromium and Safari sort descending. The table keeps today's keys and fixes Firefox to match the others.
 
 ## Streaming vs. buffering
 

@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moond4rk/hackbrowserdata/browser"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
-	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
@@ -48,7 +48,7 @@ func TestRestoreGolden(t *testing.T) {
 
 	t.Run("data-zip", func(t *testing.T) {
 		dataZip := filepath.Join(t.TempDir(), "data.zip")
-		_, err := browser.WriteArchive(chromiumFixtureBrowsers(t, data), types.AllCategories, dataZip)
+		_, err := browser.WriteArchive(chromiumFixtureBrowsers(t, data), category.All(), dataZip)
 		require.NoError(t, err)
 
 		out := t.TempDir()

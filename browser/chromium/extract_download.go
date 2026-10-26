@@ -2,11 +2,10 @@ package chromium
 
 import (
 	"database/sql"
-	"sort"
 
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
-	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 const (
@@ -15,15 +14,15 @@ const (
 	countDownloadQuery = `SELECT COUNT(*) FROM downloads`
 )
 
-func extractDownloads(path string) ([]types.DownloadEntry, error) {
+func extractDownloads(path string) ([]record.Download, error) {
 	downloads, err := sqlitex.QueryRows(path, false, defaultDownloadQuery,
-		func(rows *sql.Rows) (types.DownloadEntry, error) {
+		func(rows *sql.Rows) (record.Download, error) {
 			var targetPath, url, mimeType string
 			var totalBytes, startTime, endTime int64
 			if err := rows.Scan(&targetPath, &url, &totalBytes, &startTime, &endTime, &mimeType); err != nil {
-				return types.DownloadEntry{}, err
+				return record.Download{}, err
 			}
-			return types.DownloadEntry{
+			return record.Download{
 				URL:        url,
 				TargetPath: targetPath,
 				MimeType:   mimeType,
@@ -35,10 +34,6 @@ func extractDownloads(path string) ([]types.DownloadEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	sort.Slice(downloads, func(i, j int) bool {
-		return downloads[i].StartTime.After(downloads[j].StartTime)
-	})
 	return downloads, nil
 }
 

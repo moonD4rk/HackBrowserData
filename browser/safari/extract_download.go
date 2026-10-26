@@ -6,7 +6,7 @@ import (
 
 	"github.com/moond4rk/plist"
 
-	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 type safariDownloads struct {
@@ -25,7 +25,7 @@ type safariDownloadEntry struct {
 // extractDownloads reads Downloads.plist (shared across Safari profiles) and returns only the entries
 // owned by ownerUUID — either "DefaultProfile" or a named profile's uppercase UUID. Entries written by
 // older Safari (no ProfileUUID field) are attributed to the default profile.
-func extractDownloads(path, ownerUUID string) ([]types.DownloadEntry, error) {
+func extractDownloads(path, ownerUUID string) ([]record.Download, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("open downloads: %w", err)
@@ -37,12 +37,12 @@ func extractDownloads(path, ownerUUID string) ([]types.DownloadEntry, error) {
 		return nil, fmt.Errorf("decode downloads: %w", err)
 	}
 
-	var downloads []types.DownloadEntry
+	var downloads []record.Download
 	for _, d := range dl.DownloadHistory {
 		if !ownsDownload(d.ProfileUUID, ownerUUID) {
 			continue
 		}
-		downloads = append(downloads, types.DownloadEntry{
+		downloads = append(downloads, record.Download{
 			URL:        d.URL,
 			TargetPath: d.Path,
 			TotalBytes: d.TotalBytes,

@@ -7,9 +7,9 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/crypto"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
-	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 const (
@@ -36,16 +36,16 @@ type yandexPrivateData struct {
 	SecretComment  string `json:"secret_comment"`
 }
 
-func extractCreditCards(masterKeys masterkey.MasterKeys, path string) ([]types.CreditCardEntry, error) {
+func extractCreditCards(masterKeys masterkey.MasterKeys, path string) ([]record.CreditCard, error) {
 	cards, err := sqlitex.QueryRows(path, false, defaultCreditCardQuery,
-		func(rows *sql.Rows) (types.CreditCardEntry, error) {
+		func(rows *sql.Rows) (record.CreditCard, error) {
 			var guid, name, month, year, nickname, address string
 			var encNumber []byte
 			if err := rows.Scan(&guid, &name, &month, &year, &encNumber, &nickname, &address); err != nil {
-				return types.CreditCardEntry{}, err
+				return record.CreditCard{}, err
 			}
 			number, _ := decryptValue(masterKeys, encNumber)
-			return types.CreditCardEntry{
+			return record.CreditCard{
 				GUID:     guid,
 				Name:     name,
 				Number:   string(number),
@@ -62,7 +62,7 @@ func extractCreditCards(masterKeys masterkey.MasterKeys, path string) ([]types.C
 }
 
 // extractYandexCreditCards reads the records table (not Chromium's credit_cards). AAD = guid.
-func extractYandexCreditCards(masterKeys masterkey.MasterKeys, path string) ([]types.CreditCardEntry, error) {
+func extractYandexCreditCards(masterKeys masterkey.MasterKeys, path string) ([]record.CreditCard, error) {
 	dataKey, err := loadYandexDataKey(path, masterKeys.V10)
 	if err != nil {
 		if errors.Is(err, errYandexMasterPasswordSet) {
@@ -73,11 +73,11 @@ func extractYandexCreditCards(masterKeys masterkey.MasterKeys, path string) ([]t
 	}
 
 	return sqlitex.QueryRows(path, false, yandexCreditCardQuery,
-		func(rows *sql.Rows) (types.CreditCardEntry, error) {
+		func(rows *sql.Rows) (record.CreditCard, error) {
 			var guid, publicData string
 			var privateData []byte
 			if err := rows.Scan(&guid, &publicData, &privateData); err != nil {
-				return types.CreditCardEntry{}, err
+				return record.CreditCard{}, err
 			}
 
 			var public yandexPublicData
@@ -86,7 +86,7 @@ func extractYandexCreditCards(masterKeys masterkey.MasterKeys, path string) ([]t
 					log.Debugf("yandex: parse public_data for %s: %v", guid, err)
 				}
 			}
-			entry := types.CreditCardEntry{
+			entry := record.CreditCard{
 				GUID:     guid,
 				Name:     public.CardHolder,
 				ExpMonth: public.ExpireDateMonth,

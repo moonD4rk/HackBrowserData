@@ -6,7 +6,7 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 // defaultExtensionKeys are the JSON paths tried for standard Chromium browsers.
@@ -16,14 +16,14 @@ var defaultExtensionKeys = []string{
 	"settings.settings",
 }
 
-func extractExtensions(path string) ([]types.ExtensionEntry, error) {
+func extractExtensions(path string) ([]record.Extension, error) {
 	return extractExtensionsWithKeys(path, defaultExtensionKeys)
 }
 
 // extractExtensionsWithKeys reads Secure Preferences and looks for extension
 // settings under the given JSON key paths. This allows browser variants
 // (e.g. Opera with "extensions.opsettings") to reuse the same parsing logic.
-func extractExtensionsWithKeys(path string, keys []string) ([]types.ExtensionEntry, error) {
+func extractExtensionsWithKeys(path string, keys []string) ([]record.Extension, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func extractExtensionsWithKeys(path string, keys []string) ([]types.ExtensionEnt
 		return nil, fmt.Errorf("cannot find extensions in settings")
 	}
 
-	var extensions []types.ExtensionEntry
+	var extensions []record.Extension
 	settings.ForEach(func(id, ext gjson.Result) bool {
 		// Skip system/component extensions
 		// https://source.chromium.org/chromium/chromium/src/+/main:extensions/common/mojom/manifest.mojom
@@ -54,7 +54,7 @@ func extractExtensionsWithKeys(path string, keys []string) ([]types.ExtensionEnt
 			return true
 		}
 
-		extensions = append(extensions, types.ExtensionEntry{
+		extensions = append(extensions, record.Extension{
 			Name:        manifest.Get("name").String(),
 			ID:          id.String(),
 			Description: manifest.Get("description").String(),
@@ -82,7 +82,7 @@ func isExtensionEnabled(ext gjson.Result) bool {
 // extractOperaExtensions extracts extensions from Opera's Secure Preferences,
 // which stores extension data under "extensions.opsettings" instead of the
 // standard "extensions.settings".
-func extractOperaExtensions(path string) ([]types.ExtensionEntry, error) {
+func extractOperaExtensions(path string) ([]record.Extension, error) {
 	return extractExtensionsWithKeys(path, []string{"extensions.opsettings"})
 }
 

@@ -43,18 +43,18 @@ func TestExtractBookmarks(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 3)
 
-	// Verify sort order: date added descending (newest first)
-	assert.Equal(t, "GitHub", got[0].Name)
-	assert.Equal(t, "Go", got[1].Name)
-	assert.Equal(t, "HN", got[2].Name)
+	// Bookmarks keep the tree's order; the exporter sorts them.
+	assert.Equal(t, "Go", got[0].Name)
+	assert.Equal(t, "HN", got[1].Name)
+	assert.Equal(t, "GitHub", got[2].Name)
 
 	// Verify field mapping
-	assert.Equal(t, "https://github.com", got[0].URL)
-	assert.Equal(t, "Other", got[0].Folder)
+	assert.Equal(t, "https://github.com", got[2].URL)
+	assert.Equal(t, "Other", got[2].Folder)
 
 	// Verify nested folder tracking
-	assert.Equal(t, "https://news.ycombinator.com", got[2].URL)
-	assert.Equal(t, "News", got[2].Folder) // parent folder name
+	assert.Equal(t, "https://news.ycombinator.com", got[1].URL)
+	assert.Equal(t, "News", got[1].Folder) // parent folder name
 }
 
 func TestCountBookmarks(t *testing.T) {

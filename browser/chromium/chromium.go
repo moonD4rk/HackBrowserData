@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/moond4rk/hackbrowserdata/filemanager"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
@@ -68,7 +69,7 @@ func (b *Browser) Profiles() []types.Profile {
 }
 
 // Extract derives the installation's master key once, then extracts every profile.
-func (b *Browser) Extract(categories []types.Category) ([]types.ExtractResult, error) {
+func (b *Browser) Extract(categories []category.Category) ([]types.ExtractResult, error) {
 	masterKeys := b.masterKeys()
 	results := make([]types.ExtractResult, 0, len(b.profiles))
 	for _, p := range b.profiles {
@@ -81,7 +82,7 @@ func (b *Browser) Extract(categories []types.Category) ([]types.ExtractResult, e
 }
 
 // CountEntries counts entries per category for every profile without decryption.
-func (b *Browser) CountEntries(categories []types.Category) ([]types.CountResult, error) {
+func (b *Browser) CountEntries(categories []category.Category) ([]types.CountResult, error) {
 	results := make([]types.CountResult, 0, len(b.profiles))
 	for _, p := range b.profiles {
 		results = append(results, types.CountResult{
@@ -145,7 +146,7 @@ func (b *Browser) buildHints(session *filemanager.Session) masterkey.Hints {
 // discoverProfiles lists subdirectories of userDataDir that are valid
 // Chromium profile directories. A directory is considered a profile if it
 // contains a "Preferences" file, which Chromium creates for every profile.
-func discoverProfiles(userDataDir string, sources map[types.Category][]sourcePath) []string {
+func discoverProfiles(userDataDir string, sources map[category.Category][]sourcePath) []string {
 	entries, err := os.ReadDir(userDataDir)
 	if err != nil {
 		return nil
@@ -206,7 +207,7 @@ func isProfileDir(dir string) bool {
 }
 
 // hasAnySource checks if dir contains at least one source file or directory.
-func hasAnySource(sources map[types.Category][]sourcePath, dir string) bool {
+func hasAnySource(sources map[category.Category][]sourcePath, dir string) bool {
 	for _, candidates := range sources {
 		for _, sp := range candidates {
 			abs := filepath.Join(dir, sp.rel)
@@ -228,8 +229,8 @@ type resolvedPath struct {
 
 // resolveSourcePaths checks which sources actually exist in profileDir.
 // Candidates are tried in priority order; the first existing path wins.
-func resolveSourcePaths(sources map[types.Category][]sourcePath, profileDir string) map[types.Category]resolvedPath {
-	resolved := make(map[types.Category]resolvedPath)
+func resolveSourcePaths(sources map[category.Category][]sourcePath, profileDir string) map[category.Category]resolvedPath {
+	resolved := make(map[category.Category]resolvedPath)
 	for cat, candidates := range sources {
 		for _, sp := range candidates {
 			abs := filepath.Join(profileDir, sp.rel)

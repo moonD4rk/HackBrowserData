@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -119,20 +120,20 @@ func TestNewBrowsers_MultiProfile(t *testing.T) {
 		switch p.ctx.name {
 		case "default":
 			assert.Equal(t, legacyHome, p.dir())
-			assert.Contains(t, p.sourcePaths, types.History)
-			assert.Equal(t, filepath.Join(legacyHome, "History.db"), p.sourcePaths[types.History].absPath)
+			assert.Contains(t, p.sourcePaths, category.History)
+			assert.Equal(t, filepath.Join(legacyHome, "History.db"), p.sourcePaths[category.History].absPath)
 			// Default profile's LocalStorage root (WebsiteData/Default) isn't created in this fixture,
 			// so it won't resolve — which is the point: resolveSourcePaths only registers paths that exist.
-			assert.NotContains(t, p.sourcePaths, types.LocalStorage)
+			assert.NotContains(t, p.sourcePaths, category.LocalStorage)
 		case "work":
 			assert.Equal(t, filepath.Join(container, "Safari", "Profiles", uuid), p.dir())
-			assert.Contains(t, p.sourcePaths, types.History)
+			assert.Contains(t, p.sourcePaths, category.History)
 			assert.Equal(t,
 				filepath.Join(container, "Safari", "Profiles", uuid, "History.db"),
-				p.sourcePaths[types.History].absPath)
-			require.Contains(t, p.sourcePaths, types.LocalStorage)
-			assert.Equal(t, namedOriginsDir, p.sourcePaths[types.LocalStorage].absPath)
-			assert.True(t, p.sourcePaths[types.LocalStorage].isDir)
+				p.sourcePaths[category.History].absPath)
+			require.Contains(t, p.sourcePaths, category.LocalStorage)
+			assert.Equal(t, namedOriginsDir, p.sourcePaths[category.LocalStorage].absPath)
+			assert.True(t, p.sourcePaths[category.LocalStorage].isDir)
 		}
 	}
 }
@@ -147,9 +148,9 @@ func TestResolveSourcePaths(t *testing.T) {
 
 	sources := buildSources(profileContext{legacyHome: dir, container: deriveContainerRoot(dir)})
 	resolved := resolveSourcePaths(sources)
-	assert.Contains(t, resolved, types.History)
-	assert.Equal(t, filepath.Join(dir, "History.db"), resolved[types.History].absPath)
-	assert.False(t, resolved[types.History].isDir)
+	assert.Contains(t, resolved, category.History)
+	assert.Equal(t, filepath.Join(dir, "History.db"), resolved[category.History].absPath)
+	assert.False(t, resolved[category.History].isDir)
 }
 
 func TestResolveSourcePaths_Empty(t *testing.T) {
@@ -181,8 +182,8 @@ func TestCountEntries(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, b)
 
-	results, err := b.CountEntries([]types.Category{types.History})
+	results, err := b.CountEntries([]category.Category{category.History})
 	require.NoError(t, err)
 	require.Len(t, results, 1)
-	assert.Equal(t, 2, results[0].Counts[types.History])
+	assert.Equal(t, 2, results[0].Counts[category.History])
 }

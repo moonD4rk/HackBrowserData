@@ -25,20 +25,20 @@ func TestExtractCookies(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
-	// Verify sort order: creation time descending (newest first)
-	assert.Equal(t, ".new.com", got[0].Host)
-	assert.Equal(t, ".old.com", got[1].Host)
+	// Rows keep the database's order; the exporter sorts them.
+	assert.Equal(t, ".old.com", got[0].Host)
+	assert.Equal(t, ".new.com", got[1].Host)
 
 	// Verify field mapping
-	assert.Equal(t, "token", got[0].Name)
-	assert.Equal(t, "/api", got[0].Path)
-	assert.True(t, got[0].IsSecure)
-	assert.False(t, got[0].IsHTTPOnly)
-	assert.True(t, got[0].HasExpire)
-	assert.True(t, got[0].IsPersistent)
-	assert.False(t, got[0].CreatedAt.IsZero())
-	assert.True(t, got[0].ExpireAt.After(got[0].CreatedAt))
-	assert.True(t, got[1].IsHTTPOnly)
+	assert.Equal(t, "token", got[1].Name)
+	assert.Equal(t, "/api", got[1].Path)
+	assert.True(t, got[1].IsSecure)
+	assert.False(t, got[1].IsHTTPOnly)
+	assert.True(t, got[1].HasExpire)
+	assert.True(t, got[1].IsPersistent)
+	assert.False(t, got[1].CreatedAt.IsZero())
+	assert.True(t, got[1].ExpireAt.After(got[1].CreatedAt))
+	assert.True(t, got[0].IsHTTPOnly)
 }
 
 func TestCountCookies(t *testing.T) {

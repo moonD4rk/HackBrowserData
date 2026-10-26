@@ -10,7 +10,7 @@ import (
 
 	"github.com/syndtr/goleveldb/leveldb"
 
-	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 // Chromium localStorage LevelDB key prefixes and string format bytes.
@@ -26,7 +26,7 @@ const (
 
 const maxLocalStorageValueLength = 2048
 
-func extractLocalStorage(path string) ([]types.StorageEntry, error) {
+func extractLocalStorage(path string) ([]record.LocalStorage, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, fmt.Errorf("leveldb path %q: %w", path, err)
 	}
@@ -36,7 +36,7 @@ func extractLocalStorage(path string) ([]types.StorageEntry, error) {
 	}
 	defer db.Close()
 
-	var entries []types.StorageEntry
+	var entries []record.LocalStorage
 	iter := db.NewIterator(nil, nil)
 	defer iter.Release()
 
@@ -52,18 +52,18 @@ func extractLocalStorage(path string) ([]types.StorageEntry, error) {
 
 // parseLocalStorageEntry classifies a LevelDB key/value pair and decodes it.
 // Returns false for VERSION entries and any unrecognized keys. META entries are kept with IsMeta=true.
-func parseLocalStorageEntry(key, value []byte) (types.StorageEntry, bool) {
+func parseLocalStorageEntry(key, value []byte) (record.LocalStorage, bool) {
 	switch {
 	case bytes.Equal(key, []byte(localStorageVersionKey)):
-		return types.StorageEntry{}, false
+		return record.LocalStorage{}, false
 	case bytes.HasPrefix(key, []byte(localStorageMetaAccessKey)):
-		return types.StorageEntry{
+		return record.LocalStorage{
 			IsMeta: true,
 			URL:    string(bytes.TrimPrefix(key, []byte(localStorageMetaAccessKey))),
 			Value:  fmt.Sprintf("meta data, value bytes is %v", value),
 		}, true
 	case bytes.HasPrefix(key, []byte(localStorageMetaPrefix)):
-		return types.StorageEntry{
+		return record.LocalStorage{
 			IsMeta: true,
 			URL:    string(bytes.TrimPrefix(key, []byte(localStorageMetaPrefix))),
 			Value:  fmt.Sprintf("meta data, value bytes is %v", value),
@@ -71,13 +71,13 @@ func parseLocalStorageEntry(key, value []byte) (types.StorageEntry, bool) {
 	case len(key) > 0 && key[0] == localStorageDataPrefix:
 		return parseLocalStorageDataEntry(key[1:], value), true
 	default:
-		return types.StorageEntry{}, false
+		return record.LocalStorage{}, false
 	}
 }
 
 // parseLocalStorageDataEntry decodes a data entry with format: origin\x00<encoded-key>.
-func parseLocalStorageDataEntry(key, value []byte) types.StorageEntry {
-	entry := types.StorageEntry{
+func parseLocalStorageDataEntry(key, value []byte) record.LocalStorage {
+	entry := record.LocalStorage{
 		Value: decodeLocalStorageValue(value),
 	}
 
@@ -157,7 +157,7 @@ func decodeLocalStorageValue(value []byte) string {
 //	namespace-<guid>-<origin> → <map_id>   (origin mapping)
 //	map-<map_id>-<key_name>  → <value>     (actual data, UTF-16 LE)
 //	next-map-id / version                  (metadata, skipped)
-func extractSessionStorage(path string) ([]types.StorageEntry, error) {
+func extractSessionStorage(path string) ([]record.SessionStorage, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, fmt.Errorf("leveldb path %q: %w", path, err)
 	}
@@ -192,7 +192,7 @@ func extractSessionStorage(path string) ([]types.StorageEntry, error) {
 	}
 
 	// Pass 2: read map entries and resolve origins.
-	var entries []types.StorageEntry
+	var entries []record.SessionStorage
 	iter2 := db.NewIterator(nil, nil)
 	defer iter2.Release()
 
@@ -216,7 +216,7 @@ func extractSessionStorage(path string) ([]types.StorageEntry, error) {
 		}
 
 		value := decodeSessionStorageValue(iter2.Value())
-		entries = append(entries, types.StorageEntry{
+		entries = append(entries, record.SessionStorage{
 			URL:   origin,
 			Key:   keyName,
 			Value: value,

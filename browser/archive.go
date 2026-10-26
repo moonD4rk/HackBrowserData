@@ -7,8 +7,8 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/browser/chromium"
 	"github.com/moond4rk/hackbrowserdata/filemanager"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
-	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
@@ -16,14 +16,14 @@ import (
 // cross-host transport (Chromium only).
 type Archivable interface {
 	BrowserKey() string
-	ArchiveSources(categories []types.Category) []chromium.ArchiveSource
+	ArchiveSources(categories []category.Category) []chromium.ArchiveSource
 }
 
 // WriteArchive packs each browser's decryption-relevant files into a zip whose internal layout is
 // <browser-key>/<User Data layout>, so a restore can re-expand it and decrypt with a keys.json. Files
 // are staged through a locked-file session first because Windows holds exclusive SQLite locks. Returns
 // the number of source entries staged (a directory source counts once).
-func WriteArchive(browsers []Browser, categories []types.Category, outPath string) (int, error) {
+func WriteArchive(browsers []Browser, categories []category.Category, outPath string) (int, error) {
 	session, err := filemanager.NewSession()
 	if err != nil {
 		return 0, err

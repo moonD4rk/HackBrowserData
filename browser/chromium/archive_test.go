@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -30,7 +31,7 @@ func TestArchiveSources_ForwardSlashLayout(t *testing.T) {
 		t.Fatalf("NewBrowser: b=%v err=%v", b, err)
 	}
 
-	srcs := b.ArchiveSources([]types.Category{types.Cookie})
+	srcs := b.ArchiveSources([]category.Category{category.Cookie})
 
 	var gotCookie, gotMarker, gotLocalState bool
 	for _, s := range srcs {
@@ -70,7 +71,7 @@ func TestArchiveSources_FlatLayoutNoExtraLevel(t *testing.T) {
 		t.Fatalf("NewBrowser: b=%v err=%v", b, err)
 	}
 
-	srcs := b.ArchiveSources([]types.Category{types.History})
+	srcs := b.ArchiveSources([]category.Category{category.History})
 
 	phantom := filepath.Base(udd) + "/"
 	var gotHistory bool
@@ -106,7 +107,7 @@ func TestArchiveSources_IncludesBothPasswordDatabases(t *testing.T) {
 		t.Fatalf("NewBrowser: b=%v err=%v", b, err)
 	}
 
-	srcs := b.ArchiveSources([]types.Category{types.Password})
+	srcs := b.ArchiveSources([]category.Category{category.Password})
 
 	var gotLocal, gotAccount bool
 	for _, s := range srcs {

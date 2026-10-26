@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/moond4rk/hackbrowserdata/filemanager"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
@@ -15,7 +16,7 @@ import (
 type profile struct {
 	profileDir  string
 	browserName string
-	sourcePaths map[types.Category]resolvedPath
+	sourcePaths map[category.Category]resolvedPath
 }
 
 func (p *profile) name() string {
@@ -29,7 +30,7 @@ func (p *profile) label() string { return p.browserName + "/" + p.name() }
 
 // extract copies the profile's source files to a temp directory, derives the
 // per-profile master key, and extracts the requested categories.
-func (p *profile) extract(categories []types.Category) *types.BrowserData {
+func (p *profile) extract(categories []category.Category) *types.BrowserData {
 	session, err := filemanager.NewSession()
 	if err != nil {
 		log.Debugf("new session for %s: %v", p.label(), err)
@@ -55,7 +56,7 @@ func (p *profile) extract(categories []types.Category) *types.BrowserData {
 	return data
 }
 
-func (p *profile) count(categories []types.Category) map[types.Category]int {
+func (p *profile) count(categories []category.Category) map[category.Category]int {
 	session, err := filemanager.NewSession()
 	if err != nil {
 		log.Debugf("new session for %s: %v", p.label(), err)
@@ -64,7 +65,7 @@ func (p *profile) count(categories []types.Category) map[types.Category]int {
 	defer session.Cleanup()
 
 	tempPaths := p.acquireFiles(session, categories)
-	counts := make(map[types.Category]int)
+	counts := make(map[category.Category]int)
 	for _, cat := range categories {
 		path, ok := tempPaths[cat]
 		if !ok {
@@ -75,8 +76,8 @@ func (p *profile) count(categories []types.Category) map[types.Category]int {
 	return counts
 }
 
-func (p *profile) acquireFiles(session *filemanager.Session, categories []types.Category) map[types.Category]string {
-	tempPaths := make(map[types.Category]string)
+func (p *profile) acquireFiles(session *filemanager.Session, categories []category.Category) map[category.Category]string {
+	tempPaths := make(map[category.Category]string)
 	for _, cat := range categories {
 		rp, ok := p.sourcePaths[cat]
 		if !ok {
@@ -96,7 +97,7 @@ func (p *profile) acquireFiles(session *filemanager.Session, categories []types.
 // key4.db. The key is derived via NSS ASN1 PBE decryption (platform-agnostic).
 // If logins.json was already acquired by acquireFiles, the derived key is
 // validated by attempting to decrypt an actual login entry.
-func (p *profile) getMasterKey(session *filemanager.Session, tempPaths map[types.Category]string) ([]byte, error) {
+func (p *profile) getMasterKey(session *filemanager.Session, tempPaths map[category.Category]string) ([]byte, error) {
 	key4Src := filepath.Join(p.profileDir, "key4.db")
 	if !fileutil.FileExists(key4Src) {
 		return nil, nil
@@ -108,28 +109,28 @@ func (p *profile) getMasterKey(session *filemanager.Session, tempPaths map[types
 
 	// logins.json is already acquired by acquireFiles as the Password source;
 	// reuse it for master key validation if available.
-	loginsPath := tempPaths[types.Password]
+	loginsPath := tempPaths[category.Password]
 	return retrieveMasterKey(key4Dst, loginsPath)
 }
 
-func (p *profile) extractCategory(data *types.BrowserData, cat types.Category, masterKey []byte, path string) {
+func (p *profile) extractCategory(data *types.BrowserData, cat category.Category, masterKey []byte, path string) {
 	var err error
 	switch cat {
-	case types.Password:
+	case category.Password:
 		data.Passwords, err = extractPasswords(masterKey, path)
-	case types.Cookie:
+	case category.Cookie:
 		data.Cookies, err = extractCookies(path)
-	case types.History:
+	case category.History:
 		data.Histories, err = extractHistories(path)
-	case types.Download:
+	case category.Download:
 		data.Downloads, err = extractDownloads(path)
-	case types.Bookmark:
+	case category.Bookmark:
 		data.Bookmarks, err = extractBookmarks(path)
-	case types.Extension:
+	case category.Extension:
 		data.Extensions, err = extractExtensions(path)
-	case types.LocalStorage:
+	case category.LocalStorage:
 		data.LocalStorage, err = extractLocalStorage(path)
-	case types.CreditCard, types.SessionStorage:
+	case category.CreditCard, category.SessionStorage:
 		// Firefox does not support CreditCard or SessionStorage extraction.
 	}
 	if err != nil {
@@ -137,25 +138,25 @@ func (p *profile) extractCategory(data *types.BrowserData, cat types.Category, m
 	}
 }
 
-func (p *profile) countCategory(cat types.Category, path string) int {
+func (p *profile) countCategory(cat category.Category, path string) int {
 	var count int
 	var err error
 	switch cat {
-	case types.Password:
+	case category.Password:
 		count, err = countPasswords(path)
-	case types.Cookie:
+	case category.Cookie:
 		count, err = countCookies(path)
-	case types.History:
+	case category.History:
 		count, err = countHistories(path)
-	case types.Download:
+	case category.Download:
 		count, err = countDownloads(path)
-	case types.Bookmark:
+	case category.Bookmark:
 		count, err = countBookmarks(path)
-	case types.Extension:
+	case category.Extension:
 		count, err = countExtensions(path)
-	case types.LocalStorage:
+	case category.LocalStorage:
 		count, err = countLocalStorage(path)
-	case types.CreditCard, types.SessionStorage:
+	case category.CreditCard, category.SessionStorage:
 		// Firefox does not support CreditCard or SessionStorage.
 	}
 	if err != nil {

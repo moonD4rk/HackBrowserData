@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/masterkey"
-	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 func setupLoginDB(t *testing.T) string {
@@ -23,20 +23,20 @@ func setupLoginDB(t *testing.T) string {
 func TestExtractPasswords(t *testing.T) {
 	path := setupLoginDB(t)
 
-	got, err := extractPasswords(masterkey.MasterKeys{}, path, types.PasswordStoreLocal)
+	got, err := extractPasswords(masterkey.MasterKeys{}, path, record.StoreLocal)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
-	// Verify sort order: date created descending (newest first)
-	assert.Equal(t, "https://new.com", got[0].URL)
-	assert.Equal(t, "https://old.com", got[1].URL)
+	// Rows keep the database's order; the exporter sorts them.
+	assert.Equal(t, "https://old.com", got[0].URL)
+	assert.Equal(t, "https://new.com", got[1].URL)
 
 	// Verify field mapping
-	assert.Equal(t, "bob", got[0].Username)
-	assert.False(t, got[0].CreatedAt.IsZero())
+	assert.Equal(t, "bob", got[1].Username)
+	assert.False(t, got[1].CreatedAt.IsZero())
 	// Password is empty because masterKey is nil (decrypt returns empty)
-	assert.Empty(t, got[0].Password)
-	assert.Equal(t, types.PasswordStoreLocal, got[0].Store)
+	assert.Empty(t, got[1].Password)
+	assert.Equal(t, record.StoreLocal, got[1].Store)
 }
 
 // A credential whose blob cannot be decrypted must still be reported, otherwise a missing
@@ -46,13 +46,13 @@ func TestExtractPasswords_UndecryptableBlobStillListed(t *testing.T) {
 		insertLogin("https://enc.com", "https://enc.com/login", "carol", "763130deadbeef", 13350000000000000),
 	)
 
-	got, err := extractPasswords(masterkey.MasterKeys{}, path, types.PasswordStoreAccount)
+	got, err := extractPasswords(masterkey.MasterKeys{}, path, record.StoreAccount)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 
 	assert.Equal(t, "carol", got[0].Username)
 	assert.Empty(t, got[0].Password)
-	assert.Equal(t, types.PasswordStoreAccount, got[0].Store)
+	assert.Equal(t, record.StoreAccount, got[0].Store)
 }
 
 func TestCountPasswords(t *testing.T) {
@@ -92,11 +92,11 @@ func TestExtractYandexPasswords(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
-	// Sorted newest-first on CreatedAt.
-	assert.Equal(t, "https://new.yandex.ru", got[0].URL)
-	assert.Equal(t, "bob", got[0].Username)
-	assert.Equal(t, "sesame", got[0].Password)
-	assert.Equal(t, "hunter2", got[1].Password)
+	// Rows keep the database's order; the exporter sorts them.
+	assert.Equal(t, "https://new.yandex.ru", got[1].URL)
+	assert.Equal(t, "bob", got[1].Username)
+	assert.Equal(t, "sesame", got[1].Password)
+	assert.Equal(t, "hunter2", got[0].Password)
 }
 
 func TestExtractYandexPasswords_MasterPasswordSkipped(t *testing.T) {

@@ -24,13 +24,13 @@ func TestExtractDownloads(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
-	// Verify sort order: StartTime descending
-	assert.Equal(t, "https://example.com/new.pdf", got[0].URL)
-	assert.Equal(t, "https://example.com/old.zip", got[1].URL)
+	// Rows keep the database's order; the exporter sorts them.
+	assert.Equal(t, "https://example.com/old.zip", got[0].URL)
+	assert.Equal(t, "https://example.com/new.pdf", got[1].URL)
 
 	// Verify field mapping
-	assert.Equal(t, "/tmp/new.pdf", got[0].TargetPath)
-	assert.False(t, got[0].StartTime.IsZero())
+	assert.Equal(t, "/tmp/new.pdf", got[1].TargetPath)
+	assert.False(t, got[1].StartTime.IsZero())
 }
 
 func TestCountDownloads(t *testing.T) {
