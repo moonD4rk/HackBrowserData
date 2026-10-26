@@ -58,7 +58,7 @@ Four rules keep the graph acyclic and its seams honest:
 - **`crypto` takes bytes.** Primitives receive raw keys and blobs; they never see a `masterkey.Set`, because `masterkey` is the package that calls them.
 - **Interfaces live with their consumer.** `browser` declares the `Collector` its extractors use, and `app` implements it; `masterkey` and `browser/safari` each declare the one-method `LoginKeychain` they read. Constructors elsewhere return concrete types (`*snapshot.Dir`, `*export.Writer`).
 
-The rule is enforceable: `depguard` rules per package plus a `go list`-based test ([RFC-011](011-testing-and-quality.md)) fail CI if, say, `crypto` ever imports `browser`.
+Review keeps the table, not a tool: a change that needs an edge the table does not list — say, `crypto` importing `browser` — updates the table first, in the same pull request.
 
 ## Why `internal/` and nothing else (DECIDED)
 

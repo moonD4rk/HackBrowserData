@@ -15,7 +15,7 @@ Leaves first, bottom-up along the dependency arrows ([RFC-002](002-package-layou
 ### Phase 0 — Scaffold and guardrails
 
 - Make `rfcs/` the one design record: the design RFCs (000–012) and the format and technique RFCs (013–021), indexed by `rfcs/README.md`; the RFCs they supersede are removed.
-- Add the per-package `depguard` rules and `tagliatelle` ([RFC-011](011-testing-and-quality.md)), so new code is constrained from day one.
+- Add `tagliatelle` ([RFC-011](011-testing-and-quality.md)), so every new record, `keys.json`, and manifest field keeps its snake_case wire name from day one.
 - Pin CI to Go `1.20.x` and fail on any `go` directive other than `1.20` or on a `toolchain` line.
 - Capture the compatibility goldens from today's code: the per-command CLI flag sets first; then output-parity fixtures for every format (with URLs that exercise JSON escaping), and sample `keys.json` files and archives.
 - No behavior change. CLAUDE.md's "no `pkg/` + `internal/`" note is updated to reflect the `internal/`-only decision.
