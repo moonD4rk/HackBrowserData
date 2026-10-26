@@ -45,6 +45,9 @@
 # === RFCs ===
 !rfcs/*.md
 
+# === Test goldens ===
+!**/testdata/*.golden
+
 # === Always ignore (override !*/) ===
 .git/
 .idea/

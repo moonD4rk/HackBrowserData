@@ -1,7 +1,7 @@
-# RFC-009: Windows Locked File Bypass
+# RFC-021: Windows Locked File Bypass
 
-**Author**: moonD4rk
-**Status**: Living Document
+**Author**: moonD4rk\
+**Status**: Living Document\
 **Created**: 2026-04-05
 
 ## 1. Problem
@@ -41,13 +41,13 @@ The query starts with a 4 MB buffer and doubles it (up to 256 MB) if the API ret
 
 Each entry in the result table:
 
-| Field | Size | Description |
-|-------|------|-------------|
-| Object | `uintptr` | Kernel object pointer |
-| UniqueProcessID | `uintptr` | Owning process PID |
-| HandleValue | `uintptr` | Handle value in the owning process |
-| GrantedAccess | `uint32` | Access mask |
-| ObjectTypeIndex | `uint16` | Kernel object type |
+| Field           | Size      | Description                        |
+| --------------- | --------- | ---------------------------------- |
+| Object          | `uintptr` | Kernel object pointer              |
+| UniqueProcessID | `uintptr` | Owning process PID                 |
+| HandleValue     | `uintptr` | Handle value in the owning process |
+| GrantedAccess   | `uint32`  | Access mask                        |
+| ObjectTypeIndex | `uint16`  | Kernel object type                 |
 
 ### 3.2 Find the Target Handle
 
@@ -116,6 +116,6 @@ This is a documented Windows behavior, not an exploit. The technique requires on
 
 ## Related RFCs
 
-| RFC | Topic |
-|-----|-------|
-| [RFC-008](008-file-acquisition-and-platform-quirks.md) | File acquisition lifecycle and session management |
+| RFC                                        | Topic                           |
+| ------------------------------------------ | ------------------------------- |
+| [RFC-007](007-snapshot-and-acquisition.md) | Snapshot-first file acquisition |

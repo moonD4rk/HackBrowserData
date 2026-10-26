@@ -1,14 +1,14 @@
-# RFC-005: Firefox Encryption
+# RFC-019: Firefox Encryption
 
-**Author**: moonD4rk
-**Status**: Living Document
+**Author**: moonD4rk\
+**Status**: Living Document\
 **Created**: 2026-04-05
 
 ## 1. Overview
 
 Firefox uses Mozilla's NSS (Network Security Services) for credential encryption. Unlike Chromium, which delegates key storage to the OS (DPAPI, Keychain, D-Bus), Firefox manages its own encryption entirely within the profile directory via `key4.db`. This makes Firefox encryption **platform-agnostic** — the same derivation logic works on Windows, macOS, and Linux.
 
-Only passwords are encrypted. Cookies, history, bookmarks, downloads, extensions, and localStorage are all stored in plaintext. See [RFC-004](004-firefox-data-storage.md) for storage details.
+Only passwords are encrypted. Cookies, history, bookmarks, downloads, extensions, and localStorage are all stored in plaintext. See [RFC-018](018-firefox-data-storage.md) for storage details.
 
 ## 2. Master Key Derivation (key4.db)
 
@@ -16,10 +16,10 @@ Only passwords are encrypted. Cookies, history, bookmarks, downloads, extensions
 
 `key4.db` is a SQLite database containing two relevant tables:
 
-| Table | Purpose | Key Columns |
-|-------|---------|-------------|
-| `metaData` | Stores the global salt and an encrypted integrity marker | `item1` (global salt), `item2` (encrypted "password-check" string) |
-| `nssPrivate` | Stores encrypted master key candidates | `a11` (PBE-encrypted key blob), `a102` (key type tag) |
+| Table        | Purpose                                                  | Key Columns                                                        |
+| ------------ | -------------------------------------------------------- | ------------------------------------------------------------------ |
+| `metaData`   | Stores the global salt and an encrypted integrity marker | `item1` (global salt), `item2` (encrypted "password-check" string) |
+| `nssPrivate` | Stores encrypted master key candidates                   | `a11` (PBE-encrypted key blob), `a102` (key type tag)              |
 
 The `nssPrivate` table may contain multiple rows (certificates, other NSS objects). Only rows where `a102` matches a specific 16-byte type tag (`{0xF8, 0x00, ...0x01}`) are actual master key entries.
 
@@ -34,11 +34,11 @@ The `nssPrivate` table may contain multiple rows (certificates, other NSS object
 
 Firefox wraps all encrypted data in ASN1 structures. Three PBE (Password-Based Encryption) types are used, each with a distinct ASN1 layout:
 
-| PBE Type | Used For | Cipher | Key Derivation |
-|----------|----------|--------|----------------|
-| `privateKeyPBE` | Master key entries in `nssPrivate` | 3DES-CBC | SHA1 + HMAC-SHA1 custom NSS derivation |
-| `passwordCheckPBE` | Integrity marker in `metaData` | AES-256-CBC | PBKDF2-SHA256 |
-| `credentialPBE` | Encrypted fields in `logins.json` | 3DES-CBC or AES-256-CBC | Master key used directly (no derivation) |
+| PBE Type           | Used For                           | Cipher                  | Key Derivation                           |
+| ------------------ | ---------------------------------- | ----------------------- | ---------------------------------------- |
+| `privateKeyPBE`    | Master key entries in `nssPrivate` | 3DES-CBC                | SHA1 + HMAC-SHA1 custom NSS derivation   |
+| `passwordCheckPBE` | Integrity marker in `metaData`     | AES-256-CBC             | PBKDF2-SHA256                            |
+| `credentialPBE`    | Encrypted fields in `logins.json`  | 3DES-CBC or AES-256-CBC | Master key used directly (no derivation) |
 
 The `key` parameter has different semantics depending on the PBE type:
 
@@ -77,6 +77,7 @@ Legacy Firefox versions encrypt login credentials with 3DES-CBC. The `credential
 ```
 
 Decryption details:
+
 - **Key**: the first 24 bytes of the master key (derived from `key4.db`, see Section 2)
 - **IV**: 8-byte IV embedded in the ASN1 structure
 - **Algorithm**: Triple DES in CBC mode with PKCS5 padding
@@ -103,6 +104,7 @@ Starting from [Firefox 144](https://www.firefox.com/en-US/firefox/144.0/releasen
 ```
 
 Decryption details:
+
 - **Key**: the full master key (32 bytes for AES-256)
 - **IV**: 16-byte IV embedded in the ASN1 structure
 - **Algorithm**: AES-256 in CBC mode with PKCS5 padding
@@ -136,7 +138,7 @@ The master key is passed through unchanged — `credentialPBE` uses the key dire
 
 ## Related RFCs
 
-| RFC | Topic |
-|-----|-------|
-| [RFC-004](004-firefox-data-storage.md) | Firefox data file locations and storage formats |
-| [RFC-006](006-key-retrieval-mechanisms.md) | Platform-specific master key retrieval (Chromium only — Firefox is self-contained) |
+| RFC                                        | Topic                                                                              |
+| ------------------------------------------ | ---------------------------------------------------------------------------------- |
+| [RFC-018](018-firefox-data-storage.md)     | Firefox data file locations and storage formats                                    |
+| [RFC-015](015-key-retrieval-mechanisms.md) | Platform-specific master key retrieval (Chromium only — Firefox is self-contained) |

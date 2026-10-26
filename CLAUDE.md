@@ -8,7 +8,7 @@ This project is for security research and defensive purposes only. Do not genera
 
 ## Project Overview
 
-HackBrowserData is a CLI security research tool for extracting and decrypting browser data across Windows, macOS, and Linux. It supports Chromium-based browsers and Firefox.
+HackBrowserData is a CLI security research tool for extracting and decrypting browser data across Windows, macOS, and Linux. It supports Chromium-based browsers, Firefox, and Safari.
 
 **Constraint**: Must build with Go 1.20 (Windows 7 support). Do not use features from Go 1.21+ (e.g., `log/slog`, `slices`, `maps`, `cmp` packages).
 
@@ -62,14 +62,14 @@ make payload-clean   # rm crypto/*.bin
 - **C payload**: all sources in `crypto/windows/abe_native/` are first-party (no vendored C). See RFC-010 §9.2 for why Stephen Fewer's reflective loader was rejected.
 - **Error handling**: `fmt.Errorf("context: %w", err)` for wrapping, never `_ =` to ignore errors
 - **Logging**: `log.Debugf` for record-level diagnostics, `log.Infof` for user-facing progress/status, `log.Warnf` for unexpected conditions. Extract methods should return errors, not log them.
-- **Naming**: follow Go conventions — `Config` not `BrowserConfig`, `Extract` not `BrowsingData`
+- **Naming**: follow Go conventions and the settled names in `rfcs/004-naming-decisions.md` — `Def` not `BrowserConfig`, `Extract` not `BrowsingData`
 - **Comment width**: wrap comments at 140 columns (matches `.golangci.yml` `lll.line-length`)
-- **Tests**: use `t.TempDir()` for filesystem tests, `go-sqlmock` for database tests
-- **Architecture**: see `rfcs/` for design documents
+- **Tests**: use `t.TempDir()` with real fixture files (SQLite, JSON, LevelDB, plist) — never a live browser, never a database mock
+- **Architecture**: see `rfcs/README.md` — design RFCs 000–012, format and technique RFCs 013–021
 
 ## Key Constraints
 
 - `modernc.org/sqlite` pinned at v1.31.1 (v1.32+ requires Go 1.21)
-- `golang.org/x/text` will be removed in refactoring (use 3-byte UTF-8 BOM instead)
-- No `pkg/` + `internal/` directory structure — keep it simple
-- No root-level library API — CLI calls `browser.DiscoverBrowsersWithKeys()` directly
+- `tidwall/gjson` < v1.19, `golang.org/x/term` < v0.30, `golang.org/x/sys` at v0.30.0 — later releases raise their `go` directive above 1.20
+- New code goes under `internal/`, never `pkg/`; today's top-level packages move there phase by phase (`rfcs/012-migration-roadmap.md`), except `crypto/windows/` and `utils/injector`, which stay where they are
+- No library API — `cmd/` is the only consumer of the packages below it

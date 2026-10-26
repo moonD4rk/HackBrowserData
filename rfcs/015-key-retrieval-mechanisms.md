@@ -1,22 +1,22 @@
-# RFC-006: Key Retrieval Mechanisms
+# RFC-015: Key Retrieval Mechanisms
 
-**Author**: moonD4rk
-**Status**: Living Document
+**Author**: moonD4rk\
+**Status**: Living Document\
 **Created**: 2026-04-05
 
 ## 1. Overview
 
 Chromium-based browsers encrypt sensitive data (passwords, cookies, credit cards) using a **master key**. The master key is stored differently on each platform:
 
-| Platform | Storage | Key Type |
-|----------|---------|----------|
-| macOS | macOS Keychain | Password string → PBKDF2 → AES-128 |
-| Windows | `Local State` JSON (DPAPI-encrypted) | Raw AES-256 key |
-| Linux | GNOME Keyring / KDE Wallet via D-Bus | Password string → PBKDF2 → AES-128 |
+| Platform | Storage                              | Key Type                           |
+| -------- | ------------------------------------ | ---------------------------------- |
+| macOS    | macOS Keychain                       | Password string → PBKDF2 → AES-128 |
+| Windows  | `Local State` JSON (DPAPI-encrypted) | Raw AES-256 key                    |
+| Linux    | GNOME Keyring / KDE Wallet via D-Bus | Password string → PBKDF2 → AES-128 |
 
 Each platform may have multiple retrieval strategies. The `Retriever` interface and `ChainRetriever` pattern abstract over these strategies, trying each in priority order until one succeeds.
 
-For Chromium encryption details (cipher versions, AES-CBC/GCM), see [RFC-003](003-chromium-encryption.md). Firefox manages its own keys via `key4.db` — see [RFC-005](005-firefox-encryption.md).
+For Chromium encryption details (cipher versions, AES-CBC/GCM), see [RFC-014](014-chromium-encryption.md). Firefox manages its own keys via `key4.db` — see [RFC-019](019-firefox-encryption.md).
 
 ## 2. Retriever Interface
 
@@ -57,22 +57,22 @@ Chromium on macOS stores the encryption password in the user's login keychain un
 
 ### 3.2 Chain Order
 
-| Priority | Strategy | Requires | Interactive? |
-|----------|----------|----------|:------------:|
-| 1 | Gcoredump (CVE-2025-24204) | Root | No |
-| 2 | Keychain password | `--keychain-pw` flag | No |
-| 3 | `security` CLI command | Nothing | Yes (dialog) |
+| Priority | Strategy                   | Requires             | Interactive? |
+| -------- | -------------------------- | -------------------- | :----------: |
+| 1        | Gcoredump (CVE-2025-24204) | Root                 |      No      |
+| 2        | Keychain password          | `--keychain-pw` flag |      No      |
+| 3        | `security` CLI command     | Nothing              | Yes (dialog) |
 
 ### 3.3 PBKDF2 Derivation
 
 All macOS strategies produce a raw password string from the keychain. This is derived into an AES-128 key via PBKDF2:
 
-| Parameter | Value | Source |
-|-----------|-------|--------|
-| Salt | `"saltysalt"` | [os_crypt_mac.mm](https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157) |
-| Iterations | 1003 | |
-| Key length | 16 bytes (AES-128) | |
-| Hash | HMAC-SHA1 | |
+| Parameter  | Value              | Source                                                                                                                  |
+| ---------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Salt       | `"saltysalt"`      | [os_crypt_mac.mm](https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157) |
+| Iterations | 1003               |                                                                                                                         |
+| Key length | 16 bytes (AES-128) |                                                                                                                         |
+| Hash       | HMAC-SHA1          |                                                                                                                         |
 
 ### 3.4 Keychain Labels
 
@@ -82,13 +82,14 @@ The authoritative mapping lives in the `KeychainLabel` field of each entry in `p
 
 ## 4. Windows Key Retrieval
 
-Chromium on Windows stores **two** master keys in `Local State` JSON: a legacy v10 key (`os_crypt.encrypted_key`, DPAPI-wrapped) and, since Chrome 127, an App-Bound Encryption v20 key (`os_crypt.app_bound_encrypted_key`, IElevator-wrapped). Both tiers can coexist on a single profile — Chrome 127+ encrypts *new* cookies with v20 but leaves pre-existing passwords and old cookies on v10 — so the retriever layer fetches both keys independently rather than via a ChainRetriever (see §4.4 and issue #578).
+Chromium on Windows stores **two** master keys in `Local State` JSON: a legacy v10 key (`os_crypt.encrypted_key`, DPAPI-wrapped) and, since Chrome 127, an App-Bound Encryption v20 key (`os_crypt.app_bound_encrypted_key`, IElevator-wrapped). Both tiers can coexist on a single profile — Chrome 127+ encrypts _new_ cookies with v20 but leaves pre-existing passwords and old cookies on v10 — so the retriever layer fetches both keys independently rather than via a ChainRetriever (see §4.4 and issue #578).
 
 ### 4.1 DPAPI Background
 
 Windows Data Protection API (DPAPI) is a built-in symmetric encryption service provided by `Crypt32.dll`. It uses the logged-in user's Windows credentials (derived from the user's login password) as the root key material. Applications call `CryptProtectData` to encrypt and `CryptUnprotectData` to decrypt, without needing to manage keys themselves.
 
 Key characteristics:
+
 - **User-scoped** — data encrypted by one Windows user cannot be decrypted by another user, even on the same machine
 - **Machine-bound** — the encrypted blob cannot be decrypted on a different machine (unless roaming credentials are used)
 - **No password prompt** — decryption is transparent to the calling process as long as it runs under the correct user session
@@ -111,16 +112,16 @@ The implementation loads `Crypt32.dll` at runtime via `syscall.NewLazyDLL` and c
 
 ### 4.3 No PBKDF2 Needed
 
-Unlike macOS/Linux, DPAPI gives the **final AES-256 key directly**. No intermediate password, no derivation step. The key is used as-is for AES-256-GCM decryption (see [RFC-003](003-chromium-encryption.md)).
+Unlike macOS/Linux, DPAPI gives the **final AES-256 key directly**. No intermediate password, no derivation step. The key is used as-is for AES-256-GCM decryption (see [RFC-014](014-chromium-encryption.md)).
 
 ### 4.4 Dual-Tier Retrievers (V10 + V20)
 
 Windows populates two slots of the `masterkey.Retrievers` struct — V10 (legacy DPAPI) and V20 (Chrome 127+ App-Bound Encryption) — which run independently rather than as a first-success chain. V11 stays nil on Windows (Chromium does not emit v11 prefix there).
 
-| Slot | Retriever | Source field | Mechanism |
-|------|-----------|--------------|-----------|
-| V10 | `DPAPIRetriever` | `os_crypt.encrypted_key` | `CryptUnprotectData` (Crypt32.dll) |
-| V20 | `ABERetriever` | `os_crypt.app_bound_encrypted_key` | IElevator via reflective injection (see [RFC-010](010-chrome-abe-integration.md)) |
+| Slot | Retriever        | Source field                       | Mechanism                                                                         |
+| ---- | ---------------- | ---------------------------------- | --------------------------------------------------------------------------------- |
+| V10  | `DPAPIRetriever` | `os_crypt.encrypted_key`           | `CryptUnprotectData` (Crypt32.dll)                                                |
+| V20  | `ABERetriever`   | `os_crypt.app_bound_encrypted_key` | IElevator via reflective injection (see [RFC-016](016-chrome-abe-integration.md)) |
 
 `browser/browser_windows.go::newCredentialInjector` calls `masterkey.DefaultRetrievers()` and wires the resulting struct through `Browser.SetRetrievers(r)`. At extract time `masterkey.NewMasterKeys` runs each slot independently — a failure on one tier does not prevent the other from succeeding, because mixed-tier Chrome profiles (upgraded from pre-127) need partial success to be useful.
 
@@ -134,10 +135,10 @@ Windows populates two slots of the `masterkey.Retrievers` struct — V10 (legacy
 
 Linux populates two slots of the `masterkey.Retrievers` struct — one per cipher prefix that Chromium emits on this platform:
 
-| Slot | Prefix | Retriever | Mechanism | Chromium name |
-|------|--------|-----------|-----------|---------------|
-| V10 | `v10` | `PosixRetriever` | PBKDF2(`"peanuts"`) | kV10Key (matches upstream `PosixKeyProvider`) |
-| V11 | `v11` | `DBusRetriever` | PBKDF2(D-Bus Secret Service password) | kV11Key (matches upstream `FreedesktopSecretKeyProvider`) |
+| Slot | Prefix | Retriever        | Mechanism                             | Chromium name                                             |
+| ---- | ------ | ---------------- | ------------------------------------- | --------------------------------------------------------- |
+| V10  | `v10`  | `PosixRetriever` | PBKDF2(`"peanuts"`)                   | kV10Key (matches upstream `PosixKeyProvider`)             |
+| V11  | `v11`  | `DBusRetriever`  | PBKDF2(D-Bus Secret Service password) | kV11Key (matches upstream `FreedesktopSecretKeyProvider`) |
 
 V20 stays nil on Linux (App-Bound Encryption is Windows-only). v12 (Chromium's `SecretPortalKeyProvider`, Flatpak/xdg-desktop-portal) is a separate tier not yet implemented — see the `CipherV12` case in `decryptValue`.
 
@@ -155,12 +156,12 @@ The split mirrors the Windows V10/V20 fix (§4.4) and the root-cause logic of is
 
 Both strategies produce a password, derived via PBKDF2 with notably weaker parameters than macOS:
 
-| Parameter | Value | Source |
-|-----------|-------|--------|
-| Salt | `"saltysalt"` | [os_crypt_linux.cc](https://source.chromium.org/chromium/chromium/src/+/main:components/os_crypt/os_crypt_linux.cc;l=100) |
-| Iterations | **1** | |
-| Key length | 16 bytes (AES-128) | |
-| Hash | HMAC-SHA1 | |
+| Parameter  | Value              | Source                                                                                                                    |
+| ---------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| Salt       | `"saltysalt"`      | [os_crypt_linux.cc](https://source.chromium.org/chromium/chromium/src/+/main:components/os_crypt/os_crypt_linux.cc;l=100) |
+| Iterations | **1**              |                                                                                                                           |
+| Key length | 16 bytes (AES-128) |                                                                                                                           |
+| Hash       | HMAC-SHA1          |                                                                                                                           |
 
 A single iteration makes PBKDF2 essentially a keyed HMAC — no real key-stretching. Combined with the well-known fallback password `"peanuts"`, Linux Chromium encryption is trivial to break without the keyring.
 
@@ -172,11 +173,11 @@ The authoritative mapping lives in the `KeychainLabel` field of each entry in `p
 
 ## 6. Platform Summary
 
-| Platform | Retrievers (slots populated) | PBKDF2 | Key Size |
-|----------|------------------------------|:------:|----------|
-| macOS | V10 = chain(Gcoredump → KeychainPassword* → SecurityCmd) | 1003 iterations | AES-128 |
-| Windows | V10 = DPAPIRetriever; V20 = ABERetriever (Chrome 127+) | No | AES-256 |
-| Linux | V10 = PosixRetriever ("peanuts" kV10Key); V11 = DBusRetriever (keyring kV11Key) | 1 iteration | AES-128 |
+| Platform | Retrievers (slots populated)                                                    |     PBKDF2      | Key Size |
+| -------- | ------------------------------------------------------------------------------- | :-------------: | -------- |
+| macOS    | V10 = chain(Gcoredump → KeychainPassword* → SecurityCmd)                        | 1003 iterations | AES-128  |
+| Windows  | V10 = DPAPIRetriever; V20 = ABERetriever (Chrome 127+)                          |       No        | AES-256  |
+| Linux    | V10 = PosixRetriever ("peanuts" kV10Key); V11 = DBusRetriever (keyring kV11Key) |   1 iteration   | AES-128  |
 
 \* Only included when a non-empty password resolves — either via `--keychain-pw` flag or an interactive TTY prompt.
 
@@ -188,17 +189,17 @@ This is a deliberate architectural choice, not an oversight. The following secti
 
 ### 7.1 Why Safari Does Not Share the Chromium Chain
 
-| Aspect | Chromium chain | Safari direct access |
-|---|---|---|
-| Output | A 16-byte AES-128 key | A list of `InternetPassword` records |
-| Use case | Decrypt Login Data DB | Records *are* the credentials |
-| Number of consumers | 10+ Chromium variants | 1 (Safari only) |
-| Failure mode | Hard fail (no key → cannot decrypt) | Soft fail (degrade to metadata-only) |
-| Caching benefit | High (multi-profile, multi-browser) | None (single browser, single call) |
+| Aspect              | Chromium chain                      | Safari direct access                 |
+| ------------------- | ----------------------------------- | ------------------------------------ |
+| Output              | A 16-byte AES-128 key               | A list of `InternetPassword` records |
+| Use case            | Decrypt Login Data DB               | Records _are_ the credentials        |
+| Number of consumers | 10+ Chromium variants               | 1 (Safari only)                      |
+| Failure mode        | Hard fail (no key → cannot decrypt) | Soft fail (degrade to metadata-only) |
+| Caching benefit     | High (multi-profile, multi-browser) | None (single browser, single call)   |
 
-Forcing Safari through the `Retriever` interface would require returning a different type than `[]byte`, contradicting the interface's documented purpose as the *master-key* abstraction. Forcing it through a parallel "InternetPassword chain" would be over-engineering for a single consumer that has no fallback strategies worth chaining.
+Forcing Safari through the `Retriever` interface would require returning a different type than `[]byte`, contradicting the interface's documented purpose as the _master-key_ abstraction. Forcing it through a parallel "InternetPassword chain" would be over-engineering for a single consumer that has no fallback strategies worth chaining.
 
-Note the "failure mode" row in particular: Chromium *must* have a master key or extraction fails entirely, so it needs a chain of escalating strategies. Safari can degrade gracefully — if the keychain cannot be unlocked, metadata-only export (URLs and usernames, no plaintext passwords) is still useful output, so a single "try keychainbreaker, warn on failure" is sufficient.
+Note the "failure mode" row in particular: Chromium _must_ have a master key or extraction fails entirely, so it needs a chain of escalating strategies. Safari can degrade gracefully — if the keychain cannot be unlocked, metadata-only export (URLs and usernames, no plaintext passwords) is still useful output, so a single "try keychainbreaker, warn on failure" is sufficient.
 
 ### 7.2 The General Rule
 
@@ -206,7 +207,7 @@ Note the "failure mode" row in particular: Chromium *must* have a master key or 
 
 Evidence the rule is already in force:
 
-- **Firefox** (`browser/firefox/firefox.go`) does not import `masterkey` or `keychainbreaker`. It derives keys from `key4.db` via internal NSS PBE. See RFC-005.
+- **Firefox** (`browser/firefox/firefox.go`) does not import `masterkey` or `keychainbreaker`. It derives keys from `key4.db` via internal NSS PBE. See RFC-019.
 - **Safari** (`browser/safari/extract_password.go`) uses `keychainbreaker` directly for `InternetPassword` records.
 - **Chromium variants** all go through `masterkey` because they share exactly one chain and benefit from the shared `sync.Once` caching.
 
@@ -216,10 +217,10 @@ Future contributors adding a new macOS browser that reads credentials from the K
 
 The macOS login password is resolved once at startup by `browser/browser_darwin.go::resolveKeychainPassword`, then delivered to both consumers from within a single platform-specific closure, `newCredentialInjector` (defined per platform in `browser/browser_{darwin,linux,windows}.go`). The closure captures both the retriever chain and the raw password, and applies whichever capability interface each Browser happens to satisfy:
 
-| Consumer | Capability interface | Defined in | Payload |
-|---|---|---|---|
-| Chromium browsers | `KeyManager` | `browser/browser.go` | `masterkey.Retrievers` struct (V10 / V11 / V20 slots; unused tiers nil) |
-| Safari | `KeychainPasswordReceiver` | `browser/browser.go` | raw `string` |
+| Consumer          | Capability interface       | Defined in           | Payload                                                                 |
+| ----------------- | -------------------------- | -------------------- | ----------------------------------------------------------------------- |
+| Chromium browsers | `KeyManager`               | `browser/browser.go` | `masterkey.Retrievers` struct (V10 / V11 / V20 slots; unused tiers nil) |
+| Safari            | `KeychainPasswordReceiver` | `browser/browser.go` | raw `string`                                                            |
 
 The two interfaces are **intentionally not unified**. They carry different abstractions — one hands the browser a pre-assembled retrieval chain, the other hands the browser a credential token to unlock its own access path. Unifying them would create a leaky polymorphic interface with no real shared semantics.
 
@@ -235,7 +236,7 @@ The two interfaces are **intentionally not unified**. They carry different abstr
 
 ## Related RFCs
 
-| RFC | Topic |
-|-----|-------|
-| [RFC-003](003-chromium-encryption.md) | Chromium encryption mechanisms per platform |
-| [RFC-005](005-firefox-encryption.md) | Firefox NSS encryption and key derivation |
+| RFC                                   | Topic                                       |
+| ------------------------------------- | ------------------------------------------- |
+| [RFC-014](014-chromium-encryption.md) | Chromium encryption mechanisms per platform |
+| [RFC-019](019-firefox-encryption.md)  | Firefox NSS encryption and key derivation   |
