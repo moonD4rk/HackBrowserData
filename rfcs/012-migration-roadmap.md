@@ -41,7 +41,7 @@ Leaves first, bottom-up along the dependency arrows ([RFC-002](002-package-layou
 
 ### Phase 4 — `snapshot`
 
-- Build `internal/snapshot` ([RFC-007](007-snapshot-and-acquisition.md)): `Dir` (`Temp`, `Open`, `Unzip`, `Capture`, `Snapshot`, `Zip`, `Close`) and `Snapshot.Path` with the per-file error contract, the copier with the Windows locked-file fallback and SQLite sidecars, user-data-dir IDs in the layout, `manifest.json`, and `0700` temp snapshot directories removed on every exit path.
+- Build `internal/snapshot` ([RFC-007](007-snapshot-and-acquisition.md)): `Dir` (`Temp`, `Open`, `Unzip`, `Capture`, `Snapshot`, `Zip`, `Close`) and `Snapshot.Path` with the per-file error contract, the copier with the Windows locked-file fallback and SQLite sidecars, user-data-dir IDs in the layout, and `0700` temp snapshot directories removed on every exit path.
 - Replace `otiai10/copy` with the snapshot copier ([RFC-010](010-dependencies.md)).
 - `archive` and `restore` move onto the snapshot; the archive-layout and `keys.json` compatibility tests guard both directions.
 
@@ -58,6 +58,7 @@ Leaves first, bottom-up along the dependency arrows ([RFC-002](002-package-layou
 ### Phase 7 — Switch over
 
 - `dump`, `dumpkeys`, `archive`, `restore`, and `list` run on the pipeline.
+- `archive` writes the snapshot `manifest.json` and `restore` reads it as its `Discovery` ([RFC-007](007-snapshot-and-acquisition.md)): writer and reader land together, so the round trip is tested end to end, and every earlier archive stays byte-identical to today's.
 - Validate-first ordering, `--keychain-pw-stdin` with the new precedence, the `-p` fixes, the safe `--zip` order, and the `restore` stamp fix ([RFC-009](009-cli-surface.md)).
 
 ### Phase 8 — Delete & document

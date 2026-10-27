@@ -1,6 +1,6 @@
 //go:build windows
 
-package filemanager
+package winapi
 
 import (
 	"fmt"
@@ -8,11 +8,9 @@ import (
 	"strings"
 
 	"golang.org/x/sys/windows"
-
-	"github.com/moond4rk/hackbrowserdata/internal/winapi"
 )
 
-// copyLocked copies a file that is locked by another process (e.g., Chrome's
+// ReadLockedFile reads a file that is locked by another process (e.g., Chrome's
 // Cookies database with PRAGMA locking_mode=EXCLUSIVE).
 //
 // Approach: DuplicateHandle + FileMapping
@@ -20,22 +18,20 @@ import (
 //  2. Find the handle matching the target file path
 //  3. Duplicate that handle into our process via DuplicateHandle
 //  4. Read file content through memory-mapped I/O (CreateFileMapping + MapViewOfFile)
-//  5. Write content to destination
 //
 // This requires only normal user privileges (no admin needed).
-func copyLocked(src, dst string) error {
-	handle, err := findFileHandle(src)
+func ReadLockedFile(path string) ([]byte, error) {
+	handle, err := findFileHandle(path)
 	if err != nil {
-		return fmt.Errorf("find file handle for %s: %w", src, err)
+		return nil, fmt.Errorf("find file handle for %s: %w", path, err)
 	}
 	defer windows.CloseHandle(handle)
 
 	data, err := readFileContent(handle)
 	if err != nil {
-		return fmt.Errorf("read via file mapping: %w", err)
+		return nil, fmt.Errorf("read via file mapping: %w", err)
 	}
-
-	return os.WriteFile(dst, data, 0o600)
+	return data, nil
 }
 
 // findFileHandle enumerates all system handles, finds the one matching the
@@ -49,7 +45,7 @@ func findFileHandle(targetPath string) (windows.Handle, error) {
 	targetSuffix := extractStableSuffix(targetPath)
 	currentProcess := windows.CurrentProcess()
 
-	handles, err := winapi.QuerySystemHandles()
+	handles, err := QuerySystemHandles()
 	if err != nil {
 		return 0, err
 	}
@@ -82,13 +78,13 @@ func findFileHandle(targetPath string) (windows.Handle, error) {
 		}
 
 		// Verify it's a disk file (not a pipe, device, etc.)
-		if winapi.GetFileType(dupHandle) != winapi.FileTypeDisk {
+		if GetFileType(dupHandle) != FileTypeDisk {
 			_ = windows.CloseHandle(dupHandle)
 			continue
 		}
 
 		// Get the file path and check if it matches our target
-		name, err := winapi.GetFinalPathName(dupHandle)
+		name, err := GetFinalPathName(dupHandle)
 		if err != nil {
 			_ = windows.CloseHandle(dupHandle)
 			continue
@@ -109,7 +105,7 @@ func findFileHandle(targetPath string) (windows.Handle, error) {
 // written but not yet checkpointed to the main file. Falls back to ReadFile
 // if FileMapping fails.
 func readFileContent(handle windows.Handle) ([]byte, error) {
-	fileSize, err := winapi.GetFileSizeEx(handle)
+	fileSize, err := GetFileSizeEx(handle)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +116,7 @@ func readFileContent(handle windows.Handle) ([]byte, error) {
 	size := int(fileSize)
 
 	// Try FileMapping first — reads from kernel file cache, includes WAL data
-	if data, err := winapi.MapFile(handle, size); err == nil {
+	if data, err := MapFile(handle, size); err == nil {
 		return data, nil
 	}
 

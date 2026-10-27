@@ -10,7 +10,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
-	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
+	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
 func restoreCmd() *cobra.Command {
@@ -33,13 +33,13 @@ func restoreCmd() *cobra.Command {
   hack-browser-data restore --keys keys.json --data-dir ./chrome-userdata -b chrome
   ssh origin "hack-browser-data dumpkeys" | hack-browser-data restore --keys - --data-zip data.zip`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			resolvedDir, cleanup, err := resolveDataDir(dataDir, dataZip)
+			data, err := openRestoreData(dataDir, dataZip)
 			if err != nil {
 				return err
 			}
-			defer cleanup()
+			defer closeRestoreData(data)
 
-			browsers, err := loadRestoreBrowsers(keysPath, resolvedDir, browserName)
+			browsers, err := loadRestoreBrowsers(keysPath, data.Path(), browserName)
 			if err != nil {
 				return err
 			}
@@ -92,29 +92,24 @@ func loadRestoreBrowsers(keysPath, dataDir, browserName string) ([]browser.Brows
 	return browser.BuildFromDump(dump, dataDir, browserName)
 }
 
-// resolveDataDir returns the directory restore reads from: --data-dir as-is, or --data-zip extracted
-// into a temp dir (removed by the returned cleanup). Exactly one of the two must be set.
-func resolveDataDir(dataDir, dataZip string) (string, func(), error) {
-	noop := func() {}
+// openRestoreData returns the snapshot directory restore reads from: --data-dir in place, or --data-zip extracted
+// into a temporary one. Exactly one of the two must be set.
+func openRestoreData(dataDir, dataZip string) (*snapshot.Dir, error) {
 	if (dataDir == "") == (dataZip == "") {
-		return "", noop, fmt.Errorf("exactly one of --data-dir or --data-zip is required")
+		return nil, fmt.Errorf("exactly one of --data-dir or --data-zip is required")
 	}
 	if dataDir != "" {
-		return dataDir, noop, nil
+		return snapshot.Open(dataDir), nil
 	}
-	tmp, err := os.MkdirTemp("", "hbd-restore-*")
+	d, err := snapshot.Unzip(dataZip)
 	if err != nil {
-		return "", noop, fmt.Errorf("create temp dir: %w", err)
+		return nil, fmt.Errorf("extract %s: %w", dataZip, err)
 	}
-	if err := fileutil.Unzip(dataZip, tmp); err != nil {
-		removeTempDir(tmp)
-		return "", noop, fmt.Errorf("extract %s: %w", dataZip, err)
-	}
-	return tmp, func() { removeTempDir(tmp) }, nil
+	return d, nil
 }
 
-func removeTempDir(dir string) {
-	if err := os.RemoveAll(dir); err != nil {
-		log.Warnf("restore: remove temp dir %s: %v", dir, err)
+func closeRestoreData(d *snapshot.Dir) {
+	if err := d.Close(); err != nil {
+		log.Warnf("restore: %v", err)
 	}
 }

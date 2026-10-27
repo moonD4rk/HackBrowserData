@@ -15,7 +15,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
-	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
+	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
 func TestRestoreGolden(t *testing.T) {
@@ -41,9 +41,10 @@ func TestRestoreGolden(t *testing.T) {
 
 		archive := filepath.Join(out, "results.zip")
 		assertGolden(t, "restore-zip.golden", zipListing(t, archive))
-		unzipped := t.TempDir()
-		require.NoError(t, fileutil.Unzip(archive, unzipped))
-		assert.Equal(t, want, readDirFiles(t, unzipped))
+		unzipped, err := snapshot.Unzip(archive)
+		require.NoError(t, err)
+		defer unzipped.Close()
+		assert.Equal(t, want, readDirFiles(t, unzipped.Path()))
 	})
 
 	t.Run("data-zip", func(t *testing.T) {
