@@ -8,7 +8,6 @@ require (
 	github.com/moond4rk/binarycookies v1.0.3
 	github.com/moond4rk/keychainbreaker v0.2.6
 	github.com/moond4rk/plist v1.2.2
-	github.com/otiai10/copy v1.14.1
 	github.com/ppacher/go-dbus-keyring v1.0.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -27,7 +26,6 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
-	github.com/otiai10/mint v1.6.3 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
