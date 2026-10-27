@@ -67,7 +67,7 @@ type Extractors map[category.Category]Extractor
 
 Sources are static data: a base package declares them once per category and never rewrites them per profile. Plan joins a profile-scoped path with the profile's `Dir`, leaves a `Shared` one as it is, and captures the union once per user data dir — so `Local State`, or the Chromium `History` file that feeds both history and downloads, is copied once however many extractions need it.
 
-An extraction is `absent` when a required source has no candidate on disk, or when all its sources are optional and none is there. Chromium passwords are two optional sources — `Login Data` (store `local`) and `Login Data For Account` (store `account`) — which reproduces today's output, including a profile that only ever synced passwords, without a special case.
+An extraction is `absent` when a required source has no candidate on disk, or when all its sources are optional and none of the profile's own is there: a shared source such as `Local State` never makes an extraction present by itself. Chromium passwords are two optional sources — `Login Data` (store `local`) and `Login Data For Account` (store `account`) — which reproduces today's output, including a profile that only ever synced passwords, without a special case.
 
 `Extractor` / `Extractors` are **DECIDED**.
 
