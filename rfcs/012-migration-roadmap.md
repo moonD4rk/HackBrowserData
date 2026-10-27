@@ -36,7 +36,7 @@ Leaves first, bottom-up along the dependency arrows ([RFC-002](002-package-layou
 ### Phase 3 — `crypto`, `masterkey`, `keychain`, `winapi`
 
 - Make `crypto` pure primitives; move OS secret-store work into `masterkey` — retrievers per OS, `RetrieveAll` with first-key-wins per version and independent versions, `Version` as a string type, `DecryptDPAPI`, the `keys.json` `Dump` unchanged at version `"2"`, `ABEKind` ([RFC-006](006-key-retrieval-and-crypto.md)). No technique is rewritten — only the boundary is drawn.
-- Add `internal/keychain` (macOS only): the login keychain handle, opened on first use and at most once per run. The macOS `v10` retriever reads through it from this phase, the Safari base when it is ported (Phase 6); today's separate password check and per-consumer keychain opens go away ([RFC-006](006-key-retrieval-and-crypto.md)).
+- Add `internal/keychain` (macOS only): the login keychain handle, opened on first use and at most once per run. The macOS `v10` retriever reads through it from this phase, the Safari base when it is ported (Phase 6); today's separate password check and per-consumer keychain opens go away at the switch-over (Phase 7), once both read through it ([RFC-006](006-key-retrieval-and-crypto.md)).
 - Fold `utils/{winapi,winutil}` into `internal/winapi`. The ABE unit — `utils/injector` and `crypto/windows/` with its C sources, generated `bootstrap` package, and `payload` embed package, plus `Makefile.frag` — stays where it is; only its importers change. Its move to `internal/abe/` is DEFERRED ([RFC-002](002-package-layout.md)).
 
 ### Phase 4 — `snapshot`

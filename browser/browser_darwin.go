@@ -3,14 +3,17 @@
 package browser
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/moond4rk/keychainbreaker"
 	"golang.org/x/term"
 
+	"github.com/moond4rk/hackbrowserdata/internal/keychain"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
-	"github.com/moond4rk/hackbrowserdata/masterkey"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -108,6 +111,15 @@ func platformBrowsers() []types.BrowserConfig {
 	}
 }
 
+// loginKeychainPath is the per-user login keychain the run reads Chromium v10 secrets from.
+func loginKeychainPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, "Library", "Keychains", "login.keychain-db")
+}
+
 // resolveKeychainPassword resolves the macOS login password (CLI flag, else TTY prompt) and verifies it against
 // keychainbreaker. On any failure it returns "" so callers fall back to no-password mode rather than a known-bad credential.
 func resolveKeychainPassword(flagPassword string) string {
@@ -146,27 +158,28 @@ func resolveKeychainPassword(flagPassword string) string {
 	return password
 }
 
-// newCredentialInjector lazily wires retrievers (and the macOS keychain password) into each Browser;
-// `-b firefox` never triggers a keychain prompt because lazy resolution skips browsers that need neither.
+// newCredentialInjector lazily resolves the macOS login password and hands every Chromium browser the run's
+// login keychain; `-b firefox` never triggers a prompt because resolution is skipped for browsers that need neither.
 func newCredentialInjector(opts DiscoverOptions) browserInjector {
 	var (
-		password   string
-		retrievers masterkey.Retrievers
-		resolved   bool
+		password string
+		kc       *keychain.Keychain
+		resolved bool
 	)
 	return func(b Browser) {
-		km, needsRetrievers := b.(KeyManager)
+		km, needsKeychain := b.(KeyManager)
 		kps, needsKeychainPassword := b.(KeychainPasswordReceiver)
-		if !needsRetrievers && !needsKeychainPassword {
+		if !needsKeychain && !needsKeychainPassword {
 			return
 		}
 		if !resolved {
 			password = resolveKeychainPassword(opts.KeychainPassword)
-			retrievers = masterkey.DefaultRetrievers(password)
+			pw := password
+			kc = keychain.New(loginKeychainPath(), func(context.Context) (string, error) { return pw, nil })
 			resolved = true
 		}
-		if needsRetrievers {
-			km.SetRetrievers(retrievers)
+		if needsKeychain {
+			km.SetLocator(masterkey.Locator{Keychain: kc})
 		}
 		if needsKeychainPassword {
 			kps.SetKeychainPassword(password)

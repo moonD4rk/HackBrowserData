@@ -3,6 +3,7 @@
 package masterkey
 
 import (
+	"context"
 	"crypto/sha1"
 	"fmt"
 
@@ -18,11 +19,17 @@ var linuxParams = pbkdf2Params{
 	hashFunc:   sha1.New,
 }
 
-// DBusRetriever queries GNOME Keyring / KDE Wallet via D-Bus Secret Service.
-type DBusRetriever struct{}
+// One per prefix Chromium emits: v10 = PBKDF2("peanuts") when no keyring exists, v11 = PBKDF2(keyring secret).
+// A profile carries both if the host moved between headless and keyring sessions.
+var platformRetrievers = []Retriever{posixRetriever{}, dbusRetriever{}}
 
-func (r *DBusRetriever) RetrieveKey(hints Hints) ([]byte, error) {
-	storage := hints.KeychainLabel
+// dbusRetriever queries GNOME Keyring / KDE Wallet via D-Bus Secret Service.
+type dbusRetriever struct{}
+
+func (dbusRetriever) Version() Version { return V11 }
+
+func (dbusRetriever) Retrieve(_ context.Context, loc Locator) ([]byte, error) {
+	storage := loc.KeychainLabel
 	conn, err := dbus.SessionBus()
 	if err != nil {
 		return nil, fmt.Errorf("dbus session: %w", err)
@@ -69,20 +76,12 @@ func (r *DBusRetriever) RetrieveKey(hints Hints) ([]byte, error) {
 	return nil, fmt.Errorf("%q: %w", storage, errStorageNotFound)
 }
 
-// PosixRetriever derives Chromium's kV10Key via PBKDF2 over the hardcoded "peanuts" password — the
+// posixRetriever derives Chromium's kV10Key via PBKDF2 over the hardcoded "peanuts" password — the
 // deterministic v10 key used when no keyring exists (headless/Docker/CI). Mirrors PosixKeyProvider.
-type PosixRetriever struct{}
+type posixRetriever struct{}
 
-func (r *PosixRetriever) RetrieveKey(_ Hints) ([]byte, error) {
+func (posixRetriever) Version() Version { return V10 }
+
+func (posixRetriever) Retrieve(context.Context, Locator) ([]byte, error) {
 	return linuxParams.deriveKey([]byte("peanuts")), nil
-}
-
-// DefaultRetrievers wires the Linux tiers, one per prefix Chromium emits: v10 = PBKDF2("peanuts")
-// (kV10Key, no keyring); v11 = PBKDF2(keyring secret) (kV11Key, via D-Bus). A profile can carry both
-// if the host moved between headless and keyring sessions, so both run independently.
-func DefaultRetrievers() Retrievers {
-	return Retrievers{
-		V10: &PosixRetriever{},
-		V11: &DBusRetriever{},
-	}
 }

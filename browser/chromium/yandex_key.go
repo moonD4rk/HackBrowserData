@@ -1,8 +1,10 @@
-package crypto
+package chromium
 
 import (
 	"bytes"
 	"errors"
+
+	"github.com/moond4rk/hackbrowserdata/internal/crypto"
 )
 
 // yandexSignature is the protobuf wire-format header (field1 varint=1, field2 len=32) on every wrapped key.
@@ -22,8 +24,8 @@ var (
 	errYandexKeyTooShort    = errors.New("yandex: decrypted intermediate key shorter than 32 bytes")
 )
 
-// DecryptYandexIntermediateKey unwraps the per-DB data key from meta.local_encryptor_data.
-func DecryptYandexIntermediateKey(masterKey, blob []byte) ([]byte, error) {
+// decryptYandexIntermediateKey unwraps the per-DB data key from meta.local_encryptor_data.
+func decryptYandexIntermediateKey(masterKey, blob []byte) ([]byte, error) {
 	idx := bytes.Index(blob, localEncryptorPrefix)
 	if idx < 0 {
 		return nil, errYandexMarkerNotFound
@@ -33,7 +35,7 @@ func DecryptYandexIntermediateKey(masterKey, blob []byte) ([]byte, error) {
 		return nil, errYandexBlobShort
 	}
 
-	plaintext, err := AESGCMDecryptBlob(masterKey, payload[:yandexIntKeyBlobLen], nil)
+	plaintext, err := crypto.AESGCMDecryptBlob(masterKey, payload[:yandexIntKeyBlobLen], nil)
 	if err != nil {
 		return nil, err
 	}

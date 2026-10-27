@@ -1,6 +1,6 @@
 //go:build windows
 
-package winutil
+package winapi
 
 import (
 	"errors"
@@ -11,8 +11,6 @@ import (
 
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
-
-	"github.com/moond4rk/hackbrowserdata/utils/winapi"
 )
 
 // ErrExecutableNotFound is returned when a browser's executable cannot be
@@ -25,35 +23,31 @@ var ErrExecutableNotFound = errors.New("browser executable not found")
 //  3. Running-process probe — scan EnumProcesses for a match by exe name
 //     and return the owner's QueryFullProcessImageName. Picks up portable
 //     builds and non-standard installs that never wrote to App Paths.
-//  4. Hard-coded InstallFallbacks from Table (last resort when the browser
+//  4. Hard-coded install fallbacks (last resort when the browser
 //     is not running and the registry is missing the entry).
-//
-// browserKey must match an Entry in Table; keys align with
-// browser.BrowserConfig.Key (for configs that set WindowsABE: true).
-func ExecutablePath(browserKey string) (string, error) {
-	entry, ok := Table[browserKey]
-	if !ok {
-		return "", fmt.Errorf("%w: %q (no lookup entry)", ErrExecutableNotFound, browserKey)
+func ExecutablePath(exeName string, fallbacks []string) (string, error) {
+	if exeName == "" {
+		return "", fmt.Errorf("%w: no executable name", ErrExecutableNotFound)
 	}
 
-	if p, err := appPathsLookup(entry.ExeName, registry.LOCAL_MACHINE); err == nil {
+	if p, err := appPathsLookup(exeName, registry.LOCAL_MACHINE); err == nil {
 		return p, nil
 	}
-	if p, err := appPathsLookup(entry.ExeName, registry.CURRENT_USER); err == nil {
+	if p, err := appPathsLookup(exeName, registry.CURRENT_USER); err == nil {
 		return p, nil
 	}
 
-	if p := runningProcessPath(entry.ExeName); p != "" {
+	if p := runningProcessPath(exeName); p != "" {
 		return p, nil
 	}
 
-	for _, candidate := range entry.InstallFallbacks {
-		// Use winapi.ExpandEnvString (kernel32!ExpandEnvironmentStringsW)
+	for _, candidate := range fallbacks {
+		// Use ExpandEnvString (kernel32!ExpandEnvironmentStringsW)
 		// rather than os.ExpandEnv: Go stdlib only understands Unix-style
 		// $VAR / ${VAR} and leaves Windows-style %VAR% untouched, which
 		// would make every fallback path fail to resolve. Verified on
 		// Windows 10 19044 + Go 1.20.14.
-		expanded, err := winapi.ExpandEnvString(candidate)
+		expanded, err := ExpandEnvString(candidate)
 		if err != nil {
 			continue
 		}
@@ -63,7 +57,7 @@ func ExecutablePath(browserKey string) (string, error) {
 	}
 
 	return "", fmt.Errorf("%w: %q (registry miss, no running process, no fallback match)",
-		ErrExecutableNotFound, browserKey)
+		ErrExecutableNotFound, exeName)
 }
 
 // runningProcessPath scans live processes for one whose image filename
@@ -71,7 +65,7 @@ func ExecutablePath(browserKey string) (string, error) {
 // first hit. Errors are swallowed — this is a best-effort probe that
 // yields to the hard-coded fallbacks if nothing matches.
 func runningProcessPath(exeName string) string {
-	pids, err := winapi.EnumProcesses()
+	pids, err := EnumProcesses()
 	if err != nil {
 		return ""
 	}
@@ -83,7 +77,7 @@ func runningProcessPath(exeName string) string {
 		if err != nil {
 			continue
 		}
-		path, err := winapi.QueryFullProcessImageName(h)
+		path, err := QueryFullProcessImageName(h)
 		_ = windows.CloseHandle(h)
 		if err != nil || path == "" {
 			continue

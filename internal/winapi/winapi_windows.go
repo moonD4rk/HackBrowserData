@@ -5,8 +5,7 @@
 // that golang.org/x/sys/windows does not cover, plus shared LazyDLL
 // handles and a small error-handling helper.
 //
-// Callers: utils/injector, filemanager, crypto. Higher-level Windows
-// browser utilities live in utils/winutil.
+// Callers: utils/injector, filemanager, masterkey.
 package winapi
 
 import (

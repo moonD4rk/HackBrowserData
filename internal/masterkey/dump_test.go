@@ -47,7 +47,7 @@ func TestDump_VaultKindRoundTrip(t *testing.T) {
 		Kind:        "chromium",
 		UserDataDir: "/p",
 		Profiles:    []string{"Default"},
-		Keys:        MasterKeys{V10: []byte{0x01}},
+		Keys:        Set{V10: []byte{0x01}},
 	})
 
 	var buf bytes.Buffer
@@ -66,5 +66,34 @@ func TestDump_VaultKindRoundTrip(t *testing.T) {
 	}
 	if parsed.Vaults[0].Browser != "chrome" {
 		t.Errorf("Vault.Browser round-trip: got %q, want %q", parsed.Vaults[0].Browser, "chrome")
+	}
+}
+
+// keys.json is a frozen format: present versions only, in key order, and {} for a vault without keys.
+func TestDump_KeysWireForm(t *testing.T) {
+	d := Dump{Version: DumpVersion, Vaults: []Vault{
+		{Browser: "chrome", Keys: Set{V20: []byte{0x20}, V10: []byte{0x10}}},
+		{Browser: "opera", Keys: Set{}},
+	}}
+	var buf bytes.Buffer
+	if err := d.WriteJSON(&buf); err != nil {
+		t.Fatalf("WriteJSON: %v", err)
+	}
+	out := buf.String()
+	for _, want := range []string{`"keys": {` + "\n" + `        "v10": "EA==",` + "\n" + `        "v20": "IA=="`, `"keys": {}`} {
+		if !strings.Contains(out, want) {
+			t.Errorf("WriteJSON output lacks %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestReadJSON_IgnoresUnknownKeyVersions(t *testing.T) {
+	input := bytes.NewBufferString(`{"version":"2","vaults":[{"browser":"chrome","keys":{"v10":"EA==","v99":"AQ=="}}]}`)
+	d, err := ReadJSON(input)
+	if err != nil {
+		t.Fatalf("ReadJSON: %v", err)
+	}
+	if got := d.Vaults[0].Keys[V10]; !bytes.Equal(got, []byte{0x10}) {
+		t.Errorf("v10 = %x, want 10", got)
 	}
 }

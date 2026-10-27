@@ -3,20 +3,26 @@
 package masterkey
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"os"
 
 	"github.com/tidwall/gjson"
 
-	"github.com/moond4rk/hackbrowserdata/crypto"
+	"github.com/moond4rk/hackbrowserdata/internal/winapi"
 )
 
-// DPAPIRetriever unwraps Chrome's Local State os_crypt.encrypted_key via Windows DPAPI.
-type DPAPIRetriever struct{}
+// Both run: a profile upgraded past Chrome 127 holds v10 and v20 values side by side.
+var platformRetrievers = []Retriever{dpapiRetriever{}, abeRetriever{}}
 
-func (r *DPAPIRetriever) RetrieveKey(hints Hints) ([]byte, error) {
-	data, err := os.ReadFile(hints.LocalStatePath)
+// dpapiRetriever unwraps Chrome's Local State os_crypt.encrypted_key via Windows DPAPI.
+type dpapiRetriever struct{}
+
+func (dpapiRetriever) Version() Version { return V10 }
+
+func (dpapiRetriever) Retrieve(_ context.Context, loc Locator) ([]byte, error) {
+	data, err := os.ReadFile(loc.LocalState)
 	if err != nil {
 		return nil, fmt.Errorf("read Local State: %w", err)
 	}
@@ -39,18 +45,14 @@ func (r *DPAPIRetriever) RetrieveKey(hints Hints) ([]byte, error) {
 		return nil, fmt.Errorf("encrypted_key unexpected prefix: got %q, want %q", keyBytes[:len(dpapiPrefix)], dpapiPrefix)
 	}
 
-	masterKey, err := crypto.DecryptDPAPI(keyBytes[len(dpapiPrefix):])
+	masterKey, err := winapi.DecryptDPAPI(keyBytes[len(dpapiPrefix):])
 	if err != nil {
 		return nil, fmt.Errorf("DPAPI decrypt: %w", err)
 	}
 	return masterKey, nil
 }
 
-// DefaultRetrievers wires the Windows tiers: DPAPI for v10, ABE for v20 (Chrome 127+, via reflective
-// injection). Both run — a profile upgraded from pre-v127 mixes v10+v20 and needs both (issue #578).
-func DefaultRetrievers() Retrievers {
-	return Retrievers{
-		V10: &DPAPIRetriever{},
-		V20: &ABERetriever{},
-	}
+// DecryptDPAPI decrypts a legacy Chromium value that has no version prefix, with the live user's DPAPI context.
+func DecryptDPAPI(blob []byte) ([]byte, error) {
+	return winapi.DecryptDPAPI(blob)
 }

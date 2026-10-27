@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/moond4rk/hackbrowserdata/crypto"
+	"github.com/moond4rk/hackbrowserdata/internal/crypto"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
-	"github.com/moond4rk/hackbrowserdata/masterkey"
 )
 
 const (
@@ -36,7 +36,7 @@ type yandexPrivateData struct {
 	SecretComment  string `json:"secret_comment"`
 }
 
-func extractCreditCards(masterKeys masterkey.MasterKeys, path string) ([]record.CreditCard, error) {
+func extractCreditCards(masterKeys masterkey.Set, path string) ([]record.CreditCard, error) {
 	cards, err := sqlitex.QueryRows(path, false, defaultCreditCardQuery,
 		func(rows *sql.Rows) (record.CreditCard, error) {
 			var guid, name, month, year, nickname, address string
@@ -62,8 +62,8 @@ func extractCreditCards(masterKeys masterkey.MasterKeys, path string) ([]record.
 }
 
 // extractYandexCreditCards reads the records table (not Chromium's credit_cards). AAD = guid.
-func extractYandexCreditCards(masterKeys masterkey.MasterKeys, path string) ([]record.CreditCard, error) {
-	dataKey, err := loadYandexDataKey(path, masterKeys.V10)
+func extractYandexCreditCards(masterKeys masterkey.Set, path string) ([]record.CreditCard, error) {
+	dataKey, err := loadYandexDataKey(path, masterKeys[masterkey.V10])
 	if err != nil {
 		if errors.Is(err, errYandexMasterPasswordSet) {
 			log.Warnf("%s: %v", path, err)

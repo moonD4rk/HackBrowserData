@@ -11,7 +11,7 @@ import (
 	"github.com/tidwall/gjson"
 	_ "modernc.org/sqlite"
 
-	"github.com/moond4rk/hackbrowserdata/crypto"
+	"github.com/moond4rk/hackbrowserdata/internal/crypto"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 

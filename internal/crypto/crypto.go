@@ -1,11 +1,9 @@
 package crypto
 
 import (
-	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/des"
-	"crypto/sha1"
 	"fmt"
 )
 
@@ -47,46 +45,7 @@ func DES3Decrypt(key, iv, ciphertext []byte) ([]byte, error) {
 	return cbcDecrypt(block, iv, ciphertext)
 }
 
-// gcmNonceSize is the AES-GCM standard nonce size used by Chromium's v10/v20
-// cipher formats. Cross-platform because the v20 ciphertext layout is the
-// same regardless of host OS (only Windows currently produces v20).
 const gcmNonceSize = 12
-
-// chromiumCBCIV is the fixed IV Chromium uses for AES-CBC v10/v11 (macOS/Linux).
-var chromiumCBCIV = bytes.Repeat([]byte{0x20}, aes.BlockSize)
-
-// kEmptyKey is Chromium's decrypt-only fallback for data corrupted by a KWallet
-// race in Chrome ~89 (crbug.com/40055416). Matches kEmptyKey in os_crypt_linux.cc.
-var kEmptyKey = PBKDF2Key([]byte(""), []byte("saltysalt"), 1, 16, sha1.New)
-
-// DecryptChromiumGCM decrypts a prefixed AES-GCM blob: version(3B)+nonce(12B)+ct+tag.
-// Used by Windows v10 (AES-256) and v20; the layout is identical and platform-neutral.
-func DecryptChromiumGCM(key, ciphertext []byte) ([]byte, error) {
-	if len(ciphertext) < versionPrefixLen+gcmNonceSize {
-		return nil, errShortCiphertext
-	}
-	nonce := ciphertext[versionPrefixLen : versionPrefixLen+gcmNonceSize]
-	payload := ciphertext[versionPrefixLen+gcmNonceSize:]
-	return AESGCMDecrypt(key, nonce, payload)
-}
-
-// DecryptChromiumCBC decrypts a prefixed AES-CBC blob (version(3B)+ct) with Chromium's
-// fixed IV, retrying with kEmptyKey to recover crbug.com/40055416 KWallet-corrupted data.
-// Used by macOS/Linux v10 and Linux v11 (both AES-128).
-func DecryptChromiumCBC(key, ciphertext []byte) ([]byte, error) {
-	if len(ciphertext) < versionPrefixLen+aes.BlockSize {
-		return nil, errShortCiphertext
-	}
-	payload := ciphertext[versionPrefixLen:]
-	plaintext, err := AESCBCDecrypt(key, chromiumCBCIV, payload)
-	if err == nil {
-		return plaintext, nil
-	}
-	if alt, altErr := AESCBCDecrypt(kEmptyKey, chromiumCBCIV, payload); altErr == nil {
-		return alt, nil
-	}
-	return nil, err
-}
 
 // AESGCMEncrypt encrypts data using AES-GCM mode.
 func AESGCMEncrypt(key, nonce, plaintext []byte) ([]byte, error) {

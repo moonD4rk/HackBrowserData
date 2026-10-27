@@ -1,6 +1,7 @@
 package chromium
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"sync"
@@ -8,7 +9,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/filemanager"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
-	"github.com/moond4rk/hackbrowserdata/masterkey"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
@@ -16,16 +17,18 @@ import (
 // Browser is one Chromium installation: a single UserDataDir holding profiles
 // that share a master key. The key is derived once and reused across profiles.
 type Browser struct {
-	cfg        types.BrowserConfig
-	retrievers masterkey.Retrievers
-	profiles   []*profile
+	cfg      types.BrowserConfig
+	locator  masterkey.Locator // cross-cutting bits the injector adds (macOS keychain, Windows ABE); live only
+	static   masterkey.Set     // keys known from a dump; restore skips retrieval
+	isStatic bool
+	profiles []*profile
 
 	keysOnce sync.Once
-	keys     masterkey.MasterKeys
+	keys     masterkey.Set
 }
 
 // NewBrowser discovers the profiles under cfg.UserDataDir, or returns nil if none resolve.
-// Call SetRetrievers before Extract to enable decryption.
+// Call SetLocator (live) or SetKeys (restore) before Extract to enable decryption.
 func NewBrowser(cfg types.BrowserConfig) (*Browser, error) {
 	sources := sourcesForKind(cfg.Kind)
 	extractors := extractorsForKind(cfg.Kind)
@@ -50,9 +53,11 @@ func NewBrowser(cfg types.BrowserConfig) (*Browser, error) {
 	return &Browser{cfg: cfg, profiles: profiles}, nil
 }
 
-// SetRetrievers wires the per-tier master-key retrievers (V10/V11/V20) used by
-// Extract; unused tiers stay nil.
-func (b *Browser) SetRetrievers(r masterkey.Retrievers) { b.retrievers = r }
+// SetLocator adds the live run's cross-cutting key sources — the macOS login keychain, the Windows ABE executable.
+func (b *Browser) SetLocator(loc masterkey.Locator) { b.locator = loc }
+
+// SetKeys supplies keys already known from a dump, so restore decrypts without touching any OS secret store.
+func (b *Browser) SetKeys(keys masterkey.Set) { b.static, b.isStatic = keys, true }
 
 func (b *Browser) BrowserName() string     { return b.cfg.Name }
 func (b *Browser) BrowserKey() string      { return b.cfg.Key }
@@ -93,21 +98,24 @@ func (b *Browser) CountEntries(categories []category.Category) ([]types.CountRes
 	return results, nil
 }
 
-// ExportKeys derives the master keys without extracting. Returns the tiers that succeeded plus a
+// ExportKeys derives the master keys without extracting. Returns the versions that succeeded plus a
 // joined error for those that failed — partial results matter (a v20-only failure keeps the v10 key).
-func (b *Browser) ExportKeys() (masterkey.MasterKeys, error) {
+func (b *Browser) ExportKeys() (masterkey.Set, error) {
+	if b.isStatic {
+		return b.static, nil
+	}
 	session, err := filemanager.NewSession()
 	if err != nil {
-		return masterkey.MasterKeys{}, err
+		return masterkey.Set{}, err
 	}
 	defer session.Cleanup()
 
-	return masterkey.NewMasterKeys(b.retrievers, b.buildHints(session))
+	return masterkey.RetrieveAll(context.Background(), b.buildLocator(session))
 }
 
 // masterKeys derives and caches the installation's keys exactly once (sync.Once), so a failure is
 // warned once — no cross-profile dedup state needed.
-func (b *Browser) masterKeys() masterkey.MasterKeys {
+func (b *Browser) masterKeys() masterkey.Set {
 	b.keysOnce.Do(func() {
 		masterKeys, err := b.ExportKeys()
 		if err != nil {
@@ -118,29 +126,21 @@ func (b *Browser) masterKeys() masterkey.MasterKeys {
 	return b.keys
 }
 
-// buildHints copies Local State into the session temp dir (so Windows DPAPI/ABE retrievers read it
-// from a process-owned path) and assembles the Hints. Local State sits at the installation root.
-func (b *Browser) buildHints(session *filemanager.Session) masterkey.Hints {
-	var localStateDst string
+// buildLocator copies Local State into the session temp dir (so Windows DPAPI/ABE retrievers read it
+// from a process-owned path) and fills in the dir's own fields; the injector added the rest.
+func (b *Browser) buildLocator(session *filemanager.Session) masterkey.Locator {
+	loc := b.locator
+	loc.KeychainLabel = b.cfg.KeychainLabel
 	candidate := filepath.Join(b.cfg.UserDataDir, "Local State")
 	if fileutil.FileExists(candidate) {
 		dst := filepath.Join(session.TempDir(), "Local State")
 		if err := session.Acquire(candidate, dst, false); err != nil {
 			log.Debugf("acquire Local State for %s: %v", b.BrowserName(), err)
 		} else {
-			localStateDst = dst
+			loc.LocalState = dst
 		}
 	}
-
-	abeKey := ""
-	if b.cfg.WindowsABE {
-		abeKey = b.cfg.Key
-	}
-	return masterkey.Hints{
-		KeychainLabel:  b.cfg.KeychainLabel,
-		WindowsABEKey:  abeKey,
-		LocalStatePath: localStateDst,
-	}
+	return loc
 }
 
 // discoverProfiles lists subdirectories of userDataDir that are valid

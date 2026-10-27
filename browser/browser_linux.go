@@ -3,7 +3,6 @@
 package browser
 
 import (
-	"github.com/moond4rk/hackbrowserdata/masterkey"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
 
@@ -67,13 +66,8 @@ func platformBrowsers() []types.BrowserConfig {
 	}
 }
 
-// newCredentialInjector wires the Linux Chromium retrievers: V10 ("peanuts" hardcoded) and V11 (D-Bus Secret Service),
-// run independently for mixed-cipher profiles. V20 is nil — App-Bound Encryption is Windows-only.
+// newCredentialInjector is a no-op on Linux: RetrieveAll runs the peanuts (v10) and D-Bus keyring (v11)
+// retrievers itself, and a Chromium browser builds the rest of its Locator from its own config.
 func newCredentialInjector(_ DiscoverOptions) browserInjector {
-	retrievers := masterkey.DefaultRetrievers()
-	return func(b Browser) {
-		if km, ok := b.(KeyManager); ok {
-			km.SetRetrievers(retrievers)
-		}
-	}
+	return func(Browser) {}
 }
