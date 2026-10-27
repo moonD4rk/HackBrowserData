@@ -3,18 +3,16 @@ package chromium
 import (
 	"database/sql"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 )
 
-const (
-	defaultDownloadQuery = `SELECT target_path, tab_url, total_bytes, start_time, end_time,
-		mime_type FROM downloads`
-	countDownloadQuery = `SELECT COUNT(*) FROM downloads`
-)
+const defaultDownloadQuery = `SELECT target_path, tab_url, total_bytes, start_time, end_time,
+	mime_type FROM downloads`
 
-func extractDownloads(path string) ([]record.Download, error) {
+func extractDownloads(path string, out browser.Collector) error {
 	downloads, err := sqlitex.QueryRows(path, false, defaultDownloadQuery,
 		func(rows *sql.Rows) (record.Download, error) {
 			var targetPath, url, mimeType string
@@ -32,11 +30,8 @@ func extractDownloads(path string) ([]record.Download, error) {
 			}, nil
 		})
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return downloads, nil
-}
-
-func countDownloads(path string) (int, error) {
-	return sqlitex.CountRows(path, false, countDownloadQuery)
+	emit(out, downloads)
+	return nil
 }

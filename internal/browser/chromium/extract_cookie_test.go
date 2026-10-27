@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moond4rk/hackbrowserdata/internal/record"
+
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
@@ -21,7 +23,9 @@ func setupCookieDB(t *testing.T) string {
 func TestExtractCookies(t *testing.T) {
 	path := setupCookieDB(t)
 
-	got, err := extractCookies(masterkey.Set{}, path)
+	var out testCollector
+	err := extractCookies(masterkey.Set{}, path, &out)
+	got := collected[record.Cookie](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -39,22 +43,6 @@ func TestExtractCookies(t *testing.T) {
 	assert.False(t, got[1].CreatedAt.IsZero())
 	assert.True(t, got[1].ExpireAt.After(got[1].CreatedAt))
 	assert.True(t, got[0].IsHTTPOnly)
-}
-
-func TestCountCookies(t *testing.T) {
-	path := setupCookieDB(t)
-
-	count, err := countCookies(path)
-	require.NoError(t, err)
-	assert.Equal(t, 2, count)
-}
-
-func TestCountCookies_Empty(t *testing.T) {
-	path := createTestDB(t, "Cookies", cookiesSchema)
-
-	count, err := countCookies(path)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count)
 }
 
 func TestStripCookieHash(t *testing.T) {

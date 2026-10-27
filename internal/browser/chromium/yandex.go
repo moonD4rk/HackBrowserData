@@ -9,34 +9,7 @@ import (
 	"strings"
 
 	_ "modernc.org/sqlite"
-
-	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
-
-// yandexSourceOverrides contains only the entries that differ from chromiumSources.
-var yandexSourceOverrides = map[category.Category][]sourcePath{
-	category.Password:   {file("Ya Passman Data")},
-	category.CreditCard: {file("Ya Credit Cards")},
-}
-
-// yandexSources returns chromiumSources with Yandex-specific overrides applied.
-func yandexSources() map[category.Category][]sourcePath {
-	sources := make(map[category.Category][]sourcePath, len(chromiumSources))
-	for k, v := range chromiumSources {
-		sources[k] = v
-	}
-	for k, v := range yandexSourceOverrides {
-		sources[k] = v
-	}
-	return sources
-}
-
-// yandexExtractors overrides Password and CreditCard extraction for Yandex, which wraps its data-encryption key inside
-// meta.local_encryptor_data, binds per-row AAD to GCM, and stores cards as JSON blobs in a records table.
-var yandexExtractors = map[category.Category]categoryExtractor{
-	category.Password:   passwordExtractor{fn: extractYandexPasswords},
-	category.CreditCard: creditCardExtractor{fn: extractYandexCreditCards},
-}
 
 // yandexLoginAAD is SHA1(origin_url \x00 username_element \x00 username_value \x00 password_element \x00 signon_realm),
 // with keyID appended when the profile has a master password (v1 always passes nil).
@@ -72,7 +45,7 @@ func yandexCardAAD(guid string, keyID []byte) []byte {
 	return out
 }
 
-// errYandexMasterPasswordSet: caller warns + skips; RSA-OAEP unseal is deferred.
+// errYandexMasterPasswordSet fails the extraction; unsealing a master-password profile is deferred.
 var errYandexMasterPasswordSet = errors.New("yandex: profile protected by master password, skipping")
 
 // loadYandexDataKey honors the master-password gate and returns the per-DB data key.

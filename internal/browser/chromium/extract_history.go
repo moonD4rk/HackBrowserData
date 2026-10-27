@@ -3,17 +3,15 @@ package chromium
 import (
 	"database/sql"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 )
 
-const (
-	defaultHistoryQuery = `SELECT url, title, visit_count, last_visit_time FROM urls`
-	countHistoryQuery   = `SELECT COUNT(*) FROM urls`
-)
+const defaultHistoryQuery = `SELECT url, title, visit_count, last_visit_time FROM urls`
 
-func extractHistories(path string) ([]record.History, error) {
+func extractHistories(path string, out browser.Collector) error {
 	histories, err := sqlitex.QueryRows(path, false, defaultHistoryQuery,
 		func(rows *sql.Rows) (record.History, error) {
 			var url, title string
@@ -30,11 +28,8 @@ func extractHistories(path string) ([]record.History, error) {
 			}, nil
 		})
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return histories, nil
-}
-
-func countHistories(path string) (int, error) {
-	return sqlitex.CountRows(path, false, countHistoryQuery)
+	emit(out, histories)
+	return nil
 }

@@ -4,21 +4,20 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"database/sql"
+	"fmt"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 )
 
-const (
-	defaultCookieQuery = `SELECT name, encrypted_value, host_key, path,
-		creation_utc, expires_utc, is_secure, is_httponly,
-		has_expires, is_persistent, samesite FROM cookies`
-	countCookieQuery = `SELECT COUNT(*) FROM cookies`
-)
+const defaultCookieQuery = `SELECT name, encrypted_value, host_key, path,
+	creation_utc, expires_utc, is_secure, is_httponly,
+	has_expires, is_persistent, samesite FROM cookies`
 
-func extractCookies(masterKeys masterkey.Set, path string) ([]record.Cookie, error) {
+func extractCookies(masterKeys masterkey.Set, path string, out browser.Collector) error {
 	cookies, err := sqlitex.QueryRows(path, false, defaultCookieQuery,
 		func(rows *sql.Rows) (record.Cookie, error) {
 			var (
@@ -35,7 +34,10 @@ func extractCookies(masterKeys masterkey.Set, path string) ([]record.Cookie, err
 				return record.Cookie{}, err
 			}
 
-			value, _ := decryptValue(masterKeys, encryptedValue)
+			value, err := decryptValue(masterKeys, encryptedValue)
+			if err != nil {
+				out.Fail(fmt.Errorf("decrypt cookie %s on %s: %w", name, host, err))
+			}
 			value = stripCookieHash(value, host)
 			sameSiteStr := "unspecified"
 			switch sameSite {
@@ -63,13 +65,10 @@ func extractCookies(masterKeys masterkey.Set, path string) ([]record.Cookie, err
 			}, nil
 		})
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return cookies, nil
-}
-
-func countCookies(path string) (int, error) {
-	return sqlitex.CountRows(path, false, countCookieQuery)
+	emit(out, cookies)
+	return nil
 }
 
 // stripCookieHash removes the SHA256(host_key) prefix from a decrypted cookie value. Chrome 130+

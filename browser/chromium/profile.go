@@ -1,16 +1,22 @@
 package chromium
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 
 	"github.com/moond4rk/hackbrowserdata/filemanager"
+	ibrowser "github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
+	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 	"github.com/moond4rk/hackbrowserdata/types"
 )
+
+// snapshotDirID names the one user data dir in a profile's private snapshot, whose root is the profile dir itself.
+const snapshotDirID = "profile"
 
 // profile is one Chromium profile under an installation — the leaf extraction
 // unit. It reads its own source files but reuses the installation's master keys.
@@ -18,7 +24,7 @@ type profile struct {
 	profileDir  string
 	browserName string
 	kind        types.BrowserKind
-	extractors  map[category.Category]categoryExtractor
+	extractors  ibrowser.Extractors
 	sourcePaths map[category.Category]resolvedPath
 }
 
@@ -31,35 +37,104 @@ func (p *profile) name() string {
 
 func (p *profile) label() string { return p.browserName + "/" + p.name() }
 
-// extract copies the profile's source files to a temp directory and extracts the
-// requested categories, decrypting with the installation's master keys.
+// extract captures the profile's sources into a private snapshot and runs the Chromium base's extractors on it,
+// decrypting with the installation's master keys.
 func (p *profile) extract(masterKeys masterkey.Set, categories []category.Category) *types.BrowserData {
-	session, err := filemanager.NewSession()
-	if err != nil {
-		log.Debugf("new session for %s: %v", p.label(), err)
-		return &types.BrowserData{}
-	}
-	defer session.Cleanup()
-
-	tempPaths := p.acquireFiles(session, categories)
 	data := &types.BrowserData{}
+	d, err := snapshot.Temp()
+	if err != nil {
+		log.Debugf("new snapshot for %s: %v", p.label(), err)
+		return data
+	}
+	defer func() {
+		if err := d.Close(); err != nil {
+			log.Debugf("remove snapshot for %s: %v", p.label(), err)
+		}
+	}()
+
+	ctx := context.Background()
+	if err := d.Capture(ctx, p.snapshotFiles(categories)); err != nil {
+		log.Debugf("capture %s: %v", p.label(), err)
+		return data
+	}
+	keys := func(context.Context) masterkey.Set { return masterKeys }
+	ps := ibrowser.NewProfileSnapshot(d.Snapshot(snapshotDirID), ibrowser.Profile{Name: p.name()}, keys)
+	out := &dataCollector{data: data, label: p.label()}
 	for _, cat := range categories {
-		path, ok := tempPaths[cat]
-		if !ok {
+		ex, ok := p.extractors[cat]
+		if _, found := p.sourcePaths[cat]; !ok || !found {
 			continue
 		}
-		p.extractCategory(data, cat, masterKeys, path)
-	}
-	if accountDB, ok := p.acquireAccountPasswords(session, categories); ok {
-		passwords, err := appendPasswords(masterKeys, accountDB, record.StoreAccount, data.Passwords)
-		if err != nil {
-			log.Debugf("extract account passwords for %s: %v", p.label(), err)
-		} else {
-			data.Passwords = passwords
+		if err := ex.Extract(ctx, ps, out); err != nil {
+			log.Debugf("extract %s for %s: %v", cat, p.label(), err)
 		}
 	}
 	return data
 }
+
+// snapshotFiles lists, once each, the first candidate on disk of every profile source the categories read.
+func (p *profile) snapshotFiles(categories []category.Category) []snapshot.File {
+	var files []snapshot.File
+	seen := make(map[string]bool)
+	for _, cat := range categories {
+		if _, found := p.sourcePaths[cat]; !found {
+			continue
+		}
+		for _, src := range p.extractors[cat].Sources {
+			if src.Shared {
+				continue
+			}
+			rel, ok := firstOnDisk(p.profileDir, src)
+			if !ok || seen[rel] {
+				continue
+			}
+			seen[rel] = true
+			files = append(files, snapshot.File{DirID: snapshotDirID, From: p.profileDir, Rel: rel, IsDir: src.IsDir})
+		}
+	}
+	return files
+}
+
+func firstOnDisk(dir string, src ibrowser.Source) (string, bool) {
+	for _, rel := range src.Paths {
+		info, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel)))
+		if err == nil && info.IsDir() == src.IsDir {
+			return rel, true
+		}
+	}
+	return "", false
+}
+
+// dataCollector files the records the Chromium base hands back into today's per-category slices.
+type dataCollector struct {
+	data  *types.BrowserData
+	label string
+}
+
+func (c *dataCollector) Add(r record.Record) {
+	switch v := r.(type) {
+	case *record.Login:
+		c.data.Passwords = append(c.data.Passwords, *v)
+	case *record.Cookie:
+		c.data.Cookies = append(c.data.Cookies, *v)
+	case *record.Bookmark:
+		c.data.Bookmarks = append(c.data.Bookmarks, *v)
+	case *record.History:
+		c.data.Histories = append(c.data.Histories, *v)
+	case *record.Download:
+		c.data.Downloads = append(c.data.Downloads, *v)
+	case *record.CreditCard:
+		c.data.CreditCards = append(c.data.CreditCards, *v)
+	case *record.Extension:
+		c.data.Extensions = append(c.data.Extensions, *v)
+	case *record.LocalStorage:
+		c.data.LocalStorage = append(c.data.LocalStorage, *v)
+	case *record.SessionStorage:
+		c.data.SessionStorage = append(c.data.SessionStorage, *v)
+	}
+}
+
+func (c *dataCollector) Fail(err error) { log.Debugf("%s: %v", c.label, err) }
 
 // count counts entries per category without decryption.
 func (p *profile) count(categories []category.Category) map[category.Category]int {
@@ -104,15 +179,6 @@ func (p *profile) acquireAccountPasswords(session *filemanager.Session, categori
 	return dst, true
 }
 
-// primaryPasswordStore labels the resolved primary login DB: a profile that only ever synced
-// passwords has no local Login Data, so the account DB wins candidate resolution.
-func (p *profile) primaryPasswordStore() record.Store {
-	if primary, ok := p.sourcePaths[category.Password]; ok && primary.rel == accountLoginData {
-		return record.StoreAccount
-	}
-	return record.StoreLocal
-}
-
 // accountPasswordPath returns the account-synced password DB when the primary source resolved to
 // the local Login Data DB. If only Login Data For Account exists, it is already the primary source.
 func (p *profile) accountPasswordPath(categories []category.Category) (string, bool) {
@@ -148,42 +214,6 @@ func (p *profile) acquireFiles(session *filemanager.Session, categories []catego
 		tempPaths[cat] = dst
 	}
 	return tempPaths
-}
-
-// extractCategory calls the appropriate extract function for a category. A custom
-// extractor (registered via extractorsForKind) takes precedence over the switch.
-func (p *profile) extractCategory(data *types.BrowserData, cat category.Category, masterKeys masterkey.Set, path string) {
-	if ext, ok := p.extractors[cat]; ok {
-		if err := ext.extract(masterKeys, path, data); err != nil {
-			log.Debugf("extract %s for %s: %v", cat, p.label(), err)
-		}
-		return
-	}
-
-	var err error
-	switch cat {
-	case category.Password:
-		data.Passwords, err = extractPasswords(masterKeys, path, p.primaryPasswordStore())
-	case category.Cookie:
-		data.Cookies, err = extractCookies(masterKeys, path)
-	case category.History:
-		data.Histories, err = extractHistories(path)
-	case category.Download:
-		data.Downloads, err = extractDownloads(path)
-	case category.Bookmark:
-		data.Bookmarks, err = extractBookmarks(path)
-	case category.CreditCard:
-		data.CreditCards, err = extractCreditCards(masterKeys, path)
-	case category.Extension:
-		data.Extensions, err = extractExtensions(path)
-	case category.LocalStorage:
-		data.LocalStorage, err = extractLocalStorage(path)
-	case category.SessionStorage:
-		data.SessionStorage, err = extractSessionStorage(path)
-	}
-	if err != nil {
-		log.Debugf("extract %s for %s: %v", cat, p.label(), err)
-	}
 }
 
 // countCategory calls the appropriate count function for a category.

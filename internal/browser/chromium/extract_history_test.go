@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 func setupHistoryDB(t *testing.T) string {
@@ -19,7 +21,9 @@ func setupHistoryDB(t *testing.T) string {
 func TestExtractHistories(t *testing.T) {
 	path := setupHistoryDB(t)
 
-	got, err := extractHistories(path)
+	var out testCollector
+	err := extractHistories(path, &out)
+	got := collected[record.History](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 3)
 
@@ -34,23 +38,7 @@ func TestExtractHistories(t *testing.T) {
 	assert.False(t, got[2].LastVisit.IsZero())
 }
 
-func TestCountHistories(t *testing.T) {
-	path := setupHistoryDB(t)
-
-	count, err := countHistories(path)
-	require.NoError(t, err)
-	assert.Equal(t, 3, count)
-}
-
-func TestCountHistories_Empty(t *testing.T) {
-	path := createTestDB(t, "History", urlsSchema)
-
-	count, err := countHistories(path)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count)
-}
-
 func TestExtractHistories_FileNotFound(t *testing.T) {
-	_, err := extractHistories("/nonexistent/History")
+	err := extractHistories("/nonexistent/History", &testCollector{})
 	require.Error(t, err)
 }

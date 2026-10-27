@@ -31,7 +31,7 @@ type Browser struct {
 // Call SetLocator (live) or SetKeys (restore) before Extract to enable decryption.
 func NewBrowser(cfg types.BrowserConfig) (*Browser, error) {
 	sources := sourcesForKind(cfg.Kind)
-	extractors := extractorsForKind(cfg.Kind)
+	extractors := extractorsFor(cfg.Kind)
 
 	var profiles []*profile
 	for _, profileDir := range discoverProfiles(cfg.UserDataDir, sources) {

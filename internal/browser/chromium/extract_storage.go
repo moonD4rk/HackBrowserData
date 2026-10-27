@@ -10,6 +10,7 @@ import (
 
 	"github.com/syndtr/goleveldb/leveldb"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
@@ -26,13 +27,13 @@ const (
 
 const maxLocalStorageValueLength = 2048
 
-func extractLocalStorage(path string) ([]record.LocalStorage, error) {
+func extractLocalStorage(path string, out browser.Collector) error {
 	if _, err := os.Stat(path); err != nil {
-		return nil, fmt.Errorf("leveldb path %q: %w", path, err)
+		return fmt.Errorf("leveldb path %q: %w", path, err)
 	}
 	db, err := leveldb.OpenFile(path, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer db.Close()
 
@@ -47,7 +48,8 @@ func extractLocalStorage(path string) ([]record.LocalStorage, error) {
 		}
 		entries = append(entries, entry)
 	}
-	return entries, iter.Error()
+	emit(out, entries)
+	return iter.Error()
 }
 
 // parseLocalStorageEntry classifies a LevelDB key/value pair and decodes it.
@@ -157,13 +159,13 @@ func decodeLocalStorageValue(value []byte) string {
 //	namespace-<guid>-<origin> → <map_id>   (origin mapping)
 //	map-<map_id>-<key_name>  → <value>     (actual data, UTF-16 LE)
 //	next-map-id / version                  (metadata, skipped)
-func extractSessionStorage(path string) ([]record.SessionStorage, error) {
+func extractSessionStorage(path string, out browser.Collector) error {
 	if _, err := os.Stat(path); err != nil {
-		return nil, fmt.Errorf("leveldb path %q: %w", path, err)
+		return fmt.Errorf("leveldb path %q: %w", path, err)
 	}
 	db, err := leveldb.OpenFile(path, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer db.Close()
 
@@ -188,7 +190,7 @@ func extractSessionStorage(path string) ([]record.SessionStorage, error) {
 	}
 	iter.Release()
 	if err := iter.Error(); err != nil {
-		return nil, fmt.Errorf("read namespace entries: %w", err)
+		return fmt.Errorf("read namespace entries: %w", err)
 	}
 
 	// Pass 2: read map entries and resolve origins.
@@ -222,7 +224,8 @@ func extractSessionStorage(path string) ([]record.SessionStorage, error) {
 			Value: value,
 		})
 	}
-	return entries, iter2.Error()
+	emit(out, entries)
+	return iter2.Error()
 }
 
 // extractNamespaceOrigin extracts the origin from a namespace key.
@@ -236,53 +239,6 @@ func extractNamespaceOrigin(key string) string {
 		}
 	}
 	return ""
-}
-
-func countLocalStorage(path string) (int, error) {
-	if _, err := os.Stat(path); err != nil {
-		return 0, err
-	}
-	db, err := leveldb.OpenFile(path, nil)
-	if err != nil {
-		return 0, err
-	}
-	defer db.Close()
-
-	var count int
-	iter := db.NewIterator(nil, nil)
-	defer iter.Release()
-
-	for iter.Next() {
-		if _, ok := parseLocalStorageEntry(iter.Key(), iter.Value()); ok {
-			count++
-		}
-	}
-	return count, iter.Error()
-}
-
-func countSessionStorage(path string) (int, error) {
-	if _, err := os.Stat(path); err != nil {
-		return 0, err
-	}
-	db, err := leveldb.OpenFile(path, nil)
-	if err != nil {
-		return 0, err
-	}
-	defer db.Close()
-
-	var count int
-	iter := db.NewIterator(nil, nil)
-	defer iter.Release()
-
-	mapPrefix := []byte("map-")
-	for iter.Next() {
-		if bytes.HasPrefix(iter.Key(), mapPrefix) {
-			if sep := bytes.IndexByte(iter.Key()[len(mapPrefix):], '-'); sep >= 0 {
-				count++
-			}
-		}
-	}
-	return count, iter.Error()
 }
 
 // decodeSessionStorageValue decodes a session storage value.
