@@ -59,6 +59,7 @@ Each bug designed out by this rewrite gets a test that would have caught it, so 
 - **Temp snapshot cleanup**: a run that fails mid-way leaves no copied `Login Data` or `Cookies` behind.
 - **Discovery errors are not absence**: an unreadable user data dir (permission denied) is reported as an `error` result, distinct from one that simply isn't there (nothing). The home directory comes from `DiscoverOptions`, so a `t.TempDir()` stands in.
 - **Safari discovery reads a copy**: listing Safari profiles opens a snapshot copy of `SafariTabs.db`, never the live file.
+- **Shared executable names**: when App Paths names another vendor's `browser.exe`, the browser's own install location wins.
 
 ## Table and payload consistency
 

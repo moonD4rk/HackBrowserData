@@ -17,28 +17,22 @@ import (
 // located via registry App Paths or any install-location fallback.
 var ErrExecutableNotFound = errors.New("browser executable not found")
 
-// ExecutablePath resolves a browser's .exe with a 4-tier search:
-//  1. Registry App Paths in HKLM
-//  2. Registry App Paths in HKCU
+// ExecutablePath resolves a browser's .exe, its own install locations first: an executable name such as browser.exe is
+// shared by more than one vendor, so App Paths or a running process may name another vendor's program.
+//  1. Hard-coded install fallbacks — the vendor's own directories.
+//  2. Registry App Paths in HKLM, then HKCU — installs elsewhere.
 //  3. Running-process probe — scan EnumProcesses for a match by exe name
 //     and return the owner's QueryFullProcessImageName. Picks up portable
 //     builds and non-standard installs that never wrote to App Paths.
-//  4. Hard-coded install fallbacks (last resort when the browser
-//     is not running and the registry is missing the entry).
 func ExecutablePath(exeName string, fallbacks []string) (string, error) {
+	return executablePath(exeName, fallbacks, appPathsLookup, runningProcessPath)
+}
+
+func executablePath(exeName string, fallbacks []string, appPaths func(string, registry.Key) (string, error),
+	running func(string) string,
+) (string, error) {
 	if exeName == "" {
 		return "", fmt.Errorf("%w: no executable name", ErrExecutableNotFound)
-	}
-
-	if p, err := appPathsLookup(exeName, registry.LOCAL_MACHINE); err == nil {
-		return p, nil
-	}
-	if p, err := appPathsLookup(exeName, registry.CURRENT_USER); err == nil {
-		return p, nil
-	}
-
-	if p := runningProcessPath(exeName); p != "" {
-		return p, nil
 	}
 
 	for _, candidate := range fallbacks {
@@ -56,14 +50,24 @@ func ExecutablePath(exeName string, fallbacks []string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("%w: %q (registry miss, no running process, no fallback match)",
+	if p, err := appPaths(exeName, registry.LOCAL_MACHINE); err == nil {
+		return p, nil
+	}
+	if p, err := appPaths(exeName, registry.CURRENT_USER); err == nil {
+		return p, nil
+	}
+
+	if p := running(exeName); p != "" {
+		return p, nil
+	}
+
+	return "", fmt.Errorf("%w: %q (no install location, registry miss, no running process)",
 		ErrExecutableNotFound, exeName)
 }
 
 // runningProcessPath scans live processes for one whose image filename
 // matches exeName (case-insensitive) and returns the full path on the
-// first hit. Errors are swallowed — this is a best-effort probe that
-// yields to the hard-coded fallbacks if nothing matches.
+// first hit. Errors are swallowed — this is the last, best-effort probe.
 func runningProcessPath(exeName string) string {
 	pids, err := EnumProcesses()
 	if err != nil {
