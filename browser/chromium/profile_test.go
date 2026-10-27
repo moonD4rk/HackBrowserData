@@ -29,50 +29,6 @@ func createLoginDBAt(t *testing.T, path string, inserts ...string) {
 	}
 }
 
-// TestExtractCategory_CustomExtractor verifies that extractCategory dispatches
-// through a registered extractor instead of the default switch logic.
-func TestExtractCategory_CustomExtractor(t *testing.T) {
-	// Create a profile with a custom extractor that records it was called
-	called := false
-	testExtractor := extensionExtractor{
-		fn: func(path string) ([]record.Extension, error) {
-			called = true
-			return []record.Extension{{Name: "custom", ID: "test-id"}}, nil
-		},
-	}
-
-	p := &profile{
-		extractors: map[category.Category]categoryExtractor{
-			category.Extension: testExtractor,
-		},
-	}
-
-	data := &types.BrowserData{}
-	p.extractCategory(data, category.Extension, masterkey.Set{}, "unused-path")
-
-	assert.True(t, called, "custom extractor should be called")
-	require.Len(t, data.Extensions, 1)
-	assert.Equal(t, "custom", data.Extensions[0].Name)
-}
-
-// TestExtractCategory_DefaultFallback verifies that extractCategory uses
-// the default switch when no extractor is registered.
-func TestExtractCategory_DefaultFallback(t *testing.T) {
-	path := createTestDB(t, "History", urlsSchema,
-		insertURL("https://example.com", "Example", 3, 13350000000000000),
-	)
-
-	p := &profile{
-		extractors: nil, // no custom extractors
-	}
-
-	data := &types.BrowserData{}
-	p.extractCategory(data, category.History, masterkey.Set{}, path)
-
-	require.Len(t, data.Histories, 1)
-	assert.Equal(t, "Example", data.Histories[0].Title)
-}
-
 // ---------------------------------------------------------------------------
 // acquireFiles
 // ---------------------------------------------------------------------------
@@ -101,14 +57,15 @@ func TestExtractAndCountPasswords_MergesLocalAndAccountDatabases(t *testing.T) {
 	profileDir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(profileDir, "Preferences"), []byte(`{}`), 0o600))
 	createLoginDBAt(t, filepath.Join(profileDir, "Login Data"),
-		insertLogin("https://local.example", "", "local-user", "", 13340000000000000))
+		insertLogin("https://local.example", "", "local-user", 13340000000000000))
 	createLoginDBAt(t, filepath.Join(profileDir, accountLoginData),
-		insertLogin("https://account.example", "", "account-user", "", 13360000000000000))
+		insertLogin("https://account.example", "", "account-user", 13360000000000000))
 
 	p := &profile{
 		profileDir:  profileDir,
 		browserName: "Chrome",
 		kind:        types.Chromium,
+		extractors:  extractorsFor(types.Chromium),
 		sourcePaths: resolveSourcePaths(chromiumSources, profileDir),
 	}
 	data := p.extract(masterkey.Set{}, []category.Category{category.Password})
@@ -126,7 +83,7 @@ func TestExtractAndCountPasswords_MergesLocalAndAccountDatabases(t *testing.T) {
 func TestExtractPasswords_IdenticalCredentialInBothStoresKeepsBoth(t *testing.T) {
 	profileDir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(profileDir, "Preferences"), []byte(`{}`), 0o600))
-	login := insertLogin("https://same.example", "", "same-user", "", 13340000000000000)
+	login := insertLogin("https://same.example", "", "same-user", 13340000000000000)
 	createLoginDBAt(t, filepath.Join(profileDir, "Login Data"), login)
 	createLoginDBAt(t, filepath.Join(profileDir, accountLoginData), login)
 
@@ -134,6 +91,7 @@ func TestExtractPasswords_IdenticalCredentialInBothStoresKeepsBoth(t *testing.T)
 		profileDir:  profileDir,
 		browserName: "Chrome",
 		kind:        types.Chromium,
+		extractors:  extractorsFor(types.Chromium),
 		sourcePaths: resolveSourcePaths(chromiumSources, profileDir),
 	}
 	data := p.extract(masterkey.Set{}, []category.Category{category.Password})
@@ -150,12 +108,13 @@ func TestExtractAndCountPasswords_AccountDatabaseOnly(t *testing.T) {
 	profileDir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(profileDir, "Preferences"), []byte(`{}`), 0o600))
 	createLoginDBAt(t, filepath.Join(profileDir, accountLoginData),
-		insertLogin("https://account.example", "", "account-user", "", 13360000000000000))
+		insertLogin("https://account.example", "", "account-user", 13360000000000000))
 
 	p := &profile{
 		profileDir:  profileDir,
 		browserName: "Chrome",
 		kind:        types.Chromium,
+		extractors:  extractorsFor(types.Chromium),
 		sourcePaths: resolveSourcePaths(chromiumSources, profileDir),
 	}
 	data := p.extract(masterkey.Set{}, []category.Category{category.Password})

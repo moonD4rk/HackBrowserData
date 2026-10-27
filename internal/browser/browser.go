@@ -1,4 +1,5 @@
-// Package browser describes the browsers HBD knows: one Def per browser, with how it appears on each OS.
+// Package browser holds the browser table and what the base packages hand the pipeline: user data dirs, profiles,
+// and the extractors that read them.
 package browser
 
 import "github.com/moond4rk/hackbrowserdata/internal/masterkey"

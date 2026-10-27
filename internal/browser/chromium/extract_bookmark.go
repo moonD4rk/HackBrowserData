@@ -5,14 +5,15 @@ import (
 
 	"github.com/tidwall/gjson"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 )
 
-func extractBookmarks(path string) ([]record.Bookmark, error) {
+func extractBookmarks(path string, out browser.Collector) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var bookmarks []record.Bookmark
@@ -21,7 +22,8 @@ func extractBookmarks(path string) ([]record.Bookmark, error) {
 		walkBookmarks(value, "", &bookmarks)
 		return true
 	})
-	return bookmarks, nil
+	emit(out, bookmarks)
+	return nil
 }
 
 // walkBookmarks recursively traverses the bookmark tree, collecting URL entries.
@@ -46,33 +48,4 @@ func walkBookmarks(node gjson.Result, folder string, out *[]record.Bookmark) {
 	for _, child := range children.Array() {
 		walkBookmarks(child, currentFolder, out)
 	}
-}
-
-func countBookmarks(path string) (int, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return 0, err
-	}
-	var count int
-	roots := gjson.GetBytes(data, "roots")
-	roots.ForEach(func(_, value gjson.Result) bool {
-		count += walkCountBookmarks(value)
-		return true
-	})
-	return count, nil
-}
-
-// walkCountBookmarks recursively counts URL nodes in the bookmark tree.
-func walkCountBookmarks(node gjson.Result) int {
-	count := 0
-	if node.Get("type").String() == "url" {
-		count++
-	}
-	children := node.Get("children")
-	if children.Exists() && children.IsArray() {
-		for _, child := range children.Array() {
-			count += walkCountBookmarks(child)
-		}
-	}
-	return count
 }

@@ -376,17 +376,30 @@ func TestSourcesForKind(t *testing.T) {
 	assert.Equal(t, chromium[category.History][0].rel, yandex[category.History][0].rel)
 }
 
-func TestExtractorsForKind(t *testing.T) {
-	assert.Nil(t, extractorsForKind(types.Chromium))
+func TestExtractorsFor(t *testing.T) {
+	assert.Equal(t, []string{"Login Data"}, extractorsFor(types.Chromium)[category.Password].Sources[0].Paths)
+	assert.Equal(t, []string{"Ya Passman Data"}, extractorsFor(types.ChromiumYandex)[category.Password].Sources[0].Paths)
+	assert.Equal(t, []string{"Ya Credit Cards"}, extractorsFor(types.ChromiumYandex)[category.CreditCard].Sources[0].Paths)
+}
 
-	yandexExt := extractorsForKind(types.ChromiumYandex)
-	require.NotNil(t, yandexExt)
-	assert.Contains(t, yandexExt, category.Password)
-	assert.Contains(t, yandexExt, category.CreditCard)
+// The kind still selects a fork's own format: Opera keeps its extensions under extensions.opsettings.
+func TestExtract_OperaKindReadsOpsettings(t *testing.T) {
+	dir := t.TempDir()
+	mkFile(dir, "Default", "Preferences")
+	installFile(t, filepath.Join(dir, "Default"), createTestJSON(t, "Secure Preferences", `{
+		"extensions": {"opsettings": {"ext1": {"location": 1, "manifest": {"name": "Ext", "version": "1.0"}}}}
+	}`), "Secure Preferences")
 
-	operaExt := extractorsForKind(types.ChromiumOpera)
-	require.NotNil(t, operaExt)
-	assert.Contains(t, operaExt, category.Extension)
+	b, err := NewBrowser(types.BrowserConfig{Name: "Opera", Kind: types.ChromiumOpera, UserDataDir: dir})
+	require.NoError(t, err)
+	require.NotNil(t, b)
+	b.SetKeys(masterkey.Set{})
+
+	results, err := b.Extract([]category.Category{category.Extension})
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	require.Len(t, results[0].Data.Extensions, 1)
+	assert.Equal(t, "Ext", results[0].Data.Extensions[0].Name)
 }
 
 // ---------------------------------------------------------------------------

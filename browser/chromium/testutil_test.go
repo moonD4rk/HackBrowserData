@@ -13,14 +13,6 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// Shared test constants for Chromium encryption.
-// Reusable across decrypt, cookie, password, and creditcard tests.
-// ---------------------------------------------------------------------------
-
-// testAESKey is a 16-byte AES-128 key for constructing test ciphertext.
-var testAESKey = []byte("0123456789abcdef")
-
-// ---------------------------------------------------------------------------
 // Real Chrome table schemas — extracted via `sqlite3 <db> ".schema <table>"`.
 // Using complete schemas ensures our SQL queries work against real browser data.
 // ---------------------------------------------------------------------------
@@ -144,13 +136,13 @@ const creditCardsSchema = `CREATE TABLE credit_cards (
 // our extract functions care about; other NOT NULL columns get defaults.
 // ---------------------------------------------------------------------------
 
-func insertLogin(originURL, actionURL, username, pwdHex string, dateCreated int64) string {
+func insertLogin(originURL, actionURL, username string, dateCreated int64) string {
 	return fmt.Sprintf(
 		`INSERT INTO logins (origin_url, action_url, username_element, username_value,
 		 password_element, password_value, submit_element, signon_realm, date_created,
 		 blacklisted_by_user, scheme)
-		 VALUES ('%s', '%s', '', '%s', '', x'%s', '', '%s', %d, 0, 0)`,
-		originURL, actionURL, username, pwdHex, originURL, dateCreated,
+		 VALUES ('%s', '%s', '', '%s', '', x'', '', '%s', %d, 0, 0)`,
+		originURL, actionURL, username, originURL, dateCreated,
 	)
 }
 

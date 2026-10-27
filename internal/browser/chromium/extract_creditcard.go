@@ -3,10 +3,10 @@ package chromium
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
+	"fmt"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/crypto"
-	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
@@ -15,10 +15,8 @@ import (
 const (
 	defaultCreditCardQuery = `SELECT COALESCE(guid, ''), name_on_card, expiration_month, expiration_year,
 		card_number_encrypted, COALESCE(nickname, ''), COALESCE(billing_address_id, '') FROM credit_cards`
-	countCreditCardQuery = `SELECT COUNT(*) FROM credit_cards`
 
-	yandexCreditCardQuery      = `SELECT guid, public_data, private_data FROM records`
-	yandexCreditCardCountQuery = `SELECT COUNT(*) FROM records`
+	yandexCreditCardQuery = `SELECT guid, public_data, private_data FROM records`
 )
 
 // yandexPublicData is the plaintext JSON in records.public_data.
@@ -36,7 +34,7 @@ type yandexPrivateData struct {
 	SecretComment  string `json:"secret_comment"`
 }
 
-func extractCreditCards(masterKeys masterkey.Set, path string) ([]record.CreditCard, error) {
+func extractCreditCards(masterKeys masterkey.Set, path string, out browser.Collector) error {
 	cards, err := sqlitex.QueryRows(path, false, defaultCreditCardQuery,
 		func(rows *sql.Rows) (record.CreditCard, error) {
 			var guid, name, month, year, nickname, address string
@@ -44,7 +42,10 @@ func extractCreditCards(masterKeys masterkey.Set, path string) ([]record.CreditC
 			if err := rows.Scan(&guid, &name, &month, &year, &encNumber, &nickname, &address); err != nil {
 				return record.CreditCard{}, err
 			}
-			number, _ := decryptValue(masterKeys, encNumber)
+			number, err := decryptValue(masterKeys, encNumber)
+			if err != nil {
+				out.Fail(fmt.Errorf("decrypt card %s: %w", guid, err))
+			}
 			return record.CreditCard{
 				GUID:     guid,
 				Name:     name,
@@ -56,23 +57,20 @@ func extractCreditCards(masterKeys masterkey.Set, path string) ([]record.CreditC
 			}, nil
 		})
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return cards, nil
+	emit(out, cards)
+	return nil
 }
 
 // extractYandexCreditCards reads the records table (not Chromium's credit_cards). AAD = guid.
-func extractYandexCreditCards(masterKeys masterkey.Set, path string) ([]record.CreditCard, error) {
+func extractYandexCreditCards(masterKeys masterkey.Set, path string, out browser.Collector) error {
 	dataKey, err := loadYandexDataKey(path, masterKeys[masterkey.V10])
 	if err != nil {
-		if errors.Is(err, errYandexMasterPasswordSet) {
-			log.Warnf("%s: %v", path, err)
-			return nil, nil
-		}
-		return nil, err
+		return err
 	}
 
-	return sqlitex.QueryRows(path, false, yandexCreditCardQuery,
+	cards, err := sqlitex.QueryRows(path, false, yandexCreditCardQuery,
 		func(rows *sql.Rows) (record.CreditCard, error) {
 			var guid, publicData string
 			var privateData []byte
@@ -83,7 +81,7 @@ func extractYandexCreditCards(masterKeys masterkey.Set, path string) ([]record.C
 			var public yandexPublicData
 			if publicData != "" {
 				if err := json.Unmarshal([]byte(publicData), &public); err != nil {
-					log.Debugf("yandex: parse public_data for %s: %v", guid, err)
+					out.Fail(fmt.Errorf("yandex: parse public_data for %s: %w", guid, err))
 				}
 			}
 			entry := record.CreditCard{
@@ -96,13 +94,13 @@ func extractYandexCreditCards(masterKeys masterkey.Set, path string) ([]record.C
 
 			plaintext, err := crypto.AESGCMDecryptBlob(dataKey, privateData, yandexCardAAD(guid, nil))
 			if err != nil {
-				log.Debugf("yandex: decrypt card %s: %v", guid, err)
+				out.Fail(fmt.Errorf("yandex: decrypt card %s: %w", guid, err))
 				return entry, nil
 			}
 
 			var private yandexPrivateData
 			if err := json.Unmarshal(plaintext, &private); err != nil {
-				log.Debugf("yandex: parse private_data for %s: %v", guid, err)
+				out.Fail(fmt.Errorf("yandex: parse private_data for %s: %w", guid, err))
 				return entry, nil
 			}
 			entry.Number = private.FullCardNumber
@@ -110,12 +108,9 @@ func extractYandexCreditCards(masterKeys masterkey.Set, path string) ([]record.C
 			entry.Comment = private.SecretComment
 			return entry, nil
 		})
-}
-
-func countCreditCards(path string) (int, error) {
-	return sqlitex.CountRows(path, false, countCreditCardQuery)
-}
-
-func countYandexCreditCards(path string) (int, error) {
-	return sqlitex.CountRows(path, false, yandexCreditCardCountQuery)
+	if err != nil {
+		return err
+	}
+	emit(out, cards)
+	return nil
 }

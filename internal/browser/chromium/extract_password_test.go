@@ -23,7 +23,9 @@ func setupLoginDB(t *testing.T) string {
 func TestExtractPasswords(t *testing.T) {
 	path := setupLoginDB(t)
 
-	got, err := extractPasswords(masterkey.Set{}, path, record.StoreLocal)
+	var out testCollector
+	err := extractPasswords(masterkey.Set{}, path, record.StoreLocal, &out)
+	got := collected[record.Login](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -46,29 +48,16 @@ func TestExtractPasswords_UndecryptableBlobStillListed(t *testing.T) {
 		insertLogin("https://enc.com", "https://enc.com/login", "carol", "763130deadbeef", 13350000000000000),
 	)
 
-	got, err := extractPasswords(masterkey.Set{}, path, record.StoreAccount)
+	var out testCollector
+	err := extractPasswords(masterkey.Set{}, path, record.StoreAccount, &out)
+	got := collected[record.Login](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 
 	assert.Equal(t, "carol", got[0].Username)
 	assert.Empty(t, got[0].Password)
 	assert.Equal(t, record.StoreAccount, got[0].Store)
-}
-
-func TestCountPasswords(t *testing.T) {
-	path := setupLoginDB(t)
-
-	count, err := countPasswords(path)
-	require.NoError(t, err)
-	assert.Equal(t, 2, count)
-}
-
-func TestCountPasswords_Empty(t *testing.T) {
-	path := createTestDB(t, "Login Data", loginsSchema)
-
-	count, err := countPasswords(path)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count)
+	assert.Len(t, out.fails, 1, "the unrecovered password is reported, which makes the extraction partial")
 }
 
 func TestExtractYandexPasswords(t *testing.T) {
@@ -88,7 +77,9 @@ func TestExtractYandexPasswords(t *testing.T) {
 		},
 	)
 
-	got, err := extractYandexPasswords(masterkey.Set{masterkey.V10: masterKey}, path)
+	var out testCollector
+	err := extractYandexPasswords(masterkey.Set{masterkey.V10: masterKey}, path, &out)
+	got := collected[record.Login](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -111,9 +102,10 @@ func TestExtractYandexPasswords_MasterPasswordSkipped(t *testing.T) {
 		},
 	)
 
-	got, err := extractYandexPasswords(masterkey.Set{masterkey.V10: masterKey}, path)
-	require.NoError(t, err)
-	assert.Empty(t, got, "master-password profiles should be skipped in v1")
+	var out testCollector
+	err := extractYandexPasswords(masterkey.Set{masterkey.V10: masterKey}, path, &out)
+	require.ErrorIs(t, err, errYandexMasterPasswordSet)
+	assert.Empty(t, out.records, "a master-password profile yields no logins")
 }
 
 func TestExtractYandexPasswords_WrongMasterKey(t *testing.T) {
@@ -130,7 +122,7 @@ func TestExtractYandexPasswords_WrongMasterKey(t *testing.T) {
 
 	// A wrong master key fails at the intermediate step, surfacing as an error
 	// from the extractor.
-	_, err := extractYandexPasswords(masterkey.Set{masterkey.V10: wrongKey}, path)
+	err := extractYandexPasswords(masterkey.Set{masterkey.V10: wrongKey}, path, &testCollector{})
 	require.Error(t, err)
 }
 

@@ -7,12 +7,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 // ---------------------------------------------------------------------------
 // decodeChromiumString
 // ---------------------------------------------------------------------------
-
 func TestDecodeChromiumString(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -188,7 +189,9 @@ func setupSessionStorageLevelDB(t *testing.T) string {
 func TestExtractLocalStorage(t *testing.T) {
 	dir := setupLocalStorageLevelDB(t)
 
-	got, err := extractLocalStorage(dir)
+	var out testCollector
+	err := extractLocalStorage(dir, &out)
+	got := collected[record.LocalStorage](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 4, "VERSION filtered, META kept, data kept")
 
@@ -215,7 +218,9 @@ func TestExtractLocalStorage(t *testing.T) {
 func TestExtractSessionStorage(t *testing.T) {
 	dir := setupSessionStorageLevelDB(t)
 
-	got, err := extractSessionStorage(dir)
+	var out testCollector
+	err := extractSessionStorage(dir, &out)
+	got := collected[record.SessionStorage](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -226,45 +231,6 @@ func TestExtractSessionStorage(t *testing.T) {
 	assert.Equal(t, "false", byKey["https://github.com//__darkreader__wasEnabledForHost"])
 	assert.Equal(t, "abc123", byKey["https://example.com//token"])
 }
-
-// ---------------------------------------------------------------------------
-// countLocalStorage
-// ---------------------------------------------------------------------------
-
-func TestCountLocalStorage(t *testing.T) {
-	dir := setupLocalStorageLevelDB(t)
-
-	count, err := countLocalStorage(dir)
-	require.NoError(t, err)
-	assert.Equal(t, 4, count) // VERSION filtered, 2 META + 2 data entries kept
-}
-
-// ---------------------------------------------------------------------------
-// countSessionStorage
-// ---------------------------------------------------------------------------
-
-func TestCountSessionStorage(t *testing.T) {
-	dir := setupSessionStorageLevelDB(t)
-
-	count, err := countSessionStorage(dir)
-	require.NoError(t, err)
-	assert.Equal(t, 2, count) // only map- entries with key separator
-}
-
-func TestCountSessionStorage_Empty(t *testing.T) {
-	dir := createTestLevelDB(t, map[string]string{
-		"next-map-id": "1",
-		"version":     "1",
-	})
-
-	count, err := countSessionStorage(dir)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count)
-}
-
-// ---------------------------------------------------------------------------
-// Test helpers
-// ---------------------------------------------------------------------------
 
 func testEncodeLatin1(s string) []byte {
 	return append([]byte{chromiumStringLatin1Format}, []byte(s)...)

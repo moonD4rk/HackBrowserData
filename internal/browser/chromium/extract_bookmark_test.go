@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 func setupBookmarkJSON(t *testing.T) string {
@@ -39,7 +41,9 @@ func setupBookmarkJSON(t *testing.T) string {
 func TestExtractBookmarks(t *testing.T) {
 	path := setupBookmarkJSON(t)
 
-	got, err := extractBookmarks(path)
+	var out testCollector
+	err := extractBookmarks(path, &out)
+	got := collected[record.Bookmark](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 3)
 
@@ -57,22 +61,6 @@ func TestExtractBookmarks(t *testing.T) {
 	assert.Equal(t, "News", got[1].Folder) // parent folder name
 }
 
-func TestCountBookmarks(t *testing.T) {
-	path := setupBookmarkJSON(t)
-
-	count, err := countBookmarks(path)
-	require.NoError(t, err)
-	assert.Equal(t, 3, count) // 3 URLs, folders not counted
-}
-
-func TestCountBookmarks_Empty(t *testing.T) {
-	path := createTestJSON(t, "Bookmarks", `{"roots": {}}`)
-
-	count, err := countBookmarks(path)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count)
-}
-
 func TestExtractBookmarks_FoldersExcluded(t *testing.T) {
 	path := createTestJSON(t, "Bookmarks", `{
 		"roots": {
@@ -87,7 +75,9 @@ func TestExtractBookmarks_FoldersExcluded(t *testing.T) {
 		}
 	}`)
 
-	got, err := extractBookmarks(path)
+	var out testCollector
+	err := extractBookmarks(path, &out)
+	got := collected[record.Bookmark](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 1) // only URL entries, not folders
 	assert.Equal(t, "Link", got[0].Name)

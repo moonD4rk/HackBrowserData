@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 func setupDownloadDB(t *testing.T) string {
@@ -18,7 +20,9 @@ func setupDownloadDB(t *testing.T) string {
 func TestExtractDownloads(t *testing.T) {
 	path := setupDownloadDB(t)
 
-	got, err := extractDownloads(path)
+	var out testCollector
+	err := extractDownloads(path, &out)
+	got := collected[record.Download](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -33,20 +37,4 @@ func TestExtractDownloads(t *testing.T) {
 	assert.False(t, got[1].StartTime.IsZero())
 	assert.False(t, got[1].EndTime.IsZero())
 	assert.True(t, got[1].StartTime.Before(got[1].EndTime))
-}
-
-func TestCountDownloads(t *testing.T) {
-	path := setupDownloadDB(t)
-
-	count, err := countDownloads(path)
-	require.NoError(t, err)
-	assert.Equal(t, 2, count)
-}
-
-func TestCountDownloads_Empty(t *testing.T) {
-	path := createTestDB(t, "History", downloadsSchema)
-
-	count, err := countDownloads(path)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count)
 }

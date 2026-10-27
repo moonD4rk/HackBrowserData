@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moond4rk/hackbrowserdata/internal/record"
+
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
@@ -21,7 +23,9 @@ func setupCreditCardDB(t *testing.T) string {
 func TestExtractCreditCards(t *testing.T) {
 	path := setupCreditCardDB(t)
 
-	got, err := extractCreditCards(masterkey.Set{}, path)
+	var out testCollector
+	err := extractCreditCards(masterkey.Set{}, path, &out)
+	got := collected[record.CreditCard](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -35,22 +39,6 @@ func TestExtractCreditCards(t *testing.T) {
 	assert.Equal(t, "Jane Smith", got[1].Name)
 	assert.Equal(t, "6", got[1].ExpMonth)
 	assert.Equal(t, "2027", got[1].ExpYear)
-}
-
-func TestCountCreditCards(t *testing.T) {
-	path := setupCreditCardDB(t)
-
-	count, err := countCreditCards(path)
-	require.NoError(t, err)
-	assert.Equal(t, 2, count)
-}
-
-func TestCountCreditCards_Empty(t *testing.T) {
-	path := createTestDB(t, "Web Data", creditCardsSchema)
-
-	count, err := countCreditCards(path)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count)
 }
 
 func TestExtractYandexCreditCards(t *testing.T) {
@@ -80,7 +68,9 @@ func TestExtractYandexCreditCards(t *testing.T) {
 		},
 	)
 
-	got, err := extractYandexCreditCards(masterkey.Set{masterkey.V10: masterKey}, path)
+	var out testCollector
+	err := extractYandexCreditCards(masterkey.Set{masterkey.V10: masterKey}, path, &out)
+	got := collected[record.CreditCard](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -104,21 +94,6 @@ func TestExtractYandexCreditCards(t *testing.T) {
 	assert.Empty(t, c2.Comment)
 }
 
-func TestCountYandexCreditCards(t *testing.T) {
-	masterKey := bytes.Repeat([]byte{0x11}, 32)
-	dataKey := bytes.Repeat([]byte{0x22}, 32)
-
-	path := setupYandexCreditCardDB(t, masterKey, dataKey,
-		yandexCreditCard{GUID: "g1", FullCardNumber: "x"},
-		yandexCreditCard{GUID: "g2", FullCardNumber: "y"},
-		yandexCreditCard{GUID: "g3", FullCardNumber: "z"},
-	)
-
-	count, err := countYandexCreditCards(path)
-	require.NoError(t, err)
-	assert.Equal(t, 3, count)
-}
-
 func TestExtractYandexCreditCards_WrongMasterKey(t *testing.T) {
 	goodKey := bytes.Repeat([]byte{0x11}, 32)
 	wrongKey := bytes.Repeat([]byte{0x99}, 32)
@@ -128,7 +103,7 @@ func TestExtractYandexCreditCards_WrongMasterKey(t *testing.T) {
 		yandexCreditCard{GUID: "g1", FullCardNumber: "4111"},
 	)
 
-	_, err := extractYandexCreditCards(masterkey.Set{masterkey.V10: wrongKey}, path)
+	err := extractYandexCreditCards(masterkey.Set{masterkey.V10: wrongKey}, path, &testCollector{})
 	require.Error(t, err)
 }
 
