@@ -19,6 +19,8 @@ const (
 	testProfile1       = "Profile 1"
 	testUDD            = "/p"
 	testEdgeName       = "Edge"
+	testChromeName     = "Chrome"
+	testFirefoxName    = "Firefox"
 )
 
 // mockBrowser is one installation holding zero or more profile names.
@@ -89,7 +91,7 @@ func TestBuildDump_Empty(t *testing.T) {
 
 func TestBuildDump_SingleChromium(t *testing.T) {
 	b := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
+		mockBrowser: mockBrowser{name: testChromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
 		keys:        masterkey.Set{masterkey.V10: []byte("v10-key")},
 	}
 
@@ -99,7 +101,7 @@ func TestBuildDump_SingleChromium(t *testing.T) {
 		t.Fatalf("Vaults len = %d, want 1", len(dump.Vaults))
 	}
 	inst := dump.Vaults[0]
-	if !strings.EqualFold(inst.Browser, chromeName) || inst.UserDataDir != testUDD {
+	if !strings.EqualFold(inst.Browser, testChromeName) || inst.UserDataDir != testUDD {
 		t.Errorf("inst metadata = %+v", inst)
 	}
 	if inst.Kind != "chromium" {
@@ -118,7 +120,7 @@ func TestBuildDump_SingleChromium(t *testing.T) {
 // key exactly once.
 func TestBuildDump_MultipleProfilesOneVault(t *testing.T) {
 	b := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault, testProfile1}},
+		mockBrowser: mockBrowser{name: testChromeName, userDataDir: testUDD, profiles: []string{testProfileDefault, testProfile1}},
 		keys:        masterkey.Set{masterkey.V10: []byte("v10")},
 	}
 
@@ -137,24 +139,24 @@ func TestBuildDump_MultipleProfilesOneVault(t *testing.T) {
 
 func TestBuildDump_SkipsNonKeyManager(t *testing.T) {
 	chrome := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, userDataDir: "/chrome", profiles: []string{testProfileDefault}},
+		mockBrowser: mockBrowser{name: testChromeName, userDataDir: "/chrome", profiles: []string{testProfileDefault}},
 		keys:        masterkey.Set{masterkey.V10: []byte("v10")},
 	}
-	firefox := &mockBrowser{name: firefoxName, userDataDir: "/ff", profiles: []string{"default-release"}}
+	firefox := &mockBrowser{name: testFirefoxName, userDataDir: "/ff", profiles: []string{"default-release"}}
 
 	dump := BuildDump([]Browser{chrome, firefox})
 
 	if len(dump.Vaults) != 1 {
 		t.Fatalf("Vaults len = %d, want 1 (firefox skipped)", len(dump.Vaults))
 	}
-	if !strings.EqualFold(dump.Vaults[0].Browser, chromeName) {
-		t.Errorf("Browser = %q, want %q", dump.Vaults[0].Browser, strings.ToLower(chromeName))
+	if !strings.EqualFold(dump.Vaults[0].Browser, testChromeName) {
+		t.Errorf("Browser = %q, want %q", dump.Vaults[0].Browser, strings.ToLower(testChromeName))
 	}
 }
 
 func TestBuildDump_SkipsExportError(t *testing.T) {
 	good := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, userDataDir: "/chrome", profiles: []string{testProfileDefault}},
+		mockBrowser: mockBrowser{name: testChromeName, userDataDir: "/chrome", profiles: []string{testProfileDefault}},
 		keys:        masterkey.Set{masterkey.V10: []byte("v10")},
 	}
 	failing := &mockChromiumBrowser{
@@ -167,14 +169,14 @@ func TestBuildDump_SkipsExportError(t *testing.T) {
 	if len(dump.Vaults) != 1 {
 		t.Fatalf("Vaults len = %d, want 1 (failing browser skipped)", len(dump.Vaults))
 	}
-	if !strings.EqualFold(dump.Vaults[0].Browser, chromeName) {
-		t.Errorf("Browser = %q, want %q", dump.Vaults[0].Browser, strings.ToLower(chromeName))
+	if !strings.EqualFold(dump.Vaults[0].Browser, testChromeName) {
+		t.Errorf("Browser = %q, want %q", dump.Vaults[0].Browser, strings.ToLower(testChromeName))
 	}
 }
 
 func TestBuildDump_JSONRoundTrip(t *testing.T) {
 	b := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
+		mockBrowser: mockBrowser{name: testChromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
 		keys:        masterkey.Set{masterkey.V10: []byte{0x01, 0x02, 0x03}, masterkey.V20: []byte{0xff, 0xee}},
 	}
 
@@ -212,7 +214,7 @@ func TestBuildDump_JSONRoundTrip(t *testing.T) {
 
 func TestBuildDump_PartialKeys(t *testing.T) {
 	b := &mockChromiumBrowser{
-		mockBrowser: mockBrowser{name: chromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
+		mockBrowser: mockBrowser{name: testChromeName, userDataDir: testUDD, profiles: []string{testProfileDefault}},
 		keys:        masterkey.Set{masterkey.V10: []byte("v10")},
 		exportErr:   errors.New("v20: ABE failed"),
 	}

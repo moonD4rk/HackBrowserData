@@ -3,133 +3,9 @@
 package browser
 
 import (
+	ibrowser "github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
-	"github.com/moond4rk/hackbrowserdata/types"
 )
-
-func platformBrowsers() []types.BrowserConfig {
-	return []types.BrowserConfig{
-		{
-			Key:         "chrome",
-			Name:        chromeName,
-			Kind:        types.Chromium,
-			WindowsABE:  true,
-			UserDataDir: homeDir + "/AppData/Local/Google/Chrome/User Data",
-		},
-		{
-			Key:         "edge",
-			Name:        edgeName,
-			Kind:        types.Chromium,
-			WindowsABE:  true,
-			UserDataDir: homeDir + "/AppData/Local/Microsoft/Edge/User Data",
-		},
-		{
-			Key:         "chromium",
-			Name:        chromiumName,
-			Kind:        types.Chromium,
-			UserDataDir: homeDir + "/AppData/Local/Chromium/User Data",
-		},
-		{
-			Key:         "chrome-beta",
-			Name:        chromeBetaName,
-			Kind:        types.Chromium,
-			WindowsABE:  true,
-			UserDataDir: homeDir + "/AppData/Local/Google/Chrome Beta/User Data",
-		},
-		{
-			Key:         "opera",
-			Name:        operaName,
-			Kind:        types.ChromiumOpera,
-			UserDataDir: homeDir + "/AppData/Roaming/Opera Software/Opera Stable",
-		},
-		{
-			Key:         "opera-gx",
-			Name:        operaGXName,
-			Kind:        types.ChromiumOpera,
-			UserDataDir: homeDir + "/AppData/Roaming/Opera Software/Opera GX Stable",
-		},
-		{
-			Key:         "vought",
-			Name:        voughtName,
-			Kind:        types.ChromiumOpera,
-			UserDataDir: homeDir + "/AppData/Roaming/Browser from Vought",
-		},
-		{
-			Key:         "vivaldi",
-			Name:        vivaldiName,
-			Kind:        types.Chromium,
-			UserDataDir: homeDir + "/AppData/Local/Vivaldi/User Data",
-		},
-		{
-			Key:         "coccoc",
-			Name:        coccocName,
-			Kind:        types.Chromium,
-			WindowsABE:  true,
-			UserDataDir: homeDir + "/AppData/Local/CocCoc/Browser/User Data",
-		},
-		{
-			Key:         "brave",
-			Name:        braveName,
-			Kind:        types.Chromium,
-			WindowsABE:  true,
-			UserDataDir: homeDir + "/AppData/Local/BraveSoftware/Brave-Browser/User Data",
-		},
-		{
-			Key:         "yandex",
-			Name:        yandexName,
-			Kind:        types.ChromiumYandex,
-			UserDataDir: homeDir + "/AppData/Local/Yandex/YandexBrowser/User Data",
-		},
-		{
-			Key:         "360x",
-			Name:        speed360XName,
-			Kind:        types.Chromium,
-			UserDataDir: homeDir + "/AppData/Local/360ChromeX/Chrome/User Data",
-		},
-		{
-			Key:         "360",
-			Name:        speed360Name,
-			Kind:        types.Chromium,
-			UserDataDir: homeDir + "/AppData/Local/360chrome/Chrome/User Data",
-		},
-		{
-			Key:         "qq",
-			Name:        qqName,
-			Kind:        types.Chromium,
-			UserDataDir: homeDir + "/AppData/Local/Tencent/QQBrowser/User Data",
-		},
-		{
-			Key:         "dc",
-			Name:        dcName,
-			Kind:        types.Chromium,
-			UserDataDir: homeDir + "/AppData/Local/DCBrowser/User Data",
-		},
-		{
-			Key:         "sogou",
-			Name:        sogouName,
-			Kind:        types.Chromium,
-			UserDataDir: homeDir + "/AppData/Local/Sogou/SogouExplorer/User Data",
-		},
-		{
-			Key:         "arc",
-			Name:        arcName,
-			Kind:        types.Chromium,
-			UserDataDir: homeDir + "/AppData/Local/Packages/TheBrowserCompany.Arc_*/LocalCache/Local/Arc/User Data",
-		},
-		{
-			Key:         "duckduckgo",
-			Name:        duckduckgoName,
-			Kind:        types.Chromium,
-			UserDataDir: homeDir + "/AppData/Local/Packages/DuckDuckGo.DesktopBrowser_*/LocalState/EBWebView",
-		},
-		{
-			Key:         "firefox",
-			Name:        firefoxName,
-			Kind:        types.Firefox,
-			UserDataDir: homeDir + "/AppData/Roaming/Mozilla/Firefox/Profiles",
-		},
-	}
-}
 
 // newCredentialInjector hands each ABE browser its executable and dialect; RetrieveAll runs v10 (DPAPI) and,
 // when the Locator carries an ABE kind, v20 (reflective injection) — both, since an upgraded profile mixes them.
@@ -139,8 +15,12 @@ func newCredentialInjector(_ DiscoverOptions) browserInjector {
 		if !ok {
 			return
 		}
-		if target, ok := abeTargets[km.BrowserKey()]; ok {
-			km.SetLocator(masterkey.Locator{Exe: target.exe, ExeFallbacks: target.fallbacks, ABE: target.kind})
+		def, ok := ibrowser.Lookup(km.BrowserKey())
+		if !ok {
+			return
+		}
+		if p := def.Platform(); p.ABE != masterkey.ABENone {
+			km.SetLocator(masterkey.Locator{Exe: p.Exe, ExeFallbacks: p.ExeFallbacks, ABE: p.ABE})
 		}
 	}
 }

@@ -135,7 +135,7 @@ For a genuinely new base (not Chromium/Firefox/Safari), you add a new `internal/
 
 ## Consistency, enforced by tests
 
-Folding `winutil.Table` into `Platform` removes the Go-side join, and with it the need for today's `TestWinUtilTableCoversABEBrowsers`: one struct cannot disagree with itself. What remains is the C side — the payload runs inside the browser process with no Go runtime, so its table stays in `com_iid.c`. A Go test inside `browser`, over the whole table, parses that file and fails when its set of executables and ABE kinds differs from the Windows entries whose `ABE` is not `ABENone` ([RFC-011](011-testing-and-quality.md)). A mismatch fails `go test`, not production.
+Folding `winutil.Table` into `Platform` removes the Go-side join, and with it the need for today's `TestWinUtilTableCoversABEBrowsers`: one struct cannot disagree with itself. What remains is the C side — the payload runs inside the browser process with no Go runtime, so its table stays in `com_iid.c`. A Go test inside `browser`, over the whole table, parses that file and fails when a Windows entry whose `ABE` is not `ABENone` has no row there with the same executable and ABE kind; the C table may list browsers the Go table does not, such as Avast ([RFC-011](011-testing-and-quality.md)). A mismatch fails `go test`, not production.
 
 ## Why a table beats per-browser types
 

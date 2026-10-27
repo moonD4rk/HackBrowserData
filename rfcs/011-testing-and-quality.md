@@ -63,7 +63,7 @@ Each bug designed out by this rewrite gets a test that would have caught it, so 
 ## Table and payload consistency
 
 - Every key in the Chromium override table resolves through `browser.Lookup` to a Chromium `Def`.
-- The table's Windows rows with `ABE` other than `ABENone` and the rows of the payload's `com_iid.c` name the same executables and ABE kinds; the test parses the C table. It lives inside `browser` and reads the whole table, since `Supported()` lists only the running OS's rows. (The Go-side `winutil.Table` join, and the `TestWinUtilTableCoversABEBrowsers` that guarded it, disappear into `Platform`.)
+- Every Windows row of the table with `ABE` other than `ABENone` has a row in the payload's `com_iid.c` with the same executable and ABE kind; the test parses the C table, which may list browsers the Go table does not, such as Avast. It lives inside `browser` and reads the whole table, since `Supported()` lists only the running OS's rows. (The Go-side `winutil.Table` join, and the `TestWinUtilTableCoversABEBrowsers` that guarded it, disappear into `Platform`.)
 
 ## Import direction
 
