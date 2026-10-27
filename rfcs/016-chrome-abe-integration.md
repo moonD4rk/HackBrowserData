@@ -49,7 +49,7 @@ browser/chromium.Extract()
   → masterkey.Retrievers{V10: &DPAPIRetriever{}, V20: &ABERetriever{}}
   → ABERetriever.RetrieveKey():
       reads Local State → extracts APPB-prefixed blob
-      resolves browser exe via registry App Paths
+      resolves browser exe: install locations, then App Paths
   → utils/injector.Reflective.Inject(exePath, payload, env)
 ```
 
@@ -198,7 +198,7 @@ Go consumes the same constants via **`go tool cgo -godefs`** (a development-time
 `masterkey.DefaultRetrievers()` on Windows returns a `Retrievers` struct with `V10 = &DPAPIRetriever{}` and `V20 = &ABERetriever{}`. The two tiers are wired independently — not in a ChainRetriever — because a single Chrome profile upgraded from pre-127 can carry mixed v10+v20 ciphertexts, and both keys must be available for `decryptValue` to route each ciphertext to its matching tier (see [RFC-015](015-key-retrieval-mechanisms.md) §4.4 and issue #578). `ABERetriever.RetrieveKey`:
 
 1. Reads `Local State` → extracts `os_crypt.app_bound_encrypted_key` → strips `APPB` prefix. If the field is missing, `ABERetriever` returns `(nil, nil)`, `V20` remains empty, and the independently-wired `V10` DPAPI tier still runs.
-2. Resolves browser executable via `utils/winutil/browser_path_windows.go` (registry App Paths → hardcoded fallback).
+2. Resolves browser executable via `internal/winapi/executable_windows.go` (install-location fallbacks → registry App Paths → running process; the install locations come first because an executable name such as `browser.exe` is shared by more than one vendor).
 3. Base64-encodes the encrypted blob and passes it as `HBD_ABE_ENC_B64` env var.
 4. `Reflective.Inject(exePath, payload, env)` runs the full flow in §3.
 5. Returns the 32-byte key on success, or a formatted diagnostic error.
