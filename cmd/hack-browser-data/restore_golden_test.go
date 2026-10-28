@@ -2,32 +2,29 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moond4rk/hackbrowserdata/browser"
-	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
+// Restore writes what dump writes: the extract golden, stamped with each browser's display name.
 func TestRestoreGolden(t *testing.T) {
 	data := t.TempDir()
 	chromiumFixtureInstallations(t, data)
 	keys := chromiumFixtureKeysFile(t)
-	want := restoreWantFiles(t, data)
+	want := readGolden(t, "extract-json.golden")
 
 	t.Run("data-dir", func(t *testing.T) {
 		out := t.TempDir()
 		chromiumFixtureRestore(t, "--keys", keys, "--data-dir", data, "-d", out)
-		assert.Equal(t, want, readDirFiles(t, out))
+		assert.Equal(t, want, bundleDir(t, out))
 	})
 
 	t.Run("zip", func(t *testing.T) {
@@ -44,37 +41,18 @@ func TestRestoreGolden(t *testing.T) {
 		unzipped, err := snapshot.Unzip(archive)
 		require.NoError(t, err)
 		defer unzipped.Close()
-		assert.Equal(t, want, readDirFiles(t, unzipped.Path()))
+		assert.Equal(t, want, bundleDir(t, unzipped.Path()))
 	})
 
-	t.Run("data-zip", func(t *testing.T) {
+	// An archive written before the manifest is the bare <browser-key>/ layout, which the vaults resolve.
+	t.Run("data-zip without a manifest", func(t *testing.T) {
 		dataZip := filepath.Join(t.TempDir(), "data.zip")
-		_, err := browser.WriteArchive(chromiumFixtureBrowsers(t, data), category.All(), dataZip)
-		require.NoError(t, err)
+		require.NoError(t, snapshot.Open(data).Zip(dataZip))
 
 		out := t.TempDir()
 		chromiumFixtureRestore(t, "--keys", keys, "--data-zip", dataZip, "-d", out)
-		assert.Equal(t, want, readDirFiles(t, out))
+		assert.Equal(t, want, bundleDir(t, out))
 	})
-}
-
-// Restore has no golden of its own: its output is extract's json output, pinned by extract-json.golden, restamped.
-func restoreWantFiles(t *testing.T, data string) map[string]string {
-	t.Helper()
-	// Known difference: restore stamps each row with the vault key, extract with the display name.
-	stamps := make([]string, 0, 2*len(chromiumFixtureInstalls))
-	for _, inst := range chromiumFixtureInstalls {
-		stamps = append(stamps, fmt.Sprintf(`"browser": %q`, inst.name), fmt.Sprintf(`"browser": %q`, inst.key))
-	}
-	toVaultKeys := strings.NewReplacer(stamps...)
-
-	files := readDirFiles(t, extractGoldenRun(t, chromiumFixtureBrowsers(t, data), "json"))
-	for name, content := range files {
-		restamped := toVaultKeys.Replace(content)
-		require.NotEqualf(t, content, restamped, "%s carries no display-name stamp to restamp", name)
-		files[name] = restamped
-	}
-	return files
 }
 
 func chromiumFixtureKeysFile(t *testing.T) string {
@@ -108,7 +86,5 @@ func chromiumFixtureKeysFile(t *testing.T) string {
 
 func chromiumFixtureRestore(t *testing.T, args ...string) {
 	t.Helper()
-	cmd := restoreCmd()
-	cmd.SetArgs(args)
-	require.NoError(t, cmd.Execute())
+	runCmd(t, restoreCmd(), args...)
 }

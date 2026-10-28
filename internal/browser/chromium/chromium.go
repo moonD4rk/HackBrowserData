@@ -43,6 +43,17 @@ func Discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserData
 	return dirs, errors.Join(errs...)
 }
 
+// DiscoverAt reads the profiles of a user data dir the table does not name, such as a copy restore was given.
+func DiscoverAt(def browser.Def, id browser.DirID, path string) (browser.UserDataDir, error) {
+	dir := browser.UserDataDir{ID: id, Def: def, Path: path}
+	profiles, err := discoverProfiles(dir)
+	if err != nil {
+		return dir, err
+	}
+	dir.Profiles = profiles
+	return dir, nil
+}
+
 // profileAt reads -p as the path chrome://version shows: a directory with a profile marker but no Local State is one
 // profile, so its parent is the user data dir that holds the keys, and only that profile is selected.
 func profileAt(def browser.Def, path string) (browser.UserDataDir, bool) {
@@ -171,6 +182,11 @@ func KeyLocator(dir browser.UserDataDir, snap snapshot.Snapshot) (masterkey.Loca
 		return loc, fmt.Errorf("local state: %w", err)
 	}
 	return loc, nil
+}
+
+// KeySources are the files KeyLocator reads from a snapshot.
+func KeySources(_ browser.UserDataDir) []browser.Source {
+	return []browser.Source{localState}
 }
 
 // ArchiveSources are what an archive keeps beside the categories' own files: Local State, and each profile's marker so

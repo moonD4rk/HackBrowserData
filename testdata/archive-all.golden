@@ -29,3 +29,4 @@ chrome/Profile 1/Session Storage/000004.log method=8 modified=1979-11-30T00:00:0
 chrome/Profile 1/Session Storage/CURRENT method=8 modified=1979-11-30T00:00:00Z size=33 crc32=6290110a
 chrome/Profile 1/Session Storage/MANIFEST-000001 method=8 modified=1979-11-30T00:00:00Z size=41 crc32=8f635ae8
 chrome/Profile 1/Web Data method=8 modified=1979-11-30T00:00:00Z size=18 crc32=e0117ed3
+manifest.json method=8 modified=1979-11-30T00:00:00Z size=1004 crc32=ed341f82

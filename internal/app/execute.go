@@ -10,6 +10,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/chromium"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/safari"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/export"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
@@ -43,25 +44,47 @@ func execute(ctx context.Context, p Plan, req Request, extractors extractorsFunc
 	if err != nil {
 		return Summary{}, err
 	}
-	results := append([]Result(nil), p.Skipped...)
-	for _, dir := range p.Dirs {
-		dirResults, err := executeDir(ctx, dir, p, w, extractors, keys)
-		results = append(results, dirResults...)
-		if err != nil {
-			return Summary{Results: results}, errors.Join(err, w.Close())
-		}
-	}
-	return Summary{Results: results}, w.Close()
+	s, err := runPlan(ctx, p, w, extractors, keys, true)
+	return s, errors.Join(err, w.Close())
 }
 
-func executeDir(ctx context.Context, dir browser.UserDataDir, p Plan, w *export.Writer, extractors extractorsFunc,
-	keys keySource,
+// Count runs every planned extraction with no key and the keychain locked, and counts the records instead of exporting
+// them, which is all list --detail shows.
+func Count(ctx context.Context, p Plan, req Request) (Summary, error) {
+	return runPlan(ctx, p, discard{}, extractorsWith(loginKeychain(req)), dumpKeys(nil), false)
+}
+
+// recordWriter takes each extraction's records as it finishes.
+type recordWriter interface {
+	Write(c category.Category, records []record.Record) error
+}
+
+type discard struct{}
+
+func (discard) Write(category.Category, []record.Record) error { return nil }
+
+func runPlan(ctx context.Context, p Plan, w recordWriter, extractors extractorsFunc, keys keySource, announce bool) (Summary, error) {
+	results := append([]Result(nil), p.Skipped...)
+	for _, dir := range p.Dirs {
+		dirResults, err := executeDir(ctx, dir, p, w, extractors, keys, announce)
+		results = append(results, dirResults...)
+		if err != nil {
+			return Summary{Results: results}, err
+		}
+	}
+	return Summary{Results: results}, nil
+}
+
+func executeDir(ctx context.Context, dir browser.UserDataDir, p Plan, w recordWriter, extractors extractorsFunc,
+	keys keySource, announce bool,
 ) ([]Result, error) {
 	extractions := extractionsOf(p, dir.ID)
 	if len(extractions) == 0 {
 		return nil, nil
 	}
-	log.Infof("Extracting %s...", dir.Def.Name)
+	if announce {
+		log.Infof("Extracting %s...", dir.Def.Name)
+	}
 
 	d, err := snapshot.Temp()
 	if err != nil {

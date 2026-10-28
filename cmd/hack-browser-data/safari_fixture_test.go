@@ -14,10 +14,6 @@ import (
 
 	"github.com/moond4rk/plist"
 	"github.com/stretchr/testify/require"
-
-	"github.com/moond4rk/hackbrowserdata/browser"
-	"github.com/moond4rk/hackbrowserdata/browser/safari"
-	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 const (
@@ -26,19 +22,6 @@ const (
 )
 
 var safariFixtureStart = time.Date(2024, 3, 1, 9, 0, 0, 0, time.UTC)
-
-func safariFixtureBrowsers(t *testing.T, home string) []browser.Browser {
-	t.Helper()
-	b, err := safari.NewBrowser(types.BrowserConfig{
-		Key:         "safari",
-		Name:        "Safari",
-		Kind:        types.Safari,
-		UserDataDir: filepath.Join(home, "Library", "Safari"),
-	})
-	require.NoError(t, err)
-	require.NotNil(t, b)
-	return []browser.Browser{b}
-}
 
 func safariFixtureLibrary(t *testing.T, library string) {
 	t.Helper()

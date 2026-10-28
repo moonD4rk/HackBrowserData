@@ -186,6 +186,34 @@ func TestOverrides_KeysAreChromiumBrowsers(t *testing.T) {
 	}
 }
 
+// A vault's kind must lead a reader back to the same fork's files, or a restore would parse them as plain Chromium.
+func TestVaultKind_RoundTripsEveryFork(t *testing.T) {
+	assert.Len(t, kinds, len(overrides))
+	for id := range overrides {
+		kind := VaultKind(browser.Def{ID: id})
+		require.NotEqualf(t, kindChromium, kind, "override %q has no keys.json kind", id)
+		formatID, err := FormatID(kind, "unknown")
+		require.NoError(t, err)
+		assert.Equalf(t, categoriesOf(overrides[id]), categoriesOf(overrides[formatID]), "kind %s of %q", kind, id)
+	}
+	assert.Equal(t, kindChromium, VaultKind(browser.Def{ID: "chrome"}))
+	formatID, err := FormatID(kindChromium, "unknown")
+	require.NoError(t, err)
+	assert.Equal(t, "unknown", formatID)
+	_, err = FormatID("bogus", "unknown")
+	assert.Error(t, err)
+}
+
+func categoriesOf(ex browser.Extractors) []category.Category {
+	var out []category.Category
+	for _, c := range category.All() {
+		if _, ok := ex[c]; ok {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
 func TestExtractors_OverridesFollowTheBrowserNotTheDirectory(t *testing.T) {
 	yandex, ok := browser.Lookup("yandex")
 	require.True(t, ok)

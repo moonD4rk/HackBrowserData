@@ -1,39 +1,69 @@
 package main
 
 import (
+	"context"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/moond4rk/hackbrowserdata/browser"
-	"github.com/moond4rk/hackbrowserdata/internal/category"
+	"github.com/moond4rk/hackbrowserdata/internal/app"
+	ibrowser "github.com/moond4rk/hackbrowserdata/internal/browser"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
+// The extract goldens pin dump's output on fixtures; the fixtures' keys are handed in, since no secret store holds them.
 func TestExtractGolden(t *testing.T) {
-	root := t.TempDir()
-	chromiumFixtureInstallations(t, root)
+	home := t.TempDir()
+	keys := make(map[ibrowser.DirID]masterkey.Set)
+	for _, inst := range chromiumFixtureInstalls {
+		def, ok := ibrowser.Lookup(inst.key)
+		require.True(t, ok, inst.key)
+		require.Equal(t, inst.name, def.Name, "records are stamped with the table's display name")
+		chromiumFixtureUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])), inst.key)
+		keys[ibrowser.DirID(inst.key)] = chromiumFixtureKeys
+	}
+
 	assertExtractGoldens(t, "extract", func(t *testing.T, format string) string {
-		return extractGoldenRun(t, chromiumFixtureBrowsers(t, root), format)
+		return extractGoldenRun(t, home, keys, format)
 	})
 }
 
 func TestExtractGoldenFirefox(t *testing.T) {
-	profilesDir := filepath.Join(t.TempDir(), "firefox")
-	firefoxFixtureUserData(t, profilesDir)
+	home := t.TempDir()
+	def, ok := ibrowser.Lookup("firefox")
+	require.True(t, ok)
+	firefoxFixtureUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])))
+
 	assertExtractGoldens(t, "extract-firefox", func(t *testing.T, format string) string {
-		return extractGoldenRun(t, firefoxFixtureBrowsers(t, profilesDir), format)
+		return extractGoldenRun(t, home, nil, format)
 	})
 }
 
 func TestExtractGoldenSafari(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("Safari is in the browser table on macOS only")
+	}
 	home := t.TempDir()
-	// Safari reads passwords from the login keychain under the home directory, which must not be the real one.
-	t.Setenv("HOME", home)
 	safariFixtureLibrary(t, filepath.Join(home, "Library"))
+
 	assertExtractGoldens(t, "extract-safari", func(t *testing.T, format string) string {
-		return extractGoldenRun(t, safariFixtureBrowsers(t, home), format)
+		return extractGoldenRun(t, home, nil, format)
 	})
+}
+
+func extractGoldenRun(t *testing.T, home string, keys map[ibrowser.DirID]masterkey.Set, format string) string {
+	t.Helper()
+	out := t.TempDir()
+	req, err := app.Validate(app.Flags{Browser: "all", Categories: "all", Format: format, Dir: out})
+	require.NoError(t, err)
+	req.Home, req.Keys = home, keys
+
+	plan := app.NewPlan(app.Discover(req), req)
+	_, err = app.Execute(context.Background(), plan, req)
+	require.NoError(t, err)
+	return out
 }
 
 var extractGoldenFormats = []struct {
@@ -59,11 +89,4 @@ func assertExtractGoldens(t *testing.T, prefix string, run func(t *testing.T, fo
 			assertGolden(t, prefix+"-"+tt.format+".golden", got)
 		})
 	}
-}
-
-func extractGoldenRun(t *testing.T, browsers []browser.Browser, format string) string {
-	t.Helper()
-	out := t.TempDir()
-	require.NoError(t, extractAndWrite(browsers, category.All(), out, format, false))
-	return out
 }

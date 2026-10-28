@@ -37,6 +37,7 @@ GitHub: https://github.com/moonD4rk/HackBrowserData`,
 	// Copy dump flags to root so that `hack-browser-data -b chrome`
 	// works the same as `hack-browser-data dump -b chrome`.
 	root.RunE = func(cmd *cobra.Command, args []string) error {
+		dump.SetContext(cmd.Context())
 		return dump.RunE(dump, args)
 	}
 	dump.Flags().VisitAll(func(f *pflag.Flag) {

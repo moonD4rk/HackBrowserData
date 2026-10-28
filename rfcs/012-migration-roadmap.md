@@ -52,7 +52,7 @@ Leaves first, bottom-up along the dependency arrows ([RFC-002](002-package-layou
 
 ### Phase 6 — Widen: Firefox and Safari
 
-- Port the Firefox and Safari bases one category at a time, each with a `testdata/` fixture and golden.
+- Port the Firefox and Safari bases one base per pull request, after extract goldens for both are captured from today's code on fixtures built in `cmd/hack-browser-data`.
 - Land the remaining listed output fixes here — Firefox bookmark fields and Safari bookmark IDs — each with its regression test and as an expected diff in the parity suite.
 - With the Firefox base, a profile whose key cannot be recovered exports its logins instead of stopping the run ([RFC-008](008-output-and-export.md)); the goldens do not change.
 
@@ -66,7 +66,7 @@ Leaves first, bottom-up along the dependency arrows ([RFC-002](002-package-layou
 ### Phase 8 — Delete & document
 
 - Remove the superseded top-level packages — `browser/`, `crypto/` except the ABE unit's `crypto/windows/`, `filemanager/`, `log/`, `masterkey/`, `output/`, `types/`, and `utils/` except `utils/injector` — once nothing references them.
-- Move the compatibility tests out of `cmd/hack-browser-data` into the packages they cover — the export goldens into `export`, `keys.json` into `masterkey`, the archive into `snapshot`, the extract goldens into `browser/chromium`, and `restore` into `app` — each with its goldens in its own `testdata/`; `cmd` keeps only the flag-surface test, and the root `testdata/` goes away.
+- Move the compatibility tests out of `cmd/hack-browser-data` into the packages they cover — the export goldens into `export`, `keys.json` into `masterkey`, the archive into `snapshot`, the extract goldens into `browser/chromium`, `browser/firefox`, and `browser/safari`, and `restore` into `app` — each with its goldens in its own `testdata/`; `cmd` keeps only the flag-surface test, and the root `testdata/` goes away.
 - Update CLAUDE.md (the new paths), the README (Safari, the `cookie-editor` behavior), and the root help text.
 - Bring the RFCs to their finished state: the format and technique RFCs (013–021) move from today's type names — `BrowserConfig`, `WindowsABE`, `winutil.Table`, `Hints`, the `Retrievers` struct — to the names in [RFC-004](004-naming-decisions.md); the design RFCs describe the code as it is instead of comparing it with today's; and this roadmap is removed.
 - Final `go mod tidy` under go@1.20; confirm the `go` directive is still `1.20` and `otiai10/copy` and `mint` are gone.
