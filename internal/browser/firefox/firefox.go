@@ -32,9 +32,12 @@ var extractors = browser.Extractors{
 	category.LocalStorage: plain(file("webappsstore.sqlite"), extractLocalStorage),
 }
 
-// Discover finds def's Profiles directory and the profiles in it. -p names one profile, and its parent directory is
-// searched, as today.
+// Discover finds def's Profiles directory and the profiles in it. -p names one profile: its parent is the Profiles
+// directory, and only that profile is selected.
 func Discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserDataDir, error) {
+	if opts.ProfilePath != "" {
+		return profileAt(def, opts.ProfilePath), nil
+	}
 	var errs []error
 	var dirs []browser.UserDataDir
 	for i, path := range userDataDirPaths(def, opts) {
@@ -53,10 +56,21 @@ func Discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserData
 	return dirs, errors.Join(errs...)
 }
 
-func userDataDirPaths(def browser.Def, opts browser.DiscoverOptions) []string {
-	if opts.ProfilePath != "" {
-		return []string{filepath.Dir(filepath.Clean(opts.ProfilePath))}
+func profileAt(def browser.Def, path string) []browser.UserDataDir {
+	clean := filepath.Clean(path)
+	if !hasDataFile(clean) {
+		return nil
 	}
+	name := filepath.Base(clean)
+	return []browser.UserDataDir{{
+		ID:       dirID(def, 0),
+		Def:      def,
+		Path:     filepath.Dir(clean),
+		Profiles: []browser.Profile{{Name: name, Dir: name}},
+	}}
+}
+
+func userDataDirPaths(def browser.Def, opts browser.DiscoverOptions) []string {
 	paths := make([]string, 0, len(def.Platform().UserDataDirs))
 	for _, rel := range def.Platform().UserDataDirs {
 		paths = append(paths, filepath.Join(opts.Home, filepath.FromSlash(rel)))

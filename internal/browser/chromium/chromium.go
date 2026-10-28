@@ -21,6 +21,9 @@ var profileMarkers = []string{"Preferences", "Preferences_02"}
 // Discover finds def's user data dirs and their profiles. A user data dir that does not exist yields nothing; any
 // other failure is returned, joined across dirs, beside whatever was found.
 func Discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserDataDir, error) {
+	if dir, ok := profileAt(def, opts.ProfilePath); ok {
+		return []browser.UserDataDir{dir}, nil
+	}
 	paths, err := userDataDirPaths(def, opts)
 	errs := []error{err}
 	var dirs []browser.UserDataDir
@@ -38,6 +41,22 @@ func Discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserData
 		dirs = append(dirs, dir)
 	}
 	return dirs, errors.Join(errs...)
+}
+
+// profileAt reads -p as the path chrome://version shows: a directory with a profile marker but no Local State is one
+// profile, so its parent is the user data dir that holds the keys, and only that profile is selected.
+func profileAt(def browser.Def, path string) (browser.UserDataDir, bool) {
+	if path == "" || !isProfileDir(path) || hasAnySource(path, localState.Paths) {
+		return browser.UserDataDir{}, false
+	}
+	clean := filepath.Clean(path)
+	name := filepath.Base(clean)
+	return browser.UserDataDir{
+		ID:       dirID(def, 0),
+		Def:      def,
+		Path:     filepath.Dir(clean),
+		Profiles: []browser.Profile{{Name: name, Dir: name}},
+	}, true
 }
 
 // userDataDirPaths keeps every glob match, so both of a machine's Arc packages are found. Joining with "/" keeps the

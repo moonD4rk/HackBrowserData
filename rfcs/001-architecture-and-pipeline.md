@@ -40,7 +40,7 @@ A run is a one-way pipeline of seven stages. Each stage takes the previous stage
 
 ### 1. Validate
 
-Turns parsed flags into a typed `app.Request`: which categories, which browser, the `-p` override, output directory, format, `--zip`, and how the keychain password is supplied. Rejects bad input here — an unknown format, category, or browser ID, or an output directory that cannot be created, fails now with exit status `1` (today's status), **before** any browser is discovered and **before** any keychain prompt. Today `-c` and `-f` are checked only after discovery and the prompt; that ordering bug is designed out here.
+Turns parsed flags into a typed `app.Request`: which categories, which browser, the `-p` override, output directory, format, `--zip`, and how the keychain password is supplied. Rejects bad input here — an unknown format, category, or browser ID, or an output directory that cannot be created, fails now with exit status `1` (today's status, except for an unknown browser ID, which found nothing and exited `0`; [RFC-009](009-cli-surface.md)), **before** any browser is discovered and **before** any keychain prompt. Today `-c` and `-f` are checked only after discovery and the prompt; that ordering bug is designed out here.
 
 Validate touches no browser files and creates nothing: the output-directory check only confirms that `-d` is a directory or that its nearest existing ancestor is a writable directory. For `restore`, reading `--keys` is part of Validate, because `-b` there is checked against the dump's vaults ([RFC-009](009-cli-surface.md)). `-p` combined with `-b all` logs a warning and is ignored, as today, instead of being dropped silently.
 
