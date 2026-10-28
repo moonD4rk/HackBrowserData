@@ -68,7 +68,7 @@ func restoreWantFiles(t *testing.T, data string) map[string]string {
 	}
 	toVaultKeys := strings.NewReplacer(stamps...)
 
-	files := readDirFiles(t, extractGoldenRun(t, data, "json"))
+	files := readDirFiles(t, extractGoldenRun(t, chromiumFixtureBrowsers(t, data), "json"))
 	for name, content := range files {
 		restamped := toVaultKeys.Replace(content)
 		require.NotEqualf(t, content, restamped, "%s carries no display-name stamp to restamp", name)

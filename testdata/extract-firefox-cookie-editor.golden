@@ -1,0 +1,97 @@
+-- cookie.json (2031 bytes) --
+[
+  {
+    "domain": "app.home.firefox.test",
+    "httpOnly": true,
+    "name": "session",
+    "path": "/",
+    "secure": true,
+    "value": "ephemeral",
+    "sameSite": null,
+    "session": true,
+    "hostOnly": true
+  },
+  {
+    "domain": ".home.firefox.test",
+    "expirationDate": 1772355600,
+    "httpOnly": false,
+    "name": "tracker",
+    "path": "/",
+    "secure": true,
+    "value": "opt-out",
+    "sameSite": "no_restriction",
+    "session": false,
+    "hostOnly": false
+  },
+  {
+    "domain": "www.home.firefox.test",
+    "expirationDate": 1711875600,
+    "httpOnly": false,
+    "name": "prefs",
+    "path": "/settings",
+    "secure": false,
+    "value": "theme=dark",
+    "sameSite": "strict",
+    "session": false,
+    "hostOnly": true
+  },
+  {
+    "domain": ".home.firefox.test",
+    "expirationDate": 1740819600,
+    "httpOnly": true,
+    "name": "SID",
+    "path": "/",
+    "secure": true,
+    "value": "sid-home.firefox.test",
+    "sameSite": "lax",
+    "session": false,
+    "hostOnly": false
+  },
+  {
+    "domain": "app.work.firefox.test",
+    "httpOnly": true,
+    "name": "session",
+    "path": "/",
+    "secure": true,
+    "value": "ephemeral",
+    "sameSite": null,
+    "session": true,
+    "hostOnly": true
+  },
+  {
+    "domain": ".work.firefox.test",
+    "expirationDate": 1780304400,
+    "httpOnly": false,
+    "name": "tracker",
+    "path": "/",
+    "secure": true,
+    "value": "opt-out",
+    "sameSite": "no_restriction",
+    "session": false,
+    "hostOnly": false
+  },
+  {
+    "domain": "www.work.firefox.test",
+    "expirationDate": 1719824400,
+    "httpOnly": false,
+    "name": "prefs",
+    "path": "/settings",
+    "secure": false,
+    "value": "theme=dark",
+    "sameSite": "strict",
+    "session": false,
+    "hostOnly": true
+  },
+  {
+    "domain": ".work.firefox.test",
+    "expirationDate": 1748768400,
+    "httpOnly": true,
+    "name": "SID",
+    "path": "/",
+    "secure": true,
+    "value": "sid-work.firefox.test",
+    "sameSite": "lax",
+    "session": false,
+    "hostOnly": false
+  }
+]

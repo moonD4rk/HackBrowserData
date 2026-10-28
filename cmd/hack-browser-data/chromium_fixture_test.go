@@ -2,11 +2,9 @@ package main
 
 import (
 	"crypto/sha256"
-	"database/sql"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -16,7 +14,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/syndtr/goleveldb/leveldb"
-	_ "modernc.org/sqlite"
 
 	"github.com/moond4rk/hackbrowserdata/browser"
 	"github.com/moond4rk/hackbrowserdata/browser/chromium"
@@ -76,7 +73,7 @@ func chromiumFixtureBrowsers(t *testing.T, root string) []browser.Browser {
 
 func chromiumFixtureUserData(t *testing.T, userDataDir, browserKey string) {
 	t.Helper()
-	chromiumFixtureWrite(t, filepath.Join(userDataDir, "Local State"), "{}")
+	fixtureWrite(t, filepath.Join(userDataDir, "Local State"), "{}")
 	for _, p := range chromiumFixtureProfiles {
 		site := p.label + "." + browserKey + ".test"
 		chromiumFixtureProfile(t, filepath.Join(userDataDir, p.dir), site, p.start, p.accountLogins)
@@ -100,21 +97,21 @@ func chromiumFixtureProfile(t *testing.T, dir, site string, start time.Time, acc
 	}
 	day := 24 * time.Hour
 
-	chromiumFixtureWrite(t, filepath.Join(dir, "Preferences"), "{}")
+	fixtureWrite(t, filepath.Join(dir, "Preferences"), "{}")
 
-	chromiumFixtureSQLite(t, filepath.Join(dir, "Login Data"), chromiumFixtureLoginsSchema,
+	fixtureSQLite(t, filepath.Join(dir, "Login Data"), chromiumFixtureLoginsSchema,
 		chromiumFixtureInsertLogin(link("accounts", "/"), link("accounts", "/login"), "alice",
 			v10("correct-horse-battery-staple"), at(time.Hour)),
 		chromiumFixtureInsertLogin(link("shop", "/"), link("shop", "/signin"), "alice@"+site, v10(`pa,ss"word`), at(2*time.Hour)),
 	)
 	if accountLogins {
-		chromiumFixtureSQLite(t, filepath.Join(dir, "Login Data For Account"), chromiumFixtureLoginsSchema,
+		fixtureSQLite(t, filepath.Join(dir, "Login Data For Account"), chromiumFixtureLoginsSchema,
 			chromiumFixtureInsertLogin(link("sync", "/"), link("sync", "/auth"), "alice", v10("synced-secret"), at(90*time.Minute)),
 		)
 	}
 
 	domain, www, app := "."+site, "www."+site, "app."+site
-	chromiumFixtureSQLite(t, filepath.Join(dir, "Network", "Cookies"), chromiumFixtureCookiesSchema,
+	fixtureSQLite(t, filepath.Join(dir, "Network", "Cookies"), chromiumFixtureCookiesSchema,
 		chromiumFixtureInsertCookie("SID", domain, "/", v20(hostBound(domain, "sid-"+site)),
 			at(10*time.Minute+123456*time.Microsecond), at(365*day), 1, 1, 1),
 		chromiumFixtureInsertCookie("prefs", www, "/settings", v10("theme=dark"), at(20*time.Minute), at(30*day), 0, 0, 2),
@@ -122,7 +119,7 @@ func chromiumFixtureProfile(t *testing.T, dir, site string, start time.Time, acc
 		chromiumFixtureInsertCookie("session", app, "/", v20("ephemeral"), at(40*time.Minute), 0, 1, 1, -1),
 	)
 
-	chromiumFixtureSQLite(t, filepath.Join(dir, "History"), chromiumFixtureURLsSchema, chromiumFixtureDownloadsSchema,
+	fixtureSQLite(t, filepath.Join(dir, "History"), chromiumFixtureURLsSchema, chromiumFixtureDownloadsSchema,
 		chromiumFixtureInsertURL(link("www", "/"), "Home", 42, at(3*time.Hour)),
 		chromiumFixtureInsertURL(link("docs", "/guide?q=go&lang=en"), `Guide, "quoted" & <b>bold</b>`, 7, at(4*time.Hour)),
 		chromiumFixtureInsertURL(link("news", "/ja"), "ニュース", 3, at(5*time.Hour)),
@@ -132,15 +129,15 @@ func chromiumFixtureProfile(t *testing.T, dir, site string, start time.Time, acc
 			1048576, at(7*time.Hour), 0),
 	)
 
-	chromiumFixtureWrite(t, filepath.Join(dir, "Bookmarks"),
+	fixtureWrite(t, filepath.Join(dir, "Bookmarks"),
 		fmt.Sprintf(chromiumFixtureBookmarks, site, at(0), at(8*time.Hour), at(9*time.Hour), at(10*time.Hour)))
 
-	chromiumFixtureSQLite(t, filepath.Join(dir, "Web Data"), chromiumFixtureCreditCardsSchema,
+	fixtureSQLite(t, filepath.Join(dir, "Web Data"), chromiumFixtureCreditCardsSchema,
 		chromiumFixtureInsertCreditCard("Alice Example", 4, 2031, v10("4111111111111111"), "Travel", "billing-home"),
 		chromiumFixtureInsertCreditCard("Bob Example", 11, 2029, v10("5500005555555559"), "", ""),
 	)
 
-	chromiumFixtureWrite(t, filepath.Join(dir, "Secure Preferences"), chromiumFixtureSecurePreferences)
+	fixtureWrite(t, filepath.Join(dir, "Secure Preferences"), chromiumFixtureSecurePreferences)
 
 	origin := link("app", "")
 	dataKey := "_" + origin + "\x00"
@@ -189,24 +186,6 @@ func chromiumFixtureUTF16Raw(s string) string {
 		binary.LittleEndian.PutUint16(b[2*i:], u)
 	}
 	return string(b)
-}
-
-func chromiumFixtureWrite(t *testing.T, path, content string) {
-	t.Helper()
-	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
-	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
-}
-
-func chromiumFixtureSQLite(t *testing.T, path string, stmts ...string) {
-	t.Helper()
-	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
-	db, err := sql.Open("sqlite", path)
-	require.NoError(t, err)
-	defer db.Close()
-	for _, stmt := range stmts {
-		_, err = db.Exec(stmt)
-		require.NoError(t, err)
-	}
 }
 
 func chromiumFixtureLevelDB(t *testing.T, dir string, entries map[string]string) {
