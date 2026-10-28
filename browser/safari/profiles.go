@@ -25,16 +25,6 @@ type profileContext struct {
 
 func (p profileContext) isDefault() bool { return p.uuidUpper == "" }
 
-// downloadOwnerUUID is the value Safari writes into DownloadEntryProfileUUIDStringKey
-// for downloads that belong to this profile. The default profile uses the sentinel
-// "DefaultProfile"; named profiles use their uppercase UUID.
-func (p profileContext) downloadOwnerUUID() string {
-	if p.isDefault() {
-		return defaultProfileSentinel
-	}
-	return p.uuidUpper
-}
-
 // SafariTabs.db lists profiles in bookmarks rows with subtype=2. external_uuid "DefaultProfile"
 // is the sentinel for the implicit default, which has no per-UUID directory.
 const (

@@ -1,9 +1,12 @@
 package app
 
 import (
+	"fmt"
+
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/chromium"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/firefox"
+	"github.com/moond4rk/hackbrowserdata/internal/browser/safari"
 )
 
 // Discovery is what Discover found: the user data dirs, and an error result for each browser whose data could not be
@@ -33,26 +36,33 @@ func Discover(req Request) Discovery {
 	return d
 }
 
-// discover and extractorsOf dispatch on the base here, because the base packages import browser and so browser cannot
-// call them.
+// discover and extractorsWith dispatch on the base here, because the base packages import browser and so browser
+// cannot call them.
 func discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserDataDir, error) {
 	switch def.Base {
 	case browser.Chromium:
 		return chromium.Discover(def, opts)
 	case browser.Firefox:
 		return firefox.Discover(def, opts)
+	case browser.Safari:
+		return safari.Discover(def, opts)
 	default:
-		return nil, nil // Safari is not on the pipeline yet
+		return nil, fmt.Errorf("%s: no base package", def.ID)
 	}
 }
 
-func extractorsOf(dir browser.UserDataDir, p browser.Profile) browser.Extractors {
-	switch dir.Def.Base {
-	case browser.Chromium:
-		return chromium.Extractors(dir, p)
-	case browser.Firefox:
-		return firefox.Extractors(dir, p)
-	default:
-		return nil
+// extractorsWith hands Safari the run's login keychain, which its default profile's password extractor reads.
+func extractorsWith(kc safari.LoginKeychain) extractorsFunc {
+	return func(dir browser.UserDataDir, p browser.Profile) browser.Extractors {
+		switch dir.Def.Base {
+		case browser.Chromium:
+			return chromium.Extractors(dir, p)
+		case browser.Firefox:
+			return firefox.Extractors(dir, p)
+		case browser.Safari:
+			return safari.Extractors(dir, p, kc)
+		default:
+			return nil
+		}
 	}
 }

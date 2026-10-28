@@ -9,6 +9,7 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/chromium"
+	"github.com/moond4rk/hackbrowserdata/internal/browser/safari"
 	"github.com/moond4rk/hackbrowserdata/internal/export"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
@@ -16,17 +17,25 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
+// runKeychain is the run's one login keychain, read by the Chromium v10 retriever and the Safari password extractor;
+// nil off macOS.
+type runKeychain interface {
+	masterkey.LoginKeychain
+	safari.LoginKeychain
+}
+
 // keySource retrieves one user data dir's Chromium keys, reading what it needs from the dir's snapshot.
 type keySource func(ctx context.Context, dir browser.UserDataDir, snap snapshot.Snapshot) (masterkey.Set, error)
 
 // Execute runs Capture, Extract, and Export one user data dir at a time, so at most one dir's copies are on disk. Its
 // error means the run could not finish, such as a failed output write; every other failure is a Result.
 func Execute(ctx context.Context, p Plan, req Request) (Summary, error) {
+	kc := loginKeychain(req)
 	keys := dumpKeys(req.Keys)
 	if req.Keys == nil {
-		keys = machineKeys(loginKeychain(req))
+		keys = machineKeys(kc)
 	}
-	return execute(ctx, p, req, extractorsOf, keys)
+	return execute(ctx, p, req, extractorsWith(kc), keys)
 }
 
 func execute(ctx context.Context, p Plan, req Request, extractors extractorsFunc, keys keySource) (Summary, error) {

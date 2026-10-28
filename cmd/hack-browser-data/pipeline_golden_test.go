@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -37,6 +38,18 @@ func TestPipelineGoldenFirefox(t *testing.T) {
 	firefoxFixtureUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])))
 
 	assertExtractGoldens(t, "extract-firefox", func(t *testing.T, format string) string {
+		return pipelineGoldenRun(t, home, nil, format)
+	})
+}
+
+func TestPipelineGoldenSafari(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("Safari is in the browser table on macOS only")
+	}
+	home := t.TempDir()
+	safariFixtureLibrary(t, filepath.Join(home, "Library"))
+
+	assertExtractGoldens(t, "extract-safari", func(t *testing.T, format string) string {
 		return pipelineGoldenRun(t, home, nil, format)
 	})
 }

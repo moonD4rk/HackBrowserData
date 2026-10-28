@@ -1,7 +1,6 @@
 package safari
 
 import (
-	"database/sql"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,7 +8,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	_ "modernc.org/sqlite"
+
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 // ---------------------------------------------------------------------------
@@ -128,7 +130,9 @@ func TestExtractLocalStorage_SingleOrigin(t *testing.T) {
 	root := buildTestLocalStorageDir(t, map[string][]testLocalStorageItem{
 		"https://example.com": {{Key: "auth_token", Value: "abc123"}},
 	})
-	entries, err := extractLocalStorage(root)
+	var out testCollector
+	err := extractLocalStorage(root, &out)
+	entries := collected[record.LocalStorage](t, &out)
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
 	assert.Equal(t, "https://example.com", entries[0].URL)
@@ -147,7 +151,9 @@ func TestExtractLocalStorage_MultiOrigin(t *testing.T) {
 			{Key: "session", Value: "xyz"},
 		},
 	})
-	entries, err := extractLocalStorage(root)
+	var out testCollector
+	err := extractLocalStorage(root, &out)
+	entries := collected[record.LocalStorage](t, &out)
 	require.NoError(t, err)
 	require.Len(t, entries, 3)
 
@@ -166,7 +172,9 @@ func TestExtractLocalStorage_CJKAndEmoji(t *testing.T) {
 			{Key: "status", Value: "hello 世界 🌍"},
 		},
 	})
-	entries, err := extractLocalStorage(root)
+	var out testCollector
+	err := extractLocalStorage(root, &out)
+	entries := collected[record.LocalStorage](t, &out)
 	require.NoError(t, err)
 	require.Len(t, entries, 2)
 
@@ -182,7 +190,9 @@ func TestExtractLocalStorage_EmptyItemTable(t *testing.T) {
 	root := buildTestLocalStorageDir(t, map[string][]testLocalStorageItem{
 		"https://example.com": nil,
 	})
-	entries, err := extractLocalStorage(root)
+	var out testCollector
+	err := extractLocalStorage(root, &out)
+	entries := collected[record.LocalStorage](t, &out)
 	require.NoError(t, err)
 	assert.Empty(t, entries)
 }
@@ -191,7 +201,9 @@ func TestExtractLocalStorage_TruncatesOversizedValue(t *testing.T) {
 	root := buildTestLocalStorageDir(t, map[string][]testLocalStorageItem{
 		"https://example.com": {{Key: "big", Value: strings.Repeat("x", 1100)}},
 	})
-	entries, err := extractLocalStorage(root)
+	var out testCollector
+	err := extractLocalStorage(root, &out)
+	entries := collected[record.LocalStorage](t, &out)
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
 	assert.Contains(t, entries[0].Value, "too long")
@@ -206,7 +218,9 @@ func TestExtractLocalStorage_Partitioned(t *testing.T) {
 		[]testLocalStorageItem{{Key: "yt-session", Value: "embedded"}},
 	)
 
-	entries, err := extractLocalStorage(root)
+	var out testCollector
+	err := extractLocalStorage(root, &out)
+	entries := collected[record.LocalStorage](t, &out)
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
 	assert.Equal(t, "https://accounts.youtube.com", entries[0].URL, "frame origin preferred over top-frame")
@@ -220,7 +234,9 @@ func TestExtractLocalStorage_SkipsSaltAndStrayFiles(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(root, "salt"), []byte("pretend salt"), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(root, "README"), []byte("noise"), 0o644))
 
-	entries, err := extractLocalStorage(root)
+	var out testCollector
+	err := extractLocalStorage(root, &out)
+	entries := collected[record.LocalStorage](t, &out)
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
 	assert.Equal(t, "https://example.com", entries[0].URL)
@@ -236,46 +252,28 @@ func TestExtractLocalStorage_SkipsFrameDirsWithoutDB(t *testing.T) {
 		filepath.Join(frameDir, "origin"),
 		encodeOriginFile("https://example.com", "https://example.com"), 0o644))
 
-	entries, err := extractLocalStorage(root)
+	var out testCollector
+	err := extractLocalStorage(root, &out)
+	entries := collected[record.LocalStorage](t, &out)
 	require.NoError(t, err)
 	assert.Empty(t, entries)
 }
 
 func TestExtractLocalStorage_DirMissing(t *testing.T) {
-	_, err := extractLocalStorage(filepath.Join(t.TempDir(), "does-not-exist"))
+	err := extractLocalStorage(filepath.Join(t.TempDir(), "does-not-exist"), &testCollector{})
 	require.Error(t, err)
 }
 
 func TestExtractLocalStorage_EmptyRoot(t *testing.T) {
-	entries, err := extractLocalStorage(t.TempDir())
+	var out testCollector
+	err := extractLocalStorage(t.TempDir(), &out)
+	entries := collected[record.LocalStorage](t, &out)
 	require.NoError(t, err)
 	assert.Empty(t, entries)
 }
 
 // ---------------------------------------------------------------------------
-// countLocalStorage
-// ---------------------------------------------------------------------------
-
-func TestCountLocalStorage(t *testing.T) {
-	root := buildTestLocalStorageDir(t, map[string][]testLocalStorageItem{
-		"https://a.com":      {{Key: "k1", Value: "v1"}, {Key: "k2", Value: "v2"}},
-		"https://b.com":      {{Key: "k3", Value: "v3"}},
-		"https://c.com:8443": {{Key: "k4", Value: "v4"}},
-	})
-	count, err := countLocalStorage(root)
-	require.NoError(t, err)
-	assert.Equal(t, 4, count)
-}
-
-func TestCountLocalStorage_DirMissing(t *testing.T) {
-	count, err := countLocalStorage(filepath.Join(t.TempDir(), "nope"))
-	require.Error(t, err)
-	assert.Equal(t, 0, count)
-}
-
-// ---------------------------------------------------------------------------
-// NULL-key handling — readLocalStorageFile / countLocalStorageFile both skip NULL keys,
-// keeping count and extract in sync.
+// NULL-key handling — readLocalStorageFile skips NULL keys.
 // ---------------------------------------------------------------------------
 
 func TestReadLocalStorageFile_SkipsNullKey(t *testing.T) {
@@ -289,18 +287,6 @@ func TestReadLocalStorageFile_SkipsNullKey(t *testing.T) {
 	require.Len(t, items, 1)
 	assert.Equal(t, "real", items[0].key)
 	assert.Equal(t, "keeper", items[0].value)
-}
-
-func TestCountLocalStorageFile_SkipsNullKey(t *testing.T) {
-	dbPath := filepath.Join(t.TempDir(), "ls.sqlite3")
-	writeLocalStorageDB(t, dbPath, []testLocalStorageItem{
-		{Key: "k1", Value: "v1"},
-		{Key: "k2", Value: "v2"},
-	}, true /*addNullKey*/)
-
-	count, err := countLocalStorageFile(dbPath)
-	require.NoError(t, err)
-	assert.Equal(t, 2, count, "NULL keys are excluded from count to match extract's skip rule")
 }
 
 func TestReadLocalStorageFile_ReturnsRowsInKeyOrder(t *testing.T) {
@@ -319,17 +305,4 @@ func TestReadLocalStorageFile_ReturnsRowsInKeyOrder(t *testing.T) {
 	assert.Equal(t, "apple", items[0].key)
 	assert.Equal(t, "mango", items[1].key)
 	assert.Equal(t, "zebra", items[2].key)
-}
-
-func TestCountLocalStorageFile_MissingTable(t *testing.T) {
-	// Real Safari has origin dirs with LocalStorage/localstorage.sqlite3 but no ItemTable yet
-	// (seen during live verification). countLocalStorageFile must surface the error so the
-	// caller can log-and-skip rather than counting 0 silently.
-	dbPath := filepath.Join(t.TempDir(), "empty.sqlite3")
-	db, err := sql.Open("sqlite", dbPath)
-	require.NoError(t, err)
-	require.NoError(t, db.Close())
-
-	_, err = countLocalStorageFile(dbPath)
-	require.Error(t, err)
 }

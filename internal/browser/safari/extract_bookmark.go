@@ -7,6 +7,7 @@ import (
 
 	"github.com/moond4rk/plist"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
@@ -28,21 +29,22 @@ const (
 	bookmarkTypeList = "WebBookmarkTypeList"
 )
 
-func extractBookmarks(path string) ([]record.Bookmark, error) {
+func extractBookmarks(path string, out browser.Collector) error {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open bookmarks: %w", err)
+		return fmt.Errorf("open bookmarks: %w", err)
 	}
 	defer f.Close()
 
 	var root safariBookmark
 	if err := plist.NewDecoder(f).Decode(&root); err != nil {
-		return nil, fmt.Errorf("decode bookmarks: %w", err)
+		return fmt.Errorf("decode bookmarks: %w", err)
 	}
 
 	var bookmarks []record.Bookmark
 	walkBookmarks(root.Children, "", &bookmarks)
-	return bookmarks, nil
+	emit(out, bookmarks)
+	return nil
 }
 
 // walkBookmarks recursively traverses the bookmark tree, collecting leaf entries.
@@ -73,12 +75,4 @@ func walkBookmarks(nodes []safariBookmark, folder string, out *[]record.Bookmark
 			walkBookmarks(node.Children, name, out)
 		}
 	}
-}
-
-func countBookmarks(path string) (int, error) {
-	bookmarks, err := extractBookmarks(path)
-	if err != nil {
-		return 0, err
-	}
-	return len(bookmarks), nil
 }

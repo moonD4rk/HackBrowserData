@@ -3,6 +3,7 @@ package safari
 import (
 	"database/sql"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
@@ -19,11 +20,9 @@ const (
 			WHERE hv2.history_item = hi.id
 			ORDER BY hv2.visit_time DESC LIMIT 1
 		)`
-
-	safariCountHistoryQuery = `SELECT COUNT(*) FROM history_items`
 )
 
-func extractHistories(path string) ([]record.History, error) {
+func extractHistories(path string, out browser.Collector) error {
 	histories, err := sqlitex.QueryRows(path, true, safariHistoryQuery,
 		func(rows *sql.Rows) (record.History, error) {
 			var (
@@ -42,11 +41,8 @@ func extractHistories(path string) ([]record.History, error) {
 			}, nil
 		})
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return histories, nil
-}
-
-func countHistories(path string) (int, error) {
-	return sqlitex.CountRows(path, true, safariCountHistoryQuery)
+	emit(out, histories)
+	return nil
 }

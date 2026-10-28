@@ -6,13 +6,14 @@ import (
 
 	"github.com/moond4rk/binarycookies"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-func extractCookies(path string) ([]record.Cookie, error) {
+func extractCookies(path string, out browser.Collector) error {
 	pages, err := decodeBinaryCookies(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var cookies []record.Cookie
@@ -35,19 +36,8 @@ func extractCookies(path string) ([]record.Cookie, error) {
 			})
 		}
 	}
-	return cookies, nil
-}
-
-func countCookies(path string) (int, error) {
-	pages, err := decodeBinaryCookies(path)
-	if err != nil {
-		return 0, err
-	}
-	var total int
-	for _, page := range pages {
-		total += len(page.Cookies)
-	}
-	return total, nil
+	emit(out, cookies)
+	return nil
 }
 
 func decodeBinaryCookies(path string) ([]binarycookies.Page, error) {

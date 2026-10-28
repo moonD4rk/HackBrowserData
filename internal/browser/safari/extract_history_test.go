@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 func setupSafariHistoryDB(t *testing.T) string {
@@ -25,7 +27,9 @@ func setupSafariHistoryDB(t *testing.T) string {
 func TestExtractHistories(t *testing.T) {
 	path := setupSafariHistoryDB(t)
 
-	got, err := extractHistories(path)
+	var out testCollector
+	err := extractHistories(path, &out)
+	got := collected[record.History](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 3)
 
@@ -44,7 +48,9 @@ func TestExtractHistories(t *testing.T) {
 func TestExtractHistories_Dedup(t *testing.T) {
 	path := setupSafariHistoryDB(t)
 
-	got, err := extractHistories(path)
+	var out testCollector
+	err := extractHistories(path, &out)
+	got := collected[record.History](t, &out)
 	require.NoError(t, err)
 	// 3 history_items, not 4 visits.
 	require.Len(t, got, 3)
@@ -62,23 +68,6 @@ func TestExtractHistories_Dedup(t *testing.T) {
 	t.Fatal("expected https://github.com in results")
 }
 
-func TestCountHistories(t *testing.T) {
-	path := setupSafariHistoryDB(t)
-
-	count, err := countHistories(path)
-	require.NoError(t, err)
-	assert.Equal(t, 3, count)
-}
-
-func TestCountHistories_Empty(t *testing.T) {
-	path := createTestDB(t, "History.db",
-		[]string{safariHistoryItemsSchema, safariHistoryVisitsSchema})
-
-	count, err := countHistories(path)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count)
-}
-
 func TestExtractHistories_NullTitle(t *testing.T) {
 	path := createTestDB(t, "History.db",
 		[]string{safariHistoryItemsSchema, safariHistoryVisitsSchema},
@@ -87,7 +76,9 @@ func TestExtractHistories_NullTitle(t *testing.T) {
 		`INSERT INTO history_visits (id, history_item, visit_time) VALUES (1, 1, 700000000.0)`,
 	)
 
-	got, err := extractHistories(path)
+	var out testCollector
+	err := extractHistories(path, &out)
+	got := collected[record.History](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, "https://null.test", got[0].URL)

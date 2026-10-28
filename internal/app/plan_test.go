@@ -102,3 +102,16 @@ func TestNewPlan_UnsupportedCategory(t *testing.T) {
 		got.Skipped)
 	assert.Empty(t, got.Extractions)
 }
+
+// Safari's passwords come from the keychain: an extractor that reads no file is never absent.
+func TestNewPlan_ExtractorWithoutSourcesRuns(t *testing.T) {
+	dir := browser.UserDataDir{ID: "safari", Path: t.TempDir(), Profiles: []browser.Profile{{Name: "default", Dir: "Safari"}}}
+	keychainOnly := func(browser.UserDataDir, browser.Profile) browser.Extractors {
+		return browser.Extractors{category.Password: {}}
+	}
+
+	got := newPlan(Discovery{Dirs: []browser.UserDataDir{dir}}, Request{Categories: []category.Category{category.Password}}, keychainOnly)
+	assert.Equal(t, []Extraction{{DirID: "safari", Profile: "default", Category: category.Password}}, got.Extractions)
+	assert.Empty(t, got.Files)
+	assert.Empty(t, got.Skipped)
+}

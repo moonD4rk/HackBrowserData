@@ -8,6 +8,8 @@ import (
 	"github.com/moond4rk/plist"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 func buildTestBookmarksPlist(t *testing.T, root safariBookmark) string {
@@ -55,7 +57,9 @@ func TestExtractBookmarks(t *testing.T) {
 	}
 
 	path := buildTestBookmarksPlist(t, root)
-	bookmarks, err := extractBookmarks(path)
+	var out testCollector
+	err := extractBookmarks(path, &out)
+	bookmarks := collected[record.Bookmark](t, &out)
 	require.NoError(t, err)
 	require.Len(t, bookmarks, 3)
 
@@ -90,7 +94,9 @@ func TestExtractBookmarks_ReadingList(t *testing.T) {
 	}
 
 	path := buildTestBookmarksPlist(t, root)
-	bookmarks, err := extractBookmarks(path)
+	var out testCollector
+	err := extractBookmarks(path, &out)
+	bookmarks := collected[record.Bookmark](t, &out)
 	require.NoError(t, err)
 	require.Len(t, bookmarks, 1)
 	assert.Equal(t, "ReadingList", bookmarks[0].Folder)
@@ -114,7 +120,9 @@ func TestExtractBookmarks_SkipsEmptyURL(t *testing.T) {
 	}
 
 	path := buildTestBookmarksPlist(t, root)
-	bookmarks, err := extractBookmarks(path)
+	var out testCollector
+	err := extractBookmarks(path, &out)
+	bookmarks := collected[record.Bookmark](t, &out)
 	require.NoError(t, err)
 	require.Len(t, bookmarks, 1)
 	assert.Equal(t, "Valid", bookmarks[0].Name)
@@ -142,7 +150,9 @@ func TestExtractBookmarks_NestedFolders(t *testing.T) {
 	}
 
 	path := buildTestBookmarksPlist(t, root)
-	bookmarks, err := extractBookmarks(path)
+	var out testCollector
+	err := extractBookmarks(path, &out)
+	bookmarks := collected[record.Bookmark](t, &out)
 	require.NoError(t, err)
 	require.Len(t, bookmarks, 2)
 
@@ -154,26 +164,13 @@ func TestExtractBookmarks_NestedFolders(t *testing.T) {
 	assert.Equal(t, "Work", bookmarks[1].Folder)
 }
 
-func TestCountBookmarks(t *testing.T) {
-	root := safariBookmark{
-		Type: bookmarkTypeList,
-		Children: []safariBookmark{
-			{Type: bookmarkTypeLeaf, URLString: "https://a.com", URIDictionary: uriDictionary{Title: "A"}},
-			{Type: bookmarkTypeLeaf, URLString: "https://b.com", URIDictionary: uriDictionary{Title: "B"}},
-		},
-	}
-
-	path := buildTestBookmarksPlist(t, root)
-	count, err := countBookmarks(path)
-	require.NoError(t, err)
-	assert.Equal(t, 2, count)
-}
-
 func TestExtractBookmarks_Empty(t *testing.T) {
 	root := safariBookmark{Type: bookmarkTypeList}
 	path := buildTestBookmarksPlist(t, root)
 
-	bookmarks, err := extractBookmarks(path)
+	var out testCollector
+	err := extractBookmarks(path, &out)
+	bookmarks := collected[record.Bookmark](t, &out)
 	require.NoError(t, err)
 	assert.Empty(t, bookmarks)
 }

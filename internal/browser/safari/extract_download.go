@@ -6,6 +6,7 @@ import (
 
 	"github.com/moond4rk/plist"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
@@ -25,16 +26,16 @@ type safariDownloadEntry struct {
 // extractDownloads reads Downloads.plist (shared across Safari profiles) and returns only the entries
 // owned by ownerUUID — either "DefaultProfile" or a named profile's uppercase UUID. Entries written by
 // older Safari (no ProfileUUID field) are attributed to the default profile.
-func extractDownloads(path, ownerUUID string) ([]record.Download, error) {
+func extractDownloads(path, ownerUUID string, out browser.Collector) error {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open downloads: %w", err)
+		return fmt.Errorf("open downloads: %w", err)
 	}
 	defer f.Close()
 
 	var dl safariDownloads
 	if err := plist.NewDecoder(f).Decode(&dl); err != nil {
-		return nil, fmt.Errorf("decode downloads: %w", err)
+		return fmt.Errorf("decode downloads: %w", err)
 	}
 
 	var downloads []record.Download
@@ -48,15 +49,8 @@ func extractDownloads(path, ownerUUID string) ([]record.Download, error) {
 			TotalBytes: d.TotalBytes,
 		})
 	}
-	return downloads, nil
-}
-
-func countDownloads(path, ownerUUID string) (int, error) {
-	downloads, err := extractDownloads(path, ownerUUID)
-	if err != nil {
-		return 0, err
-	}
-	return len(downloads), nil
+	emit(out, downloads)
+	return nil
 }
 
 // ownsDownload treats empty ProfileUUID as DefaultProfile for backward compat with pre-profile Safari.

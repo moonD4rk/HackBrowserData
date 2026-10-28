@@ -3,13 +3,13 @@ package safari
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/moond4rk/plist"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
@@ -21,13 +21,6 @@ import (
 // Both files share the same top-level shape: a dictionary keyed by
 // "<bundleID> (<teamID>)". Only WebExtensions carry an `Enabled` field;
 // an App Extension that appears in the plist is implicitly enabled.
-const (
-	safariExtensionsSubdir    = "Safari"
-	safariAppExtensionsSubdir = "AppExtensions"
-	safariWebExtensionsSubdir = "WebExtensions"
-	safariExtensionsPlistFile = "Extensions.plist"
-)
-
 // extensionKeyPattern matches the "<bundleID> (<teamID>)" key format Safari uses.
 var extensionKeyPattern = regexp.MustCompile(`^(\S+)\s+\(([^)]+)\)$`)
 
@@ -39,14 +32,11 @@ type safariExtension struct {
 	Enabled *bool `plist:"Enabled"`
 }
 
-// extractExtensions reads both AppExtensions/Extensions.plist and
-// WebExtensions/Extensions.plist from the profile's Safari container and
-// returns the merged list, sorted by key for deterministic output.
-// A missing plist on either side is skipped silently.
-func extractExtensions(container string) ([]record.Extension, error) {
-	records, err := readSafariExtensions(container)
+// extractExtensions merges the plists in paths, sorted by key for deterministic output.
+func extractExtensions(paths []string, out browser.Collector) error {
+	records, err := readSafariExtensions(paths)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	extensions := make([]record.Extension, 0, len(records))
@@ -57,15 +47,8 @@ func extractExtensions(container string) ([]record.Extension, error) {
 			Enabled: r.enabled,
 		})
 	}
-	return extensions, nil
-}
-
-func countExtensions(container string) (int, error) {
-	records, err := readSafariExtensions(container)
-	if err != nil {
-		return 0, err
-	}
-	return len(records), nil
+	emit(out, extensions)
+	return nil
 }
 
 type extensionRecord struct {
@@ -74,16 +57,11 @@ type extensionRecord struct {
 	enabled  bool
 }
 
-func readSafariExtensions(container string) ([]extensionRecord, error) {
-	safariDir := filepath.Join(container, safariExtensionsSubdir)
+func readSafariExtensions(paths []string) ([]extensionRecord, error) {
 	var all []extensionRecord
-	for _, sub := range []string{safariAppExtensionsSubdir, safariWebExtensionsSubdir} {
-		p := filepath.Join(safariDir, sub, safariExtensionsPlistFile)
+	for _, p := range paths {
 		records, err := decodeSafariExtensionsPlist(p)
 		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
 			return nil, err
 		}
 		all = append(all, records...)

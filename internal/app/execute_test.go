@@ -155,14 +155,14 @@ func TestExecute_HistoryNeverRetrievesKeys(t *testing.T) {
 	touch(t, path, "Default", "Network", "Cookies")
 	dir := browser.UserDataDir{ID: "chrome", Def: lookup(t, "chrome"), Path: path, Profiles: []browser.Profile{{Name: "Default", Dir: "Default"}}}
 
-	run(t, extractorsOf, noKeys(t), []category.Category{category.History, category.Download}, dir)
+	run(t, extractorsWith(nil), noKeys(t), []category.Category{category.History, category.Download}, dir)
 
 	calls := 0
 	counting := func(context.Context, browser.UserDataDir, snapshot.Snapshot) (masterkey.Set, error) {
 		calls++
 		return nil, nil
 	}
-	run(t, extractorsOf, counting, []category.Category{category.Cookie, category.History}, dir)
+	run(t, extractorsWith(nil), counting, []category.Category{category.Cookie, category.History}, dir)
 	assert.Equal(t, 1, calls)
 }
 
