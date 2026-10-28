@@ -135,6 +135,37 @@ func TestDiscover_ProfilePathReplacesTheTable(t *testing.T) {
 	assert.Equal(t, custom, dirs[0].Path)
 }
 
+// Before, a profile directory became the whole user data dir, so the Local State one level up was never found.
+func TestDiscover_ProfilePathAtAProfileSelectsOnlyIt(t *testing.T) {
+	userData := t.TempDir()
+	touch(t, userData, "Local State")
+	touch(t, userData, "Default", "Preferences")
+	touch(t, userData, "Profile 1", "Preferences")
+
+	opts := browser.DiscoverOptions{Home: t.TempDir(), ProfilePath: filepath.Join(userData, "Profile 1") + string(filepath.Separator)}
+	dirs, err := Discover(testDef("chrome", "ud"), opts)
+	require.NoError(t, err)
+	want := browser.UserDataDir{
+		ID: "chrome", Def: testDef("chrome", "ud"), Path: userData,
+		Profiles: []browser.Profile{{Name: "Profile 1", Dir: "Profile 1"}},
+	}
+	assert.Equal(t, []browser.UserDataDir{want}, dirs)
+}
+
+// A flat layout keeps Local State beside its Preferences: it is a user data dir, as before.
+func TestDiscover_ProfilePathAtAFlatUserDataDir(t *testing.T) {
+	flat := t.TempDir()
+	touch(t, flat, "Local State")
+	touch(t, flat, "Preferences")
+	touch(t, flat, "History")
+
+	dirs, err := Discover(testDef("opera", "ud"), browser.DiscoverOptions{Home: t.TempDir(), ProfilePath: flat})
+	require.NoError(t, err)
+	require.Len(t, dirs, 1)
+	assert.Equal(t, flat, dirs[0].Path)
+	assert.Equal(t, []browser.Profile{{Name: filepath.Base(flat)}}, dirs[0].Profiles)
+}
+
 func TestExtractors_CoverEveryCategory(t *testing.T) {
 	ex := Extractors(browser.UserDataDir{Def: testDef("chrome")}, browser.Profile{})
 	for _, c := range category.All() {

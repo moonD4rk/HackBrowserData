@@ -83,8 +83,8 @@ func TestDiscover_UnreadableUserDataDirIsAnError(t *testing.T) {
 	assert.Empty(t, dirs)
 }
 
-// -p names one profile, yet every profile beside it is found too, as today; narrowing to it waits for the switch-over.
-func TestDiscover_ProfilePathSearchesItsParent(t *testing.T) {
+// Before, -p searched its parent and exported every profile beside the one it named.
+func TestDiscover_ProfilePathSelectsOnlyThatProfile(t *testing.T) {
 	custom := t.TempDir()
 	touch(t, custom, "abcd1234.default-release", "places.sqlite")
 	touch(t, custom, "wxyz5678.work", "places.sqlite")
@@ -94,7 +94,17 @@ func TestDiscover_ProfilePathSearchesItsParent(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, dirs, 1)
 	assert.Equal(t, custom, dirs[0].Path)
-	assert.Len(t, dirs[0].Profiles, 2)
+	assert.Equal(t, []browser.Profile{{Name: "abcd1234.default-release", Dir: "abcd1234.default-release"}}, dirs[0].Profiles)
+}
+
+func TestDiscover_ProfilePathWithoutDataFindsNothing(t *testing.T) {
+	custom := t.TempDir()
+	touch(t, custom, "abcd1234.default-release", "key4.db")
+
+	opts := browser.DiscoverOptions{Home: t.TempDir(), ProfilePath: filepath.Join(custom, "abcd1234.default-release")}
+	dirs, err := Discover(testDef("Profiles"), opts)
+	require.NoError(t, err)
+	assert.Empty(t, dirs)
 }
 
 func TestExtractors_CoverFirefoxCategories(t *testing.T) {

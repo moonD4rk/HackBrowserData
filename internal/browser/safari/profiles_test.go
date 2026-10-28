@@ -51,14 +51,22 @@ func TestDiscover_MissingSafariYieldsNothing(t *testing.T) {
 	assert.Empty(t, dirs)
 }
 
-// -p does not apply to Safari: the table's directory is used, and Validate rejects -p at the switch-over.
-func TestDiscover_IgnoresProfilePath(t *testing.T) {
+func TestDiscover_ProfilePathIsTheSafariDir(t *testing.T) {
+	const uuid = "5604E6F5-02ED-4E40-8249-63DE7BC986C8"
+	copied := t.TempDir()
+	mkFile(t, copied, "Library", "SafariCopy", "History.db")
+	container := filepath.Join(copied, "Library", "Containers", "com.apple.Safari", "Data", "Library")
+	mkFile(t, container, "Safari", "Profiles", uuid, "History.db")
+	writeSafariTabsDB(t, filepath.Join(container, "Safari", "SafariTabs.db"), []tabRow{{uuid: uuid, title: "work"}})
+
 	home := t.TempDir()
 	libraryAt(t, home)
-	dirs, err := Discover(testDef(), browser.DiscoverOptions{Home: home, ProfilePath: t.TempDir()})
+	opts := browser.DiscoverOptions{Home: home, ProfilePath: filepath.Join(copied, "Library", "SafariCopy")}
+	dirs, err := Discover(testDef(), opts)
 	require.NoError(t, err)
 	require.Len(t, dirs, 1)
-	assert.Equal(t, filepath.Join(home, "Library"), dirs[0].Path)
+	assert.Equal(t, filepath.Join(copied, "Library"), dirs[0].Path)
+	assert.Equal(t, []browser.Profile{{Name: "default", Dir: "SafariCopy"}, named("work", uuid)}, dirs[0].Profiles)
 }
 
 func TestDiscover_WithNamedProfile(t *testing.T) {

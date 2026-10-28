@@ -36,12 +36,11 @@ type LoginKeychain interface {
 }
 
 // Discover finds Safari's data under ~/Library: the default profile, whose Dir is the Safari directory, and the named
-// profiles SafariTabs.db lists. -p does not apply to Safari, and Validate rejects it at the switch-over.
+// profiles SafariTabs.db lists. -p names another Safari directory, whose parent stands in for ~/Library.
 func Discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserDataDir, error) {
 	var errs []error
 	var dirs []browser.UserDataDir
-	for i, rel := range def.Platform().UserDataDirs {
-		safariPath := filepath.Join(opts.Home, filepath.FromSlash(rel))
+	for i, safariPath := range safariPaths(def, opts) {
 		if _, err := os.Stat(safariPath); err != nil {
 			if !errors.Is(err, fs.ErrNotExist) {
 				errs = append(errs, fmt.Errorf("%s: %w", safariPath, err))
@@ -54,6 +53,17 @@ func Discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserData
 		dirs = append(dirs, browser.UserDataDir{ID: dirID(def, i), Def: def, Path: library, Profiles: profiles})
 	}
 	return dirs, errors.Join(errs...)
+}
+
+func safariPaths(def browser.Def, opts browser.DiscoverOptions) []string {
+	if opts.ProfilePath != "" {
+		return []string{filepath.Clean(opts.ProfilePath)}
+	}
+	paths := make([]string, 0, len(def.Platform().UserDataDirs))
+	for _, rel := range def.Platform().UserDataDirs {
+		paths = append(paths, filepath.Join(opts.Home, filepath.FromSlash(rel)))
+	}
+	return paths
 }
 
 func dirID(def browser.Def, i int) browser.DirID {

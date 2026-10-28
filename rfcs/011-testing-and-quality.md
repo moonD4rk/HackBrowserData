@@ -55,7 +55,7 @@ Each bug designed out by this rewrite gets a test that would have caught it, so 
 - **`-p` with `-b all`**: a warning is logged and no user data dir is overridden.
 - **`-p` at a Chromium profile directory**: its parent becomes the user data dir, so `Local State` is captured and keys resolve.
 - **`-p` for Firefox**: only the named profile is exported, not every sibling under it.
-- **`-p` for Safari**: rejected in Validate with a reason.
+- **`-p` for Safari**: names the Safari directory, whose parent stands in for `~/Library`, as today.
 - **Keychain password precedence**: explicit flag > prompt > none.
 - **Temp snapshot cleanup**: a run that fails mid-way leaves no copied `Login Data` or `Cookies` behind.
 - **Discovery errors are not absence**: an unreadable user data dir (permission denied) is reported as an `error` result, distinct from one that simply isn't there (nothing). The home directory comes from `DiscoverOptions`, so a `t.TempDir()` stands in.
