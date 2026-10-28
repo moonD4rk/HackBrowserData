@@ -1,13 +1,13 @@
--- bookmark.csv (860 bytes) --
+-- bookmark.csv (914 bytes) --
 ﻿browser,profile,id,name,type,url,folder,created_at
-Firefox,abcd1234.default-release,0,,,https://www.home.firefox.test/,url,2024-03-01T20:00:00Z
-Firefox,abcd1234.default-release,0,Café menu,,https://shop.home.firefox.test/menu,url,2024-03-01T19:00:00Z
-Firefox,abcd1234.default-release,0,Long read <with> & tags,,https://news.home.firefox.test/long-read,url,2024-03-01T18:00:00Z
-Firefox,abcd1234.default-release,0,Docs,,https://docs.home.firefox.test/,url,2024-03-01T17:00:00Z
-Firefox,wxyz5678.work,0,,,https://www.work.firefox.test/,url,2024-06-01T20:00:00Z
-Firefox,wxyz5678.work,0,Café menu,,https://shop.work.firefox.test/menu,url,2024-06-01T19:00:00Z
-Firefox,wxyz5678.work,0,Long read <with> & tags,,https://news.work.firefox.test/long-read,url,2024-06-01T18:00:00Z
-Firefox,wxyz5678.work,0,Docs,,https://docs.work.firefox.test/,url,2024-06-01T17:00:00Z
+Firefox,abcd1234.default-release,12,,url,https://www.home.firefox.test/,unfiled,2024-03-01T20:00:00Z
+Firefox,abcd1234.default-release,11,Café menu,url,https://shop.home.firefox.test/menu,menu,2024-03-01T19:00:00Z
+Firefox,abcd1234.default-release,9,Long read <with> & tags,url,https://news.home.firefox.test/long-read,Reading,2024-03-01T18:00:00Z
+Firefox,abcd1234.default-release,7,Docs,url,https://docs.home.firefox.test/,toolbar,2024-03-01T17:00:00Z
+Firefox,wxyz5678.work,12,,url,https://www.work.firefox.test/,unfiled,2024-06-01T20:00:00Z
+Firefox,wxyz5678.work,11,Café menu,url,https://shop.work.firefox.test/menu,menu,2024-06-01T19:00:00Z
+Firefox,wxyz5678.work,9,Long read <with> & tags,url,https://news.work.firefox.test/long-read,Reading,2024-06-01T18:00:00Z
+Firefox,wxyz5678.work,7,Docs,url,https://docs.work.firefox.test/,toolbar,2024-06-01T17:00:00Z
 -- cookie.csv (1211 bytes) --
 ﻿browser,profile,host,path,name,value,is_secure,is_http_only,has_expire,is_persistent,expire_at,created_at,same_site
 Firefox,abcd1234.default-release,app.home.firefox.test,/,session,ephemeral,true,true,false,false,,2024-03-01T09:40:00Z,unspecified

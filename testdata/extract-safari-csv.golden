@@ -1,11 +1,11 @@
 -- bookmark.csv (566 bytes) --
 ﻿browser,profile,id,name,type,url,folder,created_at
-Safari,default,0,Docs,bookmark,https://docs.home.safari.test/,BookmarksBar,
-Safari,default,0,Long read <with> & tags,bookmark,https://news.home.safari.test/long-read,Reading,
-Safari,default,2,Home,bookmark,https://www.home.safari.test/,BookmarksBar,
-Safari,default,0,Café menu,bookmark,https://shop.home.safari.test/menu,BookmarksMenu,
-Safari,default,0,Saved post,bookmark,https://blog.home.safari.test/post,ReadingList,
-Safari,default,1,Untitled entry,bookmark,https://blog.home.safari.test/draft,ReadingList,
+Safari,default,1,Docs,bookmark,https://docs.home.safari.test/,BookmarksBar,
+Safari,default,2,Long read <with> & tags,bookmark,https://news.home.safari.test/long-read,Reading,
+Safari,default,3,Home,bookmark,https://www.home.safari.test/,BookmarksBar,
+Safari,default,4,Café menu,bookmark,https://shop.home.safari.test/menu,BookmarksMenu,
+Safari,default,5,Saved post,bookmark,https://blog.home.safari.test/post,ReadingList,
+Safari,default,6,Untitled entry,bookmark,https://blog.home.safari.test/draft,ReadingList,
 -- cookie.csv (831 bytes) --
 ﻿browser,profile,host,path,name,value,is_secure,is_http_only,has_expire,is_persistent,expire_at,created_at,same_site
 Safari,default,app.home.safari.test,/,csrf,token-123,false,true,true,true,2024-03-02T09:00:00Z,2024-03-01T09:40:00Z,

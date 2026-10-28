@@ -47,9 +47,10 @@ func extractBookmarks(path string, out browser.Collector) error {
 	return nil
 }
 
-// walkBookmarks recursively traverses the bookmark tree, collecting leaf entries.
+// walkBookmarks collects the leaves in tree order. A leaf's ID is its position among them, counting from 1, because
+// the plist stores no number and an index within one folder repeats across folders.
 func walkBookmarks(nodes []safariBookmark, folder string, out *[]record.Bookmark) {
-	for i, node := range nodes {
+	for _, node := range nodes {
 		switch node.Type {
 		case bookmarkTypeLeaf:
 			title := node.URIDictionary.Title
@@ -60,7 +61,7 @@ func walkBookmarks(nodes []safariBookmark, folder string, out *[]record.Bookmark
 				continue
 			}
 			*out = append(*out, record.Bookmark{
-				ID:        int64(i),
+				ID:        int64(len(*out) + 1),
 				Name:      title,
 				URL:       node.URLString,
 				Folder:    folder,
