@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 func setupMozBookmarkDB(t *testing.T) string {
@@ -20,7 +22,9 @@ func setupMozBookmarkDB(t *testing.T) string {
 func TestExtractBookmarks(t *testing.T) {
 	path := setupMozBookmarkDB(t)
 
-	got, err := extractBookmarks(path)
+	var out testCollector
+	err := extractBookmarks(path, &out)
+	got := collected[record.Bookmark](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -32,20 +36,4 @@ func TestExtractBookmarks(t *testing.T) {
 	assert.Equal(t, "https://github.com", got[1].URL)
 	assert.Equal(t, "url", got[1].Folder) // type=1 → "url"
 	assert.False(t, got[1].CreatedAt.IsZero())
-}
-
-func TestCountBookmarks(t *testing.T) {
-	path := setupMozBookmarkDB(t)
-
-	count, err := countBookmarks(path)
-	require.NoError(t, err)
-	assert.Equal(t, 2, count)
-}
-
-func TestCountBookmarks_Empty(t *testing.T) {
-	path := createTestDB(t, "places.sqlite", []string{mozPlacesSchema, mozBookmarksSchema})
-
-	count, err := countBookmarks(path)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count)
 }

@@ -54,6 +54,7 @@ Leaves first, bottom-up along the dependency arrows ([RFC-002](002-package-layou
 
 - Port the Firefox and Safari bases one category at a time, each with a `testdata/` fixture and golden.
 - Land the remaining listed output fixes here — Firefox bookmark fields and Safari bookmark IDs — each with its regression test and as an expected diff in the parity suite.
+- With the Firefox base, a profile whose key cannot be recovered exports its logins instead of stopping the run ([RFC-008](008-output-and-export.md)); the goldens do not change.
 
 ### Phase 7 — Switch over
 

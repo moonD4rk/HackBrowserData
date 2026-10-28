@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 func setupMozHistoryDB(t *testing.T) string {
@@ -19,7 +21,9 @@ func setupMozHistoryDB(t *testing.T) string {
 func TestExtractHistories(t *testing.T) {
 	path := setupMozHistoryDB(t)
 
-	got, err := extractHistories(path)
+	var out testCollector
+	err := extractHistories(path, &out)
+	got := collected[record.History](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 3)
 
@@ -34,22 +38,6 @@ func TestExtractHistories(t *testing.T) {
 	assert.False(t, got[1].LastVisit.IsZero())
 }
 
-func TestCountHistories(t *testing.T) {
-	path := setupMozHistoryDB(t)
-
-	count, err := countHistories(path)
-	require.NoError(t, err)
-	assert.Equal(t, 3, count)
-}
-
-func TestCountHistories_Empty(t *testing.T) {
-	path := createTestDB(t, "places.sqlite", []string{mozPlacesSchema})
-
-	count, err := countHistories(path)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count)
-}
-
 func TestExtractHistories_NullFields(t *testing.T) {
 	path := createTestDB(t, "places.sqlite", []string{mozPlacesSchema},
 		// last_visit_date=NULL, title=NULL — COALESCE should handle
@@ -57,7 +45,9 @@ func TestExtractHistories_NullFields(t *testing.T) {
 		 VALUES (1, 'https://null.test', 1, '', 'g1', 0)`,
 	)
 
-	got, err := extractHistories(path)
+	var out testCollector
+	err := extractHistories(path, &out)
+	got := collected[record.History](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, "https://null.test", got[0].URL)

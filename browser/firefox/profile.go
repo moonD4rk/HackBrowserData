@@ -1,15 +1,22 @@
 package firefox
 
 import (
-	"fmt"
+	"context"
+	"os"
 	"path/filepath"
 
 	"github.com/moond4rk/hackbrowserdata/filemanager"
+	ibrowser "github.com/moond4rk/hackbrowserdata/internal/browser"
+	ifirefox "github.com/moond4rk/hackbrowserdata/internal/browser/firefox"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
+	"github.com/moond4rk/hackbrowserdata/internal/record"
+	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 	"github.com/moond4rk/hackbrowserdata/types"
-	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
+
+// snapshotDirID names the one user data dir in a profile's private snapshot, whose root is the profile dir itself.
+const snapshotDirID = "profile"
 
 // profile is one Firefox profile — the leaf extraction unit. Unlike Chromium,
 // each Firefox profile owns its own master key (derived from its key4.db).
@@ -28,33 +35,96 @@ func (p *profile) name() string {
 
 func (p *profile) label() string { return p.browserName + "/" + p.name() }
 
-// extract copies the profile's source files to a temp directory, derives the
-// per-profile master key, and extracts the requested categories.
+// extract captures the profile's sources into a private snapshot and runs the Firefox base's extractors on it.
 func (p *profile) extract(categories []category.Category) *types.BrowserData {
-	session, err := filemanager.NewSession()
-	if err != nil {
-		log.Debugf("new session for %s: %v", p.label(), err)
-		return &types.BrowserData{}
-	}
-	defer session.Cleanup()
-
-	tempPaths := p.acquireFiles(session, categories)
-
-	masterKey, err := p.getMasterKey(session, tempPaths)
-	if err != nil {
-		log.Debugf("get master key for %s: %v", p.label(), err)
-	}
-
 	data := &types.BrowserData{}
+	d, err := snapshot.Temp()
+	if err != nil {
+		log.Debugf("new snapshot for %s: %v", p.label(), err)
+		return data
+	}
+	defer func() {
+		if err := d.Close(); err != nil {
+			log.Debugf("remove snapshot for %s: %v", p.label(), err)
+		}
+	}()
+
+	extractors := ifirefox.Extractors(ibrowser.UserDataDir{}, ibrowser.Profile{})
+	ctx := context.Background()
+	if err := d.Capture(ctx, p.snapshotFiles(extractors, categories)); err != nil {
+		log.Debugf("capture %s: %v", p.label(), err)
+		return data
+	}
+	ps := ibrowser.NewProfileSnapshot(d.Snapshot(snapshotDirID), ibrowser.Profile{Name: p.name()}, nil)
+	out := &dataCollector{data: data, label: p.label()}
 	for _, cat := range categories {
-		path, ok := tempPaths[cat]
-		if !ok {
+		ex, ok := extractors[cat]
+		if _, found := p.sourcePaths[cat]; !ok || !found {
 			continue
 		}
-		p.extractCategory(data, cat, masterKey, path)
+		if err := ex.Extract(ctx, ps, out); err != nil {
+			log.Debugf("extract %s for %s: %v", cat, p.label(), err)
+		}
 	}
 	return data
 }
+
+// snapshotFiles lists, once each, the first candidate on disk of every source the categories read.
+func (p *profile) snapshotFiles(extractors ibrowser.Extractors, categories []category.Category) []snapshot.File {
+	var files []snapshot.File
+	seen := make(map[string]bool)
+	for _, cat := range categories {
+		if _, found := p.sourcePaths[cat]; !found {
+			continue
+		}
+		for _, src := range extractors[cat].Sources {
+			rel, ok := firstOnDisk(p.profileDir, src)
+			if !ok || seen[rel] {
+				continue
+			}
+			seen[rel] = true
+			files = append(files, snapshot.File{DirID: snapshotDirID, From: p.profileDir, Rel: rel, IsDir: src.IsDir})
+		}
+	}
+	return files
+}
+
+func firstOnDisk(dir string, src ibrowser.Source) (string, bool) {
+	for _, rel := range src.Paths {
+		info, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel)))
+		if err == nil && info.IsDir() == src.IsDir {
+			return rel, true
+		}
+	}
+	return "", false
+}
+
+// dataCollector files the records the Firefox base hands back into today's per-category slices.
+type dataCollector struct {
+	data  *types.BrowserData
+	label string
+}
+
+func (c *dataCollector) Add(r record.Record) {
+	switch v := r.(type) {
+	case *record.Login:
+		c.data.Passwords = append(c.data.Passwords, *v)
+	case *record.Cookie:
+		c.data.Cookies = append(c.data.Cookies, *v)
+	case *record.Bookmark:
+		c.data.Bookmarks = append(c.data.Bookmarks, *v)
+	case *record.History:
+		c.data.Histories = append(c.data.Histories, *v)
+	case *record.Download:
+		c.data.Downloads = append(c.data.Downloads, *v)
+	case *record.Extension:
+		c.data.Extensions = append(c.data.Extensions, *v)
+	case *record.LocalStorage:
+		c.data.LocalStorage = append(c.data.LocalStorage, *v)
+	}
+}
+
+func (c *dataCollector) Fail(err error) { log.Debugf("%s: %v", c.label, err) }
 
 func (p *profile) count(categories []category.Category) map[category.Category]int {
 	session, err := filemanager.NewSession()
@@ -91,51 +161,6 @@ func (p *profile) acquireFiles(session *filemanager.Session, categories []catego
 		tempPaths[cat] = dst
 	}
 	return tempPaths
-}
-
-// getMasterKey retrieves the Firefox master encryption key from this profile's
-// key4.db. The key is derived via NSS ASN1 PBE decryption (platform-agnostic).
-// If logins.json was already acquired by acquireFiles, the derived key is
-// validated by attempting to decrypt an actual login entry.
-func (p *profile) getMasterKey(session *filemanager.Session, tempPaths map[category.Category]string) ([]byte, error) {
-	key4Src := filepath.Join(p.profileDir, "key4.db")
-	if !fileutil.FileExists(key4Src) {
-		return nil, nil
-	}
-	key4Dst := filepath.Join(session.TempDir(), "key4.db")
-	if err := session.Acquire(key4Src, key4Dst, false); err != nil {
-		return nil, fmt.Errorf("acquire key4.db: %w", err)
-	}
-
-	// logins.json is already acquired by acquireFiles as the Password source;
-	// reuse it for master key validation if available.
-	loginsPath := tempPaths[category.Password]
-	return retrieveMasterKey(key4Dst, loginsPath)
-}
-
-func (p *profile) extractCategory(data *types.BrowserData, cat category.Category, masterKey []byte, path string) {
-	var err error
-	switch cat {
-	case category.Password:
-		data.Passwords, err = extractPasswords(masterKey, path)
-	case category.Cookie:
-		data.Cookies, err = extractCookies(path)
-	case category.History:
-		data.Histories, err = extractHistories(path)
-	case category.Download:
-		data.Downloads, err = extractDownloads(path)
-	case category.Bookmark:
-		data.Bookmarks, err = extractBookmarks(path)
-	case category.Extension:
-		data.Extensions, err = extractExtensions(path)
-	case category.LocalStorage:
-		data.LocalStorage, err = extractLocalStorage(path)
-	case category.CreditCard, category.SessionStorage:
-		// Firefox does not support CreditCard or SessionStorage extraction.
-	}
-	if err != nil {
-		log.Debugf("extract %s for %s: %v", cat, p.label(), err)
-	}
 }
 
 func (p *profile) countCategory(cat category.Category, path string) int {

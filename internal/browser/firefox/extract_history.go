@@ -3,18 +3,16 @@ package firefox
 import (
 	"database/sql"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 )
 
-const (
-	firefoxHistoryQuery = `SELECT url, COALESCE(last_visit_date, 0),
-		COALESCE(title, ''), visit_count FROM moz_places`
-	firefoxCountHistoryQuery = `SELECT COUNT(*) FROM moz_places`
-)
+const firefoxHistoryQuery = `SELECT url, COALESCE(last_visit_date, 0),
+	COALESCE(title, ''), visit_count FROM moz_places`
 
-func extractHistories(path string) ([]record.History, error) {
+func extractHistories(path string, out browser.Collector) error {
 	histories, err := sqlitex.QueryRows(path, true, firefoxHistoryQuery,
 		func(rows *sql.Rows) (record.History, error) {
 			var url, title string
@@ -31,11 +29,8 @@ func extractHistories(path string) ([]record.History, error) {
 			}, nil
 		})
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return histories, nil
-}
-
-func countHistories(path string) (int, error) {
-	return sqlitex.CountRows(path, true, firefoxCountHistoryQuery)
+	emit(out, histories)
+	return nil
 }

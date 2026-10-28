@@ -1,8 +1,6 @@
 package firefox
 
 import (
-	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -75,36 +73,6 @@ func (b *Browser) CountEntries(categories []category.Category) ([]types.CountRes
 		})
 	}
 	return results, nil
-}
-
-// retrieveMasterKey reads key4.db and derives the master key using NSS.
-// If loginsPath is non-empty, the derived key is validated against actual
-// login data to ensure the correct candidate is selected.
-func retrieveMasterKey(key4Path, loginsPath string) ([]byte, error) {
-	k4, err := readKey4DB(key4Path)
-	if err != nil {
-		return nil, err
-	}
-
-	keys, err := k4.deriveKeys()
-	if err != nil {
-		return nil, err
-	}
-	if len(keys) == 0 {
-		return nil, errors.New("no valid master key candidates in key4.db")
-	}
-
-	// No logins to validate against — return the first derived key.
-	if loginsPath == "" {
-		return keys[0], nil
-	}
-
-	// Validate against actual login data.
-	if key := validateKeyWithLogins(keys, loginsPath); key != nil {
-		return key, nil
-	}
-
-	return nil, fmt.Errorf("derived %d key(s) but none could decrypt logins", len(keys))
 }
 
 // resolvedPath holds the absolute path and type for a discovered source.

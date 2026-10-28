@@ -3,18 +3,16 @@ package firefox
 import (
 	"database/sql"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 )
 
-const (
-	firefoxCookieQuery = `SELECT name, value, host, path,
-		creationTime, expiry, isSecure, isHttpOnly, sameSite FROM moz_cookies`
-	firefoxCountCookieQuery = `SELECT COUNT(*) FROM moz_cookies`
-)
+const firefoxCookieQuery = `SELECT name, value, host, path,
+	creationTime, expiry, isSecure, isHttpOnly, sameSite FROM moz_cookies`
 
-func extractCookies(path string) ([]record.Cookie, error) {
+func extractCookies(path string, out browser.Collector) error {
 	cookies, err := sqlitex.QueryRows(path, true, firefoxCookieQuery,
 		func(rows *sql.Rows) (record.Cookie, error) {
 			var (
@@ -54,11 +52,8 @@ func extractCookies(path string) ([]record.Cookie, error) {
 			}, nil
 		})
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return cookies, nil
-}
-
-func countCookies(path string) (int, error) {
-	return sqlitex.CountRows(path, true, firefoxCountCookieQuery)
+	emit(out, cookies)
+	return nil
 }

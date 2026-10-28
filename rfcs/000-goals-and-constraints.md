@@ -43,7 +43,7 @@ The rewrite is invisible from the outside. Every item below behaves exactly as i
 | Archive           | zip layout `<browser-key>/<User Data layout>`, readable by v1.1.0 `restore`                                                           |
 | Exit status       | `0` when the run completes (including partial results and "no browsers found"); `1` when it cannot start or finish                    |
 
-Not part of the contract: log lines and the human-readable summary on stderr, and row order where today's order is unspecified or wrong. Output may change only for listed bug fixes where today's output is wrong — Firefox history order, Firefox bookmark fields, Safari bookmark IDs, the `browser` value `restore` stamps, and CocCoc cookies on a Windows machine that also has Yandex ([RFC-008](008-output-and-export.md)); each is called out where it is fixed.
+Not part of the contract: log lines and the human-readable summary on stderr, and row order where today's order is unspecified or wrong. Output may change only for listed bug fixes where today's output is wrong — Firefox history order, Firefox bookmark fields, Safari bookmark IDs, Firefox logins from a profile whose key cannot be recovered, the `browser` value `restore` stamps, and CocCoc cookies on a Windows machine that also has Yandex ([RFC-008](008-output-and-export.md)); each is called out where it is fixed.
 
 ## Hard constraints
 

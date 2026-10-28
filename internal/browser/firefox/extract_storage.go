@@ -5,17 +5,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 )
 
-const (
-	firefoxLocalStorageQuery      = `SELECT originKey, key, value FROM webappsstore2`
-	firefoxCountLocalStorageQuery = `SELECT COUNT(*) FROM webappsstore2`
-)
+const firefoxLocalStorageQuery = `SELECT originKey, key, value FROM webappsstore2`
 
-func extractLocalStorage(path string) ([]record.LocalStorage, error) {
-	return sqlitex.QueryRows(path, true, firefoxLocalStorageQuery,
+func extractLocalStorage(path string, out browser.Collector) error {
+	entries, err := sqlitex.QueryRows(path, true, firefoxLocalStorageQuery,
 		func(rows *sql.Rows) (record.LocalStorage, error) {
 			var originKey, key, value string
 			if err := rows.Scan(&originKey, &key, &value); err != nil {
@@ -27,10 +25,11 @@ func extractLocalStorage(path string) ([]record.LocalStorage, error) {
 				Value: value,
 			}, nil
 		})
-}
-
-func countLocalStorage(path string) (int, error) {
-	return sqlitex.CountRows(path, true, firefoxCountLocalStorageQuery)
+	if err != nil {
+		return err
+	}
+	emit(out, entries)
+	return nil
 }
 
 func reverseString(s string) string {

@@ -10,5 +10,6 @@ var (
 	errInvalidPadding   = errors.New("invalid PKCS5 padding")
 	errInvalidNonceLen  = errors.New("nonce length must equal GCM nonce size")
 	errUnsupportedIVLen = errors.New("unsupported IV length")
+	errShortKey         = errors.New("key is shorter than the cipher needs")
 	errDecodeASN1       = errors.New("failed to decode ASN1 data")
 )

@@ -5,13 +5,14 @@ import (
 
 	"github.com/tidwall/gjson"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-func extractExtensions(path string) ([]record.Extension, error) {
+func extractExtensions(path string, out browser.Collector) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var extensions []record.Extension
@@ -31,21 +32,6 @@ func extractExtensions(path string) ([]record.Extension, error) {
 			Enabled:     v.Get("active").Bool(),
 		})
 	}
-
-	return extensions, nil
-}
-
-func countExtensions(path string) (int, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return 0, err
-	}
-
-	var count int
-	for _, v := range gjson.GetBytes(data, "addons").Array() {
-		if v.Get("location").String() == "app-profile" {
-			count++
-		}
-	}
-	return count, nil
+	emit(out, extensions)
+	return nil
 }

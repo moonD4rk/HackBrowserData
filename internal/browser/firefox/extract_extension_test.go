@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 func setupMozExtensionJSON(t *testing.T) string {
@@ -44,7 +46,9 @@ func setupMozExtensionJSON(t *testing.T) string {
 func TestExtractExtensions(t *testing.T) {
 	path := setupMozExtensionJSON(t)
 
-	got, err := extractExtensions(path)
+	var out testCollector
+	err := extractExtensions(path, &out)
+	got := collected[record.Extension](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2) // system addon filtered out
 
@@ -59,25 +63,11 @@ func TestExtractExtensions(t *testing.T) {
 	assert.False(t, ids["system@mozilla.org"])
 }
 
-func TestCountExtensions(t *testing.T) {
-	path := setupMozExtensionJSON(t)
-
-	count, err := countExtensions(path)
-	require.NoError(t, err)
-	assert.Equal(t, 2, count) // system addon filtered out
-}
-
-func TestCountExtensions_Empty(t *testing.T) {
-	path := createTestJSON(t, "extensions.json", `{"addons": []}`)
-
-	count, err := countExtensions(path)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count)
-}
-
 func TestExtractExtensions_EmptyAddons(t *testing.T) {
 	path := createTestJSON(t, "extensions.json", `{"addons": []}`)
-	got, err := extractExtensions(path)
+	var out testCollector
+	err := extractExtensions(path, &out)
+	got := collected[record.Extension](t, &out)
 	require.NoError(t, err)
 	assert.Empty(t, got)
 }
