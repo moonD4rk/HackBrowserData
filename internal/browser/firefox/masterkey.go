@@ -15,6 +15,28 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
+// retrieveMasterKey derives the key candidates in key4.db and returns the one that opens the logins in loginsPath.
+func retrieveMasterKey(key4Path, loginsPath string) ([]byte, error) {
+	k4, err := readKey4DB(key4Path)
+	if err != nil {
+		return nil, err
+	}
+
+	keys, err := k4.deriveKeys()
+	if err != nil {
+		return nil, err
+	}
+	if len(keys) == 0 {
+		return nil, errors.New("no valid master key candidates in key4.db")
+	}
+
+	if key := validateKeyWithLogins(keys, loginsPath); key != nil {
+		return key, nil
+	}
+
+	return nil, fmt.Errorf("derived %d key(s) but none could decrypt logins", len(keys))
+}
+
 // key4DB holds the parsed contents of Firefox's key4.db NSS key storage.
 //
 // Firefox stores the master encryption key in key4.db using two SQLite tables:

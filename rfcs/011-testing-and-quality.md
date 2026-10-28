@@ -40,6 +40,7 @@ Each bug designed out by this rewrite gets a test that would have caught it, so 
 - **Firefox bookmark fields** (`folder` always `url`, `type` empty, `id` 0): golden assertions on a fixture with nested folders.
 - **Firefox history order**: `visit_count` descending for every browser, Firefox included.
 - **Safari bookmark IDs**: unique across the whole tree, not repeated per folder.
+- **Firefox without a key**: a profile with no `key4.db` still exports its logins with empty secrets, the extraction is `partial`, and the run goes on; a missing key makes decryption fail instead of panicking.
 - **Arc multi-dir**: two `arc` user data dirs yield IDs `arc` and `arc-2`, distinct snapshots, and distinct `keys.json` vaults, while overrides and the vaults' `browser` key still use `arc`.
 - **`--zip` data loss**: a failing zip write leaves every output file in place.
 - **Late flag validation**: `-f bogus` exits `1` with no discovery call and no password resolution (both injected as spies).

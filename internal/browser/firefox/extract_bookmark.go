@@ -3,19 +3,16 @@ package firefox
 import (
 	"database/sql"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 )
 
-const (
-	firefoxBookmarkQuery = `SELECT id, url, type, dateAdded, COALESCE(title, '')
-		FROM (SELECT * FROM moz_bookmarks INNER JOIN moz_places ON moz_bookmarks.fk=moz_places.id)`
-	firefoxCountBookmarkQuery = `SELECT COUNT(*) FROM moz_bookmarks
-		INNER JOIN moz_places ON moz_bookmarks.fk=moz_places.id`
-)
+const firefoxBookmarkQuery = `SELECT id, url, type, dateAdded, COALESCE(title, '')
+	FROM (SELECT * FROM moz_bookmarks INNER JOIN moz_places ON moz_bookmarks.fk=moz_places.id)`
 
-func extractBookmarks(path string) ([]record.Bookmark, error) {
+func extractBookmarks(path string, out browser.Collector) error {
 	bookmarks, err := sqlitex.QueryRows(path, true, firefoxBookmarkQuery,
 		func(rows *sql.Rows) (record.Bookmark, error) {
 			var id, dateAdded int64
@@ -32,9 +29,10 @@ func extractBookmarks(path string) ([]record.Bookmark, error) {
 			}, nil
 		})
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return bookmarks, nil
+	emit(out, bookmarks)
+	return nil
 }
 
 func bookmarkType(bt int64) string {
@@ -44,8 +42,4 @@ func bookmarkType(bt int64) string {
 	default:
 		return "folder"
 	}
-}
-
-func countBookmarks(path string) (int, error) {
-	return sqlitex.CountRows(path, true, firefoxCountBookmarkQuery)
 }

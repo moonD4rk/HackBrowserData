@@ -30,6 +30,17 @@ func TestPipelineGolden(t *testing.T) {
 	})
 }
 
+func TestPipelineGoldenFirefox(t *testing.T) {
+	home := t.TempDir()
+	def, ok := ibrowser.Lookup("firefox")
+	require.True(t, ok)
+	firefoxFixtureUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])))
+
+	assertExtractGoldens(t, "extract-firefox", func(t *testing.T, format string) string {
+		return pipelineGoldenRun(t, home, nil, format)
+	})
+}
+
 func pipelineGoldenRun(t *testing.T, home string, keys map[ibrowser.DirID]masterkey.Set, format string) string {
 	t.Helper()
 	out := t.TempDir()

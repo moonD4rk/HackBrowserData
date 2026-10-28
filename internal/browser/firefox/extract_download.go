@@ -6,22 +6,17 @@ import (
 
 	"github.com/tidwall/gjson"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 )
 
-const (
-	firefoxDownloadQuery = `SELECT place_id, GROUP_CONCAT(content), url, dateAdded
-		FROM (SELECT * FROM moz_annos INNER JOIN moz_places ON moz_annos.place_id=moz_places.id)
-		t GROUP BY place_id`
-	firefoxCountDownloadQuery = `SELECT COUNT(*) FROM
-		(SELECT place_id FROM moz_annos
-			INNER JOIN moz_places ON moz_annos.place_id=moz_places.id
-		GROUP BY place_id)`
-)
+const firefoxDownloadQuery = `SELECT place_id, GROUP_CONCAT(content), url, dateAdded
+	FROM (SELECT * FROM moz_annos INNER JOIN moz_places ON moz_annos.place_id=moz_places.id)
+	t GROUP BY place_id`
 
-func extractDownloads(path string) ([]record.Download, error) {
+func extractDownloads(path string, out browser.Collector) error {
 	downloads, err := sqlitex.QueryRows(path, true, firefoxDownloadQuery,
 		func(rows *sql.Rows) (record.Download, error) {
 			var placeID, dateAdded int64
@@ -50,11 +45,8 @@ func extractDownloads(path string) ([]record.Download, error) {
 			return entry, nil
 		})
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return downloads, nil
-}
-
-func countDownloads(path string) (int, error) {
-	return sqlitex.CountRows(path, true, firefoxCountDownloadQuery)
+	emit(out, downloads)
+	return nil
 }

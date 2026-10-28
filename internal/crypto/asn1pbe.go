@@ -188,6 +188,9 @@ func (l credentialPBE) Decrypt(masterKey []byte) ([]byte, error) {
 	// The cipher is inferred from IV length (avoids fragile OID checks):
 	switch len(iv) {
 	case des.BlockSize: // 8: 3DES-CBC (legacy Firefox)
+		if len(key) < des3KeySize {
+			return nil, errShortKey
+		}
 		return DES3Decrypt(key[:des3KeySize], iv, l.Encrypted)
 	case aes.BlockSize: // 16: AES-256-CBC (Firefox 144+)
 		return AESCBCDecrypt(key, iv, l.Encrypted)
@@ -200,6 +203,9 @@ func (l credentialPBE) Encrypt(masterKey, plaintext []byte) ([]byte, error) {
 	key, iv := l.deriveKeyAndIV(masterKey)
 	switch len(iv) {
 	case des.BlockSize:
+		if len(key) < des3KeySize {
+			return nil, errShortKey
+		}
 		return DES3Encrypt(key[:des3KeySize], iv, plaintext)
 	case aes.BlockSize:
 		return AESCBCEncrypt(key, iv, plaintext)

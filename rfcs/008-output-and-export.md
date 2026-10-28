@@ -71,6 +71,7 @@ Extractors emit records one at a time ([RFC-003](003-core-types.md)), but sortin
 - **Firefox history order** — `visit_count` descending, like Chromium and Safari.
 - **Firefox bookmarks** — `folder` holds the real folder name instead of `url`, and `type` and `id` are filled; today they are always `url`, empty, and `0`.
 - **Safari bookmark IDs** — unique across the whole bookmark tree; today each ID is the index among its siblings, so IDs repeat across folders.
+- **Firefox logins without a key** — when a profile's key cannot be recovered (no `key4.db`, or a primary password is set), its logins are exported with empty usernames and passwords and the extraction is `partial`; today the run panics as soon as one of those logins uses the legacy cipher.
 - **`browser` in `restore` output** — the display name (`Chrome`), as `dump` writes it; today `restore` writes the vault key (`chrome`).
 - **CocCoc cookies beside Yandex** — on Windows, ABE looks for a browser's program in its own install locations before registry App Paths. CocCoc and Yandex both ship `browser.exe`, and App Paths names only one of them, so today CocCoc's key is requested from Yandex's program and its `v20` cookies export with empty values.
 

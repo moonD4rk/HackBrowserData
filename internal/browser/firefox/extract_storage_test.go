@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 func setupWebappsDB(t *testing.T) string {
@@ -19,7 +21,9 @@ func setupWebappsDB(t *testing.T) string {
 func TestExtractLocalStorage(t *testing.T) {
 	path := setupWebappsDB(t)
 
-	got, err := extractLocalStorage(path)
+	var out testCollector
+	err := extractLocalStorage(path, &out)
+	got := collected[record.LocalStorage](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 3)
 
@@ -31,22 +35,6 @@ func TestExtractLocalStorage(t *testing.T) {
 	assert.Equal(t, "dark", byKey["https://github.com:443/theme"])
 	assert.Equal(t, "en", byKey["https://github.com:443/lang"])
 	assert.Equal(t, "abc123", byKey["http://example.com:8080/token"])
-}
-
-func TestCountLocalStorage(t *testing.T) {
-	path := setupWebappsDB(t)
-
-	count, err := countLocalStorage(path)
-	require.NoError(t, err)
-	assert.Equal(t, 3, count)
-}
-
-func TestCountLocalStorage_Empty(t *testing.T) {
-	path := createTestDB(t, "webappsstore.sqlite", []string{webappsstore2Schema})
-
-	count, err := countLocalStorage(path)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count)
 }
 
 func TestParseOriginKey(t *testing.T) {

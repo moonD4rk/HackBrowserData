@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 func setupMozDownloadDB(t *testing.T) string {
@@ -20,7 +22,9 @@ func setupMozDownloadDB(t *testing.T) string {
 func TestExtractDownloads(t *testing.T) {
 	path := setupMozDownloadDB(t)
 
-	got, err := extractDownloads(path)
+	var out testCollector
+	err := extractDownloads(path, &out)
+	got := collected[record.Download](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -31,20 +35,4 @@ func TestExtractDownloads(t *testing.T) {
 	// Verify field mapping
 	assert.Equal(t, "/tmp/new.pdf", got[1].TargetPath)
 	assert.False(t, got[1].StartTime.IsZero())
-}
-
-func TestCountDownloads(t *testing.T) {
-	path := setupMozDownloadDB(t)
-
-	count, err := countDownloads(path)
-	require.NoError(t, err)
-	assert.Equal(t, 2, count)
-}
-
-func TestCountDownloads_Empty(t *testing.T) {
-	path := createTestDB(t, "places.sqlite", []string{mozPlacesSchema, mozAnnosSchema})
-
-	count, err := countDownloads(path)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count)
 }

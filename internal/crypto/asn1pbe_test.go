@@ -350,3 +350,17 @@ func TestCredentialPBE_UnsupportedIVLength(t *testing.T) {
 	_, err = pbe.Encrypt([]byte("key"), []byte("data"))
 	require.ErrorIs(t, err, errUnsupportedIVLen)
 }
+
+// A profile whose key could not be derived passes a nil key, which must fail instead of panicking.
+func TestCredentialPBE_ShortKey(t *testing.T) {
+	raw, err := hex.DecodeString(credentialPBETestCases[0].RawHexPBE)
+	require.NoError(t, err)
+	pbe, err := NewASN1PBE(raw)
+	require.NoError(t, err)
+	for _, key := range [][]byte{nil, make([]byte, des3KeySize-1)} {
+		_, err := pbe.Decrypt(key)
+		require.ErrorIs(t, err, errShortKey)
+		_, err = pbe.Encrypt(key, pbePlaintext)
+		require.ErrorIs(t, err, errShortKey)
+	}
+}

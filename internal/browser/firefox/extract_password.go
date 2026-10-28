@@ -7,19 +7,11 @@ import (
 
 	"github.com/tidwall/gjson"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/crypto"
-	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 )
-
-func countPasswords(path string) (int, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return 0, err
-	}
-	return len(gjson.GetBytes(data, "logins").Array()), nil
-}
 
 // decryptPBE combines base64 decode + ASN1 PBE parse + decrypt into one call.
 func decryptPBE(encoded string, masterKey []byte) ([]byte, error) {
@@ -38,30 +30,27 @@ func decryptPBE(encoded string, masterKey []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
-func extractPasswords(masterKey []byte, path string) ([]record.Login, error) {
+func extractPasswords(masterKey func() []byte, path string, out browser.Collector) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var logins []record.Login
-	var decryptFails int
-	var lastErr error
 	for _, v := range gjson.GetBytes(data, "logins").Array() {
 		url := v.Get("formSubmitURL").String()
 		if url == "" {
 			url = v.Get("hostname").String()
 		}
 
-		user, err := decryptPBE(v.Get("encryptedUsername").String(), masterKey)
+		key := masterKey()
+		user, err := decryptPBE(v.Get("encryptedUsername").String(), key)
 		if err != nil {
-			decryptFails++
-			lastErr = err
+			out.Fail(fmt.Errorf("decrypt username for %s: %w", url, err))
 		}
-		pwd, err := decryptPBE(v.Get("encryptedPassword").String(), masterKey)
+		pwd, err := decryptPBE(v.Get("encryptedPassword").String(), key)
 		if err != nil {
-			decryptFails++
-			lastErr = err
+			out.Fail(fmt.Errorf("decrypt password for %s: %w", url, err))
 		}
 
 		logins = append(logins, record.Login{
@@ -72,8 +61,6 @@ func extractPasswords(masterKey []byte, path string) ([]record.Login, error) {
 			Store:     record.StoreLocal,
 		})
 	}
-	if decryptFails > 0 {
-		log.Debugf("decrypt firefox login fields: %d failed: %v", decryptFails, lastErr)
-	}
-	return logins, nil
+	emit(out, logins)
+	return nil
 }

@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 func setupMozCookieDB(t *testing.T) string {
@@ -18,7 +20,9 @@ func setupMozCookieDB(t *testing.T) string {
 func TestExtractCookies(t *testing.T) {
 	path := setupMozCookieDB(t)
 
-	got, err := extractCookies(path)
+	var out testCollector
+	err := extractCookies(path, &out)
+	got := collected[record.Cookie](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -37,20 +41,4 @@ func TestExtractCookies(t *testing.T) {
 
 	assert.Equal(t, "abc123", got[0].Value)
 	assert.True(t, got[0].IsHTTPOnly)
-}
-
-func TestCountCookies(t *testing.T) {
-	path := setupMozCookieDB(t)
-
-	count, err := countCookies(path)
-	require.NoError(t, err)
-	assert.Equal(t, 2, count)
-}
-
-func TestCountCookies_Empty(t *testing.T) {
-	path := createTestDB(t, "cookies.sqlite", []string{mozCookiesSchema})
-
-	count, err := countCookies(path)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count)
 }

@@ -173,3 +173,83 @@ func createTestJSON(t *testing.T, name, content string) string {
 	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
 	return path
 }
+
+func setupMozBookmarkDB(t *testing.T) string {
+	t.Helper()
+	return createTestDB(t, "places.sqlite", []string{mozPlacesSchema, mozBookmarksSchema},
+		insertMozPlace(1, "https://go.dev", "Go", 0, 0),
+		insertMozPlace(2, "https://github.com", "GitHub", 0, 0),
+		insertMozBookmark(1, 1, 1, "Go Website", 1700000000000000),
+		insertMozBookmark(2, 2, 1, "GitHub", 1710000000000000),
+	)
+}
+
+func setupMozCookieDB(t *testing.T) string {
+	t.Helper()
+	return createTestDB(t, "cookies.sqlite", []string{mozCookiesSchema},
+		insertMozCookie("session", "abc123", ".example.com", "/", 1700000000000000, 1800000000, 1, 1),
+		insertMozCookie("token", "xyz789", ".new.com", "/api", 1710000000000000, 1810000000, 1, 0),
+	)
+}
+
+func setupMozDownloadDB(t *testing.T) string {
+	t.Helper()
+	return createTestDB(t, "places.sqlite", []string{mozPlacesSchema, mozAnnosSchema},
+		insertMozPlace(1, "https://example.com/old.zip", "Old File", 0, 0),
+		insertMozPlace(2, "https://example.com/new.pdf", "New File", 0, 0),
+		insertMozAnno(1, "/tmp/old.zip", 1700000000000000),
+		insertMozAnno(2, "/tmp/new.pdf", 1710000000000000),
+	)
+}
+
+func setupMozExtensionJSON(t *testing.T) string {
+	t.Helper()
+	return createTestJSON(t, "extensions.json", `{
+		"addons": [
+			{
+				"id": "ublock@gorhill.org",
+				"location": "app-profile",
+				"version": "1.52.0",
+				"active": true,
+				"defaultLocale": {
+					"name": "uBlock Origin",
+					"description": "An efficient blocker"
+				}
+			},
+			{
+				"id": "system@mozilla.org",
+				"location": "app-system-defaults",
+				"version": "1.0",
+				"defaultLocale": {"name": "System Addon"}
+			},
+			{
+				"id": "bitwarden@bitwarden.com",
+				"location": "app-profile",
+				"version": "2024.1.0",
+				"active": true,
+				"defaultLocale": {
+					"name": "Bitwarden",
+					"description": "Password manager"
+				}
+			}
+		]
+	}`)
+}
+
+func setupMozHistoryDB(t *testing.T) string {
+	t.Helper()
+	return createTestDB(t, "places.sqlite", []string{mozPlacesSchema},
+		insertMozPlace(1, "https://github.com", "GitHub", 100, 1700000000000000),
+		insertMozPlace(2, "https://go.dev", "Go", 50, 1710000000000000),
+		insertMozPlace(3, "https://example.com", "Example", 200, 1690000000000000),
+	)
+}
+
+func setupWebappsDB(t *testing.T) string {
+	t.Helper()
+	return createTestDB(t, "webappsstore.sqlite", []string{webappsstore2Schema},
+		insertWebappsstore("moc.buhtig.:https:443", "theme", "dark"),
+		insertWebappsstore("moc.buhtig.:https:443", "lang", "en"),
+		insertWebappsstore("moc.elpmaxe.:http:8080", "token", "abc123"),
+	)
+}

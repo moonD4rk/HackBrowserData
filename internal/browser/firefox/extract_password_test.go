@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 // These values are from crypto/asn1pbe_test.go loginPBETestCases.
@@ -16,6 +18,8 @@ import (
 const loginPBEHex = "303b0410f8000000000000000000000000000001301506092a864886f70d010503040830313233343536370410fe968b6565149114ea688defd6683e45"
 
 var testGlobalSalt = bytes.Repeat([]byte("moond4rk"), 3) // 24 bytes
+
+func fixedKey(key []byte) func() []byte { return func() []byte { return key } }
 
 func loginPBEBase64(t *testing.T) string {
 	t.Helper()
@@ -42,7 +46,9 @@ func TestExtractPasswords(t *testing.T) {
 
 	path := createTestJSON(t, "logins.json", json)
 
-	got, err := extractPasswords(testGlobalSalt, path)
+	var out testCollector
+	err := extractPasswords(fixedKey(testGlobalSalt), path, &out)
+	got := collected[record.Login](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 
@@ -51,29 +57,6 @@ func TestExtractPasswords(t *testing.T) {
 	assert.Equal(t, "Hello, World!", got[0].Password)
 	assert.Equal(t, "https://example.com/login", got[0].URL)
 	assert.False(t, got[0].CreatedAt.IsZero())
-}
-
-func TestCountPasswords(t *testing.T) {
-	json := `{
-		"logins": [
-			{"hostname": "https://a.com", "encryptedUsername": "", "encryptedPassword": "", "timeCreated": 1000},
-			{"hostname": "https://b.com", "encryptedUsername": "", "encryptedPassword": "", "timeCreated": 2000},
-			{"hostname": "https://c.com", "encryptedUsername": "", "encryptedPassword": "", "timeCreated": 3000}
-		]
-	}`
-	path := createTestJSON(t, "logins.json", json)
-
-	count, err := countPasswords(path)
-	require.NoError(t, err)
-	assert.Equal(t, 3, count)
-}
-
-func TestCountPasswords_Empty(t *testing.T) {
-	path := createTestJSON(t, "logins.json", `{"logins": []}`)
-
-	count, err := countPasswords(path)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count)
 }
 
 func TestExtractPasswords_FormSubmitURLFallback(t *testing.T) {
@@ -94,7 +77,9 @@ func TestExtractPasswords_FormSubmitURLFallback(t *testing.T) {
 
 	path := createTestJSON(t, "logins.json", json)
 
-	got, err := extractPasswords(testGlobalSalt, path)
+	var out testCollector
+	err := extractPasswords(fixedKey(testGlobalSalt), path, &out)
+	got := collected[record.Login](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, "https://fallback.com", got[0].URL)
@@ -115,18 +100,23 @@ func TestExtractPasswords_DecryptFailureKeepsEntry(t *testing.T) {
 
 	path := createTestJSON(t, "logins.json", json)
 
-	got, err := extractPasswords(testGlobalSalt, path)
+	var out testCollector
+	err := extractPasswords(fixedKey(testGlobalSalt), path, &out)
+	got := collected[record.Login](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, "https://bad.com", got[0].URL)
 	assert.Empty(t, got[0].Username) // decrypt failed → empty
 	assert.Empty(t, got[0].Password) // decrypt failed → empty
+	assert.Len(t, out.fails, 2)
 }
 
 func TestExtractPasswords_EmptyLogins(t *testing.T) {
 	path := createTestJSON(t, "logins.json", `{"logins": []}`)
 
-	got, err := extractPasswords(testGlobalSalt, path)
+	var out testCollector
+	err := extractPasswords(fixedKey(testGlobalSalt), path, &out)
+	got := collected[record.Login](t, &out)
 	require.NoError(t, err)
 	assert.Empty(t, got)
 }

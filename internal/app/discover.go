@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/chromium"
+	"github.com/moond4rk/hackbrowserdata/internal/browser/firefox"
 )
 
 // Discovery is what Discover found: the user data dirs, and an error result for each browser whose data could not be
@@ -38,8 +39,10 @@ func discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserData
 	switch def.Base {
 	case browser.Chromium:
 		return chromium.Discover(def, opts)
+	case browser.Firefox:
+		return firefox.Discover(def, opts)
 	default:
-		return nil, nil // Firefox and Safari are not on the pipeline yet
+		return nil, nil // Safari is not on the pipeline yet
 	}
 }
 
@@ -47,6 +50,8 @@ func extractorsOf(dir browser.UserDataDir, p browser.Profile) browser.Extractors
 	switch dir.Def.Base {
 	case browser.Chromium:
 		return chromium.Extractors(dir, p)
+	case browser.Firefox:
+		return firefox.Extractors(dir, p)
 	default:
 		return nil
 	}
