@@ -9,22 +9,27 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 )
 
-const firefoxBookmarkQuery = `SELECT id, url, type, dateAdded, COALESCE(title, '')
-	FROM (SELECT * FROM moz_bookmarks INNER JOIN moz_places ON moz_bookmarks.fk=moz_places.id)`
+// Folders and separators have no place, so the place join keeps only bookmarks; the parent join names their folder.
+const firefoxBookmarkQuery = `SELECT b.id, p.url, b.type, b.dateAdded, COALESCE(b.title, ''), COALESCE(f.title, '')
+	FROM moz_bookmarks b
+	INNER JOIN moz_places p ON b.fk = p.id
+	LEFT JOIN moz_bookmarks f ON b.parent = f.id`
 
 func extractBookmarks(path string, out browser.Collector) error {
 	bookmarks, err := sqlitex.QueryRows(path, true, firefoxBookmarkQuery,
 		func(rows *sql.Rows) (record.Bookmark, error) {
 			var id, dateAdded int64
-			var url, title string
+			var url, title, folder string
 			var bt int64
-			if err := rows.Scan(&id, &url, &bt, &dateAdded, &title); err != nil {
+			if err := rows.Scan(&id, &url, &bt, &dateAdded, &title, &folder); err != nil {
 				return record.Bookmark{}, err
 			}
 			return record.Bookmark{
+				ID:        id,
 				Name:      title,
+				Type:      bookmarkType(bt),
 				URL:       url,
-				Folder:    bookmarkType(bt),
+				Folder:    folder,
 				CreatedAt: timeconv.UnixMicro(dateAdded),
 			}, nil
 		})

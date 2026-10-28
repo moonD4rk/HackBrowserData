@@ -3,7 +3,7 @@
   {
     "browser": "Safari",
     "profile": "default",
-    "id": 0,
+    "id": 1,
     "name": "Docs",
     "type": "bookmark",
     "url": "https://docs.home.safari.test/",
@@ -13,7 +13,7 @@
   {
     "browser": "Safari",
     "profile": "default",
-    "id": 0,
+    "id": 2,
     "name": "Long read \u003cwith\u003e \u0026 tags",
     "type": "bookmark",
     "url": "https://news.home.safari.test/long-read",
@@ -23,7 +23,7 @@
   {
     "browser": "Safari",
     "profile": "default",
-    "id": 2,
+    "id": 3,
     "name": "Home",
     "type": "bookmark",
     "url": "https://www.home.safari.test/",
@@ -33,7 +33,7 @@
   {
     "browser": "Safari",
     "profile": "default",
-    "id": 0,
+    "id": 4,
     "name": "Café menu",
     "type": "bookmark",
     "url": "https://shop.home.safari.test/menu",
@@ -43,7 +43,7 @@
   {
     "browser": "Safari",
     "profile": "default",
-    "id": 0,
+    "id": 5,
     "name": "Saved post",
     "type": "bookmark",
     "url": "https://blog.home.safari.test/post",
@@ -53,7 +53,7 @@
   {
     "browser": "Safari",
     "profile": "default",
-    "id": 1,
+    "id": 6,
     "name": "Untitled entry",
     "type": "bookmark",
     "url": "https://blog.home.safari.test/draft",

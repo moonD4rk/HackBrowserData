@@ -1,83 +1,83 @@
--- bookmark.json (1935 bytes) --
+-- bookmark.json (1989 bytes) --
 [
   {
     "browser": "Firefox",
     "profile": "abcd1234.default-release",
-    "id": 0,
+    "id": 12,
     "name": "",
-    "type": "",
+    "type": "url",
     "url": "https://www.home.firefox.test/",
-    "folder": "url",
+    "folder": "unfiled",
     "created_at": "2024-03-01T20:00:00Z"
   },
   {
     "browser": "Firefox",
     "profile": "abcd1234.default-release",
-    "id": 0,
+    "id": 11,
     "name": "Café menu",
-    "type": "",
+    "type": "url",
     "url": "https://shop.home.firefox.test/menu",
-    "folder": "url",
+    "folder": "menu",
     "created_at": "2024-03-01T19:00:00Z"
   },
   {
     "browser": "Firefox",
     "profile": "abcd1234.default-release",
-    "id": 0,
+    "id": 9,
     "name": "Long read \u003cwith\u003e \u0026 tags",
-    "type": "",
+    "type": "url",
     "url": "https://news.home.firefox.test/long-read",
-    "folder": "url",
+    "folder": "Reading",
     "created_at": "2024-03-01T18:00:00Z"
   },
   {
     "browser": "Firefox",
     "profile": "abcd1234.default-release",
-    "id": 0,
+    "id": 7,
     "name": "Docs",
-    "type": "",
+    "type": "url",
     "url": "https://docs.home.firefox.test/",
-    "folder": "url",
+    "folder": "toolbar",
     "created_at": "2024-03-01T17:00:00Z"
   },
   {
     "browser": "Firefox",
     "profile": "wxyz5678.work",
-    "id": 0,
+    "id": 12,
     "name": "",
-    "type": "",
+    "type": "url",
     "url": "https://www.work.firefox.test/",
-    "folder": "url",
+    "folder": "unfiled",
     "created_at": "2024-06-01T20:00:00Z"
   },
   {
     "browser": "Firefox",
     "profile": "wxyz5678.work",
-    "id": 0,
+    "id": 11,
     "name": "Café menu",
-    "type": "",
+    "type": "url",
     "url": "https://shop.work.firefox.test/menu",
-    "folder": "url",
+    "folder": "menu",
     "created_at": "2024-06-01T19:00:00Z"
   },
   {
     "browser": "Firefox",
     "profile": "wxyz5678.work",
-    "id": 0,
+    "id": 9,
     "name": "Long read \u003cwith\u003e \u0026 tags",
-    "type": "",
+    "type": "url",
     "url": "https://news.work.firefox.test/long-read",
-    "folder": "url",
+    "folder": "Reading",
     "created_at": "2024-06-01T18:00:00Z"
   },
   {
     "browser": "Firefox",
     "profile": "wxyz5678.work",
-    "id": 0,
+    "id": 7,
     "name": "Docs",
-    "type": "",
+    "type": "url",
     "url": "https://docs.work.firefox.test/",
-    "folder": "url",
+    "folder": "toolbar",
     "created_at": "2024-06-01T17:00:00Z"
   }
 ]
