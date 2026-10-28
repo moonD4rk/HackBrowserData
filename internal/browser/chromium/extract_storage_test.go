@@ -2,12 +2,15 @@ package chromium
 
 import (
 	"encoding/binary"
+	"os"
+	"path/filepath"
 	"testing"
 	"unicode/utf16"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
@@ -230,6 +233,40 @@ func TestExtractSessionStorage(t *testing.T) {
 	}
 	assert.Equal(t, "false", byKey["https://github.com//__darkreader__wasEnabledForHost"])
 	assert.Equal(t, "abc123", byKey["https://example.com//token"])
+}
+
+// Opening the copy read-write replays its journal into new files; on Windows that write can fail and lose the profile.
+func TestExtractStorage_LeavesTheCopyUnchanged(t *testing.T) {
+	tests := []struct {
+		name    string
+		setup   func(*testing.T) string
+		extract func(string, browser.Collector) error
+	}{
+		{name: "localstorage", setup: setupLocalStorageLevelDB, extract: extractLocalStorage},
+		{name: "sessionstorage", setup: setupSessionStorageLevelDB, extract: extractSessionStorage},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			dir := tt.setup(t)
+			before := levelDBFiles(t, dir)
+			require.NoError(t, tt.extract(dir, &testCollector{}))
+			assert.Equal(t, before, levelDBFiles(t, dir))
+		})
+	}
+}
+
+func levelDBFiles(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	files := make(map[string]string, len(entries))
+	for _, e := range entries {
+		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		require.NoError(t, err)
+		files[e.Name()] = string(data)
+	}
+	return files
 }
 
 func testEncodeLatin1(s string) []byte {
