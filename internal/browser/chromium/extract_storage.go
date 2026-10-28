@@ -9,6 +9,7 @@ import (
 	"unicode/utf16"
 
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
@@ -27,11 +28,14 @@ const (
 
 const maxLocalStorageValueLength = 2048
 
+// readOnly keeps the open from replaying the journal into new files in the copy, a write that can fail on Windows.
+var readOnly = &opt.Options{ReadOnly: true}
+
 func extractLocalStorage(path string, out browser.Collector) error {
 	if _, err := os.Stat(path); err != nil {
 		return fmt.Errorf("leveldb path %q: %w", path, err)
 	}
-	db, err := leveldb.OpenFile(path, nil)
+	db, err := leveldb.OpenFile(path, readOnly)
 	if err != nil {
 		return err
 	}
@@ -163,7 +167,7 @@ func extractSessionStorage(path string, out browser.Collector) error {
 	if _, err := os.Stat(path); err != nil {
 		return fmt.Errorf("leveldb path %q: %w", path, err)
 	}
-	db, err := leveldb.OpenFile(path, nil)
+	db, err := leveldb.OpenFile(path, readOnly)
 	if err != nil {
 		return err
 	}
