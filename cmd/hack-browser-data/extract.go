@@ -2,8 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
-	"path/filepath"
 
 	"github.com/moond4rk/hackbrowserdata/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
@@ -11,7 +9,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/types"
-	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
 func extractAndWrite(browsers []browser.Browser, categories []category.Category, outputDir, outputFormat string, compress bool) error {
@@ -19,7 +16,7 @@ func extractAndWrite(browsers []browser.Browser, categories []category.Category,
 	if err != nil {
 		return err
 	}
-	w, err := export.NewWriter(outputDir, format)
+	w, err := export.NewWriter(outputDir, format, compress)
 	if err != nil {
 		return err
 	}
@@ -35,16 +32,7 @@ func extractAndWrite(browsers []browser.Browser, categories []category.Category,
 			}
 		}
 	}
-	if err := w.Close(); err != nil {
-		return err
-	}
-	if compress {
-		if err := fileutil.CompressDir(outputDir); err != nil {
-			return fmt.Errorf("compress: %w", err)
-		}
-		log.Infof("Compressed: %s/%s.zip", outputDir, filepath.Base(outputDir))
-	}
-	return nil
+	return w.Close()
 }
 
 // writeResult bridges today's BrowserData to the writer until the pipeline replaces it.

@@ -39,7 +39,7 @@ func Execute(ctx context.Context, p Plan, req Request) (Summary, error) {
 }
 
 func execute(ctx context.Context, p Plan, req Request, extractors extractorsFunc, keys keySource) (Summary, error) {
-	w, err := export.NewWriter(req.Dir, req.Format)
+	w, err := export.NewWriter(req.Dir, req.Format, req.Zip)
 	if err != nil {
 		return Summary{}, err
 	}

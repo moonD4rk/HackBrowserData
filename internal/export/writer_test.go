@@ -1,9 +1,12 @@
 package export
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,7 +62,7 @@ func firefoxExtractions() []extraction {
 
 func writeAll(t *testing.T, dir string, f Format, extractions ...extraction) {
 	t.Helper()
-	w, err := NewWriter(dir, f)
+	w, err := NewWriter(dir, f, false)
 	require.NoError(t, err)
 	for _, e := range extractions {
 		require.NoError(t, w.Write(e.c, e.records))
@@ -94,7 +97,7 @@ func TestFormat_ZeroIsJSON(t *testing.T) {
 
 func TestNewWriter_CreatesDir(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "nested", "results")
-	_, err := NewWriter(dir, JSON)
+	_, err := NewWriter(dir, JSON, false)
 	require.NoError(t, err)
 	assert.DirExists(t, dir)
 }
@@ -302,7 +305,7 @@ func TestWrite_AppendsExtractionsInWriteOrder(t *testing.T) {
 
 func TestWrite_RejectsRecordOfAnotherCategory(t *testing.T) {
 	dir := t.TempDir()
-	w, err := NewWriter(dir, JSON)
+	w, err := NewWriter(dir, JSON, false)
 	require.NoError(t, err)
 	require.EqualError(t, w.Write(category.Cookie, []record.Record{&record.Login{}}), "*record.Login is not a cookie record")
 	require.NoError(t, w.Close())
@@ -315,7 +318,7 @@ func TestWrite_RejectsRecordOfAnotherCategory(t *testing.T) {
 // A failed Write must not cost the files already written: Close still completes them.
 func TestClose_AfterFailedWriteKeepsEarlierFiles(t *testing.T) {
 	dir := t.TempDir()
-	w, err := NewWriter(dir, JSON)
+	w, err := NewWriter(dir, JSON, false)
 	require.NoError(t, err)
 	require.NoError(t, w.Write(category.Password, []record.Record{&record.Login{URL: "https://kept.example"}}))
 
@@ -333,7 +336,97 @@ func TestClose_AfterFailedWriteKeepsEarlierFiles(t *testing.T) {
 	assert.Empty(t, cookies)
 }
 
+// --- --zip ---
+
+func TestClose_ZipReplacesTheFilesWithOneArchive(t *testing.T) {
+	loose := filepath.Join(t.TempDir(), "results")
+	writeAll(t, loose, CSV, chromeExtractions()...)
+
+	dir := filepath.Join(t.TempDir(), "results")
+	require.NoError(t, zipAll(dir, chromeExtractions()...))
+
+	assert.Equal(t, []string{"results.zip"}, dirNames(t, dir))
+	assert.Equal(t, dirFiles(t, loose), zipFiles(t, filepath.Join(dir, "results.zip")))
+}
+
+// The output is the files this run wrote; anything else in the directory is not the writer's to pack or delete.
+func TestClose_ZipLeavesOtherFilesAlone(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "results")
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("mine"), 0o600))
+
+	require.NoError(t, zipAll(dir, chromeExtractions()...))
+	assert.Equal(t, []string{"notes.txt", "results.zip"}, dirNames(t, dir))
+	assert.NotContains(t, zipFiles(t, filepath.Join(dir, "results.zip")), "notes.txt")
+}
+
+func TestClose_ZipFailureKeepsTheFiles(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "results")
+	// A non-empty directory in the zip's place makes the final rename fail on every OS.
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "results.zip", "taken"), 0o755))
+
+	require.Error(t, zipAll(dir, chromeExtractions()...))
+	assert.Equal(t, []string{"cookie.csv", "history.csv", "password.csv", "results.zip"}, dirNames(t, dir))
+}
+
+func TestClose_ZipWithNothingWrittenFails(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "results")
+	require.Error(t, zipAll(dir))
+	assert.Empty(t, dirNames(t, dir))
+}
+
 // --- helpers ---
+
+func zipAll(dir string, extractions ...extraction) error {
+	w, err := NewWriter(dir, CSV, true)
+	if err != nil {
+		return err
+	}
+	for _, e := range extractions {
+		if err := w.Write(e.c, e.records); err != nil {
+			return errors.Join(err, w.Close())
+		}
+	}
+	return w.Close()
+}
+
+func dirNames(t *testing.T, dir string) []string {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	return names
+}
+
+func dirFiles(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	files := make(map[string]string)
+	for _, name := range dirNames(t, dir) {
+		data, err := os.ReadFile(filepath.Join(dir, name))
+		require.NoError(t, err)
+		files[name] = string(data)
+	}
+	return files
+}
+
+func zipFiles(t *testing.T, path string) map[string]string {
+	t.Helper()
+	r, err := zip.OpenReader(path)
+	require.NoError(t, err)
+	defer r.Close()
+	files := make(map[string]string, len(r.File))
+	for _, f := range r.File {
+		rc, err := f.Open()
+		require.NoError(t, err)
+		data, err := io.ReadAll(rc)
+		require.NoError(t, errors.Join(err, rc.Close()))
+		files[f.Name] = string(data)
+	}
+	return files
+}
 
 func readCSV(t *testing.T, path string) [][]string {
 	t.Helper()

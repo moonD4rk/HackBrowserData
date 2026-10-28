@@ -64,7 +64,7 @@ Extractors emit records one at a time ([RFC-003](003-core-types.md)), but sortin
 
 ## `--zip`
 
-`--zip` keeps today's result — `<dir>/<basename(dir)>.zip` with the files at its top level, and the loose files removed — but fixes the order. Today `fileutil.CompressDir` deletes each file as soon as it is added to an in-memory zip and writes the zip to disk last, so any failure along the way loses the output. The rewrite writes the zip to a temp file, closes and renames it into place, and only then deletes the originals; a failure leaves every output file where it was.
+`--zip` keeps today's result — `<dir>/<basename(dir)>.zip` with the files at its top level, and the loose files removed — but fixes the order. Today `fileutil.CompressDir` deletes each file as soon as it is added to an in-memory zip and writes the zip to disk last, so any failure along the way loses the output. The rewrite writes the zip to a temp file, closes and renames it into place, and only then deletes the originals; a failure leaves every output file where it was. It packs only the files the run wrote: today every file in the directory is packed and deleted, whoever wrote it.
 
 ## Output fixes (listed exceptions to "unchanged")
 
