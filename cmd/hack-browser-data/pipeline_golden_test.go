@@ -25,27 +25,9 @@ func TestPipelineGolden(t *testing.T) {
 		keys[ibrowser.DirID(inst.key)] = chromiumFixtureKeys
 	}
 
-	tests := []struct {
-		format       string
-		golden       string
-		jsonFallback bool
-	}{
-		{format: "csv", golden: "extract-csv.golden"},
-		{format: "json", golden: "extract-json.golden"},
-		{format: "cookie-editor", golden: "extract-cookie-editor.golden", jsonFallback: true},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.format, func(t *testing.T) {
-			out := pipelineGoldenRun(t, home, keys, tt.format)
-			got := bundleDir(t, out)
-			if tt.jsonFallback {
-				assertJSONFallback(t, out, pipelineGoldenRun(t, home, keys, "json"))
-				got = bundleFiles(t, out, "cookie.json")
-			}
-			assertGolden(t, tt.golden, got)
-		})
-	}
+	assertExtractGoldens(t, "extract", func(t *testing.T, format string) string {
+		return pipelineGoldenRun(t, home, keys, format)
+	})
 }
 
 func pipelineGoldenRun(t *testing.T, home string, keys map[ibrowser.DirID]masterkey.Set, format string) string {

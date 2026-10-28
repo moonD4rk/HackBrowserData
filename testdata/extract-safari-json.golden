@@ -1,0 +1,334 @@
+-- bookmark.json (1472 bytes) --
+[
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "id": 0,
+    "name": "Docs",
+    "type": "bookmark",
+    "url": "https://docs.home.safari.test/",
+    "folder": "BookmarksBar",
+    "created_at": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "id": 0,
+    "name": "Long read \u003cwith\u003e \u0026 tags",
+    "type": "bookmark",
+    "url": "https://news.home.safari.test/long-read",
+    "folder": "Reading",
+    "created_at": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "id": 2,
+    "name": "Home",
+    "type": "bookmark",
+    "url": "https://www.home.safari.test/",
+    "folder": "BookmarksBar",
+    "created_at": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "id": 0,
+    "name": "Café menu",
+    "type": "bookmark",
+    "url": "https://shop.home.safari.test/menu",
+    "folder": "BookmarksMenu",
+    "created_at": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "id": 0,
+    "name": "Saved post",
+    "type": "bookmark",
+    "url": "https://blog.home.safari.test/post",
+    "folder": "ReadingList",
+    "created_at": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "id": 1,
+    "name": "Untitled entry",
+    "type": "bookmark",
+    "url": "https://blog.home.safari.test/draft",
+    "folder": "ReadingList",
+    "created_at": "0001-01-01T00:00:00Z"
+  }
+]
+-- cookie.json (2191 bytes) --
+[
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "host": "app.home.safari.test",
+    "path": "/",
+    "name": "csrf",
+    "value": "token-123",
+    "is_secure": false,
+    "is_http_only": true,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2024-03-02T09:00:00Z",
+    "created_at": "2024-03-01T09:40:00Z",
+    "same_site": ""
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "host": ".home.safari.test",
+    "path": "/",
+    "name": "tracker",
+    "value": "opt-out",
+    "is_secure": true,
+    "is_http_only": false,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2026-03-01T09:00:00Z",
+    "created_at": "2024-03-01T09:30:00Z",
+    "same_site": ""
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "host": "www.home.safari.test",
+    "path": "/settings",
+    "name": "prefs",
+    "value": "theme=dark",
+    "is_secure": false,
+    "is_http_only": false,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2024-03-31T09:00:00Z",
+    "created_at": "2024-03-01T09:20:00Z",
+    "same_site": ""
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "host": ".home.safari.test",
+    "path": "/",
+    "name": "SID",
+    "value": "sid-home.safari.test",
+    "is_secure": true,
+    "is_http_only": true,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2025-03-01T09:00:00Z",
+    "created_at": "2024-03-01T09:10:00Z",
+    "same_site": ""
+  },
+  {
+    "browser": "Safari",
+    "profile": "Work",
+    "host": "wiki.work.safari.test",
+    "path": "/",
+    "name": "lang",
+    "value": "en",
+    "is_secure": false,
+    "is_http_only": false,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2024-05-30T09:00:00Z",
+    "created_at": "2024-03-01T16:00:00Z",
+    "same_site": ""
+  },
+  {
+    "browser": "Safari",
+    "profile": "Work",
+    "host": ".work.safari.test",
+    "path": "/",
+    "name": "SSO",
+    "value": "sso-work.safari.test",
+    "is_secure": true,
+    "is_http_only": true,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2024-03-08T09:00:00Z",
+    "created_at": "2024-03-01T15:00:00Z",
+    "same_site": ""
+  }
+]
+-- download.json (909 bytes) --
+[
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "url": "https://files.home.safari.test/report.pdf",
+    "target_path": "/Users/alice/Downloads/report.pdf",
+    "mime_type": "",
+    "total_bytes": 52344,
+    "start_time": "0001-01-01T00:00:00Z",
+    "end_time": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "url": "https://files.home.safari.test/archive.tar.gz",
+    "target_path": "/Users/alice/Downloads/archive.tar.gz",
+    "mime_type": "",
+    "total_bytes": 2048,
+    "start_time": "0001-01-01T00:00:00Z",
+    "end_time": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Safari",
+    "profile": "Work",
+    "url": "https://files.work.safari.test/slides.key",
+    "target_path": "/Users/alice/Downloads/slides.key",
+    "mime_type": "",
+    "total_bytes": 1048576,
+    "start_time": "0001-01-01T00:00:00Z",
+    "end_time": "0001-01-01T00:00:00Z"
+  }
+]
+-- extension.json (955 bytes) --
+[
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "name": "com.example.Blocker.Extension",
+    "id": "com.example.Blocker.Extension (FGHIJ67890)",
+    "description": "",
+    "version": "",
+    "homepage_url": "",
+    "enabled": true
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "name": "com.example.Clipper.Extension",
+    "id": "com.example.Clipper.Extension (ABCDE12345)",
+    "description": "",
+    "version": "",
+    "homepage_url": "",
+    "enabled": true
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "name": "com.example.Legacy",
+    "id": "com.example.Legacy",
+    "description": "",
+    "version": "",
+    "homepage_url": "",
+    "enabled": true
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "name": "com.example.Reader.Extension",
+    "id": "com.example.Reader.Extension (KLMNO13579)",
+    "description": "",
+    "version": "",
+    "homepage_url": "",
+    "enabled": false
+  }
+]
+-- history.json (1455 bytes) --
+[
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "url": "https://www.home.safari.test/",
+    "title": "Home",
+    "visit_count": 42,
+    "last_visit": "2024-03-01T12:00:00.5Z"
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "url": "https://docs.home.safari.test/guide?q=go\u0026lang=en",
+    "title": "Guide, \"quoted\" \u0026 \u003cb\u003ebold\u003c/b\u003e",
+    "visit_count": 7,
+    "last_visit": "2024-03-01T13:00:00Z"
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "url": "https://news.home.safari.test/ja",
+    "title": "ニュース",
+    "visit_count": 3,
+    "last_visit": "2024-03-01T14:00:00Z"
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "url": "https://files.home.safari.test/report.pdf",
+    "title": "",
+    "visit_count": 0,
+    "last_visit": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Safari",
+    "profile": "Work",
+    "url": "https://intranet.work.safari.test/",
+    "title": "Intranet",
+    "visit_count": 12,
+    "last_visit": "2024-03-01T15:00:00Z"
+  },
+  {
+    "browser": "Safari",
+    "profile": "Work",
+    "url": "https://wiki.work.safari.test/onboarding",
+    "title": "Onboarding",
+    "visit_count": 2,
+    "last_visit": "2024-03-01T16:00:00Z"
+  },
+  {
+    "browser": "Safari",
+    "profile": "profile-9a1b2c3d",
+    "url": "https://www.untitled.safari.test/",
+    "title": "Untitled",
+    "visit_count": 1,
+    "last_visit": "2024-03-01T17:00:00Z"
+  }
+]
+-- localstorage.json (903 bytes) --
+[
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "is_meta": false,
+    "url": "https://cdn.home.safari.test:8443",
+    "key": "consent",
+    "value": "yes"
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "is_meta": false,
+    "url": "https://app.home.safari.test",
+    "key": "blob",
+    "value": "value is too long, length is 2200, supported max length is 2048"
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "is_meta": false,
+    "url": "https://app.home.safari.test",
+    "key": "greeting",
+    "value": "café"
+  },
+  {
+    "browser": "Safari",
+    "profile": "default",
+    "is_meta": false,
+    "url": "https://app.home.safari.test",
+    "key": "言語",
+    "value": "日本語"
+  },
+  {
+    "browser": "Safari",
+    "profile": "Work",
+    "is_meta": false,
+    "url": "https://app.work.safari.test",
+    "key": "greeting",
+    "value": "hello"
+  }
+]
