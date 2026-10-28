@@ -10,6 +10,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
@@ -52,10 +53,10 @@ const (
 	originPortExplicitFlag  = 0x01
 )
 
-func extractLocalStorage(root string) ([]record.LocalStorage, error) {
+func extractLocalStorage(root string, out browser.Collector) error {
 	dirs, err := findOriginDataDirs(root)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var entries []record.LocalStorage
@@ -79,50 +80,8 @@ func extractLocalStorage(root string) ([]record.LocalStorage, error) {
 			})
 		}
 	}
-	return entries, nil
-}
-
-// countLocalStorage sums ItemTable row counts across every origin DB under root without
-// parsing origin files or decoding values — CountEntries callers only need the total, not the
-// URLs or plaintext. COUNT(key) naturally excludes NULL keys, matching the same skip rule
-// applied by readLocalStorageFile, so count and extract stay in sync.
-func countLocalStorage(root string) (int, error) {
-	dirs, err := findOriginDataDirs(root)
-	if err != nil {
-		return 0, err
-	}
-	total := 0
-	for _, od := range dirs {
-		dbPath := filepath.Join(od, webkitLocalStorageSubdir, webkitLocalStorageDB)
-		n, err := countLocalStorageFile(dbPath)
-		if err != nil {
-			log.Debugf("safari localstorage: count %s: %v", dbPath, err)
-			continue
-		}
-		total += n
-	}
-	return total, nil
-}
-
-func countLocalStorageFile(path string) (int, error) {
-	// mode=ro (no immutable) so SQLite replays the copied -wal sidecar — this surfaces entries
-	// Safari has committed to WAL but not yet checkpointed to the main DB. Writes SQLite might
-	// make to the temp-copy's -shm during replay are harmless; the Session cleanup removes
-	// everything. Live-file reads (profiles.go) still use immutable=1 to stay off the real WAL.
-	dsn := "file:" + path + "?mode=ro"
-	db, err := sql.Open("sqlite", dsn)
-	if err != nil {
-		return 0, fmt.Errorf("open %s: %w", path, err)
-	}
-	defer db.Close()
-	if err := db.Ping(); err != nil {
-		return 0, fmt.Errorf("ping %s: %w", path, err)
-	}
-	var count int
-	if err := db.QueryRow(`SELECT COUNT(key) FROM ItemTable`).Scan(&count); err != nil {
-		return 0, fmt.Errorf("count ItemTable: %w", err)
-	}
-	return count, nil
+	emit(out, entries)
+	return nil
 }
 
 // findOriginDataDirs returns <root>/<h1>/<h2>/ paths that contain both an "origin" file and
@@ -273,9 +232,8 @@ type localStorageItem struct {
 }
 
 func readLocalStorageFile(path string) ([]localStorageItem, error) {
-	// mode=ro (no immutable) — see countLocalStorageFile for the WAL-replay rationale; the same
-	// live-vs-temp split applies here. ORDER BY key, rowid makes exports byte-for-byte stable
-	// across runs and SQLite versions.
+	// mode=ro without immutable, so SQLite replays the copied -wal sidecar and surfaces entries Safari has not yet
+	// checkpointed. ORDER BY key, rowid makes exports byte-for-byte stable across runs and SQLite versions.
 	dsn := "file:" + path + "?mode=ro"
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {

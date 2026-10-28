@@ -8,6 +8,8 @@ import (
 	"github.com/moond4rk/plist"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 // testExtensionEntry mirrors the shape of one entry in Safari's Extensions.plist:
@@ -21,25 +23,43 @@ type testExtensionEntry map[string]any
 // "AppExtensions" or "WebExtensions".
 func writeTestExtensionsPlist(t *testing.T, container, subdir string, entries map[string]testExtensionEntry) {
 	t.Helper()
-	dir := filepath.Join(container, safariExtensionsSubdir, subdir)
+	dir := filepath.Join(container, "Safari", subdir)
 	require.NoError(t, os.MkdirAll(dir, 0o755))
 
-	f, err := os.Create(filepath.Join(dir, safariExtensionsPlistFile))
+	f, err := os.Create(filepath.Join(dir, "Extensions.plist"))
 	require.NoError(t, err)
 	defer f.Close()
 	require.NoError(t, plist.NewBinaryEncoder(f).Encode(entries))
 }
 
+// extensionPlists lists the plists present under container, as the extractor finds them in its snapshot.
+func extensionPlists(container string) []string {
+	var paths []string
+	for _, sub := range []string{"AppExtensions", "WebExtensions"} {
+		if p := filepath.Join(container, "Safari", sub, "Extensions.plist"); fileExists(p) {
+			paths = append(paths, p)
+		}
+	}
+	return paths
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 func TestExtractExtensions_AppAndWebMerged(t *testing.T) {
 	container := t.TempDir()
-	writeTestExtensionsPlist(t, container, safariAppExtensionsSubdir, map[string]testExtensionEntry{
+	writeTestExtensionsPlist(t, container, "AppExtensions", map[string]testExtensionEntry{
 		"com.colliderli.iina.OpenInIINA (67CQ77V27R)": {},
 	})
-	writeTestExtensionsPlist(t, container, safariWebExtensionsSubdir, map[string]testExtensionEntry{
+	writeTestExtensionsPlist(t, container, "WebExtensions", map[string]testExtensionEntry{
 		"com.1password.safari.extension (2BUA8C4S2C)": {"Enabled": true},
 	})
 
-	got, err := extractExtensions(container)
+	var out testCollector
+	err := extractExtensions(extensionPlists(container), &out)
+	got := collected[record.Extension](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -56,12 +76,14 @@ func TestExtractExtensions_AppAndWebMerged(t *testing.T) {
 
 func TestExtractExtensions_EnabledFlag(t *testing.T) {
 	container := t.TempDir()
-	writeTestExtensionsPlist(t, container, safariWebExtensionsSubdir, map[string]testExtensionEntry{
+	writeTestExtensionsPlist(t, container, "WebExtensions", map[string]testExtensionEntry{
 		"com.example.a (AAAAAAAAAA)": {"Enabled": true},
 		"com.example.b (BBBBBBBBBB)": {"Enabled": false},
 	})
 
-	got, err := extractExtensions(container)
+	var out testCollector
+	err := extractExtensions(extensionPlists(container), &out)
+	got := collected[record.Extension](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 	assert.True(t, got[0].Enabled)
@@ -70,11 +92,13 @@ func TestExtractExtensions_EnabledFlag(t *testing.T) {
 
 func TestExtractExtensions_BundleIDFallbackOnUnexpectedKey(t *testing.T) {
 	container := t.TempDir()
-	writeTestExtensionsPlist(t, container, safariAppExtensionsSubdir, map[string]testExtensionEntry{
+	writeTestExtensionsPlist(t, container, "AppExtensions", map[string]testExtensionEntry{
 		"legacy-key-without-team-id": {},
 	})
 
-	got, err := extractExtensions(container)
+	var out testCollector
+	err := extractExtensions(extensionPlists(container), &out)
+	got := collected[record.Extension](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	// Regex miss → fall back to the full trimmed key.
@@ -84,11 +108,13 @@ func TestExtractExtensions_BundleIDFallbackOnUnexpectedKey(t *testing.T) {
 
 func TestExtractExtensions_OnlyAppExt(t *testing.T) {
 	container := t.TempDir()
-	writeTestExtensionsPlist(t, container, safariAppExtensionsSubdir, map[string]testExtensionEntry{
+	writeTestExtensionsPlist(t, container, "AppExtensions", map[string]testExtensionEntry{
 		"com.example.only (XXXXXXXXX1)": {},
 	})
 
-	got, err := extractExtensions(container)
+	var out testCollector
+	err := extractExtensions(extensionPlists(container), &out)
+	got := collected[record.Extension](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, "com.example.only", got[0].Name)
@@ -96,11 +122,13 @@ func TestExtractExtensions_OnlyAppExt(t *testing.T) {
 
 func TestExtractExtensions_OnlyWebExt(t *testing.T) {
 	container := t.TempDir()
-	writeTestExtensionsPlist(t, container, safariWebExtensionsSubdir, map[string]testExtensionEntry{
+	writeTestExtensionsPlist(t, container, "WebExtensions", map[string]testExtensionEntry{
 		"com.example.web (XXXXXXXXX2)": {"Enabled": true},
 	})
 
-	got, err := extractExtensions(container)
+	var out testCollector
+	err := extractExtensions(extensionPlists(container), &out)
+	got := collected[record.Extension](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, "com.example.web", got[0].Name)
@@ -108,22 +136,9 @@ func TestExtractExtensions_OnlyWebExt(t *testing.T) {
 
 func TestExtractExtensions_NoPlists(t *testing.T) {
 	container := t.TempDir()
-	got, err := extractExtensions(container)
+	var out testCollector
+	err := extractExtensions(extensionPlists(container), &out)
+	got := collected[record.Extension](t, &out)
 	require.NoError(t, err)
 	assert.Empty(t, got)
-}
-
-func TestCountExtensions(t *testing.T) {
-	container := t.TempDir()
-	writeTestExtensionsPlist(t, container, safariAppExtensionsSubdir, map[string]testExtensionEntry{
-		"com.example.a (AAAAAAAAAA)": {},
-		"com.example.b (BBBBBBBBBB)": {},
-	})
-	writeTestExtensionsPlist(t, container, safariWebExtensionsSubdir, map[string]testExtensionEntry{
-		"com.example.c (CCCCCCCCCC)": {"Enabled": true},
-	})
-
-	count, err := countExtensions(container)
-	require.NoError(t, err)
-	assert.Equal(t, 3, count)
 }

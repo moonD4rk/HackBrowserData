@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 // buildTestBinaryCookies constructs a minimal valid Cookies.binarycookies file
@@ -129,7 +131,9 @@ func TestExtractCookies(t *testing.T) {
 		},
 	})
 
-	cookies, err := extractCookies(path)
+	var out testCollector
+	err := extractCookies(path, &out)
+	cookies := collected[record.Cookie](t, &out)
 	require.NoError(t, err)
 	require.Len(t, cookies, 2)
 
@@ -148,27 +152,15 @@ func TestExtractCookies(t *testing.T) {
 	assert.False(t, c.ExpireAt.IsZero())
 }
 
-func TestCountCookies(t *testing.T) {
-	path := buildTestBinaryCookies(t, []testCookie{
-		{domain: ".a.com", name: "a", path: "/", value: "1", expires: 2000000000.0, creation: 700000000.0},
-		{domain: ".b.com", name: "b", path: "/", value: "2", expires: 2000000000.0, creation: 700000000.0},
-		{domain: ".c.com", name: "c", path: "/", value: "3", expires: 2000000000.0, creation: 700000000.0},
-	})
-
-	count, err := countCookies(path)
-	require.NoError(t, err)
-	assert.Equal(t, 3, count)
-}
-
 func TestExtractCookies_InvalidFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "bad.binarycookies")
 	require.NoError(t, os.WriteFile(path, []byte("not a cookies file"), 0o644))
 
-	_, err := extractCookies(path)
+	err := extractCookies(path, &testCollector{})
 	assert.Error(t, err)
 }
 
 func TestExtractCookies_FileNotFound(t *testing.T) {
-	_, err := extractCookies("/nonexistent/Cookies.binarycookies")
+	err := extractCookies("/nonexistent/Cookies.binarycookies", &testCollector{})
 	assert.Error(t, err)
 }

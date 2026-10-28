@@ -30,8 +30,9 @@ type Plan struct {
 type extractorsFunc func(browser.UserDataDir, browser.Profile) browser.Extractors
 
 // NewPlan crosses every discovered profile with the requested categories. It only stats files; it opens nothing.
+// Planning reads only the extractors' sources, so it needs no keychain.
 func NewPlan(d Discovery, req Request) Plan {
-	return newPlan(d, req, extractorsOf)
+	return newPlan(d, req, extractorsWith(nil))
 }
 
 func newPlan(d Discovery, req Request, extractors extractorsFunc) Plan {
@@ -66,8 +67,12 @@ func newPlan(d Discovery, req Request, extractors extractorsFunc) Plan {
 }
 
 // locate finds each source's first candidate on disk. An extraction needs every required source and at least one of
-// the profile's own; a shared one such as Local State never makes it present by itself.
+// the profile's own; a shared one such as Local State never makes it present by itself. An extraction that reads no
+// file, such as Safari's keychain passwords, always runs.
 func locate(dir browser.UserDataDir, p browser.Profile, sources []browser.Source) ([]snapshot.File, bool) {
+	if len(sources) == 0 {
+		return nil, true
+	}
 	var files []snapshot.File
 	present := false
 	for _, src := range sources {

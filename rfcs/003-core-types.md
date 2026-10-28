@@ -42,7 +42,7 @@ Two IDs sit side by side and must not be confused: `dir.ID` (`arc-2`) names the 
 
 `Profile.Name` is frozen by the output contract ([RFC-000](000-goals-and-constraints.md)): for Chromium the directory's base name (`Default`, `Profile 1` — what Chromium's `Profile::GetBaseName()` returns, not the display name `Local State` keeps in `profile.info_cache`); for Firefox the directory name (`97nszz88.default-release`); for Safari, `default` or the named profile's title (deduplicated with a `-N` suffix, the UUID when untitled). It is never a path.
 
-Safari has no single data directory — History lives under `~/Library/Safari`, cookies under `~/Library/Containers/com.apple.Safari/…` or `~/Library/Cookies` — so its user data dir is `~/Library`, the nearest common ancestor.
+Safari has no single data directory — History lives under `~/Library/Safari`, cookies under `~/Library/Containers/com.apple.Safari/…` or `~/Library/Cookies` — so its user data dir is `~/Library`, the nearest common ancestor. The default profile's `Dir` is `Safari`; a named profile's is its own directory, `Containers/com.apple.Safari/Data/Library/Safari/Profiles/<UUID>`.
 
 ## Extractor contract — `internal/browser`
 
@@ -65,9 +65,9 @@ type Extractor struct {
 type Extractors map[category.Category]Extractor
 ```
 
-Sources are static data: a base package declares them once per category and never rewrites them per profile. Plan joins a profile-scoped path with the profile's `Dir`, leaves a `Shared` one as it is, and captures the union once per user data dir — so `Local State`, or the Chromium `History` file that feeds both history and downloads, is copied once however many extractions need it.
+Sources are static data: a base package declares them once per category and never rewrites them per profile. Plan joins a profile-scoped path with the profile's `Dir`, leaves a `Shared` one as it is, and captures the union once per user data dir — so `Local State`, or the Chromium `History` file that feeds both history and downloads, is copied once however many extractions need it. Safari is the exception: a named profile's files sit under two directories named for its UUID, so `safari.Extractors` builds each profile's sources from its `Dir`, and reaches files elsewhere under `~/Library` with `..` from there.
 
-An extraction is `absent` when a required source has no candidate on disk, or when all its sources are optional and none of the profile's own is there: a shared source such as `Local State` never makes an extraction present by itself. Chromium passwords are two optional sources — `Login Data` (store `local`) and `Login Data For Account` (store `account`) — which reproduces today's output, including a profile that only ever synced passwords, without a special case.
+An extraction is `absent` when a required source has no candidate on disk, or when all its sources are optional and none of the profile's own is there: a shared source such as `Local State` never makes an extraction present by itself. An extractor that reads no file — Safari's passwords, which come from the login keychain — always runs. Chromium passwords are two optional sources — `Login Data` (store `local`) and `Login Data For Account` (store `account`) — which reproduces today's output, including a profile that only ever synced passwords, without a special case.
 
 `Extractor` / `Extractors` are **DECIDED**.
 

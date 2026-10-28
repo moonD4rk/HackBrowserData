@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"testing"
 	"unicode/utf16"
 
@@ -159,11 +157,7 @@ func writeTestOriginStore(t *testing.T, root, topHash, frameHash, topOrigin, fra
 	frameDir := filepath.Join(root, topHash, frameHash)
 	require.NoError(t, os.MkdirAll(filepath.Join(frameDir, webkitLocalStorageSubdir), 0o755))
 
-	require.NoError(t, os.WriteFile(
-		filepath.Join(frameDir, webkitOriginFile),
-		encodeOriginFile(topOrigin, frameOrigin),
-		0o644,
-	))
+	require.NoError(t, os.WriteFile(filepath.Join(frameDir, webkitOriginFile), []byte(topOrigin+" "+frameOrigin), 0o644))
 
 	dbPath := filepath.Join(frameDir, webkitLocalStorageSubdir, webkitLocalStorageDB)
 	db, err := sql.Open("sqlite", dbPath)
@@ -178,56 +172,6 @@ func writeTestOriginStore(t *testing.T, root, topHash, frameHash, topOrigin, fra
 		require.NoError(t, err)
 	}
 	require.NoError(t, db.Close())
-}
-
-// encodeOriginFile mirrors WebKit's SecurityOrigin binary serialization. Layout per origin
-// block: length-prefixed scheme record, length-prefixed host record, then a port marker
-// (0x00 for the scheme default, or 0x01 + uint16_le port). Two blocks back-to-back: top-frame
-// then frame.
-func encodeOriginFile(topOrigin, frameOrigin string) []byte {
-	var buf []byte
-	buf = appendOriginBlock(buf, topOrigin)
-	buf = appendOriginBlock(buf, frameOrigin)
-	return buf
-}
-
-func appendOriginBlock(buf []byte, originURL string) []byte {
-	scheme, host, port := splitTestOriginURL(originURL)
-	buf = appendOriginRecord(buf, scheme)
-	buf = appendOriginRecord(buf, host)
-	if port == 0 {
-		buf = append(buf, originPortDefaultMarker)
-		return buf
-	}
-	buf = append(buf, originPortExplicitFlag)
-	portBytes := make([]byte, 2)
-	binary.LittleEndian.PutUint16(portBytes, port)
-	return append(buf, portBytes...)
-}
-
-func appendOriginRecord(buf []byte, s string) []byte {
-	lenBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(lenBytes, uint32(len(s)))
-	buf = append(buf, lenBytes...)
-	buf = append(buf, originEncASCII)
-	return append(buf, []byte(s)...)
-}
-
-// splitTestOriginURL parses "https://example.com[:port]" into (scheme, host, port).
-// Port 0 means the URL had no explicit port (use scheme default).
-func splitTestOriginURL(u string) (scheme, host string, port uint16) {
-	idx := strings.Index(u, "://")
-	if idx < 0 {
-		return "", u, 0
-	}
-	scheme = u[:idx]
-	rest := u[idx+3:]
-	if colon := strings.LastIndex(rest, ":"); colon >= 0 {
-		if p, err := strconv.ParseUint(rest[colon+1:], 10, 16); err == nil {
-			return scheme, rest[:colon], uint16(p)
-		}
-	}
-	return scheme, rest, 0
 }
 
 // writeLocalStorageDB creates a minimal localstorage.sqlite3 at path with ItemTable populated
