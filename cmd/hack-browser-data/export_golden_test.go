@@ -18,7 +18,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/export"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/types"
-	"github.com/moond4rk/hackbrowserdata/utils/fileutil"
 )
 
 const (
@@ -66,11 +65,11 @@ func TestExportGolden(t *testing.T) {
 		tc := tc
 		t.Run(tc.format, func(t *testing.T) {
 			dir := filepath.Join(t.TempDir(), "results")
-			exportWrite(t, dir, tc.format, exportStamps())
+			exportWrite(t, dir, tc.format, false, exportStamps())
 			got := bundleDir(t, dir)
 			if tc.jsonFallback {
 				jsonDir := filepath.Join(t.TempDir(), "results")
-				exportWrite(t, jsonDir, "json", exportStamps())
+				exportWrite(t, jsonDir, "json", false, exportStamps())
 				assertJSONFallback(t, dir, jsonDir)
 				got = bundleFiles(t, dir, "cookie.json")
 			}
@@ -82,29 +81,29 @@ func TestExportGolden(t *testing.T) {
 			}
 
 			sparse := filepath.Join(t.TempDir(), "sparse")
-			exportWrite(t, sparse, tc.format, exportSparseStamps())
+			exportWrite(t, sparse, tc.format, false, exportSparseStamps())
 			assert.Equal(t, exportCategoryFiles(tc.ext, category.Password, category.LocalStorage), exportDirFiles(t, sparse))
 		})
 	}
 
 	t.Run("zip", func(t *testing.T) {
+		loose := filepath.Join(t.TempDir(), "results")
+		exportWrite(t, loose, "csv", false, exportStamps())
 		dir := filepath.Join(t.TempDir(), "results")
-		exportWrite(t, dir, "csv", exportStamps())
-		loose := readDirFiles(t, dir)
-		require.NoError(t, fileutil.CompressDir(dir))
+		exportWrite(t, dir, "csv", true, exportStamps())
 
 		assert.Equal(t, []string{"results.zip"}, exportDirFiles(t, dir))
 		archive := filepath.Join(dir, "results.zip")
 		assertGolden(t, "export-zip.golden", zipListing(t, archive))
-		assert.Equal(t, loose, exportReadZip(t, archive))
+		assert.Equal(t, readDirFiles(t, loose), exportReadZip(t, archive))
 	})
 }
 
-func exportWrite(t *testing.T, dir, format string, stamps []exportStamp) {
+func exportWrite(t *testing.T, dir, format string, compress bool, stamps []exportStamp) {
 	t.Helper()
 	f, err := export.ParseFormat(format)
 	require.NoError(t, err)
-	w, err := export.NewWriter(dir, f)
+	w, err := export.NewWriter(dir, f, compress)
 	require.NoError(t, err)
 	for _, s := range stamps {
 		require.NoError(t, writeResult(w, s.browser, types.ExtractResult{Profile: types.Profile{Name: s.profile}, Data: s.data}))

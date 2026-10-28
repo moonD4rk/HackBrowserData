@@ -21,6 +21,7 @@ type Flags struct {
 	Categories       string
 	Format           string
 	Dir              string
+	Zip              bool
 	ProfilePath      string
 	KeychainPassword string
 }
@@ -31,6 +32,7 @@ type Request struct {
 	Categories  []category.Category
 	Format      export.Format
 	Dir         string
+	Zip         bool
 	ProfilePath string
 	Home        string
 
@@ -64,6 +66,7 @@ func Validate(f Flags) (Request, error) {
 		Categories:       categories,
 		Format:           format,
 		Dir:              f.Dir,
+		Zip:              f.Zip,
 		ProfilePath:      f.ProfilePath,
 		Home:             home,
 		KeychainPassword: func(context.Context) (string, error) { return password, nil },
