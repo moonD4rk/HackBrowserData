@@ -44,6 +44,7 @@ Each bug designed out by this rewrite gets a test that would have caught it, so 
 - **Yandex without a key**: logins and cards still export with empty secrets, each a record-level problem, so `list --detail`, which reads no key, counts them as today does.
 - **Arc multi-dir**: two `arc` user data dirs yield IDs `arc` and `arc-2`, distinct snapshots, and distinct `keys.json` vaults, while overrides and the vaults' `browser` key still use `arc`.
 - **`--zip` data loss**: a failing zip write leaves every output file in place.
+- **Copies left on Ctrl-C**: a stopped run ends before its next extraction and removes its snapshot, `dumpkeys` returns no vaults, the command prints no error or usage, and the process ends by the signal.
 - **Late flag validation**: `-f bogus` exits `1` with no discovery call and no password resolution (both injected as spies).
 - **Eager secrets**: `dump -b chrome -c history` never calls `ProfileSnapshot.MasterKeys` and never opens the login keychain: a counting fake `PasswordFunc` stays at zero.
 - **JSON escaping**: a URL with `&` and `<` is written escaped in `json` and unescaped in `cookie-editor`, as today.

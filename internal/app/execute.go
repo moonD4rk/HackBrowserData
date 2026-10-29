@@ -66,6 +66,9 @@ func (discard) Write(category.Category, []record.Record) error { return nil }
 func runPlan(ctx context.Context, p Plan, w recordWriter, extractors extractorsFunc, keys keySource, announce bool) (Summary, error) {
 	results := append([]Result(nil), p.Skipped...)
 	for _, dir := range p.Dirs {
+		if err := ctx.Err(); err != nil {
+			return Summary{Results: results}, fmt.Errorf("run stopped: %w", err)
+		}
 		dirResults, err := executeDir(ctx, dir, p, w, extractors, keys, announce)
 		results = append(results, dirResults...)
 		if err != nil {
@@ -117,6 +120,9 @@ func executeDir(ctx context.Context, dir browser.UserDataDir, p Plan, w recordWr
 
 	results := make([]Result, 0, len(extractions)+1)
 	for _, e := range extractions {
+		if err := ctx.Err(); err != nil {
+			return results, fmt.Errorf("run stopped: %w", err)
+		}
 		x, ok := byProfile[e.Profile][e.Category]
 		if !ok || x.Extract == nil {
 			results = append(results, Result{Extraction: e, Outcome: OutcomeUnsupported})

@@ -41,7 +41,8 @@ func TestDumpKeys(t *testing.T) {
 		return masterkey.Set{masterkey.V10: []byte(dir.ID)}, nil
 	}
 	d := Discovery{Dirs: []browser.UserDataDir{chrome, firefox, arc2, opera, vivaldi, brave}}
-	dump := dumpKeysWith(context.Background(), d, keys)
+	dump, err := dumpKeysWith(context.Background(), d, keys)
+	require.NoError(t, err)
 
 	assert.Equal(t, []masterkey.Vault{
 		{
@@ -61,4 +62,20 @@ func TestDumpKeys(t *testing.T) {
 			Keys: masterkey.Set{masterkey.V10: []byte("brave")},
 		},
 	}, dump.Vaults, "a failed dir is left out, a partly failed one keeps what it has")
+}
+
+func TestDumpKeys_StoppedRunReturnsNoDump(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	chrome, brave := chromeDir(t, "chrome", "Default"), dirOf(t, "brave", "brave")
+	touch(t, chrome.Path, "Local State")
+	keys := func(_ context.Context, dir browser.UserDataDir, _ snapshot.Snapshot) (masterkey.Set, error) {
+		require.Equal(t, browser.DirID("chrome"), dir.ID, "keys were retrieved after the stop")
+		cancel()
+		return masterkey.Set{masterkey.V10: []byte("chrome")}, nil
+	}
+
+	dump, err := dumpKeysWith(ctx, Discovery{Dirs: []browser.UserDataDir{chrome, brave}}, keys)
+	require.ErrorIs(t, err, context.Canceled)
+	assert.Empty(t, dump.Vaults)
 }
