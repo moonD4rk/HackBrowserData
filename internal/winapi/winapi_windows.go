@@ -5,7 +5,7 @@
 // that golang.org/x/sys/windows does not cover, plus shared LazyDLL
 // handles and a small error-handling helper.
 //
-// Callers: utils/injector, filemanager, masterkey.
+// Callers: abe/injector, masterkey.
 package winapi
 
 import (

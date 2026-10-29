@@ -22,14 +22,14 @@ internal/
   sqlitex/                    thin modernc.org/sqlite helpers (open read-only by path, query)
   timeconv/                   browser epoch conversions (Chromium/WebKit, Unix, Firefox, Core Data)
   winapi/                     Windows only: syscall wrappers, DPAPI, locked-file copy, executable lookup
-  abe/                        Windows only: App-Bound Encryption bridge — move DEFERRED, see below
+  abe/                        Windows only: App-Bound Encryption bridge — native/ C sources, payload/, injector/
   keychain/                   macOS only: the user's login keychain — one handle per run, opened on first use
   log/                        leveled logging (Debugf/Infof/Warnf)
 ```
 
 The technique internals (the ABE payload, reflective injection, DPAPI and keychain specifics) sit behind `masterkey`, `keychain`, `winapi`, and the ABE unit by build tag. Their _mechanics_ are documented in the format and technique RFCs (013–021) and are out of scope for the design RFCs — here they are just packages with a contract ([RFC-006](006-key-retrieval-and-crypto.md)).
 
-**The ABE unit stays where it is (DEFERRED).** Today's `crypto/windows/` — the first-party C sources, the generated `bootstrap` layout package, and the `payload` package that embeds the built `.bin` — and `utils/injector` keep their paths in this rewrite, and so do `Makefile.frag`, `make payload`, and `make gen-layout`. Moving them changes the payload build, which needs its own validation on Windows, so only their importers change here. When the unit moves to `internal/abe/`, it moves as one: `//go:embed` only reaches files in the embedding package's directory or below, so the Makefile writes the payload there ([RFC-012](012-migration-roadmap.md)).
+**The ABE unit lives in `internal/abe/` and moved as one.** `native/` holds the first-party C sources and `Makefile.frag` and no Go files, since Go rejects C files in a package that does not use cgo; `native/bootstrap/` is the layout package generated from them; `payload/` embeds the built `.bin`, which `make payload` writes there because `//go:embed` only reaches files in the embedding package's directory or below; and `injector/` loads it. `make payload` and `make gen-layout` keep their names, and the built payload is byte-identical to the one built before the move.
 
 ## Dependency direction
 
@@ -49,7 +49,7 @@ Dependencies point downward and are listed exhaustively; anything not listed is 
 | `sqlitex`, `winapi`                                     | `log`                                                                                            |
 | `category`, `crypto`, `timeconv`, `keychain`, `log`     | nothing                                                                                          |
 
-`abe` stands for the ABE unit — `utils/injector` and `crypto/windows/payload` — until it moves.
+`abe` stands for the ABE unit's Go packages, `abe/injector` and `abe/payload`.
 
 Four rules keep the graph acyclic and its seams honest:
 
@@ -77,4 +77,4 @@ Trade-off accepted: the module stops being importable as a library. The module p
 - A package exists because it owns a _concept_, not because a file got long. `timeconv` and `category` are tiny on purpose. A package with nothing to own is not created — there is no `cli` (flags belong to `cmd`, rules to `app`) and no `textenc` (the CSV BOM is three bytes in `export`).
 - A concept with per-OS implementations lives in one package with `_windows.go` / `_darwin.go` / `_linux.go` files; callers import one package and get the right implementation at build time. A concept that exists on only one OS — the locked-file copy, the ABE bridge, the macOS login keychain — lives in its own package whose files are all built for that OS: `winapi`, `abe`, and `keychain`.
 - `winapi`, not `platform/windows`: a package named `windows` would collide with `golang.org/x/sys/windows`, which it imports, so every file would need an alias. `log` and `crypto` keep today's names although the standard library has packages of the same names: both are internal, and no file needs both.
-- No `utils` grab-bag. The old tree is redistributed to named homes: `utils/sqliteutil` → `sqlitex`; `utils/fileutil` and `filemanager` → `snapshot` (copy, zip transport) and `export` (`--zip`); `utils/{winapi,winutil}` → `winapi`; `utils/injector` and `crypto/windows/` stay in place (the `abe` move is DEFERRED); `types` → `category`, `record`, and `browser`; `output` → `export`; `log` → `internal/log`.
+- No `utils` grab-bag. The old tree is redistributed to named homes: `utils/sqliteutil` → `sqlitex`; `utils/fileutil` and `filemanager` → `snapshot` (copy, zip transport) and `export` (`--zip`); `utils/{winapi,winutil}` → `winapi`; `utils/injector` and `crypto/windows/` → `abe`, moved as one unit; `types` → `category`, `record`, and `browser`; `output` → `export`; `log` → `internal/log`.

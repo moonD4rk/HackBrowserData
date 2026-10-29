@@ -50,7 +50,7 @@ browser/chromium.Extract()
   → ABERetriever.RetrieveKey():
       reads Local State → extracts APPB-prefixed blob
       resolves browser exe: install locations, then App Paths
-  → utils/injector.Reflective.Inject(exePath, payload, env)
+  → internal/abe/injector.Reflective.Inject(exePath, payload, env)
 ```
 
 **Stage 2 — Payload preparation** (still our process)
@@ -99,7 +99,7 @@ DoExtractKey                  → see §4.2
 
 The returned key flows back up to `crypto.DecryptChromiumGCM` (cross-platform AES-256-GCM; see §5.3) and then to the usual cookie/password extraction pipeline.
 
-## 4. C payload — `crypto/windows/abe_native/`
+## 4. C payload — `internal/abe/native/`
 
 Three translation units, ~500 lines of pure C. No C++, no assembly, no direct syscalls, no vendored third-party code (Stephen Fewer's loader was evaluated and rejected — see §8.2). Built with `zig cc -target x86_64-windows-gnu`.
 
@@ -154,7 +154,7 @@ Static table mapping `exe_basename → { CLSID, IID_v1, IID_v2, kind }`. `kind` 
 { "chrome.exe", CHROME_BASE, { CLSID_bytes }, { IID_v1_bytes }, TRUE, { IID_v2_bytes } }
 ```
 
-Current coverage: Chrome Stable/Beta, Brave, Edge, Avast Secure Browser, CocCoc. Source file `crypto/windows/abe_native/com_iid.c` is the authoritative list — see §10 for how to add a new fork.
+Current coverage: Chrome Stable/Beta, Brave, Edge, Avast Secure Browser, CocCoc. Source file `internal/abe/native/com_iid.c` is the authoritative list — see §10 for how to add a new fork.
 
 ### 4.4 Bootstrap parameter block (non-obvious design)
 
@@ -166,7 +166,7 @@ Validity relies on Windows **KnownDlls + session-consistent ASLR** — `kernel32
 
 ## 5. Go integration
 
-### 5.1 Injector package — `utils/injector/`
+### 5.1 Injector package — `internal/abe/injector/`
 
 Four files collaborate:
 
@@ -181,7 +181,7 @@ Four files collaborate:
 
 ### 5.2 Scratch layout codegen
 
-The C payload and Go injector communicate through a byte-level protocol in a standalone RW scratch allocation inside the target process. The layout is defined **once** as a `BootstrapScratch` struct + `offsetof`-based macros in `crypto/windows/abe_native/bootstrap_layout.h`. `_Static_assert`s in the same header guarantee compile-time detection of layout drift:
+The C payload and Go injector communicate through a byte-level protocol in a standalone RW scratch allocation inside the target process. The layout is defined **once** as a `BootstrapScratch` struct + `offsetof`-based macros in `internal/abe/native/bootstrap_layout.h`. `_Static_assert`s in the same header guarantee compile-time detection of layout drift:
 
 ```c
 _Static_assert(offsetof(struct BootstrapScratch, marker) == 0x28, "marker offset");
@@ -189,7 +189,7 @@ _Static_assert(offsetof(struct BootstrapScratch, hresult) == 0x2C, "hresult offs
 _Static_assert(offsetof(struct BootstrapScratch, key) == 0x40, "key offset");
 ```
 
-Go consumes the same constants via **`go tool cgo -godefs`** (a development-time tool, not a runtime dependency). `make gen-layout` regenerates `crypto/windows/abe_native/bootstrap/layout.go` from `bootstrap_layout.h` using `CC="zig cc"` for bit-identical results across host OSes. `make gen-layout-verify` can be run locally to verify the committed `layout.go` matches the current header.
+Go consumes the same constants via **`go tool cgo -godefs`** (a development-time tool, not a runtime dependency). `make gen-layout` regenerates `internal/abe/native/bootstrap/layout.go` from `bootstrap_layout.h` using `CC="zig cc"` for bit-identical results across host OSes. `make gen-layout-verify` can be run locally to verify the committed `layout.go` matches the current header.
 
 **Why `cgo -godefs` rather than runtime `import "C"`**: we only need constants shared, not FFI to C functions. Runtime CGO would force the whole project into `CGO_ENABLED=1`, losing the "non-Windows contributor needs no C toolchain" guarantee. `cgo -godefs` bakes the values into a pure-Go file that commits to git; the project stays `CGO_ENABLED=0`.
 
@@ -210,7 +210,7 @@ On extraction success, logs at `Info` level (`abe: retrieved <browser> master ke
 ## 6. Build chain
 
 - **Default build** (any host, no zig): `go build ./cmd/hack-browser-data/` succeeds; ABE is stubbed out. Legacy v10/v11 cookies still decrypt via DPAPI.
-- **Windows release with ABE**: `make build-windows` = `make payload` (zig cc → `crypto/windows/payload/abe_extractor_amd64.bin`) + `GOOS=windows go build -tags abe_embed`. The `abe_embed` tag activates `//go:embed` on the compiled binary, so the payload is always built from the C sources in the same run and cannot go stale.
+- **Windows release with ABE**: `make build-windows` = `make payload` (zig cc → `internal/abe/payload/abe_extractor_amd64.bin`) + `GOOS=windows go build -tags abe_embed`. The `abe_embed` tag activates `//go:embed` on the compiled binary, so the payload is always built from the C sources in the same run and cannot go stale.
 - **Layout regen**: `make gen-layout` after any change to `bootstrap_layout.h`. This also covers the `BootstrapParams` field offsets the Go injector serializes by hand.
 - **`go.mod` unchanged** — no new dependencies. `zig` is the only external toolchain, and only when actually rebuilding the payload.
 
@@ -230,7 +230,7 @@ All ABE-specific Go code is behind `//go:build windows` (plus `&& abe_embed` for
 **No payload bytes ever touch disk on the target machine.**
 
 - Payload DLL exists only as:
-  1. Build artifact on the developer machine (`crypto/windows/payload/abe_extractor_amd64.bin`, git-ignored)
+  1. Build artifact on the developer machine (`internal/abe/payload/abe_extractor_amd64.bin`, git-ignored)
   2. `.rdata` section of `hack-browser-data.exe` (`//go:embed`)
   3. Go `[]byte` in our process memory
   4. `VirtualAllocEx`'d RX payload region in the target browser during injection; released on `TerminateProcess`
@@ -286,7 +286,7 @@ Comparisons in this section were made against [xaitax/Chrome-App-Bound-Encryptio
 | Avast Secure Browser                                        | ABE v20 via `AVAST` slot (13)                                                      |
 | Opera / OperaGX / Vivaldi / Yandex / Arc / 360 / QQ / Sogou | Not in `com_iid.c`; legacy v10 cookies still decrypt via DPAPI, v20 cookies do not |
 
-Authoritative CLSID/IID table: `crypto/windows/abe_native/com_iid.c`.
+Authoritative CLSID/IID table: `internal/abe/native/com_iid.c`.
 
 ## 11. Adding support for a new Chromium fork
 
@@ -296,7 +296,7 @@ Three steps.
 2. **Mine IIDs from TypeLib** — the interface IIDs live in the TypeLib resource of `<InstallDir>\Application\<version>\elevation_service.exe`. PowerShell + `ITypeLib.GetTypeInfo` enumerates them. Map `IElevator<Vendor>` → v1 IID, `IElevator2<Vendor>` → v2 IID (absent for older vendors).
 3. **Determine vtable slot** — count `IElevator` methods in the TypeLib. Chrome-family has 3 methods (slot 5). Edge prepends 3 placeholders (slot 8). Avast extends the interface further (slot 13).
 
-Edit `crypto/windows/abe_native/com_iid.c` (add the entry), `utils/winutil/browser_meta_windows.go` (add a matching `winutil.Entry` with the right `ABEKind` and install-path fallbacks; `Entry.Key` must equal the `BrowserConfig.Key` of the matching ABE-enabled config), `browser/browser_windows.go` (set `WindowsABE: true` on the new `BrowserConfig` so its `Key` doubles as the ABE / winutil.Table identifier), then `make payload-clean && make build-windows` and redeploy.
+Edit `internal/abe/native/com_iid.c` (add the entry), `utils/winutil/browser_meta_windows.go` (add a matching `winutil.Entry` with the right `ABEKind` and install-path fallbacks; `Entry.Key` must equal the `BrowserConfig.Key` of the matching ABE-enabled config), `browser/browser_windows.go` (set `WindowsABE: true` on the new `BrowserConfig` so its `Key` doubles as the ABE / winutil.Table identifier), then `make payload-clean && make build-windows` and redeploy.
 
 ## 12. Known issues & future work
 
