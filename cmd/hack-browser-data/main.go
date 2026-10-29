@@ -20,7 +20,7 @@ func rootCmd() *cobra.Command {
 		Use:   "hack-browser-data",
 		Short: "A CLI tool for decrypting and exporting browser data",
 		Long: `hack-browser-data decrypts and exports browser data from Chromium-based
-browsers and Firefox on Windows, macOS, and Linux.
+browsers, Firefox, and Safari on Windows, macOS, and Linux.
 
 GitHub: https://github.com/moonD4rk/HackBrowserData`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
