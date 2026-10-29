@@ -61,6 +61,7 @@ Leaves first, bottom-up along the dependency arrows ([RFC-002](002-package-layou
 - `dump`, `dumpkeys`, `archive`, `restore`, and `list` run on the pipeline.
 - `archive` writes the snapshot `manifest.json` and `restore` reads it as its `Discovery` ([RFC-007](007-snapshot-and-acquisition.md)): writer and reader land together, so the round trip is tested end to end, and every earlier archive stays byte-identical to today's.
 - Validate-first ordering, `--keychain-pw-stdin` with the new precedence, the `-p` fixes, the safe `--zip` order, and the `restore` stamp fix ([RFC-009](009-cli-surface.md)).
+- Yandex logins and cards export without their data key, like every other store, so `list --detail` counts them without a key ([RFC-008](008-output-and-export.md)).
 
 ### Phase 8 — Delete & document
 

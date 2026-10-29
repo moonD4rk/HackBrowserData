@@ -54,10 +54,7 @@ func extractPasswordsWithQuery(masterKeys masterkey.Set, path string, store reco
 // extractYandexPasswords walks Ya Passman Data.
 // Note: URL column is origin_url — it's what the per-row AAD is computed over (not action_url).
 func extractYandexPasswords(masterKeys masterkey.Set, path string, out browser.Collector) error {
-	dataKey, err := loadYandexDataKey(path, masterKeys[masterkey.V10])
-	if err != nil {
-		return err
-	}
+	dataKey, keyErr := loadYandexDataKey(path, masterKeys[masterkey.V10])
 
 	logins, err := sqlitex.QueryRows(path, false, yandexLoginQuery,
 		func(rows *sql.Rows) (record.Login, error) {
@@ -72,6 +69,10 @@ func extractYandexPasswords(masterKeys masterkey.Set, path string, out browser.C
 				Username:  usernameVal,
 				CreatedAt: timeconv.Chromium(created),
 				Store:     record.StoreLocal,
+			}
+			if dataKey == nil {
+				out.Fail(fmt.Errorf("yandex: password for %s: %w", originURL, keyErr))
+				return entry, nil
 			}
 			aad := yandexLoginAAD(originURL, usernameElem, usernameVal, passwordElem, signonRealm, nil)
 			plaintext, err := crypto.AESGCMDecryptBlob(dataKey, passwordValue, aad)

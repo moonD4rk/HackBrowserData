@@ -65,10 +65,7 @@ func extractCreditCards(masterKeys masterkey.Set, path string, out browser.Colle
 
 // extractYandexCreditCards reads the records table (not Chromium's credit_cards). AAD = guid.
 func extractYandexCreditCards(masterKeys masterkey.Set, path string, out browser.Collector) error {
-	dataKey, err := loadYandexDataKey(path, masterKeys[masterkey.V10])
-	if err != nil {
-		return err
-	}
+	dataKey, keyErr := loadYandexDataKey(path, masterKeys[masterkey.V10])
 
 	cards, err := sqlitex.QueryRows(path, false, yandexCreditCardQuery,
 		func(rows *sql.Rows) (record.CreditCard, error) {
@@ -90,6 +87,10 @@ func extractYandexCreditCards(masterKeys masterkey.Set, path string, out browser
 				ExpMonth: public.ExpireDateMonth,
 				ExpYear:  public.ExpireDateYear,
 				NickName: public.CardTitle,
+			}
+			if dataKey == nil {
+				out.Fail(fmt.Errorf("yandex: card %s: %w", guid, keyErr))
+				return entry, nil
 			}
 
 			plaintext, err := crypto.AESGCMDecryptBlob(dataKey, privateData, yandexCardAAD(guid, nil))
