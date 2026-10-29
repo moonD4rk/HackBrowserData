@@ -103,8 +103,13 @@ func TestExtractYandexCreditCards_WrongMasterKey(t *testing.T) {
 		yandexCreditCard{GUID: "g1", FullCardNumber: "4111"},
 	)
 
-	err := extractYandexCreditCards(masterkey.Set{masterkey.V10: wrongKey}, path, &testCollector{})
-	require.Error(t, err)
+	var out testCollector
+	require.NoError(t, extractYandexCreditCards(masterkey.Set{masterkey.V10: wrongKey}, path, &out))
+	cards := collected[record.CreditCard](t, &out)
+	require.Len(t, cards, 1, "the card exports without its number")
+	assert.Equal(t, "g1", cards[0].GUID)
+	assert.Empty(t, cards[0].Number)
+	assert.Len(t, out.fails, 1)
 }
 
 func TestYandexCardAAD(t *testing.T) {

@@ -41,6 +41,7 @@ Each bug designed out by this rewrite gets a test that would have caught it, so 
 - **Firefox history order**: `visit_count` descending for every browser, Firefox included.
 - **Safari bookmark IDs**: unique across the whole tree, not repeated per folder.
 - **Firefox without a key**: a profile with no `key4.db` still exports its logins with empty secrets, the extraction is `partial`, and the run goes on; a missing key makes decryption fail instead of panicking.
+- **Yandex without a key**: logins and cards still export with empty secrets, each a record-level problem, so `list --detail`, which reads no key, counts them as today does.
 - **Arc multi-dir**: two `arc` user data dirs yield IDs `arc` and `arc-2`, distinct snapshots, and distinct `keys.json` vaults, while overrides and the vaults' `browser` key still use `arc`.
 - **`--zip` data loss**: a failing zip write leaves every output file in place.
 - **Late flag validation**: `-f bogus` exits `1` with no discovery call and no password resolution (both injected as spies).

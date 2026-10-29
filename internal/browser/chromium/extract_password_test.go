@@ -90,7 +90,7 @@ func TestExtractYandexPasswords(t *testing.T) {
 	assert.Equal(t, "hunter2", got[0].Password)
 }
 
-func TestExtractYandexPasswords_MasterPasswordSkipped(t *testing.T) {
+func TestExtractYandexPasswords_MasterPasswordKeepsTheLogins(t *testing.T) {
 	masterKey := bytes.Repeat([]byte{0x11}, 32)
 	dataKey := bytes.Repeat([]byte{0x22}, 32)
 
@@ -103,9 +103,31 @@ func TestExtractYandexPasswords_MasterPasswordSkipped(t *testing.T) {
 	)
 
 	var out testCollector
-	err := extractYandexPasswords(masterkey.Set{masterkey.V10: masterKey}, path, &out)
-	require.ErrorIs(t, err, errYandexMasterPasswordSet)
-	assert.Empty(t, out.records, "a master-password profile yields no logins")
+	require.NoError(t, extractYandexPasswords(masterkey.Set{masterkey.V10: masterKey}, path, &out))
+	logins := collected[record.Login](t, &out)
+	require.Len(t, logins, 1)
+	assert.Equal(t, "alice", logins[0].Username)
+	assert.Empty(t, logins[0].Password)
+	require.Len(t, out.fails, 1)
+	assert.ErrorIs(t, out.fails[0], errYandexMasterPasswordSet)
+}
+
+func TestExtractYandexPasswords_WithoutAKeyKeepsTheLogins(t *testing.T) {
+	masterKey := bytes.Repeat([]byte{0x11}, 32)
+	dataKey := bytes.Repeat([]byte{0x22}, 32)
+	path := setupYandexPasswordDB(t, masterKey, dataKey, false,
+		yandexPassword{OriginURL: "https://a.yandex.ru", UsernameVal: "alice", Password: "hunter2"},
+		yandexPassword{OriginURL: "https://b.yandex.ru", UsernameVal: "bob", Password: "hunter3"},
+	)
+
+	var out testCollector
+	require.NoError(t, extractYandexPasswords(nil, path, &out))
+	logins := collected[record.Login](t, &out)
+	require.Len(t, logins, 2)
+	for _, l := range logins {
+		assert.Empty(t, l.Password)
+	}
+	assert.Len(t, out.fails, 2, "each login without its password is a record-level problem")
 }
 
 func TestExtractYandexPasswords_WrongMasterKey(t *testing.T) {
@@ -120,10 +142,13 @@ func TestExtractYandexPasswords_WrongMasterKey(t *testing.T) {
 		},
 	)
 
-	// A wrong master key fails at the intermediate step, surfacing as an error
-	// from the extractor.
-	err := extractYandexPasswords(masterkey.Set{masterkey.V10: wrongKey}, path, &testCollector{})
-	require.Error(t, err)
+	// A wrong master key fails at the intermediate step, so the login exports without its password.
+	var out testCollector
+	require.NoError(t, extractYandexPasswords(masterkey.Set{masterkey.V10: wrongKey}, path, &out))
+	logins := collected[record.Login](t, &out)
+	require.Len(t, logins, 1)
+	assert.Empty(t, logins[0].Password)
+	assert.Len(t, out.fails, 1)
 }
 
 func TestYandexLoginAAD_NoMasterPassword(t *testing.T) {
