@@ -1,4 +1,4 @@
-package main
+package browsertest
 
 import (
 	"crypto/sha256"
@@ -45,7 +45,7 @@ var (
 	oidDESEDE3CBC     = asn1.ObjectIdentifier{1, 2, 840, 113549, 3, 7}
 )
 
-func firefoxFixtureUserData(t *testing.T, profilesDir string) {
+func FirefoxUserData(t *testing.T, profilesDir string) {
 	t.Helper()
 	fixtureWrite(t, filepath.Join(profilesDir, "profiles.ini"), "[General]\nStartWithLastProfile=1\n")
 	fixtureWrite(t, filepath.Join(profilesDir, "Crash Reports", "InstallTime20240101000000"), "1704067200")

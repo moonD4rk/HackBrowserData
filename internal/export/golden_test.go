@@ -1,4 +1,4 @@
-package main
+package export_test
 
 import (
 	"archive/zip"
@@ -16,6 +16,7 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/export"
+	"github.com/moond4rk/hackbrowserdata/internal/golden"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
@@ -77,14 +78,14 @@ func TestExportGolden(t *testing.T) {
 		t.Run(tc.format, func(t *testing.T) {
 			dir := filepath.Join(t.TempDir(), "results")
 			exportWrite(t, dir, tc.format, false, exportStamps())
-			got := bundleDir(t, dir)
+			got := golden.Bundle(t, dir)
 			if tc.jsonFallback {
 				jsonDir := filepath.Join(t.TempDir(), "results")
 				exportWrite(t, jsonDir, "json", false, exportStamps())
-				assertJSONFallback(t, dir, jsonDir)
-				got = bundleFiles(t, dir, "cookie.json")
+				golden.AssertJSONFallback(t, dir, jsonDir)
+				got = golden.BundleFiles(t, dir, "cookie.json")
 			}
-			assertGolden(t, "export-"+tc.format+".golden", got)
+			golden.Assert(t, "export-"+tc.format+".golden", got)
 			assert.Equal(t, exportCategoryFiles(tc.ext, category.All()...), exportDirFiles(t, dir))
 			exportAssertFileContract(t, dir)
 			for _, form := range tc.urlForms {
@@ -105,8 +106,8 @@ func TestExportGolden(t *testing.T) {
 
 		assert.Equal(t, []string{"results.zip"}, exportDirFiles(t, dir))
 		archive := filepath.Join(dir, "results.zip")
-		assertGolden(t, "export-zip.golden", zipListing(t, archive))
-		assert.Equal(t, readDirFiles(t, loose), exportReadZip(t, archive))
+		golden.Assert(t, "export-zip.golden", golden.ZipListing(t, archive))
+		assert.Equal(t, golden.DirFiles(t, loose), exportReadZip(t, archive))
 	})
 }
 

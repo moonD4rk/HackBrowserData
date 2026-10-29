@@ -10,19 +10,21 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
+	"github.com/moond4rk/hackbrowserdata/internal/browser/browsertest"
+	"github.com/moond4rk/hackbrowserdata/internal/golden"
 )
 
 func TestListGolden(t *testing.T) {
 	home := t.TempDir()
 	setHome(t, home)
 	var paths []string
-	for _, inst := range chromiumFixtureInstalls {
-		dir := userDataDirOf(t, home, inst.key)
-		chromiumFixtureUserData(t, dir, inst.key)
-		paths = append(paths, dir, "<"+inst.key+">")
+	for _, inst := range browsertest.ChromiumInstalls {
+		dir := userDataDirOf(t, home, inst.Key)
+		browsertest.ChromiumUserData(t, dir, inst.Key)
+		paths = append(paths, dir, "<"+inst.Key+">")
 	}
 	dir := userDataDirOf(t, home, "firefox")
-	firefoxFixtureUserData(t, dir)
+	browsertest.FirefoxUserData(t, dir)
 	paths = append(paths, dir, "<firefox>", `\`, "/")
 	assertListGoldens(t, "list", strings.NewReplacer(paths...))
 }
@@ -34,7 +36,7 @@ func TestListGoldenSafari(t *testing.T) {
 	home := t.TempDir()
 	setHome(t, home)
 	library := filepath.Join(home, "Library")
-	safariFixtureLibrary(t, library)
+	browsertest.SafariLibrary(t, library)
 	assertListGoldens(t, "list-safari", strings.NewReplacer(library, "<library>"))
 }
 
@@ -50,7 +52,7 @@ func assertListGoldens(t *testing.T, prefix string, paths *strings.Replacer) {
 			name, args = prefix+"-detail.golden", []string{"--detail"}
 		}
 		runCmd(t, cmd, args...)
-		assertGolden(t, name, paths.Replace(out.String()))
+		golden.Assert(t, name, paths.Replace(out.String()))
 	}
 }
 

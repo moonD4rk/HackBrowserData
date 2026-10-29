@@ -1,4 +1,4 @@
-package main
+package app_test
 
 import (
 	"archive/zip"
@@ -14,6 +14,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moond4rk/hackbrowserdata/internal/app"
+	"github.com/moond4rk/hackbrowserdata/internal/browser/browsertest"
+	"github.com/moond4rk/hackbrowserdata/internal/golden"
+
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 )
 
@@ -97,7 +100,7 @@ func TestArchiveGolden(t *testing.T) {
 			out := filepath.Join(t.TempDir(), "browser-data.zip")
 			n, err := app.Archive(context.Background(), app.Discover(req), req, out)
 			require.NoError(t, err)
-			assertGolden(t, tt.golden, fmt.Sprintf("entries=%d\n", n)+zipListing(t, out))
+			golden.Assert(t, tt.golden, fmt.Sprintf("entries=%d\n", n)+golden.ZipListing(t, out))
 
 			prefix := archiveLayoutKey + "/"
 			names := archiveLayoutEntryNames(t, out)
@@ -118,20 +121,22 @@ func TestArchiveGolden(t *testing.T) {
 	}
 }
 
-// archive on one host and restore on another, both through the CLI, write what dump writes.
+// archive on one host and restore on another, through the pipeline, write what dump writes.
 func TestArchiveRestoreRoundTrip(t *testing.T) {
 	home := t.TempDir()
-	setHome(t, home)
-	for _, inst := range chromiumFixtureInstalls {
-		def, ok := browser.Lookup(inst.key)
-		require.True(t, ok, inst.key)
-		chromiumFixtureUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])), inst.key)
+	for _, inst := range browsertest.ChromiumInstalls {
+		def, ok := browser.Lookup(inst.Key)
+		require.True(t, ok, inst.Key)
+		browsertest.ChromiumUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])), inst.Key)
 	}
+	req, err := app.ValidateArchive(app.Flags{Browser: "all", Categories: "all"})
+	require.NoError(t, err)
+	req.Home = home
 	archive := filepath.Join(t.TempDir(), "data.zip")
-	runCmd(t, archiveCmd(), "-o", archive)
+	_, err = app.Archive(context.Background(), app.Discover(req), req, archive)
+	require.NoError(t, err)
 	require.Contains(t, archiveLayoutEntryNames(t, archive), "manifest.json")
 
-	out := t.TempDir()
-	chromiumFixtureRestore(t, "--keys", chromiumFixtureKeysFile(t), "--data-zip", archive, "-d", out)
-	assert.Equal(t, readGolden(t, "extract-json.golden"), bundleDir(t, out))
+	out := restoreGolden(t, app.RestoreFlags{Keys: chromiumFixtureKeysFile(t), DataZip: archive, Dir: t.TempDir()})
+	assert.Equal(t, golden.Read(t, "extract-json.golden"), golden.Bundle(t, out))
 }

@@ -1,7 +1,8 @@
-package main
+package app_test
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,6 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moond4rk/hackbrowserdata/internal/app"
+	"github.com/moond4rk/hackbrowserdata/internal/browser/browsertest"
+	"github.com/moond4rk/hackbrowserdata/internal/golden"
+
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
@@ -17,19 +22,18 @@ import (
 // Restore writes what dump writes: the extract golden, stamped with each browser's display name.
 func TestRestoreGolden(t *testing.T) {
 	data := t.TempDir()
-	chromiumFixtureInstallations(t, data)
+	browsertest.ChromiumInstallations(t, data)
 	keys := chromiumFixtureKeysFile(t)
-	want := readGolden(t, "extract-json.golden")
+	want := golden.Read(t, "extract-json.golden")
 
 	t.Run("data-dir", func(t *testing.T) {
-		out := t.TempDir()
-		chromiumFixtureRestore(t, "--keys", keys, "--data-dir", data, "-d", out)
-		assert.Equal(t, want, bundleDir(t, out))
+		out := restoreGolden(t, app.RestoreFlags{Keys: keys, DataDir: data, Dir: t.TempDir()})
+		assert.Equal(t, want, golden.Bundle(t, out))
 	})
 
 	t.Run("zip", func(t *testing.T) {
 		out := filepath.Join(t.TempDir(), "results")
-		chromiumFixtureRestore(t, "--keys", keys, "--data-dir", data, "-d", out, "--zip")
+		restoreGolden(t, app.RestoreFlags{Keys: keys, DataDir: data, Dir: out, Zip: true})
 
 		entries, err := os.ReadDir(out)
 		require.NoError(t, err)
@@ -37,11 +41,11 @@ func TestRestoreGolden(t *testing.T) {
 		require.Equal(t, "results.zip", entries[0].Name())
 
 		archive := filepath.Join(out, "results.zip")
-		assertGolden(t, "restore-zip.golden", zipListing(t, archive))
+		golden.Assert(t, "restore-zip.golden", golden.ZipListing(t, archive))
 		unzipped, err := snapshot.Unzip(archive)
 		require.NoError(t, err)
 		defer unzipped.Close()
-		assert.Equal(t, want, bundleDir(t, unzipped.Path()))
+		assert.Equal(t, want, golden.Bundle(t, unzipped.Path()))
 	})
 
 	// An archive written before the manifest is the bare <browser-key>/ layout, which the vaults resolve.
@@ -49,17 +53,16 @@ func TestRestoreGolden(t *testing.T) {
 		dataZip := filepath.Join(t.TempDir(), "data.zip")
 		require.NoError(t, snapshot.Open(data).Zip(dataZip))
 
-		out := t.TempDir()
-		chromiumFixtureRestore(t, "--keys", keys, "--data-zip", dataZip, "-d", out)
-		assert.Equal(t, want, bundleDir(t, out))
+		out := restoreGolden(t, app.RestoreFlags{Keys: keys, DataZip: dataZip, Dir: t.TempDir()})
+		assert.Equal(t, want, golden.Bundle(t, out))
 	})
 }
 
 func chromiumFixtureKeysFile(t *testing.T) string {
 	t.Helper()
-	profiles := make([]string, 0, len(chromiumFixtureProfiles))
-	for _, p := range chromiumFixtureProfiles {
-		profiles = append(profiles, p.dir)
+	profiles := make([]string, 0, len(browsertest.ChromiumProfiles))
+	for _, p := range browsertest.ChromiumProfiles {
+		profiles = append(profiles, p.Dir)
 	}
 	dump := masterkey.Dump{
 		// A literal rather than DumpVersion: keys files written by today's dumpkeys must keep restoring.
@@ -68,12 +71,12 @@ func chromiumFixtureKeysFile(t *testing.T) string {
 		Host:      masterkey.Host{OS: "windows", Arch: "amd64"},
 		Vaults:    []masterkey.Vault{},
 	}
-	for _, inst := range chromiumFixtureInstalls {
+	for _, inst := range browsertest.ChromiumInstalls {
 		dump.Vaults = append(dump.Vaults, masterkey.Vault{
-			Browser:  inst.key,
+			Browser:  inst.Key,
 			Kind:     "chromium",
 			Profiles: profiles,
-			Keys:     chromiumFixtureKeys,
+			Keys:     browsertest.ChromiumKeys,
 		})
 	}
 
@@ -84,7 +87,29 @@ func chromiumFixtureKeysFile(t *testing.T) string {
 	return path
 }
 
-func chromiumFixtureRestore(t *testing.T, args ...string) {
+// restoreGolden drives the restore pipeline the way the cobra command does, and returns the output directory.
+func restoreGolden(t *testing.T, f app.RestoreFlags) string {
 	t.Helper()
-	runCmd(t, restoreCmd(), args...)
+	if f.Categories == "" {
+		f.Categories = "all"
+	}
+	if f.Format == "" {
+		f.Format = "json"
+	}
+	req, dump, err := app.ValidateRestore(f)
+	require.NoError(t, err)
+
+	data := snapshot.Open(f.DataDir)
+	if f.DataZip != "" {
+		data, err = snapshot.Unzip(f.DataZip)
+		require.NoError(t, err)
+	}
+	defer data.Close()
+
+	d, keys, err := app.RestoreDiscovery(data, dump, req)
+	require.NoError(t, err)
+	req.Keys = keys
+	_, err = app.Execute(context.Background(), app.NewPlan(d, req), req)
+	require.NoError(t, err)
+	return f.Dir
 }

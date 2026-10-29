@@ -1,4 +1,4 @@
-package main
+package browsertest
 
 import (
 	"database/sql"

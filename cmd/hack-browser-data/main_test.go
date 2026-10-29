@@ -10,12 +10,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/browser/browsertest"
 )
 
 func TestStoppedRunPrintsNoErrorOrUsage(t *testing.T) {
 	home := t.TempDir()
 	setHome(t, home)
-	chromiumFixtureUserData(t, userDataDirOf(t, home, "chrome"), "chrome")
+	browsertest.ChromiumUserData(t, userDataDirOf(t, home, "chrome"), "chrome")
 
 	for _, tc := range []struct {
 		name, browser string
