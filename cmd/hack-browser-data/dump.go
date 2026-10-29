@@ -56,6 +56,8 @@ func runDump(ctx context.Context, f app.Flags) error {
 		return nil
 	}
 	summary, err := app.Execute(ctx, app.NewPlan(d, req), req)
-	report(summary)
+	if ctx.Err() == nil {
+		report(summary)
+	}
 	return err
 }

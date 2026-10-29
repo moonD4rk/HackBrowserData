@@ -42,7 +42,7 @@ func (s Snapshot) Path(rel string) (string, error) // absolute path inside the s
 
 `dump` captures one user data dir at a time ([RFC-001](001-architecture-and-pipeline.md)): `Execute` creates a `Temp` snapshot directory for the dir, captures its files, runs its extractions, and `Close`s it before the next dir. At most one user data dir's copies of `Login Data`, `Cookies`, and the like exist at once — close to today's per-profile session, and far from a run-long snapshot directory holding every browser's copies until the end. `archive` captures every user data dir into one snapshot directory, because the zip of that directory is its product. `restore --data-zip` unzips into a `Temp` snapshot directory; `restore --data-dir` `Open`s the given directory, which `Close` leaves in place.
 
-Because it holds those copies, a temporary snapshot directory is created with mode `0700` and always removed — on success, on error, and on cancellation (the run's context is cancelled on Ctrl-C). The live profile still exists, so removing the copy never loses anything.
+Because it holds those copies, a temporary snapshot directory is created with mode `0700` and always removed — on success, on error, and on cancellation (the run's context is cancelled on Ctrl-C, `SIGTERM`, or `SIGHUP`; [RFC-009](009-cli-surface.md)). The live profile still exists, so removing the copy never loses anything.
 
 ## Layout and user data dir identity
 

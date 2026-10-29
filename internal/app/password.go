@@ -24,9 +24,11 @@ func keychainPassword(f Flags, stdin *os.File) (func(context.Context) (string, e
 		password := f.KeychainPassword
 		return func(context.Context) (string, error) { return password, nil }, nil
 	case f.KeychainPasswordStdin:
-		return func(context.Context) (string, error) { return firstLine(stdin) }, nil
+		return func(ctx context.Context) (string, error) {
+			return untilDone(ctx, func() (string, error) { return firstLine(stdin) })
+		}, nil
 	case term.IsTerminal(int(stdin.Fd())):
-		return func(context.Context) (string, error) { return prompt(stdin) }, nil
+		return func(ctx context.Context) (string, error) { return prompt(ctx, stdin) }, nil
 	default:
 		return func(context.Context) (string, error) { return "", errNoPassword }, nil
 	}
@@ -40,12 +42,43 @@ func firstLine(r io.Reader) (string, error) {
 	return strings.TrimRight(line, "\r\n"), nil
 }
 
-func prompt(stdin *os.File) (string, error) {
+func prompt(ctx context.Context, stdin *os.File) (string, error) {
+	fd := int(stdin.Fd())
+	state, err := term.GetState(fd)
+	if err != nil {
+		return "", fmt.Errorf("read the password: %w", err)
+	}
 	fmt.Fprint(os.Stderr, "Enter macOS login password: ")
-	password, err := term.ReadPassword(int(stdin.Fd()))
+	password, err := untilDone(ctx, func() (string, error) {
+		p, err := term.ReadPassword(fd)
+		return string(p), err
+	})
+	if ctx.Err() != nil {
+		// The abandoned read never turns the echo back on, and the stop notice has already ended the line.
+		return "", errors.Join(ctx.Err(), term.Restore(fd, state))
+	}
 	fmt.Fprintln(os.Stderr)
 	if err != nil {
 		return "", fmt.Errorf("read the password: %w", err)
 	}
-	return string(password), nil
+	return password, nil
+}
+
+// untilDone stops waiting when the run is stopped; the read itself stays blocked until the process ends.
+func untilDone(ctx context.Context, read func() (string, error)) (string, error) {
+	type answer struct {
+		value string
+		err   error
+	}
+	answers := make(chan answer, 1)
+	go func() {
+		value, err := read()
+		answers <- answer{value, err}
+	}()
+	select {
+	case a := <-answers:
+		return a.value, a.err
+	case <-ctx.Done():
+		return "", ctx.Err()
+	}
 }

@@ -190,6 +190,33 @@ func TestExecute_RemovesEachSnapshotBeforeTheNextDir(t *testing.T) {
 	}
 }
 
+func TestExecute_StopEndsTheRunBeforeTheNextExtractionAndRemovesTheCopy(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var copied []string
+	base := fakeBase(map[category.Category]extractFunc{
+		category.History: func(_ context.Context, ps browser.ProfileSnapshot, _ browser.Collector) error {
+			path, err := ps.Path(history)
+			require.NoError(t, err)
+			copied = append(copied, path)
+			cancel()
+			return nil
+		},
+		category.Download: func(context.Context, browser.ProfileSnapshot, browser.Collector) error {
+			t.Error("an extraction ran after the stop")
+			return nil
+		},
+	})
+	req := Request{Categories: []category.Category{category.History, category.Download}, Dir: t.TempDir()}
+	d := Discovery{Dirs: []browser.UserDataDir{chromeDir(t, "chrome", "Default"), chromeDir(t, "chrome-2", "Default")}}
+
+	_, err := execute(ctx, newPlan(d, req, base), req, base, noKeys(t))
+	require.ErrorIs(t, err, context.Canceled)
+	require.Len(t, copied, 1, "the next user data dir is never captured")
+	_, statErr := os.Stat(copied[0])
+	assert.ErrorIs(t, statErr, fs.ErrNotExist)
+}
+
 func TestExecute_OutputFailureStopsTheRunAndLeavesNoCopies(t *testing.T) {
 	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
 		t.Skip("directory permissions do not deny writes here")

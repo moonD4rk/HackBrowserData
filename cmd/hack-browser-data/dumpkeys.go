@@ -27,7 +27,10 @@ func dumpKeysCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			dump := app.DumpKeys(cmd.Context(), app.Discover(req), req)
+			dump, err := app.DumpKeys(cmd.Context(), app.Discover(req), req)
+			if err != nil {
+				return err
+			}
 			log.Infof("Exported keys for %d vault(s)", len(dump.Vaults))
 
 			if outputPath == "" {

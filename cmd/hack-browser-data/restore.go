@@ -62,7 +62,9 @@ func runRestore(ctx context.Context, f app.RestoreFlags) error {
 	}
 	req.Keys = keys
 	summary, err := app.Execute(ctx, app.NewPlan(d, req), req)
-	report(summary)
+	if ctx.Err() == nil {
+		report(summary)
+	}
 	return err
 }
 
