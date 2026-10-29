@@ -11,10 +11,10 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"github.com/moond4rk/hackbrowserdata/crypto/windows/payload"
+	"github.com/moond4rk/hackbrowserdata/internal/abe/injector"
+	"github.com/moond4rk/hackbrowserdata/internal/abe/payload"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/winapi"
-	"github.com/moond4rk/hackbrowserdata/utils/injector"
 )
 
 const envEncKeyB64 = "HBD_ABE_ENC_B64"

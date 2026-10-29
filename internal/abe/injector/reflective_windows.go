@@ -13,7 +13,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"github.com/moond4rk/hackbrowserdata/crypto/windows/abe_native/bootstrap"
+	"github.com/moond4rk/hackbrowserdata/internal/abe/native/bootstrap"
 	"github.com/moond4rk/hackbrowserdata/internal/winapi"
 )
 

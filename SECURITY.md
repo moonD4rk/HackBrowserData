@@ -51,7 +51,7 @@ In scope — vulnerabilities in this repository's code, build, or releases, for 
 
 - Crafted input that HackBrowserData reads (browser profile files, a `keys.json`, or an archive passed to `restore`) leading to code execution, writes outside the output or temporary directory, or other compromise of the host running the tool
 - Decrypted data or exported master keys leaking beyond their intended destination, such as files created with overly broad permissions, leftover temporary copies, or secrets written to logs
-- Memory-safety bugs in the native Windows payload (`crypto/windows/abe_native/`)
+- Memory-safety bugs in the native Windows payload (`internal/abe/native/`)
 - Weaknesses in the release pipeline (GitHub Actions workflows, release artifacts, the Homebrew tap) that could let someone tamper with what users install
 
 Out of scope:

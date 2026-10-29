@@ -98,7 +98,7 @@ brew install zig                 # macOS
 scoop install zig                # Windows (scoop)
 # or download from https://ziglang.org/download/
 
-# 2. Build the payload (outputs crypto/windows/payload/abe_extractor_amd64.bin)
+# 2. Build the payload (outputs internal/abe/payload/abe_extractor_amd64.bin)
 make payload
 
 # 3. Build hack-browser-data.exe with the ABE payload embedded

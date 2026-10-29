@@ -1,7 +1,7 @@
 GO     ?= go
 GOEXE  ?= hack-browser-data
 
-include crypto/windows/abe_native/Makefile.frag
+include internal/abe/native/Makefile.frag
 
 .PHONY: build build-windows clean
 

@@ -92,7 +92,7 @@ The project CLAUDE.md is updated as part of the migration ([RFC-012](012-migrati
 
 - it references `go-sqlmock`, which `go.mod` doesn't have — the real strategy is `t.TempDir()` + fixtures;
 - it says HBD supports Chromium-based browsers and Firefox — Safari is missing, as in the root help text;
-- it points at `crypto/abe_embed_windows.go` / `crypto/abe_stub_windows.go`, which now live in `crypto/windows/payload/`;
+- it points at `crypto/abe_embed_windows.go` / `crypto/abe_stub_windows.go`, which now live in `internal/abe/payload/`;
 - its "`golang.org/x/text` will be removed" note is moot (the module is already indirect-only) and its "no `pkg/` + `internal/`" rule is superseded by [RFC-002](002-package-layout.md).
 
 In the code, the `pickTest` / `TestPickFromConfigs` names outlived the function they test (`discoverFromConfigs`) and go away with it. The README says `cookie-editor` skips non-cookie categories, while the code writes them as standard JSON; the contract freezes the code's behavior, so the README is corrected. The format and technique RFCs (013–021) keep today's type names until Phase 8 moves them to the new ones ([RFC-012](012-migration-roadmap.md)). No RFC citations go into source comments — traceability stays in git and these documents.

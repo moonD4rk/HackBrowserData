@@ -41,22 +41,22 @@ go mod verify
 
 ## Chrome ABE Payload (Windows only)
 
-Chrome 127+ cookies (v20) decrypt via a C payload reflectively injected into `chrome.exe`. Sources in `crypto/windows/abe_native/`; design in [RFC-010](rfcs/010-chrome-abe-integration.md).
+Chrome 127+ cookies (v20) decrypt via a C payload reflectively injected into `chrome.exe`. Sources in `internal/abe/native/`; design in [RFC-016](rfcs/016-chrome-abe-integration.md).
 
 ```bash
 make payload         # build the DLL (needs zig: brew install zig)
 make build-windows   # cross-compile hack-browser-data.exe with payload embedded
 make gen-layout      # regenerate Go layout constants from bootstrap_layout.h
-make payload-clean   # rm crypto/*.bin
+make payload-clean   # rm internal/abe/payload/*.bin
 ```
 
 - Default `go build` links a stub that errors at runtime when ABE is needed — contributors not touching Windows ABE need no zig.
-- `-tags abe_embed` embeds the payload via `//go:embed` (see `crypto/abe_embed_windows.go` / `crypto/abe_stub_windows.go`).
+- `-tags abe_embed` embeds the payload via `//go:embed` (see `internal/abe/payload/embed_windows.go` / `stub_windows.go`).
 
 ## Code Conventions
 
 - **Platform code**: use build tags (`_darwin.go`, `_windows.go`, `_linux.go`)
-- **C payload**: all sources in `crypto/windows/abe_native/` are first-party (no vendored C). See RFC-010 §9.2 for why Stephen Fewer's reflective loader was rejected.
+- **C payload**: all sources in `internal/abe/native/` are first-party (no vendored C). See RFC-016 §9.2 for why Stephen Fewer's reflective loader was rejected.
 - **Error handling**: `fmt.Errorf("context: %w", err)` for wrapping, never `_ =` to ignore errors
 - **Logging**: `log.Debugf` for record-level diagnostics, `log.Infof` for user-facing progress/status, `log.Warnf` for unexpected conditions. Extract methods should return errors, not log them.
 - **Naming**: follow Go conventions and the settled names in `rfcs/004-naming-decisions.md` — `Def` not `BrowserConfig`, `Extract` not `BrowsingData`
@@ -68,5 +68,5 @@ make payload-clean   # rm crypto/*.bin
 
 - `modernc.org/sqlite` pinned at v1.31.1 (v1.32+ requires Go 1.21)
 - `tidwall/gjson` < v1.19, `golang.org/x/term` < v0.30, `golang.org/x/sys` at v0.30.0 — later releases raise their `go` directive above 1.20
-- New code goes under `internal/`, never `pkg/`; today's top-level packages move there phase by phase (`rfcs/012-migration-roadmap.md`), except `crypto/windows/` and `utils/injector`, which stay where they are
+- Code lives under `internal/`, never `pkg/`; `cmd/` is the only entry point
 - No library API — `cmd/` is the only consumer of the packages below it
