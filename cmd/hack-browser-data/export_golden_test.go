@@ -17,7 +17,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/export"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
-	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 const (
@@ -29,7 +28,19 @@ const (
 type exportStamp struct {
 	browser string
 	profile string
-	data    *types.BrowserData
+	data    *exportData
+}
+
+type exportData struct {
+	Passwords      []record.Login
+	Cookies        []record.Cookie
+	Histories      []record.History
+	Downloads      []record.Download
+	Bookmarks      []record.Bookmark
+	CreditCards    []record.CreditCard
+	Extensions     []record.Extension
+	LocalStorage   []record.LocalStorage
+	SessionStorage []record.SessionStorage
 }
 
 type exportURLForm struct {
@@ -106,7 +117,7 @@ func exportWrite(t *testing.T, dir, format string, compress bool, stamps []expor
 	w, err := export.NewWriter(dir, f, compress)
 	require.NoError(t, err)
 	for _, s := range stamps {
-		require.NoError(t, writeResult(w, s.browser, types.ExtractResult{Profile: types.Profile{Name: s.profile}, Data: s.data}))
+		require.NoError(t, writeStamp(w, s))
 	}
 	require.NoError(t, w.Close())
 }
@@ -194,7 +205,7 @@ func exportAssertURLForm(t *testing.T, dir string, form exportURLForm) {
 // Entries are listed in extractor sort order with unique sort keys, so re-sorting a profile cannot change a golden.
 func exportStamps() []exportStamp {
 	return []exportStamp{
-		{browser: "Chrome", profile: "Default", data: &types.BrowserData{
+		{browser: "Chrome", profile: "Default", data: &exportData{
 			Passwords: []record.Login{
 				{
 					URL: "https://accounts.example.com/signin?continue=/mail&hl=ja", Username: "alice@example.com",
@@ -261,7 +272,7 @@ func exportStamps() []exportStamp {
 				{URL: "https://app.example.com", Key: "tab-id", Value: "42"},
 			},
 		}},
-		{browser: "Chrome", profile: "Profile 1", data: &types.BrowserData{
+		{browser: "Chrome", profile: "Profile 1", data: &exportData{
 			Passwords: []record.Login{
 				{
 					URL: "http://192.168.0.1:8080/admin", Username: "admin", Password: " leading space",
@@ -313,7 +324,7 @@ func exportStamps() []exportStamp {
 				{URL: "https://example.org/?x=1&y=<2>", Key: "draft", Value: `He said "hi", then left \`},
 			},
 		}},
-		{browser: "Microsoft Edge", profile: "Default", data: &types.BrowserData{
+		{browser: "Microsoft Edge", profile: "Default", data: &exportData{
 			Passwords: []record.Login{
 				{
 					URL: "https://login.example.org/<tenant>/authorize?client=a&scope=b", Username: `CORP\jdoe`, Password: "日本語パスワード",
@@ -368,27 +379,26 @@ func exportStamps() []exportStamp {
 
 func exportSparseStamps() []exportStamp {
 	return []exportStamp{
-		{browser: "Chrome", profile: "Default", data: &types.BrowserData{
+		{browser: "Chrome", profile: "Default", data: &exportData{
 			Passwords: []record.Login{{URL: "https://example.com/", Username: "alice", Store: record.StoreLocal}},
 			Cookies:   []record.Cookie{},
 		}},
 		{browser: "Chrome", profile: "Profile 1"},
-		{browser: "Microsoft Edge", profile: "Default", data: &types.BrowserData{
+		{browser: "Microsoft Edge", profile: "Default", data: &exportData{
 			Histories:    []record.History{},
 			LocalStorage: []record.LocalStorage{{URL: "https://example.com", Key: "k", Value: "v"}},
 		}},
 	}
 }
 
-// writeResult writes the export fixtures, which are kept in today's BrowserData until the goldens move into export.
-func writeResult(w *export.Writer, browserName string, r types.ExtractResult) error {
-	if r.Data == nil {
+func writeStamp(w *export.Writer, s exportStamp) error {
+	if s.data == nil {
 		return nil
 	}
 	for _, c := range category.All() {
-		records := profileRecords(r.Data, c)
+		records := profileRecords(s.data, c)
 		for _, rec := range records {
-			record.Stamp(rec, browserName, r.Name)
+			record.Stamp(rec, s.browser, s.profile)
 		}
 		if err := w.Write(c, records); err != nil {
 			return err
@@ -397,7 +407,7 @@ func writeResult(w *export.Writer, browserName string, r types.ExtractResult) er
 	return nil
 }
 
-func profileRecords(d *types.BrowserData, c category.Category) []record.Record {
+func profileRecords(d *exportData, c category.Category) []record.Record {
 	switch c {
 	case category.Password:
 		return recordsOf(d.Passwords)
