@@ -11,10 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/moond4rk/hackbrowserdata/browser"
-	"github.com/moond4rk/hackbrowserdata/browser/firefox"
 	"github.com/moond4rk/hackbrowserdata/internal/crypto"
-	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 // home's logins open only with its second key candidate (AES-256) and work's with its only one (3DES), so the golden
@@ -47,19 +44,6 @@ var (
 	oidAES256CBC      = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 1, 42}
 	oidDESEDE3CBC     = asn1.ObjectIdentifier{1, 2, 840, 113549, 3, 7}
 )
-
-func firefoxFixtureBrowsers(t *testing.T, profilesDir string) []browser.Browser {
-	t.Helper()
-	b, err := firefox.NewBrowser(types.BrowserConfig{
-		Key:         "firefox",
-		Name:        "Firefox",
-		Kind:        types.Firefox,
-		UserDataDir: profilesDir,
-	})
-	require.NoError(t, err)
-	require.NotNil(t, b)
-	return []browser.Browser{b}
-}
 
 func firefoxFixtureUserData(t *testing.T, profilesDir string) {
 	t.Helper()

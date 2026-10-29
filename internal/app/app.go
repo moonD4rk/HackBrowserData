@@ -42,6 +42,7 @@ type Request struct {
 	Home        string
 
 	// KeychainPassword yields the macOS login password when the login keychain is first opened; "" leaves it locked.
+	// nil, as list has it, leaves the keychain locked without saying so.
 	KeychainPassword func(ctx context.Context) (string, error)
 	// Keys are a dump's keys by user data dir; nil retrieves every dir's keys from this machine.
 	Keys map[browser.DirID]masterkey.Set
@@ -77,9 +78,9 @@ func validate(f Flags, stdin *os.File) (Request, error) {
 	if err != nil {
 		return Request{}, err
 	}
-	home, err := os.UserHomeDir()
+	home, err := homeDir()
 	if err != nil {
-		return Request{}, fmt.Errorf("home directory: %w", err)
+		return Request{}, err
 	}
 	return Request{
 		Browser:          id,
@@ -91,6 +92,57 @@ func validate(f Flags, stdin *os.File) (Request, error) {
 		Home:             home,
 		KeychainPassword: password,
 	}, nil
+}
+
+// ValidateKeys checks dumpkeys' flags: the browser, and how the keychain password is given.
+func ValidateKeys(f Flags) (Request, error) {
+	id, err := parseBrowser(f.Browser)
+	if err != nil {
+		return Request{}, err
+	}
+	password, err := keychainPassword(f, os.Stdin)
+	if err != nil {
+		return Request{}, err
+	}
+	home, err := homeDir()
+	if err != nil {
+		return Request{}, err
+	}
+	return Request{Browser: id, Home: home, KeychainPassword: password}, nil
+}
+
+// ValidateArchive checks archive's flags. An archive copies files and reads no secret.
+func ValidateArchive(f Flags) (Request, error) {
+	id, err := parseBrowser(f.Browser)
+	if err != nil {
+		return Request{}, err
+	}
+	categories, err := parseCategories(f.Categories)
+	if err != nil {
+		return Request{}, err
+	}
+	home, err := homeDir()
+	if err != nil {
+		return Request{}, err
+	}
+	return Request{Browser: id, Categories: categories, Home: home}, nil
+}
+
+// ListRequest is what list reads: every browser and category, with the keychain left locked, so counting never prompts.
+func ListRequest() (Request, error) {
+	home, err := homeDir()
+	if err != nil {
+		return Request{}, err
+	}
+	return Request{Browser: "all", Categories: category.All(), Home: home}, nil
+}
+
+func homeDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("home directory: %w", err)
+	}
+	return home, nil
 }
 
 // parseBrowser accepts all or one of this OS's browser IDs; an ID from another OS's table has nothing to find here.

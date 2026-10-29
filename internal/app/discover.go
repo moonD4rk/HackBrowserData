@@ -28,12 +28,44 @@ func Discover(req Request) Discovery {
 			opts.ProfilePath = req.ProfilePath
 		}
 		dirs, err := discover(def, opts)
-		d.Dirs = append(d.Dirs, dirs...)
+		d.Dirs = append(d.Dirs, withData(dirs)...)
 		if err != nil {
 			d.Failed = append(d.Failed, dirFailure(browser.DirID(def.ID), err))
 		}
 	}
 	return d
+}
+
+// withData keeps the profiles holding a file some category reads, and the user data dirs with such a profile: a
+// Preferences marker alone is no data, so a profile created and never used is not listed, archived, or keyed.
+func withData(dirs []browser.UserDataDir) []browser.UserDataDir {
+	extractors := extractorsWith(nil)
+	var out []browser.UserDataDir
+	for _, dir := range dirs {
+		var profiles []browser.Profile
+		for _, p := range dir.Profiles {
+			if hasData(dir, p, extractors(dir, p)) {
+				profiles = append(profiles, p)
+			}
+		}
+		if len(profiles) > 0 {
+			dir.Profiles = profiles
+			out = append(out, dir)
+		}
+	}
+	return out
+}
+
+func hasData(dir browser.UserDataDir, p browser.Profile, ex browser.Extractors) bool {
+	for _, x := range ex {
+		if len(x.Sources) == 0 {
+			continue
+		}
+		if _, ok := locate(dir, p, x.Sources); ok {
+			return true
+		}
+	}
+	return false
 }
 
 // discover and extractorsWith dispatch on the base here, because the base packages import browser and so browser

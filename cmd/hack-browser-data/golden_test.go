@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -91,4 +92,24 @@ func zipListing(t *testing.T, path string) string {
 			f.Name, f.Method, f.Modified.UTC().Format(time.RFC3339), f.UncompressedSize64, f.CRC32)
 	}
 	return b.String()
+}
+
+func readGolden(t *testing.T, name string) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(goldenDir, name))
+	require.NoError(t, err)
+	return string(data)
+}
+
+// setHome points the commands' home directory at a fixture: HOME, and USERPROFILE, which Windows reads instead.
+func setHome(t *testing.T, home string) {
+	t.Helper()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+}
+
+func runCmd(t *testing.T, cmd *cobra.Command, args ...string) {
+	t.Helper()
+	cmd.SetArgs(args)
+	require.NoError(t, cmd.Execute())
 }

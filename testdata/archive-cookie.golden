@@ -6,3 +6,4 @@ chrome/Default/Preferences method=8 modified=1979-11-30T00:00:00Z size=19 crc32=
 chrome/Local State method=8 modified=1979-11-30T00:00:00Z size=11 crc32=015c5138
 chrome/Profile 1/Network/Cookies method=8 modified=1979-11-30T00:00:00Z size=25 crc32=184f7580
 chrome/Profile 1/Preferences method=8 modified=1979-11-30T00:00:00Z size=21 crc32=be2429c4
+manifest.json method=8 modified=1979-11-30T00:00:00Z size=492 crc32=09e41450

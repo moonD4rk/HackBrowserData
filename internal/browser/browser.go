@@ -24,6 +24,20 @@ const (
 	Safari
 )
 
+// String is the base's name in a snapshot manifest.
+func (b Base) String() string {
+	switch b {
+	case Chromium:
+		return "chromium"
+	case Firefox:
+		return "firefox"
+	case Safari:
+		return "safari"
+	default:
+		return "unknown"
+	}
+}
+
 // Platform is how one browser appears on one OS; a Platform without UserDataDirs means the OS is not supported.
 type Platform struct {
 	UserDataDirs  []string // slash-separated, relative to the home directory; globs allowed

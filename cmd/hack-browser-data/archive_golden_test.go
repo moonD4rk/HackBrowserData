@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -12,10 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moond4rk/hackbrowserdata/browser"
-	"github.com/moond4rk/hackbrowserdata/browser/chromium"
-	"github.com/moond4rk/hackbrowserdata/internal/category"
-	"github.com/moond4rk/hackbrowserdata/types"
+	"github.com/moond4rk/hackbrowserdata/internal/app"
+	ibrowser "github.com/moond4rk/hackbrowserdata/internal/browser"
 )
 
 const archiveLayoutKey = "chrome"
@@ -48,9 +47,8 @@ var archiveLayoutExtraFiles = []string{
 	"System Profile/History",
 }
 
-func archiveLayoutUserData(t *testing.T) string {
+func archiveLayoutUserData(t *testing.T, root string) {
 	t.Helper()
-	root := t.TempDir()
 	files := append([]string{}, archiveLayoutExtraFiles...)
 	for _, profile := range []string{"Default", "Profile 1"} {
 		for _, rel := range archiveLayoutProfileFiles {
@@ -62,7 +60,6 @@ func archiveLayoutUserData(t *testing.T) string {
 		require.NoError(t, os.MkdirAll(filepath.Dir(abs), 0o755))
 		require.NoError(t, os.WriteFile(abs, []byte(rel), 0o600))
 	}
-	return root
 }
 
 func archiveLayoutEntryNames(t *testing.T, zipPath string) []string {
@@ -78,34 +75,37 @@ func archiveLayoutEntryNames(t *testing.T, zipPath string) []string {
 }
 
 func TestArchiveGolden(t *testing.T) {
-	b, err := chromium.NewBrowser(types.BrowserConfig{
-		Key:         archiveLayoutKey,
-		Name:        "Chrome",
-		Kind:        types.Chromium,
-		UserDataDir: archiveLayoutUserData(t),
-	})
-	require.NoError(t, err)
-	require.NotNil(t, b)
+	home := t.TempDir()
+	def, ok := ibrowser.Lookup(archiveLayoutKey)
+	require.True(t, ok)
+	archiveLayoutUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])))
 
 	tests := []struct {
 		name       string
 		golden     string
-		categories []category.Category
+		categories string
 	}{
-		{name: "all", golden: "archive-all.golden", categories: category.All()},
-		{name: "cookie", golden: "archive-cookie.golden", categories: []category.Category{category.Cookie}},
+		{name: "all", golden: "archive-all.golden", categories: "all"},
+		{name: "cookie", golden: "archive-cookie.golden", categories: "cookie"},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			req, err := app.ValidateArchive(app.Flags{Browser: archiveLayoutKey, Categories: tt.categories})
+			require.NoError(t, err)
+			req.Home = home
 			out := filepath.Join(t.TempDir(), "browser-data.zip")
-			n, err := browser.WriteArchive([]browser.Browser{b}, tt.categories, out)
+			n, err := app.Archive(context.Background(), app.Discover(req), req, out)
 			require.NoError(t, err)
 			assertGolden(t, tt.golden, fmt.Sprintf("entries=%d\n", n)+zipListing(t, out))
 
 			prefix := archiveLayoutKey + "/"
 			names := archiveLayoutEntryNames(t, out)
+			assert.Contains(t, names, "manifest.json")
 			for _, name := range names {
+				if name == "manifest.json" {
+					continue
+				}
 				assert.Truef(t, strings.HasPrefix(name, prefix), "entry %q lacks the %q prefix", name, prefix)
 				assert.NotContains(t, name, `\`)
 				assert.NotEqual(t, "LOCK", path.Base(name))
@@ -116,4 +116,22 @@ func TestArchiveGolden(t *testing.T) {
 			assert.NotContains(t, names, prefix+"Default/Favicons")
 		})
 	}
+}
+
+// archive on one host and restore on another, both through the CLI, write what dump writes.
+func TestArchiveRestoreRoundTrip(t *testing.T) {
+	home := t.TempDir()
+	setHome(t, home)
+	for _, inst := range chromiumFixtureInstalls {
+		def, ok := ibrowser.Lookup(inst.key)
+		require.True(t, ok, inst.key)
+		chromiumFixtureUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])), inst.key)
+	}
+	archive := filepath.Join(t.TempDir(), "data.zip")
+	runCmd(t, archiveCmd(), "-o", archive)
+	require.Contains(t, archiveLayoutEntryNames(t, archive), "manifest.json")
+
+	out := t.TempDir()
+	chromiumFixtureRestore(t, "--keys", chromiumFixtureKeysFile(t), "--data-zip", archive, "-d", out)
+	assert.Equal(t, readGolden(t, "extract-json.golden"), bundleDir(t, out))
 }

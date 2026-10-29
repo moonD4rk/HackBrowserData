@@ -15,11 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/syndtr/goleveldb/leveldb"
 
-	"github.com/moond4rk/hackbrowserdata/browser"
-	"github.com/moond4rk/hackbrowserdata/browser/chromium"
 	"github.com/moond4rk/hackbrowserdata/internal/crypto"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
-	"github.com/moond4rk/hackbrowserdata/types"
 )
 
 // Only GCM-sealed values (v10 under a 32-byte key, v20) decrypt identically on every OS.
@@ -51,24 +48,6 @@ func chromiumFixtureInstallations(t *testing.T, root string) {
 	for _, inst := range chromiumFixtureInstalls {
 		chromiumFixtureUserData(t, filepath.Join(root, inst.key), inst.key)
 	}
-}
-
-func chromiumFixtureBrowsers(t *testing.T, root string) []browser.Browser {
-	t.Helper()
-	browsers := make([]browser.Browser, 0, len(chromiumFixtureInstalls))
-	for _, inst := range chromiumFixtureInstalls {
-		b, err := chromium.NewBrowser(types.BrowserConfig{
-			Key:         inst.key,
-			Name:        inst.name,
-			Kind:        types.Chromium,
-			UserDataDir: filepath.Join(root, inst.key),
-		})
-		require.NoError(t, err)
-		require.NotNil(t, b)
-		b.SetKeys(chromiumFixtureKeys)
-		browsers = append(browsers, b)
-	}
-	return browsers
 }
 
 func chromiumFixtureUserData(t *testing.T, userDataDir, browserKey string) {

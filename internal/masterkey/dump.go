@@ -33,7 +33,9 @@ type Host struct {
 // Browser is the lookup key (e.g. "chrome"); Kind is the engine ("chromium"|"chromium-yandex"|
 // "chromium-opera") so a consumer can rebuild the engine without the local browser table.
 type Vault struct {
-	Browser     string   `json:"browser"`
+	Browser string `json:"browser"`
+	// ID names a second user data dir of the same browser ("arc-2"); the first one's is Browser, so it is left out.
+	ID          string   `json:"id,omitempty"`
 	Kind        string   `json:"kind"`
 	UserDataDir string   `json:"user_data_dir"`
 	Profiles    []string `json:"profiles"`

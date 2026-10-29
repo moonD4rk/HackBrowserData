@@ -54,7 +54,7 @@ An archive captures what today's does — `Local State` and each profile's `Pref
 
 ## Manifest
 
-A new snapshot directory carries `manifest.json` at its root: a schema version, and per user data dir its ID, `Def.ID`, `Base`, profiles, and captured paths. `restore` uses it, when present, to rebuild user data dirs and profiles without re-discovering anything — that is its `Discovery` ([RFC-003](003-core-types.md)) — and then runs Extract → Export → Report exactly as a live run would. Archives without a manifest — every archive made before the rewrite — still restore through today's path: the keys.json vaults plus the directory layout. v1.1.0 ignores the extra file.
+A new snapshot directory carries `manifest.json` at its root: a schema version, and per user data dir its ID, `Def.ID`, `Base`, profiles, and captured paths. `restore` uses it, when present, to rebuild user data dirs and profiles without re-discovering anything — that is its `Discovery` ([RFC-003](003-core-types.md)) — and then runs Extract → Export → Report exactly as a live run would. Restore trusts no manifest path that would leave its own directory of the archive. Archives without a manifest — every archive made before the rewrite — still restore through today's path: the keys.json vaults plus the directory layout. v1.1.0 ignores the extra file.
 
 ## Copy semantics
 
