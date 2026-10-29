@@ -1,0 +1,7 @@
+Browser          Profile                    Path
+Chrome           Default                    <chrome>/Default
+Chrome           Profile 1                  <chrome>/Profile 1
+Microsoft Edge   Default                    <edge>/Default
+Microsoft Edge   Profile 1                  <edge>/Profile 1
+Firefox          abcd1234.default-release   <firefox>/abcd1234.default-release
+Firefox          wxyz5678.work              <firefox>/wxyz5678.work

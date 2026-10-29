@@ -9,20 +9,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moond4rk/hackbrowserdata/internal/app"
-	ibrowser "github.com/moond4rk/hackbrowserdata/internal/browser"
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
 // The extract goldens pin dump's output on fixtures; the fixtures' keys are handed in, since no secret store holds them.
 func TestExtractGolden(t *testing.T) {
 	home := t.TempDir()
-	keys := make(map[ibrowser.DirID]masterkey.Set)
+	keys := make(map[browser.DirID]masterkey.Set)
 	for _, inst := range chromiumFixtureInstalls {
-		def, ok := ibrowser.Lookup(inst.key)
+		def, ok := browser.Lookup(inst.key)
 		require.True(t, ok, inst.key)
 		require.Equal(t, inst.name, def.Name, "records are stamped with the table's display name")
 		chromiumFixtureUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])), inst.key)
-		keys[ibrowser.DirID(inst.key)] = chromiumFixtureKeys
+		keys[browser.DirID(inst.key)] = chromiumFixtureKeys
 	}
 
 	assertExtractGoldens(t, "extract", func(t *testing.T, format string) string {
@@ -32,7 +32,7 @@ func TestExtractGolden(t *testing.T) {
 
 func TestExtractGoldenFirefox(t *testing.T) {
 	home := t.TempDir()
-	def, ok := ibrowser.Lookup("firefox")
+	def, ok := browser.Lookup("firefox")
 	require.True(t, ok)
 	firefoxFixtureUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])))
 
@@ -53,7 +53,7 @@ func TestExtractGoldenSafari(t *testing.T) {
 	})
 }
 
-func extractGoldenRun(t *testing.T, home string, keys map[ibrowser.DirID]masterkey.Set, format string) string {
+func extractGoldenRun(t *testing.T, home string, keys map[browser.DirID]masterkey.Set, format string) string {
 	t.Helper()
 	out := t.TempDir()
 	req, err := app.Validate(app.Flags{Browser: "all", Categories: "all", Format: format, Dir: out})

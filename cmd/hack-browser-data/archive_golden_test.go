@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moond4rk/hackbrowserdata/internal/app"
-	ibrowser "github.com/moond4rk/hackbrowserdata/internal/browser"
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 )
 
 const archiveLayoutKey = "chrome"
@@ -76,7 +76,7 @@ func archiveLayoutEntryNames(t *testing.T, zipPath string) []string {
 
 func TestArchiveGolden(t *testing.T) {
 	home := t.TempDir()
-	def, ok := ibrowser.Lookup(archiveLayoutKey)
+	def, ok := browser.Lookup(archiveLayoutKey)
 	require.True(t, ok)
 	archiveLayoutUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])))
 
@@ -123,7 +123,7 @@ func TestArchiveRestoreRoundTrip(t *testing.T) {
 	home := t.TempDir()
 	setHome(t, home)
 	for _, inst := range chromiumFixtureInstalls {
-		def, ok := ibrowser.Lookup(inst.key)
+		def, ok := browser.Lookup(inst.key)
 		require.True(t, ok, inst.key)
 		chromiumFixtureUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])), inst.key)
 	}

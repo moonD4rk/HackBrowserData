@@ -1,0 +1,7 @@
+Browser          Profile                    password   cookie   bookmark   history   download   creditcard   extension   localstorage   sessionstorage
+Chrome           Default                    3          4        3          3         2          2            3           5              3
+Chrome           Profile 1                  2          4        3          3         2          2            3           5              3
+Microsoft Edge   Default                    3          4        3          3         2          2            3           5              3
+Microsoft Edge   Profile 1                  2          4        3          3         2          2            3           5              3
+Firefox          abcd1234.default-release   3          4        4          9         3          0            2           3              0
+Firefox          wxyz5678.work              3          4        4          9         3          0            2           3              0

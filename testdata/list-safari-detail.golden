@@ -1,0 +1,4 @@
+Browser   Profile            password   cookie   bookmark   history   download   creditcard   extension   localstorage   sessionstorage
+Safari    default            0          4        6          4         2          0            4           4              0
+Safari    Work               0          2        0          2         1          0            0           1              0
+Safari    profile-9a1b2c3d   0          0        0          1         0          0            0           0              0
