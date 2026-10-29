@@ -1,4 +1,4 @@
-package main
+package app_test
 
 import (
 	"context"
@@ -9,6 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moond4rk/hackbrowserdata/internal/app"
+	"github.com/moond4rk/hackbrowserdata/internal/browser/browsertest"
+	"github.com/moond4rk/hackbrowserdata/internal/golden"
+
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
@@ -17,12 +20,12 @@ import (
 func TestExtractGolden(t *testing.T) {
 	home := t.TempDir()
 	keys := make(map[browser.DirID]masterkey.Set)
-	for _, inst := range chromiumFixtureInstalls {
-		def, ok := browser.Lookup(inst.key)
-		require.True(t, ok, inst.key)
-		require.Equal(t, inst.name, def.Name, "records are stamped with the table's display name")
-		chromiumFixtureUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])), inst.key)
-		keys[browser.DirID(inst.key)] = chromiumFixtureKeys
+	for _, inst := range browsertest.ChromiumInstalls {
+		def, ok := browser.Lookup(inst.Key)
+		require.True(t, ok, inst.Key)
+		require.Equal(t, inst.Name, def.Name, "records are stamped with the table's display name")
+		browsertest.ChromiumUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])), inst.Key)
+		keys[browser.DirID(inst.Key)] = browsertest.ChromiumKeys
 	}
 
 	assertExtractGoldens(t, "extract", func(t *testing.T, format string) string {
@@ -34,7 +37,7 @@ func TestExtractGoldenFirefox(t *testing.T) {
 	home := t.TempDir()
 	def, ok := browser.Lookup("firefox")
 	require.True(t, ok)
-	firefoxFixtureUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])))
+	browsertest.FirefoxUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])))
 
 	assertExtractGoldens(t, "extract-firefox", func(t *testing.T, format string) string {
 		return extractGoldenRun(t, home, nil, format)
@@ -46,7 +49,7 @@ func TestExtractGoldenSafari(t *testing.T) {
 		t.Skip("Safari is in the browser table on macOS only")
 	}
 	home := t.TempDir()
-	safariFixtureLibrary(t, filepath.Join(home, "Library"))
+	browsertest.SafariLibrary(t, filepath.Join(home, "Library"))
 
 	assertExtractGoldens(t, "extract-safari", func(t *testing.T, format string) string {
 		return extractGoldenRun(t, home, nil, format)
@@ -81,12 +84,12 @@ func assertExtractGoldens(t *testing.T, prefix string, run func(t *testing.T, fo
 		tt := tt
 		t.Run(tt.format, func(t *testing.T) {
 			out := run(t, tt.format)
-			got := bundleDir(t, out)
+			got := golden.Bundle(t, out)
 			if tt.jsonFallback {
-				assertJSONFallback(t, out, run(t, "json"))
-				got = bundleFiles(t, out, "cookie.json")
+				golden.AssertJSONFallback(t, out, run(t, "json"))
+				got = golden.BundleFiles(t, out, "cookie.json")
 			}
-			assertGolden(t, prefix+"-"+tt.format+".golden", got)
+			golden.Assert(t, prefix+"-"+tt.format+".golden", got)
 		})
 	}
 }

@@ -8,10 +8,12 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	"github.com/moond4rk/hackbrowserdata/internal/golden"
 )
 
 func TestFlagSurface(t *testing.T) {
-	assertGolden(t, "flags.golden", flagSurface(rootCmd()))
+	golden.Assert(t, "flags.golden", flagSurface(rootCmd()))
 }
 
 func flagSurface(root *cobra.Command) string {

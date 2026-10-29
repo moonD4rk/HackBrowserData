@@ -1,4 +1,4 @@
-package main
+package masterkey_test
 
 import (
 	"bytes"
@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moond4rk/hackbrowserdata/internal/golden"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
@@ -103,7 +104,7 @@ func TestKeysGolden(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			require.NoError(t, tt.dump(t).WriteJSON(&buf))
-			assertGolden(t, tt.golden, buf.String())
+			golden.Assert(t, tt.golden, buf.String())
 		})
 	}
 }
@@ -125,7 +126,7 @@ func TestKeysRead(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			data, err := os.ReadFile(filepath.Join(goldenDir, tt.golden))
+			data, err := os.ReadFile(filepath.Join("testdata", tt.golden))
 			require.NoError(t, err)
 			if tt.edit != nil {
 				data = keysEditJSON(t, data, tt.edit)

@@ -1,4 +1,4 @@
-package main
+package browsertest
 
 import (
 	"crypto/sha256"
@@ -20,42 +20,42 @@ import (
 )
 
 // Only GCM-sealed values (v10 under a 32-byte key, v20) decrypt identically on every OS.
-var chromiumFixtureKeys = masterkey.Set{
+var ChromiumKeys = masterkey.Set{
 	masterkey.V10: []byte("0123456789abcdef0123456789abcdef"),
 	masterkey.V20: []byte("0123456789abcdef"),
 }
 
-var chromiumFixtureInstalls = []struct {
-	key  string
-	name string
+var ChromiumInstalls = []struct {
+	Key  string
+	Name string
 }{
-	{key: "chrome", name: "Chrome"},
-	{key: "edge", name: "Microsoft Edge"},
+	{Key: "chrome", Name: "Chrome"},
+	{Key: "edge", Name: "Microsoft Edge"},
 }
 
-var chromiumFixtureProfiles = []struct {
-	dir           string
+var ChromiumProfiles = []struct {
+	Dir           string
 	label         string
 	start         time.Time
 	accountLogins bool
 }{
-	{dir: "Default", label: "home", start: time.Date(2024, 3, 1, 9, 0, 0, 0, time.UTC), accountLogins: true},
-	{dir: "Profile 1", label: "work", start: time.Date(2024, 6, 1, 9, 0, 0, 0, time.UTC)},
+	{Dir: "Default", label: "home", start: time.Date(2024, 3, 1, 9, 0, 0, 0, time.UTC), accountLogins: true},
+	{Dir: "Profile 1", label: "work", start: time.Date(2024, 6, 1, 9, 0, 0, 0, time.UTC)},
 }
 
-func chromiumFixtureInstallations(t *testing.T, root string) {
+func ChromiumInstallations(t *testing.T, root string) {
 	t.Helper()
-	for _, inst := range chromiumFixtureInstalls {
-		chromiumFixtureUserData(t, filepath.Join(root, inst.key), inst.key)
+	for _, inst := range ChromiumInstalls {
+		ChromiumUserData(t, filepath.Join(root, inst.Key), inst.Key)
 	}
 }
 
-func chromiumFixtureUserData(t *testing.T, userDataDir, browserKey string) {
+func ChromiumUserData(t *testing.T, userDataDir, browserKey string) {
 	t.Helper()
 	fixtureWrite(t, filepath.Join(userDataDir, "Local State"), "{}")
-	for _, p := range chromiumFixtureProfiles {
+	for _, p := range ChromiumProfiles {
 		site := p.label + "." + browserKey + ".test"
-		chromiumFixtureProfile(t, filepath.Join(userDataDir, p.dir), site, p.start, p.accountLogins)
+		chromiumFixtureProfile(t, filepath.Join(userDataDir, p.Dir), site, p.start, p.accountLogins)
 	}
 }
 
@@ -64,10 +64,10 @@ func chromiumFixtureProfile(t *testing.T, dir, site string, start time.Time, acc
 	at := func(offset time.Duration) int64 { return chromiumFixtureMicros(start.Add(offset)) }
 	link := func(host, path string) string { return "https://" + host + "." + site + path }
 	v10 := func(plaintext string) string {
-		return chromiumFixtureSeal(t, "v10", chromiumFixtureKeys[masterkey.V10], plaintext)
+		return chromiumFixtureSeal(t, "v10", ChromiumKeys[masterkey.V10], plaintext)
 	}
 	v20 := func(plaintext string) string {
-		return chromiumFixtureSeal(t, "v20", chromiumFixtureKeys[masterkey.V20], plaintext)
+		return chromiumFixtureSeal(t, "v20", ChromiumKeys[masterkey.V20], plaintext)
 	}
 	// Chrome 130+ seals SHA256(host_key) ahead of the cookie value, which extraction must strip again.
 	hostBound := func(host, value string) string {

@@ -1,4 +1,4 @@
-package main
+package browsertest
 
 import (
 	"bytes"
@@ -23,7 +23,7 @@ const (
 
 var safariFixtureStart = time.Date(2024, 3, 1, 9, 0, 0, 0, time.UTC)
 
-func safariFixtureLibrary(t *testing.T, library string) {
+func SafariLibrary(t *testing.T, library string) {
 	t.Helper()
 	at := safariFixtureStart.Add
 	visit := func(offset time.Duration) float64 { return safariFixtureCoreData(at(offset)) }
