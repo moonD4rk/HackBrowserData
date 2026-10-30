@@ -1,6 +1,6 @@
 # RFC-008: Output & Export
 
-Everything a user can see in the output — file names, formats, field names, stamp values — is frozen by the compatibility contract ([RFC-000](000-goals-and-constraints.md)). This RFC describes how the rewrite reproduces it byte for byte, and the few places where today's output is wrong and gets fixed.
+Everything a user can see in the output — file names, formats, field names, stamp values — is frozen by the compatibility contract ([RFC-000](000-goals-and-constraints.md)). This RFC describes how the exporter reproduces it byte for byte, and the few places where v1.1.0's output was wrong and is fixed.
 
 ## Contract
 
@@ -22,29 +22,29 @@ func (w *Writer) Write(c category.Category, records []record.Record) error // on
 func (w *Writer) Close() error                                             // finishes every file; with --zip, packs them
 ```
 
-Export writes one file per non-empty category: `password.csv`, `cookie.json`, and so on — `<category>.<ext>`, where the extension is `csv` or `json` (`cookie-editor` writes `.json`). A category with no records produces no file. The output directory is created with mode `0750` and each file with `0600`, as today. One `-f` value per run, as today.
+Export writes one file per non-empty category: `password.csv`, `cookie.json`, and so on — `<category>.<ext>`, where the extension is `csv` or `json` (`cookie-editor` writes `.json`). A category with no records produces no file. The output directory is created with mode `0750` and each file with `0600`, as in v1.1.0. One `-f` value per run, as in v1.1.0.
 
 ## Formats
 
-- **`json`** (default) — one array of objects per category, two-space indent, UTF-8 without a BOM. Strings keep today's HTML escaping: `&`, `<`, and `>` are written as `\u0026`, `\u003c`, and `\u003e`. Today's per-row `MarshalJSON` calls `json.Marshal`, which escapes them even though the outer encoder turns escaping off; the new records are plain structs, so the encoder leaves escaping on to produce the same bytes. Any URL with a query string shows the difference, so the parity suite catches a slip at once.
+- **`json`** (default) — one array of objects per category, two-space indent, UTF-8 without a BOM. Strings keep v1.1.0's HTML escaping: `&`, `<`, and `>` are written as `\u0026`, `\u003c`, and `\u003e`. v1.1.0's per-row `MarshalJSON` called `json.Marshal`, which escaped them even though the outer encoder turned escaping off; the records are plain structs, so the encoder leaves escaping on to produce the same bytes. Any URL with a query string shows the difference, so the export goldens catch a slip at once.
 - **`csv`** — a header row, then one row per record; UTF-8 with a 3-byte BOM so Excel reads non-ASCII correctly; times in RFC 3339 (empty when zero), booleans as `true` / `false`.
-- **`cookie-editor`** — cookies as the Cookie-Editor extension's import array (`expirationDate`, `httpOnly`, `hostOnly`, `sameSite`, …), written without HTML escaping, as today; every other category falls back to the `json` encoder above, which is what today's code does.
+- **`cookie-editor`** — cookies as the Cookie-Editor extension's import array (`expirationDate`, `httpOnly`, `hostOnly`, `sameSite`, …), written without HTML escaping, as in v1.1.0; every other category falls back to the `json` encoder above, as in v1.1.0.
 
 Adding a format later is a new `Format` value and a new encoder; nothing else in the pipeline changes.
 
 ## Wire names follow Go names (DECIDED)
 
-JSON keys and CSV headers are the snake_case form of the Go field names: `Cookie.IsHTTPOnly` is `is_http_only`, `Extension.HomepageURL` is `homepage_url`. `encoding/json` does not derive names on its own, so every field keeps an explicit `json` and `csv` tag, and the rule "tag = snake_case(field name)" is enforced by `tagliatelle` (`use-field-name: true`, `json: snake`, `csv: snake`). Today's record and `keys.json` types already pass that check unchanged; the Cookie-Editor encoder is exempt, because its keys are the extension's import schema, not ours.
+JSON keys and CSV headers are the snake_case form of the Go field names: `Cookie.IsHTTPOnly` is `is_http_only`, `Extension.HomepageURL` is `homepage_url`. `encoding/json` does not derive names on its own, so every field keeps an explicit `json` and `csv` tag, and the rule "tag = snake_case(field name)" is enforced by `tagliatelle` (`use-field-name: true`, `json: snake`, `csv: snake`). The record and `keys.json` types pass that check; the Cookie-Editor encoder is exempt, because its keys are the extension's import schema, not ours.
 
 The consequence is stated plainly: since the output is frozen, **the record field names are frozen too** — a rename would change a column. A field can only be renamed together with a deliberate, announced output change, and the lint makes such a change impossible to miss in review.
 
 ### Source stamp
 
-Every record starts with two flat source fields — `Browser` and `Profile` ([RFC-003](003-core-types.md)) — serialized as the leading `browser` and `profile` keys in JSON and the leading columns in CSV, exactly as today. `browser` is the display name (`Chrome`, `Microsoft Edge`); `profile` is the profile name (`Default`, `Profile 1`, a Safari profile's title), never a path. The pipeline's `Collector` sets both through `record.Stamp`, so no extractor can leave them out.
+Every record starts with two flat source fields — `Browser` and `Profile` ([RFC-003](003-core-types.md)) — serialized as the leading `browser` and `profile` keys in JSON and the leading columns in CSV, exactly as in v1.1.0. `browser` is the display name (`Chrome`, `Microsoft Edge`); `profile` is the profile name (`Default`, `Profile 1`, a Safari profile's title), never a path. The pipeline's `Collector` sets both through `record.Stamp`, so no extractor can leave them out.
 
 ## Deterministic ordering
 
-Output order is defined once per category, in the exporter, for every browser. Files list extractions in plan order — the browser table's order (one merged list whose per-OS projections equal today's `platformBrowsers()` orders), then user data dir ID, then profiles in discovery order (directory order for Chromium and Firefox, the default profile first for Safari) — which matches today's order. Within an extraction, records are sorted by today's key with a stable sort (`sort.SliceStable`; Go 1.20 has no `slices`), and ties keep the order the extractor emitted them in — the source order, which a snapshot fixes — so two runs over the same snapshot produce byte-identical files:
+Output order is defined once per category, in the exporter, for every browser. Files list extractions in plan order — the browser table's order (one merged list whose per-OS projections equal v1.1.0's per-OS orders), then user data dir ID, then profiles in discovery order (directory order for Chromium and Firefox, the default profile first for Safari) — which matches v1.1.0's order. Within an extraction, records are sorted by v1.1.0's key with a stable sort (`sort.SliceStable`; Go 1.20 has no `slices`), and ties keep the order the extractor emitted them in — the source order, which a snapshot fixes — so two runs over the same snapshot produce byte-identical files:
 
 | Category                                            | Order                                                                                                             |
 | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
@@ -56,29 +56,29 @@ Output order is defined once per category, in the exporter, for every browser. F
 
 Ties are not broken by a second key, because some sources lack the first: Safari bookmarks carry no creation time and Safari downloads no start time, so a tie-breaker such as `id` or `url` would replace their file order with an order nobody chose. A stable sort leaves them as the browser stored them.
 
-Today the order is decided in each extractor with an unstable `sort.Slice`, so ties come out in an order nobody chose — and Firefox history sorts _ascending_ by visit count (`browser/firefox/extract_history.go`) while Chromium and Safari sort descending. The table keeps today's keys and fixes Firefox to match the others.
+v1.1.0 decided the order in each extractor with an unstable `sort.Slice`, so ties came out in an order nobody chose — and Firefox history sorted _ascending_ by visit count while Chromium and Safari sorted descending. The table keeps v1.1.0's keys and fixes Firefox to match the others.
 
 ## Streaming vs. buffering
 
-Extractors emit records one at a time ([RFC-003](003-core-types.md)), but sorting needs an extraction's full set. The writer buffers one extraction's records, sorts them, appends them to that category's file, and releases them — memory is bounded by the largest single category of a single profile, where today's writer holds the whole run. The standard encoder cannot append to an open array, so the writer frames it itself: `[` before the first element, each element encoded with a two-space prefix and indent, `,` between elements, and `]` plus a newline on `Close`. Those are the bytes a single `Encode` of the whole slice produces, and the parity suite proves it ([RFC-011](011-testing-and-quality.md)).
+Extractors emit records one at a time ([RFC-003](003-core-types.md)), but sorting needs an extraction's full set. The writer buffers one extraction's records, sorts them, appends them to that category's file, and releases them — memory is bounded by the largest single category of a single profile, where v1.1.0's writer held the whole run. The standard encoder cannot append to an open array, so the writer frames it itself: `[` before the first element, each element encoded with a two-space prefix and indent, `,` between elements, and `]` plus a newline on `Close`. Those are the bytes a single `Encode` of the whole slice produces, and the export goldens prove it ([RFC-011](011-testing-and-quality.md)).
 
 ## `--zip`
 
-`--zip` keeps today's result — `<dir>/<basename(dir)>.zip` with the files at its top level, and the loose files removed — but fixes the order. Today `fileutil.CompressDir` deletes each file as soon as it is added to an in-memory zip and writes the zip to disk last, so any failure along the way loses the output. The rewrite writes the zip to a temp file, closes and renames it into place, and only then deletes the originals; a failure leaves every output file where it was. It packs only the files the run wrote: today every file in the directory is packed and deleted, whoever wrote it.
+`--zip` keeps v1.1.0's result — `<dir>/<basename(dir)>.zip` with the files at its top level, and the loose files removed — but fixes the order. v1.1.0 deleted each file as soon as it was added to an in-memory zip and wrote the zip to disk last, so any failure along the way lost the output. The writer writes the zip to a temp file, closes and renames it into place, and only then deletes the originals; a failure leaves every output file where it was. It packs only the files the run wrote, where v1.1.0 packed and deleted every file in the directory, whoever wrote it.
 
 ## Output fixes (listed exceptions to "unchanged")
 
 - **Firefox history order** — `visit_count` descending, like Chromium and Safari.
-- **Firefox bookmarks** — `folder` holds the real folder name instead of `url`, and `type` and `id` are filled; today they are always `url`, empty, and `0`.
-- **Safari bookmark IDs** — unique across the whole bookmark tree; today each ID is the index among its siblings, so IDs repeat across folders.
-- **Firefox logins without a key** — when a profile's key cannot be recovered (no `key4.db`, or a primary password is set), its logins are exported with empty usernames and passwords and the extraction is `partial`; today the run panics as soon as one of those logins uses the legacy cipher.
-- **Yandex logins and cards without a key** — when a profile's data key cannot be recovered (no master key, a wrong one, or a master password is set), its logins and cards are exported with empty passwords and card numbers and the extraction is `partial`, as every other store's are; today none of them is exported.
-- **`browser` in `restore` output** — the display name (`Chrome`), as `dump` writes it; today `restore` writes the vault key (`chrome`).
-- **CocCoc cookies beside Yandex** — on Windows, ABE looks for a browser's program in its own install locations before registry App Paths. CocCoc and Yandex both ship `browser.exe`, and App Paths names only one of them, so today CocCoc's key is requested from Yandex's program and its `v20` cookies export with empty values.
+- **Firefox bookmarks** — `folder` holds the real folder name instead of `url`, and `type` and `id` are filled; v1.1.0 always wrote `url`, empty, and `0`.
+- **Safari bookmark IDs** — unique across the whole bookmark tree; in v1.1.0 each ID was the index among its siblings, so IDs repeated across folders.
+- **Firefox logins without a key** — when a profile's key cannot be recovered (no `key4.db`, or a primary password is set), its logins are exported with empty usernames and passwords and the extraction is `partial`; v1.1.0 panicked as soon as one of those logins used the legacy cipher.
+- **Yandex logins and cards without a key** — when a profile's data key cannot be recovered (no master key, a wrong one, or a master password is set), its logins and cards are exported with empty passwords and card numbers and the extraction is `partial`, as every other store's are; v1.1.0 exported none of them.
+- **`browser` in `restore` output** — the display name (`Chrome`), as `dump` writes it; v1.1.0's `restore` wrote the vault key (`chrome`).
+- **CocCoc cookies beside Yandex** — on Windows, ABE looks for a browser's program in its own install locations before registry App Paths. CocCoc and Yandex both ship `browser.exe`, and App Paths names only one of them, so v1.1.0 requested CocCoc's key from Yandex's program and exported its `v20` cookies with empty values.
 
 ## Secrets in output
 
-`-c all` is the default, as today, so a bare run exports every category, passwords and cookies included. The exporter does not redact: what reaches Export was asked for.
+`-c all` is the default, as in v1.1.0, so a bare run exports every category, passwords and cookies included. The exporter does not redact: what reaches Export was asked for.
 
 ## DEFERRED
 

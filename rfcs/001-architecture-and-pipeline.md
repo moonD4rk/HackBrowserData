@@ -27,7 +27,7 @@ A run is a one-way pipeline of seven stages. Each stage takes the previous stage
             └─────┬─────┘  (first decrypt in a key scope triggers retrieval)
                   ▼
             ┌───────────┐
-            │  Export   │  append each extraction's records to today's files,
+            │  Export   │  append each extraction's records to the output files,
             └─────┬─────┘  then remove the snapshot and take the next user data dir
    ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
                   ▼
@@ -40,9 +40,9 @@ A run is a one-way pipeline of seven stages. Each stage takes the previous stage
 
 ### 1. Validate
 
-Turns parsed flags into a typed `app.Request`: which categories, which browser, the `-p` override, output directory, format, `--zip`, and how the keychain password is supplied. Rejects bad input here — an unknown format, category, or browser ID, or an output directory that cannot be created, fails now with exit status `1` (today's status, except for an unknown browser ID, which found nothing and exited `0`; [RFC-009](009-cli-surface.md)), **before** any browser is discovered and **before** any keychain prompt. Today `-c` and `-f` are checked only after discovery and the prompt; that ordering bug is designed out here.
+Turns parsed flags into a typed `app.Request`: which categories, which browser, the `-p` override, output directory, format, `--zip`, and how the keychain password is supplied. Rejects bad input here — an unknown format, category, or browser ID, or an output directory that cannot be created, fails now with exit status `1` (v1.1.0's status, except for an unknown browser ID, which there found nothing and exited `0`; [RFC-009](009-cli-surface.md)), **before** any browser is discovered and **before** any keychain prompt. v1.1.0 checked `-c` and `-f` only after discovery and the prompt; validating first designs that ordering bug out.
 
-Validate touches no browser files and creates nothing: the output-directory check only confirms that `-d` is a directory or that its nearest existing ancestor is a writable directory. For `restore`, reading `--keys` is part of Validate, because `-b` there is checked against the dump's vaults ([RFC-009](009-cli-surface.md)). `-p` combined with `-b all` logs a warning and is ignored, as today, instead of being dropped silently.
+Validate touches no browser files and creates nothing: the output-directory check only confirms that `-d` is a directory or that its nearest existing ancestor is a writable directory. For `restore`, reading `--keys` is part of Validate, because `-b` there is checked against the dump's vaults ([RFC-009](009-cli-surface.md)). `-p` combined with `-b all` is ignored, as in v1.1.0, but with a warning rather than silently.
 
 **In:** parsed flags. **Out:** a validated `app.Request`. **Owner:** `cmd/hack-browser-data` (flag wiring) + `app.Validate` (rules).
 
@@ -54,13 +54,13 @@ Enumerates which supported browsers are present and which profiles each one has,
 
 ### 3. Plan
 
-The cross product. For each user data dir, each profile, and each requested category, the profile's `Extractors` say whether the category is supported and which source files it needs. Plan turns that into a flat list of `Extraction`s, a `Skipped` list with a reason for every requested pair that can't run (`unsupported` by this browser, `absent` on disk) plus Discover's failures, and the union of files to capture, deduplicated by user data dir and path — so a file two categories share (Chromium `History` feeds both history and downloads) is copied once, where today it is copied twice. Plan only stats files; it opens nothing. A `Plan` is plain data, with no functions inside, so `list` prints it and tests compare it.
+The cross product. For each user data dir, each profile, and each requested category, the profile's `Extractors` say whether the category is supported and which source files it needs. Plan turns that into a flat list of `Extraction`s, a `Skipped` list with a reason for every requested pair that can't run (`unsupported` by this browser, `absent` on disk) plus Discover's failures, and the union of files to capture, deduplicated by user data dir and path — so a file two categories share (Chromium `History` feeds both history and downloads) is copied once (v1.1.0 copied it twice). Plan only stats files; it opens nothing. A `Plan` is plain data, with no functions inside, so `list` prints it and tests compare it.
 
 **In:** an `app.Discovery` + `app.Request`. **Out:** `app.Plan{Dirs, Files, Extractions, Skipped}`. **Owner:** `app.NewPlan`.
 
 ### 4–6. Capture, Extract, Export — once per user data dir
 
-`app.Execute` runs the next three stages one user data dir at a time. It captures the dir's files into a temporary snapshot, runs the dir's extractions — each extraction's records go to Export as it finishes — and removes the snapshot before it captures the next dir. At most one user data dir's copies of `Login Data`, `Cookies`, and the like are on disk at once, close to today's per-profile session; a run-long snapshot directory would keep every browser's copies until the end, and peak disk use would be all of them together. `archive` is the one exception: it captures every user data dir into one snapshot directory, because the zip of that directory is what it produces ([RFC-007](007-snapshot-and-acquisition.md)).
+`app.Execute` runs the next three stages one user data dir at a time. It captures the dir's files into a temporary snapshot, runs the dir's extractions — each extraction's records go to Export as it finishes — and removes the snapshot before it captures the next dir. At most one user data dir's copies of `Login Data`, `Cookies`, and the like are on disk at once, close to v1.1.0's per-profile session; a run-long snapshot directory would keep every browser's copies until the end, and peak disk use would be all of them together. `archive` is the one exception: it captures every user data dir into one snapshot directory, because the zip of that directory is what it produces ([RFC-007](007-snapshot-and-acquisition.md)).
 
 #### 4. Capture
 
@@ -72,13 +72,13 @@ Copies the user data dir's planned files into its snapshot, a subdirectory named
 
 For each extraction, open its source files _from the snapshot_ and parse them into records. Secrets are lazy: each is retrieved once per key scope, by the first record that needs it — the user data dir for Chromium (`ProfileSnapshot.MasterKeys`), the profile for Firefox, the run for the macOS login keychain ([RFC-006](006-key-retrieval-and-crypto.md)); later extractions in the same scope reuse it. A run that only asked for bookmarks and history never retrieves a key, never opens the keychain, and never prompts.
 
-A record whose secret can't be recovered is still emitted with that field empty (today's output) and reported as a record-level problem, which makes the extraction `partial`.
+A record whose secret can't be recovered is still emitted with that field empty (as in v1.1.0) and reported as a record-level problem, which makes the extraction `partial`.
 
 **In:** the user data dir's extractions + its snapshot. **Out:** records and record-level problems, through a `browser.Collector`. **Owner:** `internal/browser/*` extractors + `internal/masterkey` + `internal/keychain` + `internal/crypto`.
 
 #### 6. Export
 
-Appends each extraction's records, as it finishes, to today's files in today's formats ([RFC-008](008-output-and-export.md)): one file per non-empty category, field names frozen, rows in a deterministic order defined once per category.
+Appends each extraction's records, as it finishes, to the frozen output files and formats ([RFC-008](008-output-and-export.md)): one file per non-empty category, field names frozen, rows in a deterministic order defined once per category.
 
 **In:** records + `app.Request`. **Out:** files on disk (and the `--zip` archive). **Owner:** `internal/export`.
 
@@ -111,11 +111,11 @@ A failure that concerns a whole browser or user data dir rather than one extract
 | `0`    | The run completed. Every result — including `partial`, `error`, and "no browsers found" — is in the summary. |
 | `1`    | The run could not start or finish: a usage error, an unreadable `--keys`, an output write failure.           |
 
-This is today's behavior and stays frozen. `absent` and `unsupported` are not failures — asking all browsers for all categories and getting honest "not here" answers is a successful run. Finer exit codes (separate usage and partial statuses) are DEFERRED; if ever added, they must be opt-in.
+This is v1.1.0's behavior, frozen. `absent` and `unsupported` are not failures — asking all browsers for all categories and getting honest "not here" answers is a successful run. Finer exit codes (separate usage and partial statuses) are DEFERRED; if ever added, they must be opt-in.
 
-## Why a pipeline and not the current interface
+## Why a pipeline
 
-Today each browser package re-implements the orchestration: Chromium, Firefox, and Safari each copy files into a session, switch on the requested categories, and assemble results inside `Extract`, and per-fork special cases (`p.kind == types.ChromiumYandex`) sit inside the Chromium switch. Bugs live where nothing else checks them: Firefox sorts history ascending while the other browsers sort descending, and the archive keys files by browser key alone (`browser/archive.go`, `WriteArchive`), so the second Arc user data dir is dropped.
+In v1.1.0 each browser package re-implemented the orchestration: Chromium, Firefox, and Safari each copied files into a session, switched on the requested categories, and assembled results inside `Extract`, and per-fork special cases (`p.kind == types.ChromiumYandex`) sat inside the Chromium switch. Bugs lived where nothing else checked them: Firefox sorted history ascending while the other browsers sorted descending, and the archive keyed files by browser key alone, so a second Arc user data dir was dropped.
 
 Splitting the run into named stages means:
 

@@ -67,7 +67,7 @@ type Extractors map[category.Category]Extractor
 
 Sources are static data: a base package declares them once per category and never rewrites them per profile. Plan joins a profile-scoped path with the profile's `Dir`, leaves a `Shared` one as it is, and captures the union once per user data dir — so `Local State`, or the Chromium `History` file that feeds both history and downloads, is copied once however many extractions need it. Safari is the exception: a named profile's files sit under two directories named for its UUID, so `safari.Extractors` builds each profile's sources from its `Dir`, and reaches files elsewhere under `~/Library` with `..` from there.
 
-An extraction is `absent` when a required source has no candidate on disk, or when all its sources are optional and none of the profile's own is there: a shared source such as `Local State` never makes an extraction present by itself. An extractor that reads no file — Safari's passwords, which come from the login keychain — always runs. Chromium passwords are two optional sources — `Login Data` (store `local`) and `Login Data For Account` (store `account`) — which reproduces today's output, including a profile that only ever synced passwords, without a special case.
+An extraction is `absent` when a required source has no candidate on disk, or when all its sources are optional and none of the profile's own is there: a shared source such as `Local State` never makes an extraction present by itself. An extractor that reads no file — Safari's passwords, which come from the login keychain — always runs. Chromium passwords are two optional sources — `Login Data` (store `local`) and `Login Data For Account` (store `account`) — which reproduces v1.1.0's output, including a profile that only ever synced passwords, without a special case.
 
 `Extractor` / `Extractors` are **DECIDED**.
 
@@ -101,7 +101,7 @@ type Collector interface {
 }
 ```
 
-An extractor reads from its `Source`s and hands its records to the `Collector`. It emits records as it reads them; it does not accumulate slices. A record whose secret can't be recovered is emitted anyway with that field empty — today's output — and reported through `Fail`, which records the problem and lets the extraction continue, like `testing.T.Error`; the extraction ends `partial`. An extractor never logs errors: it returns extraction-level errors and reports record-level ones. Base-specific context an extractor needs (Safari's profile UUID for filtering downloads and the run's login keychain, the Yandex override) is captured when the base package builds the profile's `Extractors`, not passed through the `ProfileSnapshot`.
+An extractor reads from its `Source`s and hands its records to the `Collector`. It emits records as it reads them; it does not accumulate slices. A record whose secret can't be recovered is emitted anyway with that field empty, as in v1.1.0, and reported through `Fail`, which records the problem and lets the extraction continue, like `testing.T.Error`; the extraction ends `partial`. An extractor never logs errors: it returns extraction-level errors and reports record-level ones. Base-specific context an extractor needs (Safari's profile UUID for filtering downloads and the run's login keychain, the Yandex override) is captured when the base package builds the profile's `Extractors`, not passed through the `ProfileSnapshot`.
 
 `MasterKeys` takes a context because its first call may block — on a secret-store lookup, or on macOS on the login keychain's no-echo password prompt — and Ctrl-C cancels the run's context ([RFC-009](009-cli-surface.md)). It returns no error: the dir's call-once in `app` keeps the retrieval error and reports it once, as the user data dir's `error` result ([RFC-001](001-architecture-and-pipeline.md)), and a record whose key is missing is emitted with that field empty and reported through `Fail`. Every `ProfileSnapshot` of one user data dir shares that call-once; `masterKeys` is nil for Firefox and Safari, whose extractors never call it.
 
@@ -242,7 +242,7 @@ type Record interface {
 func Stamp(r Record, browser, profile string)
 ```
 
-| Category                  | Record type             | Today's type            |
+| Category                  | Record type             | v1.1.0 type             |
 | ------------------------- | ----------------------- | ----------------------- |
 | `category.Password`       | `record.Login`          | `types.LoginEntry`      |
 | `category.Cookie`         | `record.Cookie`         | `types.CookieEntry`     |
@@ -254,9 +254,9 @@ func Stamp(r Record, browser, profile string)
 | `category.LocalStorage`   | `record.LocalStorage`   | `types.StorageEntry`    |
 | `category.SessionStorage` | `record.SessionStorage` | `types.StorageEntry`    |
 
-Every record type starts with two flat source fields, `Browser string` (the display name) and `Profile string` (`Profile.Name`), followed by today's fields with today's names, tags, and order. `LocalStorage` and `SessionStorage` declare the same fields separately, so each is its own type with its own category. Records are used by pointer — `out.Add(&record.Cookie{…})` — because `stamp` sets the fields in place. There is no `Origin`/`Owner` umbrella type ([RFC-004](004-naming-decisions.md)).
+Every record type starts with two flat source fields, `Browser string` (the display name) and `Profile string` (`Profile.Name`), followed by v1.1.0's fields with v1.1.0's names, tags, and order. `LocalStorage` and `SessionStorage` declare the same fields separately, so each is its own type with its own category. Records are used by pointer — `out.Add(&record.Cookie{…})` — because `stamp` sets the fields in place. There is no `Origin`/`Owner` umbrella type ([RFC-004](004-naming-decisions.md)).
 
-Only the type names change. Field names are wire names — each field's snake_case form, enforced by lint — and because the output is frozen, so are they ([RFC-008](008-output-and-export.md)). `Store` becomes a named string type with today's two values, which changes nothing on the wire.
+Only the type names changed from v1.1.0. Field names are wire names — each field's snake_case form, enforced by lint — and because the output is frozen, so are they ([RFC-008](008-output-and-export.md)). `Store` is a named string type with v1.1.0's two values, which changes nothing on the wire.
 
 ## Master key — `internal/masterkey`
 
@@ -270,7 +270,7 @@ const (
     V20 Version = "v20"
 )
 
-// Set holds one Chromium user data dir's key per version. Its JSON form is today's keys.json
+// Set holds one Chromium user data dir's key per version. Its JSON form is the keys.json
 // "keys" object: {"v10": …, "v11": …, "v20": …}.
 type Set map[Version][]byte
 
@@ -287,7 +287,7 @@ type Retriever interface {
 func RetrieveAll(ctx context.Context, loc Locator) (Set, error)
 ```
 
-`Set` / `RetrieveAll` are **DECIDED** ([RFC-004](004-naming-decisions.md)). Because `Version` is a string type, `encoding/json` writes a `Set` with today's `"v10"` keys, sorted, and no marshaling code. Key scopes, retriever order, and laziness are in [RFC-006](006-key-retrieval-and-crypto.md).
+`Set` / `RetrieveAll` are **DECIDED** ([RFC-004](004-naming-decisions.md)). Because `Version` is a string type, `encoding/json` writes a `Set` with the same `"v10"` keys as v1.1.0, sorted, and no marshaling code. Key scopes, retriever order, and laziness are in [RFC-006](006-key-retrieval-and-crypto.md).
 
 ## Login keychain — `internal/keychain`
 
@@ -309,7 +309,7 @@ func (k *Keychain) InternetPasswords(ctx context.Context) ([]keychainbreaker.Int
 func (k *Keychain) Err() error                                                                        // why it is locked; nil if open or never used
 ```
 
-The login keychain belongs to the user, not to a profile or a user data dir, so one handle serves the whole run. On macOS `app` builds it and hands it to its two consumers: the Chromium `v10` retriever, through `masterkey.Locator`, and the Safari password extractor, which `safari.Extractors` captures for the default profile. Each consumer declares the one method it reads (`masterkey.LoginKeychain`, `safari.LoginKeychain`), so its tests need no real keychain. Opening the keychain is the password check: a missing or wrong password leaves it locked — metadata only, as today — and `Err` gives the reason, which the reporter prints once. The package builds only on macOS ([RFC-002](002-package-layout.md)); elsewhere, and in `restore`, there is no handle. Retrieval order and laziness are in [RFC-006](006-key-retrieval-and-crypto.md).
+The login keychain belongs to the user, not to a profile or a user data dir, so one handle serves the whole run. On macOS `app` builds it and hands it to its two consumers: the Chromium `v10` retriever, through `masterkey.Locator`, and the Safari password extractor, which `safari.Extractors` captures for the default profile. Each consumer declares the one method it reads (`masterkey.LoginKeychain`, `safari.LoginKeychain`), so its tests need no real keychain. Opening the keychain is the password check: a missing or wrong password leaves it locked — metadata only, as in v1.1.0 — and `Err` gives the reason, which the reporter prints once. The package builds only on macOS ([RFC-002](002-package-layout.md)); elsewhere, and in `restore`, there is no handle. Retrieval order and laziness are in [RFC-006](006-key-retrieval-and-crypto.md).
 
 ## Snapshot — `internal/snapshot`
 
@@ -358,7 +358,7 @@ const (
 
 func ParseFormat(s string) (Format, error) // "json", "csv", "cookie-editor"
 
-// Writer appends each extraction's records to today's per-category files, in plan order.
+// Writer appends each extraction's records to the per-category output files, in plan order.
 type Writer struct{ /* unexported */ }
 
 func NewWriter(dir string, f Format, zip bool) (*Writer, error)
