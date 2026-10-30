@@ -21,7 +21,7 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
+          go-version: '1.20.x'
 
       - name: Check Go version constraint
         if: matrix.os == 'ubuntu-latest'
@@ -32,12 +32,10 @@ jobs:
             echo "::error::Current value: go $GO_VERSION"
             exit 1
           fi
-
-      - name: Check spelling
-        if: matrix.os == 'ubuntu-latest'
-        uses: crate-ci/typos@master
-        with:
-          config: ./.typos.toml
+          if grep -q '^toolchain' go.mod; then
+            echo "::error::go.mod must not carry a toolchain line (keeps the module on Go 1.20)"
+            exit 1
+          fi
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v8

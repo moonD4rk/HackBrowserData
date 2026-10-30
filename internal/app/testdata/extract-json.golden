@@ -1,0 +1,1133 @@
+-- bookmark.json (2995 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "id": 7,
+    "name": "Café menu",
+    "type": "url",
+    "url": "https://shop.home.chrome.test/menu",
+    "folder": "Other bookmarks",
+    "created_at": "2024-03-01T19:00:00Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "id": 6,
+    "name": "Long read \u003cwith\u003e \u0026 tags",
+    "type": "url",
+    "url": "https://news.home.chrome.test/long-read",
+    "folder": "Reading",
+    "created_at": "2024-03-01T18:00:00Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "id": 4,
+    "name": "Docs",
+    "type": "url",
+    "url": "https://docs.home.chrome.test/",
+    "folder": "Bookmarks bar",
+    "created_at": "2024-03-01T17:00:00Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "id": 7,
+    "name": "Café menu",
+    "type": "url",
+    "url": "https://shop.work.chrome.test/menu",
+    "folder": "Other bookmarks",
+    "created_at": "2024-06-01T19:00:00Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "id": 6,
+    "name": "Long read \u003cwith\u003e \u0026 tags",
+    "type": "url",
+    "url": "https://news.work.chrome.test/long-read",
+    "folder": "Reading",
+    "created_at": "2024-06-01T18:00:00Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "id": 4,
+    "name": "Docs",
+    "type": "url",
+    "url": "https://docs.work.chrome.test/",
+    "folder": "Bookmarks bar",
+    "created_at": "2024-06-01T17:00:00Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "id": 7,
+    "name": "Café menu",
+    "type": "url",
+    "url": "https://shop.home.edge.test/menu",
+    "folder": "Other bookmarks",
+    "created_at": "2024-03-01T19:00:00Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "id": 6,
+    "name": "Long read \u003cwith\u003e \u0026 tags",
+    "type": "url",
+    "url": "https://news.home.edge.test/long-read",
+    "folder": "Reading",
+    "created_at": "2024-03-01T18:00:00Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "id": 4,
+    "name": "Docs",
+    "type": "url",
+    "url": "https://docs.home.edge.test/",
+    "folder": "Bookmarks bar",
+    "created_at": "2024-03-01T17:00:00Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "id": 7,
+    "name": "Café menu",
+    "type": "url",
+    "url": "https://shop.work.edge.test/menu",
+    "folder": "Other bookmarks",
+    "created_at": "2024-06-01T19:00:00Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "id": 6,
+    "name": "Long read \u003cwith\u003e \u0026 tags",
+    "type": "url",
+    "url": "https://news.work.edge.test/long-read",
+    "folder": "Reading",
+    "created_at": "2024-06-01T18:00:00Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "id": 4,
+    "name": "Docs",
+    "type": "url",
+    "url": "https://docs.work.edge.test/",
+    "folder": "Bookmarks bar",
+    "created_at": "2024-06-01T17:00:00Z"
+  }
+]
+-- cookie.json (6071 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "host": "app.home.chrome.test",
+    "path": "/",
+    "name": "session",
+    "value": "ephemeral",
+    "is_secure": true,
+    "is_http_only": true,
+    "has_expire": false,
+    "is_persistent": false,
+    "expire_at": "0001-01-01T00:00:00Z",
+    "created_at": "2024-03-01T09:40:00Z",
+    "same_site": "unspecified"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "host": ".home.chrome.test",
+    "path": "/",
+    "name": "tracker",
+    "value": "opt-out",
+    "is_secure": true,
+    "is_http_only": false,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2026-03-01T09:00:00Z",
+    "created_at": "2024-03-01T09:30:00Z",
+    "same_site": "none"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "host": "www.home.chrome.test",
+    "path": "/settings",
+    "name": "prefs",
+    "value": "theme=dark",
+    "is_secure": false,
+    "is_http_only": false,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2024-03-31T09:00:00Z",
+    "created_at": "2024-03-01T09:20:00Z",
+    "same_site": "strict"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "host": ".home.chrome.test",
+    "path": "/",
+    "name": "SID",
+    "value": "sid-home.chrome.test",
+    "is_secure": true,
+    "is_http_only": true,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2025-03-01T09:00:00Z",
+    "created_at": "2024-03-01T09:10:00.123456Z",
+    "same_site": "lax"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "host": "app.work.chrome.test",
+    "path": "/",
+    "name": "session",
+    "value": "ephemeral",
+    "is_secure": true,
+    "is_http_only": true,
+    "has_expire": false,
+    "is_persistent": false,
+    "expire_at": "0001-01-01T00:00:00Z",
+    "created_at": "2024-06-01T09:40:00Z",
+    "same_site": "unspecified"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "host": ".work.chrome.test",
+    "path": "/",
+    "name": "tracker",
+    "value": "opt-out",
+    "is_secure": true,
+    "is_http_only": false,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2026-06-01T09:00:00Z",
+    "created_at": "2024-06-01T09:30:00Z",
+    "same_site": "none"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "host": "www.work.chrome.test",
+    "path": "/settings",
+    "name": "prefs",
+    "value": "theme=dark",
+    "is_secure": false,
+    "is_http_only": false,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2024-07-01T09:00:00Z",
+    "created_at": "2024-06-01T09:20:00Z",
+    "same_site": "strict"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "host": ".work.chrome.test",
+    "path": "/",
+    "name": "SID",
+    "value": "sid-work.chrome.test",
+    "is_secure": true,
+    "is_http_only": true,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2025-06-01T09:00:00Z",
+    "created_at": "2024-06-01T09:10:00.123456Z",
+    "same_site": "lax"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "host": "app.home.edge.test",
+    "path": "/",
+    "name": "session",
+    "value": "ephemeral",
+    "is_secure": true,
+    "is_http_only": true,
+    "has_expire": false,
+    "is_persistent": false,
+    "expire_at": "0001-01-01T00:00:00Z",
+    "created_at": "2024-03-01T09:40:00Z",
+    "same_site": "unspecified"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "host": ".home.edge.test",
+    "path": "/",
+    "name": "tracker",
+    "value": "opt-out",
+    "is_secure": true,
+    "is_http_only": false,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2026-03-01T09:00:00Z",
+    "created_at": "2024-03-01T09:30:00Z",
+    "same_site": "none"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "host": "www.home.edge.test",
+    "path": "/settings",
+    "name": "prefs",
+    "value": "theme=dark",
+    "is_secure": false,
+    "is_http_only": false,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2024-03-31T09:00:00Z",
+    "created_at": "2024-03-01T09:20:00Z",
+    "same_site": "strict"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "host": ".home.edge.test",
+    "path": "/",
+    "name": "SID",
+    "value": "sid-home.edge.test",
+    "is_secure": true,
+    "is_http_only": true,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2025-03-01T09:00:00Z",
+    "created_at": "2024-03-01T09:10:00.123456Z",
+    "same_site": "lax"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "host": "app.work.edge.test",
+    "path": "/",
+    "name": "session",
+    "value": "ephemeral",
+    "is_secure": true,
+    "is_http_only": true,
+    "has_expire": false,
+    "is_persistent": false,
+    "expire_at": "0001-01-01T00:00:00Z",
+    "created_at": "2024-06-01T09:40:00Z",
+    "same_site": "unspecified"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "host": ".work.edge.test",
+    "path": "/",
+    "name": "tracker",
+    "value": "opt-out",
+    "is_secure": true,
+    "is_http_only": false,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2026-06-01T09:00:00Z",
+    "created_at": "2024-06-01T09:30:00Z",
+    "same_site": "none"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "host": "www.work.edge.test",
+    "path": "/settings",
+    "name": "prefs",
+    "value": "theme=dark",
+    "is_secure": false,
+    "is_http_only": false,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2024-07-01T09:00:00Z",
+    "created_at": "2024-06-01T09:20:00Z",
+    "same_site": "strict"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "host": ".work.edge.test",
+    "path": "/",
+    "name": "SID",
+    "value": "sid-work.edge.test",
+    "is_secure": true,
+    "is_http_only": true,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2025-06-01T09:00:00Z",
+    "created_at": "2024-06-01T09:10:00.123456Z",
+    "same_site": "lax"
+  }
+]
+-- creditcard.json (2331 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "guid": "Alice Example-4-2031",
+    "name": "Alice Example",
+    "number": "4111111111111111",
+    "exp_month": "4",
+    "exp_year": "2031",
+    "nick_name": "Travel",
+    "address": "billing-home",
+    "cvc": "",
+    "comment": ""
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "guid": "Bob Example-11-2029",
+    "name": "Bob Example",
+    "number": "5500005555555559",
+    "exp_month": "11",
+    "exp_year": "2029",
+    "nick_name": "",
+    "address": "",
+    "cvc": "",
+    "comment": ""
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "guid": "Alice Example-4-2031",
+    "name": "Alice Example",
+    "number": "4111111111111111",
+    "exp_month": "4",
+    "exp_year": "2031",
+    "nick_name": "Travel",
+    "address": "billing-home",
+    "cvc": "",
+    "comment": ""
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "guid": "Bob Example-11-2029",
+    "name": "Bob Example",
+    "number": "5500005555555559",
+    "exp_month": "11",
+    "exp_year": "2029",
+    "nick_name": "",
+    "address": "",
+    "cvc": "",
+    "comment": ""
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "guid": "Alice Example-4-2031",
+    "name": "Alice Example",
+    "number": "4111111111111111",
+    "exp_month": "4",
+    "exp_year": "2031",
+    "nick_name": "Travel",
+    "address": "billing-home",
+    "cvc": "",
+    "comment": ""
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "guid": "Bob Example-11-2029",
+    "name": "Bob Example",
+    "number": "5500005555555559",
+    "exp_month": "11",
+    "exp_year": "2029",
+    "nick_name": "",
+    "address": "",
+    "cvc": "",
+    "comment": ""
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "guid": "Alice Example-4-2031",
+    "name": "Alice Example",
+    "number": "4111111111111111",
+    "exp_month": "4",
+    "exp_year": "2031",
+    "nick_name": "Travel",
+    "address": "billing-home",
+    "cvc": "",
+    "comment": ""
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "guid": "Bob Example-11-2029",
+    "name": "Bob Example",
+    "number": "5500005555555559",
+    "exp_month": "11",
+    "exp_year": "2029",
+    "nick_name": "",
+    "address": "",
+    "cvc": "",
+    "comment": ""
+  }
+]
+-- download.json (2619 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "url": "https://files.home.chrome.test/archive.tar.gz",
+    "target_path": "/home/alice/Downloads/archive.tar.gz",
+    "mime_type": "application/gzip",
+    "total_bytes": 1048576,
+    "start_time": "2024-03-01T16:00:00Z",
+    "end_time": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "url": "https://files.home.chrome.test/report.pdf",
+    "target_path": "C:\\Users\\alice\\Downloads\\report.pdf",
+    "mime_type": "application/pdf",
+    "total_bytes": 52344,
+    "start_time": "2024-03-01T15:00:00Z",
+    "end_time": "2024-03-01T15:00:03Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "url": "https://files.work.chrome.test/archive.tar.gz",
+    "target_path": "/home/alice/Downloads/archive.tar.gz",
+    "mime_type": "application/gzip",
+    "total_bytes": 1048576,
+    "start_time": "2024-06-01T16:00:00Z",
+    "end_time": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "url": "https://files.work.chrome.test/report.pdf",
+    "target_path": "C:\\Users\\alice\\Downloads\\report.pdf",
+    "mime_type": "application/pdf",
+    "total_bytes": 52344,
+    "start_time": "2024-06-01T15:00:00Z",
+    "end_time": "2024-06-01T15:00:03Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "url": "https://files.home.edge.test/archive.tar.gz",
+    "target_path": "/home/alice/Downloads/archive.tar.gz",
+    "mime_type": "application/gzip",
+    "total_bytes": 1048576,
+    "start_time": "2024-03-01T16:00:00Z",
+    "end_time": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "url": "https://files.home.edge.test/report.pdf",
+    "target_path": "C:\\Users\\alice\\Downloads\\report.pdf",
+    "mime_type": "application/pdf",
+    "total_bytes": 52344,
+    "start_time": "2024-03-01T15:00:00Z",
+    "end_time": "2024-03-01T15:00:03Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "url": "https://files.work.edge.test/archive.tar.gz",
+    "target_path": "/home/alice/Downloads/archive.tar.gz",
+    "mime_type": "application/gzip",
+    "total_bytes": 1048576,
+    "start_time": "2024-06-01T16:00:00Z",
+    "end_time": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "url": "https://files.work.edge.test/report.pdf",
+    "target_path": "C:\\Users\\alice\\Downloads\\report.pdf",
+    "mime_type": "application/pdf",
+    "total_bytes": 52344,
+    "start_time": "2024-06-01T15:00:00Z",
+    "end_time": "2024-06-01T15:00:03Z"
+  }
+]
+-- extension.json (3171 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "name": "Tab Organizer",
+    "id": "aaaabbbbccccddddeeeeffffgggghhhh",
+    "description": "Groups tabs by site, \"neatly\" \u0026 \u003cfast\u003e",
+    "version": "2.4.1",
+    "homepage_url": "https://tabs.example/",
+    "enabled": true
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "name": "Reader Mode",
+    "id": "iiiijjjjkkkkllllmmmmnnnnoooopppp",
+    "description": "Distraction-free reading",
+    "version": "0.9.0",
+    "homepage_url": "",
+    "enabled": false
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "name": "Legacy Unpacked",
+    "id": "abcdabcdabcdabcdabcdabcdabcdabcd",
+    "description": "",
+    "version": "0.1",
+    "homepage_url": "",
+    "enabled": true
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "name": "Tab Organizer",
+    "id": "aaaabbbbccccddddeeeeffffgggghhhh",
+    "description": "Groups tabs by site, \"neatly\" \u0026 \u003cfast\u003e",
+    "version": "2.4.1",
+    "homepage_url": "https://tabs.example/",
+    "enabled": true
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "name": "Reader Mode",
+    "id": "iiiijjjjkkkkllllmmmmnnnnoooopppp",
+    "description": "Distraction-free reading",
+    "version": "0.9.0",
+    "homepage_url": "",
+    "enabled": false
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "name": "Legacy Unpacked",
+    "id": "abcdabcdabcdabcdabcdabcdabcdabcd",
+    "description": "",
+    "version": "0.1",
+    "homepage_url": "",
+    "enabled": true
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "name": "Tab Organizer",
+    "id": "aaaabbbbccccddddeeeeffffgggghhhh",
+    "description": "Groups tabs by site, \"neatly\" \u0026 \u003cfast\u003e",
+    "version": "2.4.1",
+    "homepage_url": "https://tabs.example/",
+    "enabled": true
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "name": "Reader Mode",
+    "id": "iiiijjjjkkkkllllmmmmnnnnoooopppp",
+    "description": "Distraction-free reading",
+    "version": "0.9.0",
+    "homepage_url": "",
+    "enabled": false
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "name": "Legacy Unpacked",
+    "id": "abcdabcdabcdabcdabcdabcdabcdabcd",
+    "description": "",
+    "version": "0.1",
+    "homepage_url": "",
+    "enabled": true
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "name": "Tab Organizer",
+    "id": "aaaabbbbccccddddeeeeffffgggghhhh",
+    "description": "Groups tabs by site, \"neatly\" \u0026 \u003cfast\u003e",
+    "version": "2.4.1",
+    "homepage_url": "https://tabs.example/",
+    "enabled": true
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "name": "Reader Mode",
+    "id": "iiiijjjjkkkkllllmmmmnnnnoooopppp",
+    "description": "Distraction-free reading",
+    "version": "0.9.0",
+    "homepage_url": "",
+    "enabled": false
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "name": "Legacy Unpacked",
+    "id": "abcdabcdabcdabcdabcdabcdabcdabcd",
+    "description": "",
+    "version": "0.1",
+    "homepage_url": "",
+    "enabled": true
+  }
+]
+-- history.json (2659 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "url": "https://www.home.chrome.test/",
+    "title": "Home",
+    "visit_count": 42,
+    "last_visit": "2024-03-01T12:00:00Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "url": "https://docs.home.chrome.test/guide?q=go\u0026lang=en",
+    "title": "Guide, \"quoted\" \u0026 \u003cb\u003ebold\u003c/b\u003e",
+    "visit_count": 7,
+    "last_visit": "2024-03-01T13:00:00Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "url": "https://news.home.chrome.test/ja",
+    "title": "ニュース",
+    "visit_count": 3,
+    "last_visit": "2024-03-01T14:00:00Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "url": "https://www.work.chrome.test/",
+    "title": "Home",
+    "visit_count": 42,
+    "last_visit": "2024-06-01T12:00:00Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "url": "https://docs.work.chrome.test/guide?q=go\u0026lang=en",
+    "title": "Guide, \"quoted\" \u0026 \u003cb\u003ebold\u003c/b\u003e",
+    "visit_count": 7,
+    "last_visit": "2024-06-01T13:00:00Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "url": "https://news.work.chrome.test/ja",
+    "title": "ニュース",
+    "visit_count": 3,
+    "last_visit": "2024-06-01T14:00:00Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "url": "https://www.home.edge.test/",
+    "title": "Home",
+    "visit_count": 42,
+    "last_visit": "2024-03-01T12:00:00Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "url": "https://docs.home.edge.test/guide?q=go\u0026lang=en",
+    "title": "Guide, \"quoted\" \u0026 \u003cb\u003ebold\u003c/b\u003e",
+    "visit_count": 7,
+    "last_visit": "2024-03-01T13:00:00Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "url": "https://news.home.edge.test/ja",
+    "title": "ニュース",
+    "visit_count": 3,
+    "last_visit": "2024-03-01T14:00:00Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "url": "https://www.work.edge.test/",
+    "title": "Home",
+    "visit_count": 42,
+    "last_visit": "2024-06-01T12:00:00Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "url": "https://docs.work.edge.test/guide?q=go\u0026lang=en",
+    "title": "Guide, \"quoted\" \u0026 \u003cb\u003ebold\u003c/b\u003e",
+    "visit_count": 7,
+    "last_visit": "2024-06-01T13:00:00Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "url": "https://news.work.edge.test/ja",
+    "title": "ニュース",
+    "visit_count": 3,
+    "last_visit": "2024-06-01T14:00:00Z"
+  }
+]
+-- localstorage.json (3847 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "is_meta": true,
+    "url": "https://app.home.chrome.test",
+    "key": "",
+    "value": "meta data, value bytes is [8 150 1]"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "is_meta": true,
+    "url": "https://app.home.chrome.test",
+    "key": "",
+    "value": "meta data, value bytes is [16 32]"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "is_meta": false,
+    "url": "https://app.home.chrome.test",
+    "key": "言語",
+    "value": "日本語"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "is_meta": false,
+    "url": "https://app.home.chrome.test",
+    "key": "blob",
+    "value": "value is too long, length is 2101, supported max length is 2048"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "is_meta": false,
+    "url": "https://app.home.chrome.test",
+    "key": "greeting",
+    "value": "café"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "is_meta": true,
+    "url": "https://app.work.chrome.test",
+    "key": "",
+    "value": "meta data, value bytes is [8 150 1]"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "is_meta": true,
+    "url": "https://app.work.chrome.test",
+    "key": "",
+    "value": "meta data, value bytes is [16 32]"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "is_meta": false,
+    "url": "https://app.work.chrome.test",
+    "key": "言語",
+    "value": "日本語"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "is_meta": false,
+    "url": "https://app.work.chrome.test",
+    "key": "blob",
+    "value": "value is too long, length is 2101, supported max length is 2048"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "is_meta": false,
+    "url": "https://app.work.chrome.test",
+    "key": "greeting",
+    "value": "café"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "is_meta": true,
+    "url": "https://app.home.edge.test",
+    "key": "",
+    "value": "meta data, value bytes is [8 150 1]"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "is_meta": true,
+    "url": "https://app.home.edge.test",
+    "key": "",
+    "value": "meta data, value bytes is [16 32]"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "is_meta": false,
+    "url": "https://app.home.edge.test",
+    "key": "言語",
+    "value": "日本語"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "is_meta": false,
+    "url": "https://app.home.edge.test",
+    "key": "blob",
+    "value": "value is too long, length is 2101, supported max length is 2048"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "is_meta": false,
+    "url": "https://app.home.edge.test",
+    "key": "greeting",
+    "value": "café"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "is_meta": true,
+    "url": "https://app.work.edge.test",
+    "key": "",
+    "value": "meta data, value bytes is [8 150 1]"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "is_meta": true,
+    "url": "https://app.work.edge.test",
+    "key": "",
+    "value": "meta data, value bytes is [16 32]"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "is_meta": false,
+    "url": "https://app.work.edge.test",
+    "key": "言語",
+    "value": "日本語"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "is_meta": false,
+    "url": "https://app.work.edge.test",
+    "key": "blob",
+    "value": "value is too long, length is 2101, supported max length is 2048"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "is_meta": false,
+    "url": "https://app.work.edge.test",
+    "key": "greeting",
+    "value": "café"
+  }
+]
+-- password.json (2437 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "url": "https://shop.home.chrome.test/",
+    "username": "alice@home.chrome.test",
+    "password": "pa,ss\"word",
+    "created_at": "2024-03-01T11:00:00Z",
+    "store": "local"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "url": "https://sync.home.chrome.test/",
+    "username": "alice",
+    "password": "synced-secret",
+    "created_at": "2024-03-01T10:30:00Z",
+    "store": "account"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "url": "https://accounts.home.chrome.test/",
+    "username": "alice",
+    "password": "correct-horse-battery-staple",
+    "created_at": "2024-03-01T10:00:00Z",
+    "store": "local"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "url": "https://shop.work.chrome.test/",
+    "username": "alice@work.chrome.test",
+    "password": "pa,ss\"word",
+    "created_at": "2024-06-01T11:00:00Z",
+    "store": "local"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "url": "https://accounts.work.chrome.test/",
+    "username": "alice",
+    "password": "correct-horse-battery-staple",
+    "created_at": "2024-06-01T10:00:00Z",
+    "store": "local"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "url": "https://shop.home.edge.test/",
+    "username": "alice@home.edge.test",
+    "password": "pa,ss\"word",
+    "created_at": "2024-03-01T11:00:00Z",
+    "store": "local"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "url": "https://sync.home.edge.test/",
+    "username": "alice",
+    "password": "synced-secret",
+    "created_at": "2024-03-01T10:30:00Z",
+    "store": "account"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "url": "https://accounts.home.edge.test/",
+    "username": "alice",
+    "password": "correct-horse-battery-staple",
+    "created_at": "2024-03-01T10:00:00Z",
+    "store": "local"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "url": "https://shop.work.edge.test/",
+    "username": "alice@work.edge.test",
+    "password": "pa,ss\"word",
+    "created_at": "2024-06-01T11:00:00Z",
+    "store": "local"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "url": "https://accounts.work.edge.test/",
+    "username": "alice",
+    "password": "correct-horse-battery-staple",
+    "created_at": "2024-06-01T10:00:00Z",
+    "store": "local"
+  }
+]
+-- sessionstorage.json (2115 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "is_meta": false,
+    "url": "https://app.home.chrome.test/",
+    "key": "draft",
+    "value": "Hello, world"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "is_meta": false,
+    "url": "https://app.home.chrome.test/",
+    "key": "scrollY",
+    "value": "640"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "is_meta": false,
+    "url": "https://shop.home.chrome.test/",
+    "key": "cart",
+    "value": "{\"items\":2}"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "is_meta": false,
+    "url": "https://app.work.chrome.test/",
+    "key": "draft",
+    "value": "Hello, world"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "is_meta": false,
+    "url": "https://app.work.chrome.test/",
+    "key": "scrollY",
+    "value": "640"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "is_meta": false,
+    "url": "https://shop.work.chrome.test/",
+    "key": "cart",
+    "value": "{\"items\":2}"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "is_meta": false,
+    "url": "https://app.home.edge.test/",
+    "key": "draft",
+    "value": "Hello, world"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "is_meta": false,
+    "url": "https://app.home.edge.test/",
+    "key": "scrollY",
+    "value": "640"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "is_meta": false,
+    "url": "https://shop.home.edge.test/",
+    "key": "cart",
+    "value": "{\"items\":2}"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "is_meta": false,
+    "url": "https://app.work.edge.test/",
+    "key": "draft",
+    "value": "Hello, world"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "is_meta": false,
+    "url": "https://app.work.edge.test/",
+    "key": "scrollY",
+    "value": "640"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Profile 1",
+    "is_meta": false,
+    "url": "https://shop.work.edge.test/",
+    "key": "cart",
+    "value": "{\"items\":2}"
+  }
+]

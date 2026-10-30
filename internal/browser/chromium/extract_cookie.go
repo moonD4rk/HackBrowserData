@@ -1,0 +1,87 @@
+package chromium
+
+import (
+	"bytes"
+	"crypto/sha256"
+	"database/sql"
+	"fmt"
+
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
+	"github.com/moond4rk/hackbrowserdata/internal/record"
+	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
+	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
+)
+
+const defaultCookieQuery = `SELECT name, encrypted_value, host_key, path,
+	creation_utc, expires_utc, is_secure, is_httponly,
+	has_expires, is_persistent, samesite FROM cookies`
+
+func extractCookies(masterKeys masterkey.Set, path string, out browser.Collector) error {
+	cookies, err := sqlitex.QueryRows(path, false, defaultCookieQuery,
+		func(rows *sql.Rows) (record.Cookie, error) {
+			var (
+				name, host, cookiePath  string
+				isSecure, isHTTPOnly    int
+				hasExpire, isPersistent int
+				createdAt, expireAt     int64
+				encryptedValue          []byte
+				sameSite                int
+			)
+			if err := rows.Scan(&name, &encryptedValue, &host, &cookiePath,
+				&createdAt, &expireAt, &isSecure, &isHTTPOnly,
+				&hasExpire, &isPersistent, &sameSite); err != nil {
+				return record.Cookie{}, err
+			}
+
+			value, err := decryptValue(masterKeys, encryptedValue)
+			if err != nil {
+				out.Fail(fmt.Errorf("decrypt cookie %s on %s: %w", name, host, err))
+			}
+			value = stripCookieHash(value, host)
+			sameSiteStr := "unspecified"
+			switch sameSite {
+			case 0:
+				sameSiteStr = "none"
+			case 1:
+				sameSiteStr = "lax"
+			case 2:
+				sameSiteStr = "strict"
+			case -1:
+				// not specified by Set-Cookie
+			}
+			return record.Cookie{
+				Name:         name,
+				Host:         host,
+				Path:         cookiePath,
+				Value:        string(value),
+				IsSecure:     isSecure != 0,
+				IsHTTPOnly:   isHTTPOnly != 0,
+				HasExpire:    hasExpire != 0,
+				IsPersistent: isPersistent != 0,
+				ExpireAt:     timeconv.Chromium(expireAt),
+				CreatedAt:    timeconv.Chromium(createdAt),
+				SameSite:     sameSiteStr,
+			}, nil
+		})
+	if err != nil {
+		return err
+	}
+	emit(out, cookies)
+	return nil
+}
+
+// stripCookieHash removes the SHA256(host_key) prefix from a decrypted cookie value. Chrome 130+
+// (Cookie DB schema version 24) prepends SHA256(domain) to the cookie value before encryption to
+// prevent cross-domain cookie replay attacks. If the first 32 bytes don't match SHA256(hostKey), the
+// value is returned unchanged, which handles both older Chrome versions and tampered data.
+func stripCookieHash(value []byte, hostKey string) []byte {
+	if len(value) < sha256.Size {
+		return value
+	}
+	hash := sha256.Sum256([]byte(hostKey))
+	if bytes.Equal(value[:sha256.Size], hash[:]) {
+		return value[sha256.Size:] // empty slice if value was exactly 32 bytes
+	}
+	return value
+}

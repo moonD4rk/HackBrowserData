@@ -1,0 +1,40 @@
+package chromium
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/record"
+)
+
+func setupDownloadDB(t *testing.T) string {
+	t.Helper()
+	return createTestDB(t, "History", downloadsSchema,
+		insertDownload("/tmp/old.zip", "https://old.com/file.zip", "application/zip", 1024, 13340000000000000, 13340000100000000),
+		insertDownload("/tmp/new.pdf", "https://new.com/doc.pdf", "application/pdf", 2048, 13360000000000000, 13360000200000000),
+	)
+}
+
+func TestExtractDownloads(t *testing.T) {
+	path := setupDownloadDB(t)
+
+	var out testCollector
+	err := extractDownloads(path, &out)
+	got := collected[record.Download](t, &out)
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+
+	// Rows keep the database's order; the exporter sorts them.
+	assert.Equal(t, "https://old.com/file.zip", got[0].URL)
+	assert.Equal(t, "https://new.com/doc.pdf", got[1].URL)
+
+	// Verify field mapping
+	assert.Equal(t, "/tmp/new.pdf", got[1].TargetPath)
+	assert.Equal(t, "application/pdf", got[1].MimeType)
+	assert.Equal(t, int64(2048), got[1].TotalBytes)
+	assert.False(t, got[1].StartTime.IsZero())
+	assert.False(t, got[1].EndTime.IsZero())
+	assert.True(t, got[1].StartTime.Before(got[1].EndTime))
+}

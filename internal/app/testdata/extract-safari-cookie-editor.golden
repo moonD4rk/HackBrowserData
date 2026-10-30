@@ -1,0 +1,75 @@
+-- cookie.json (1534 bytes) --
+[
+  {
+    "domain": "app.home.safari.test",
+    "expirationDate": 1709370000,
+    "httpOnly": true,
+    "name": "csrf",
+    "path": "/",
+    "secure": false,
+    "value": "token-123",
+    "sameSite": null,
+    "session": false,
+    "hostOnly": true
+  },
+  {
+    "domain": ".home.safari.test",
+    "expirationDate": 1772355600,
+    "httpOnly": false,
+    "name": "tracker",
+    "path": "/",
+    "secure": true,
+    "value": "opt-out",
+    "sameSite": null,
+    "session": false,
+    "hostOnly": false
+  },
+  {
+    "domain": "www.home.safari.test",
+    "expirationDate": 1711875600,
+    "httpOnly": false,
+    "name": "prefs",
+    "path": "/settings",
+    "secure": false,
+    "value": "theme=dark",
+    "sameSite": null,
+    "session": false,
+    "hostOnly": true
+  },
+  {
+    "domain": ".home.safari.test",
+    "expirationDate": 1740819600,
+    "httpOnly": true,
+    "name": "SID",
+    "path": "/",
+    "secure": true,
+    "value": "sid-home.safari.test",
+    "sameSite": null,
+    "session": false,
+    "hostOnly": false
+  },
+  {
+    "domain": "wiki.work.safari.test",
+    "expirationDate": 1717059600,
+    "httpOnly": false,
+    "name": "lang",
+    "path": "/",
+    "secure": false,
+    "value": "en",
+    "sameSite": null,
+    "session": false,
+    "hostOnly": true
+  },
+  {
+    "domain": ".work.safari.test",
+    "expirationDate": 1709888400,
+    "httpOnly": true,
+    "name": "SSO",
+    "path": "/",
+    "secure": true,
+    "value": "sso-work.safari.test",
+    "sameSite": null,
+    "session": false,
+    "hostOnly": false
+  }
+]

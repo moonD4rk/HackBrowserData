@@ -1,0 +1,567 @@
+-- bookmark.json (1989 bytes) --
+[
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "id": 12,
+    "name": "",
+    "type": "url",
+    "url": "https://www.home.firefox.test/",
+    "folder": "unfiled",
+    "created_at": "2024-03-01T20:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "id": 11,
+    "name": "Café menu",
+    "type": "url",
+    "url": "https://shop.home.firefox.test/menu",
+    "folder": "menu",
+    "created_at": "2024-03-01T19:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "id": 9,
+    "name": "Long read \u003cwith\u003e \u0026 tags",
+    "type": "url",
+    "url": "https://news.home.firefox.test/long-read",
+    "folder": "Reading",
+    "created_at": "2024-03-01T18:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "id": 7,
+    "name": "Docs",
+    "type": "url",
+    "url": "https://docs.home.firefox.test/",
+    "folder": "toolbar",
+    "created_at": "2024-03-01T17:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "id": 12,
+    "name": "",
+    "type": "url",
+    "url": "https://www.work.firefox.test/",
+    "folder": "unfiled",
+    "created_at": "2024-06-01T20:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "id": 11,
+    "name": "Café menu",
+    "type": "url",
+    "url": "https://shop.work.firefox.test/menu",
+    "folder": "menu",
+    "created_at": "2024-06-01T19:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "id": 9,
+    "name": "Long read \u003cwith\u003e \u0026 tags",
+    "type": "url",
+    "url": "https://news.work.firefox.test/long-read",
+    "folder": "Reading",
+    "created_at": "2024-06-01T18:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "id": 7,
+    "name": "Docs",
+    "type": "url",
+    "url": "https://docs.work.firefox.test/",
+    "folder": "toolbar",
+    "created_at": "2024-06-01T17:00:00Z"
+  }
+]
+-- cookie.json (3117 bytes) --
+[
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "host": "app.home.firefox.test",
+    "path": "/",
+    "name": "session",
+    "value": "ephemeral",
+    "is_secure": true,
+    "is_http_only": true,
+    "has_expire": false,
+    "is_persistent": false,
+    "expire_at": "0001-01-01T00:00:00Z",
+    "created_at": "2024-03-01T09:40:00Z",
+    "same_site": "unspecified"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "host": ".home.firefox.test",
+    "path": "/",
+    "name": "tracker",
+    "value": "opt-out",
+    "is_secure": true,
+    "is_http_only": false,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2026-03-01T09:00:00Z",
+    "created_at": "2024-03-01T09:30:00Z",
+    "same_site": "none"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "host": "www.home.firefox.test",
+    "path": "/settings",
+    "name": "prefs",
+    "value": "theme=dark",
+    "is_secure": false,
+    "is_http_only": false,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2024-03-31T09:00:00Z",
+    "created_at": "2024-03-01T09:20:00Z",
+    "same_site": "strict"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "host": ".home.firefox.test",
+    "path": "/",
+    "name": "SID",
+    "value": "sid-home.firefox.test",
+    "is_secure": true,
+    "is_http_only": true,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2025-03-01T09:00:00Z",
+    "created_at": "2024-03-01T09:10:00.123456Z",
+    "same_site": "lax"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "host": "app.work.firefox.test",
+    "path": "/",
+    "name": "session",
+    "value": "ephemeral",
+    "is_secure": true,
+    "is_http_only": true,
+    "has_expire": false,
+    "is_persistent": false,
+    "expire_at": "0001-01-01T00:00:00Z",
+    "created_at": "2024-06-01T09:40:00Z",
+    "same_site": "unspecified"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "host": ".work.firefox.test",
+    "path": "/",
+    "name": "tracker",
+    "value": "opt-out",
+    "is_secure": true,
+    "is_http_only": false,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2026-06-01T09:00:00Z",
+    "created_at": "2024-06-01T09:30:00Z",
+    "same_site": "none"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "host": "www.work.firefox.test",
+    "path": "/settings",
+    "name": "prefs",
+    "value": "theme=dark",
+    "is_secure": false,
+    "is_http_only": false,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2024-07-01T09:00:00Z",
+    "created_at": "2024-06-01T09:20:00Z",
+    "same_site": "strict"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "host": ".work.firefox.test",
+    "path": "/",
+    "name": "SID",
+    "value": "sid-work.firefox.test",
+    "is_secure": true,
+    "is_http_only": true,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2025-06-01T09:00:00Z",
+    "created_at": "2024-06-01T09:10:00.123456Z",
+    "same_site": "lax"
+  }
+]
+-- download.json (1938 bytes) --
+[
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "url": "https://files.home.firefox.test/setup.exe",
+    "target_path": "file:///Users/alice/Downloads/setup.exe",
+    "mime_type": "",
+    "total_bytes": 0,
+    "start_time": "2024-03-01T16:30:00Z",
+    "end_time": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "url": "https://files.home.firefox.test/archive.tar.gz",
+    "target_path": "file:///home/alice/Downloads/archive.tar.gz",
+    "mime_type": "",
+    "total_bytes": 1048576,
+    "start_time": "2024-03-01T16:00:00Z",
+    "end_time": "2024-03-01T16:01:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "url": "https://files.home.firefox.test/report.pdf",
+    "target_path": "file:///C:/Users/alice/Downloads/report.pdf",
+    "mime_type": "",
+    "total_bytes": 52344,
+    "start_time": "2024-03-01T15:00:00Z",
+    "end_time": "2024-03-01T15:00:03Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "url": "https://files.work.firefox.test/setup.exe",
+    "target_path": "file:///Users/alice/Downloads/setup.exe",
+    "mime_type": "",
+    "total_bytes": 0,
+    "start_time": "2024-06-01T16:30:00Z",
+    "end_time": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "url": "https://files.work.firefox.test/archive.tar.gz",
+    "target_path": "file:///home/alice/Downloads/archive.tar.gz",
+    "mime_type": "",
+    "total_bytes": 1048576,
+    "start_time": "2024-06-01T16:00:00Z",
+    "end_time": "2024-06-01T16:01:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "url": "https://files.work.firefox.test/report.pdf",
+    "target_path": "file:///C:/Users/alice/Downloads/report.pdf",
+    "mime_type": "",
+    "total_bytes": 52344,
+    "start_time": "2024-06-01T15:00:00Z",
+    "end_time": "2024-06-01T15:00:03Z"
+  }
+]
+-- extension.json (1155 bytes) --
+[
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "name": "Tab Organizer",
+    "id": "tab-organizer@tabs.example",
+    "description": "Groups tabs by site, \"neatly\" \u0026 \u003cfast\u003e",
+    "version": "2.4.1",
+    "homepage_url": "https://tabs.example/",
+    "enabled": true
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "name": "Reader Mode",
+    "id": "{4b5ac9d3-1f2e-4d6c-9a8b-7c6d5e4f3a2b}",
+    "description": "Distraction-free reading",
+    "version": "0.9.0",
+    "homepage_url": "",
+    "enabled": false
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "name": "Tab Organizer",
+    "id": "tab-organizer@tabs.example",
+    "description": "Groups tabs by site, \"neatly\" \u0026 \u003cfast\u003e",
+    "version": "2.4.1",
+    "homepage_url": "https://tabs.example/",
+    "enabled": true
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "name": "Reader Mode",
+    "id": "{4b5ac9d3-1f2e-4d6c-9a8b-7c6d5e4f3a2b}",
+    "description": "Distraction-free reading",
+    "version": "0.9.0",
+    "homepage_url": "",
+    "enabled": false
+  }
+]
+-- history.json (3914 bytes) --
+[
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "url": "https://www.home.firefox.test/",
+    "title": "Home",
+    "visit_count": 42,
+    "last_visit": "2024-03-01T12:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "url": "https://docs.home.firefox.test/guide?q=go\u0026lang=en",
+    "title": "Guide, \"quoted\" \u0026 \u003cb\u003ebold\u003c/b\u003e",
+    "visit_count": 7,
+    "last_visit": "2024-03-01T13:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "url": "https://news.home.firefox.test/ja",
+    "title": "ニュース",
+    "visit_count": 3,
+    "last_visit": "2024-03-01T14:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "url": "https://shop.home.firefox.test/menu",
+    "title": "Café menu",
+    "visit_count": 2,
+    "last_visit": "2024-03-01T19:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "url": "https://news.home.firefox.test/long-read",
+    "title": "Long read",
+    "visit_count": 1,
+    "last_visit": "2024-03-01T18:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "url": "https://files.home.firefox.test/report.pdf",
+    "title": "",
+    "visit_count": 1,
+    "last_visit": "2024-03-01T15:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "url": "https://files.home.firefox.test/archive.tar.gz",
+    "title": "",
+    "visit_count": 1,
+    "last_visit": "2024-03-01T16:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "url": "https://files.home.firefox.test/setup.exe",
+    "title": "",
+    "visit_count": 1,
+    "last_visit": "2024-03-01T16:30:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "url": "https://docs.home.firefox.test/",
+    "title": "Docs",
+    "visit_count": 0,
+    "last_visit": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "url": "https://www.work.firefox.test/",
+    "title": "Home",
+    "visit_count": 42,
+    "last_visit": "2024-06-01T12:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "url": "https://docs.work.firefox.test/guide?q=go\u0026lang=en",
+    "title": "Guide, \"quoted\" \u0026 \u003cb\u003ebold\u003c/b\u003e",
+    "visit_count": 7,
+    "last_visit": "2024-06-01T13:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "url": "https://news.work.firefox.test/ja",
+    "title": "ニュース",
+    "visit_count": 3,
+    "last_visit": "2024-06-01T14:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "url": "https://shop.work.firefox.test/menu",
+    "title": "Café menu",
+    "visit_count": 2,
+    "last_visit": "2024-06-01T19:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "url": "https://news.work.firefox.test/long-read",
+    "title": "Long read",
+    "visit_count": 1,
+    "last_visit": "2024-06-01T18:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "url": "https://files.work.firefox.test/report.pdf",
+    "title": "",
+    "visit_count": 1,
+    "last_visit": "2024-06-01T15:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "url": "https://files.work.firefox.test/archive.tar.gz",
+    "title": "",
+    "visit_count": 1,
+    "last_visit": "2024-06-01T16:00:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "url": "https://files.work.firefox.test/setup.exe",
+    "title": "",
+    "visit_count": 1,
+    "last_visit": "2024-06-01T16:30:00Z"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "url": "https://docs.work.firefox.test/",
+    "title": "Docs",
+    "visit_count": 0,
+    "last_visit": "0001-01-01T00:00:00Z"
+  }
+]
+-- localstorage.json (1136 bytes) --
+[
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "is_meta": false,
+    "url": "https://app.home.firefox.test:443",
+    "key": "greeting",
+    "value": "café"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "is_meta": false,
+    "url": "https://app.home.firefox.test:443",
+    "key": "言語",
+    "value": "日本語"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "is_meta": false,
+    "url": "http://shop.home.firefox.test:8080",
+    "key": "cart",
+    "value": "{\"items\":2}"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "is_meta": false,
+    "url": "https://app.work.firefox.test:443",
+    "key": "greeting",
+    "value": "café"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "is_meta": false,
+    "url": "https://app.work.firefox.test:443",
+    "key": "言語",
+    "value": "日本語"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "is_meta": false,
+    "url": "http://shop.work.firefox.test:8080",
+    "key": "cart",
+    "value": "{\"items\":2}"
+  }
+]
+-- password.json (1506 bytes) --
+[
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "url": "https://shop.home.firefox.test",
+    "username": "alice@home.firefox.test",
+    "password": "pa,ss\"word",
+    "created_at": "2024-03-01T11:00:00Z",
+    "store": "local"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "url": "https://intranet.home.firefox.test",
+    "username": "alice",
+    "password": "pässwörd",
+    "created_at": "2024-03-01T10:30:00Z",
+    "store": "local"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "abcd1234.default-release",
+    "url": "https://login.home.firefox.test",
+    "username": "alice",
+    "password": "correct-horse-battery-staple",
+    "created_at": "2024-03-01T10:00:00.25Z",
+    "store": "local"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "url": "https://shop.work.firefox.test",
+    "username": "alice@work.firefox.test",
+    "password": "pa,ss\"word",
+    "created_at": "2024-06-01T11:00:00Z",
+    "store": "local"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "url": "https://intranet.work.firefox.test",
+    "username": "alice",
+    "password": "pässwörd",
+    "created_at": "2024-06-01T10:30:00Z",
+    "store": "local"
+  },
+  {
+    "browser": "Firefox",
+    "profile": "wxyz5678.work",
+    "url": "https://login.work.firefox.test",
+    "username": "alice",
+    "password": "correct-horse-battery-staple",
+    "created_at": "2024-06-01T10:00:00.25Z",
+    "store": "local"
+  }
+]

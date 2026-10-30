@@ -1,0 +1,72 @@
+-- cookie.json (1568 bytes) --
+[
+  {
+    "domain": ".example.com",
+    "expirationDate": 1814358896,
+    "httpOnly": true,
+    "name": "return_to",
+    "path": "/",
+    "secure": true,
+    "value": "https://shop.example.com/cart?item=42&qty=<3>",
+    "sameSite": "lax",
+    "session": false,
+    "hostOnly": false
+  },
+  {
+    "domain": "www.example.com",
+    "httpOnly": true,
+    "name": "session_id",
+    "path": "/account",
+    "secure": false,
+    "value": "{\"user\":\"日本語 🍪\",\"dir\":\"C:\\Temp\"}",
+    "sameSite": "strict",
+    "session": true,
+    "hostOnly": true
+  },
+  {
+    "domain": ".tracker.example",
+    "expirationDate": 1835481599,
+    "httpOnly": false,
+    "name": "_ga",
+    "path": "/",
+    "secure": true,
+    "value": "GA1.2.1234567890.1700000000",
+    "sameSite": "no_restriction",
+    "session": false,
+    "hostOnly": false
+  },
+  {
+    "domain": ".dev.example",
+    "httpOnly": false,
+    "name": "multi_line",
+    "path": "/dev",
+    "secure": false,
+    "value": "line one\nline two, with comma",
+    "sameSite": null,
+    "session": true,
+    "hostOnly": false
+  },
+  {
+    "domain": ".edge.example",
+    "httpOnly": true,
+    "name": "epoch_expiry",
+    "path": "/",
+    "secure": true,
+    "value": "back\\slash \"quoted\" <b>&amp;</b>",
+    "sameSite": null,
+    "session": true,
+    "hostOnly": false
+  },
+  {
+    "domain": "edge.example",
+    "expirationDate": 1798761599,
+    "httpOnly": false,
+    "name": "host_only",
+    "path": "/",
+    "secure": false,
+    "value": "v",
+    "sameSite": "strict",
+    "session": false,
+    "hostOnly": true
+  }
+]

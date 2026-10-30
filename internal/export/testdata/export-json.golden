@@ -1,0 +1,397 @@
+-- bookmark.json (1020 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "id": 7,
+    "name": "Docs \u0026 \u003cSpecs\u003e",
+    "type": "url",
+    "url": "https://docs.example.com/search?a=1\u0026b=\u003c2\u003e",
+    "folder": "Bookmarks bar",
+    "created_at": "2026-02-02T02:02:02.02020202Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "id": 4294967298,
+    "name": "日本語 📚",
+    "type": "url",
+    "url": "https://例え.jp/",
+    "folder": "Other bookmarks",
+    "created_at": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "id": 1,
+    "name": "Quote \"this\", please",
+    "type": "url",
+    "url": "https://example.org/a,b",
+    "folder": "multi\nline folder",
+    "created_at": "2025-03-03T03:03:03Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "id": 12,
+    "name": "C:\\Shares\\docs",
+    "type": "url",
+    "url": "https://edge.example/",
+    "folder": "Favorites bar",
+    "created_at": "2024-04-04T04:04:04.4Z"
+  }
+]
+-- cookie.json (2434 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "host": ".example.com",
+    "path": "/",
+    "name": "return_to",
+    "value": "https://shop.example.com/cart?item=42\u0026qty=\u003c3\u003e",
+    "is_secure": true,
+    "is_http_only": true,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2027-06-30T12:34:56.789Z",
+    "created_at": "2026-03-14T15:09:27.1Z",
+    "same_site": "lax"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "host": "www.example.com",
+    "path": "/account",
+    "name": "session_id",
+    "value": "{\"user\":\"日本語 🍪\",\"dir\":\"C:\\Temp\"}",
+    "is_secure": false,
+    "is_http_only": true,
+    "has_expire": false,
+    "is_persistent": false,
+    "expire_at": "0001-01-01T00:00:00Z",
+    "created_at": "2026-01-01T00:00:00Z",
+    "same_site": "strict"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "host": ".tracker.example",
+    "path": "/",
+    "name": "_ga",
+    "value": "GA1.2.1234567890.1700000000",
+    "is_secure": true,
+    "is_http_only": false,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2028-02-29T23:59:59Z",
+    "created_at": "2025-05-05T05:05:05.123456789Z",
+    "same_site": "none"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "host": ".dev.example",
+    "path": "/dev",
+    "name": "multi_line",
+    "value": "line one\nline two, with comma",
+    "is_secure": false,
+    "is_http_only": false,
+    "has_expire": false,
+    "is_persistent": false,
+    "expire_at": "0001-01-01T00:00:00Z",
+    "created_at": "0001-01-01T00:00:00Z",
+    "same_site": "unspecified"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "host": ".edge.example",
+    "path": "/",
+    "name": "epoch_expiry",
+    "value": "back\\slash \"quoted\" \u003cb\u003e\u0026amp;\u003c/b\u003e",
+    "is_secure": true,
+    "is_http_only": true,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "1970-01-01T00:00:00Z",
+    "created_at": "2024-12-24T18:00:00Z",
+    "same_site": ""
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "host": "edge.example",
+    "path": "/",
+    "name": "host_only",
+    "value": "v",
+    "is_secure": false,
+    "is_http_only": false,
+    "has_expire": true,
+    "is_persistent": true,
+    "expire_at": "2026-12-31T23:59:59.999999999Z",
+    "created_at": "2024-06-15T09:30:00Z",
+    "same_site": "strict"
+  }
+]
+-- creditcard.json (962 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "guid": "00000000-0000-4000-8000-000000000001",
+    "name": "山田 太郎",
+    "number": "4111111111111111",
+    "exp_month": "12",
+    "exp_year": "2030",
+    "nick_name": "Work \"primary\", 💳",
+    "address": "1-2-3 Chiyoda,\nTokyo 100-0001",
+    "cvc": "",
+    "comment": ""
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "guid": "00000000-0000-4000-8000-000000000002",
+    "name": "Alice O'Brien",
+    "number": "5555555555554444",
+    "exp_month": "1",
+    "exp_year": "2027",
+    "nick_name": "",
+    "address": "",
+    "cvc": "123",
+    "comment": "note \u003cb\u003e\u0026\u003c/b\u003e \\ end"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "guid": "00000000-0000-4000-8000-000000000003",
+    "name": "",
+    "number": "",
+    "exp_month": "",
+    "exp_year": "",
+    "nick_name": "",
+    "address": "",
+    "cvc": "",
+    "comment": ""
+  }
+]
+-- download.json (996 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "url": "https://dl.example.com/files/big.iso?token=a\u0026sig=\u003cx\u003e",
+    "target_path": "C:\\Users\\Alice\\Downloads\\Ubuntu \"final\", v2.iso",
+    "mime_type": "application/x-iso9660-image",
+    "total_bytes": 5368709121,
+    "start_time": "2026-03-14T15:00:00.25Z",
+    "end_time": "2026-03-14T15:30:00.75Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "url": "https://例え.jp/資料.pdf",
+    "target_path": "/home/alice/Downloads/資料 📄.pdf",
+    "mime_type": "application/pdf",
+    "total_bytes": 0,
+    "start_time": "2025-08-01T08:00:00Z",
+    "end_time": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "url": "blob:https://app.example/1234",
+    "target_path": "\\\\fileserver\\share\\Q3 summary.csv",
+    "mime_type": "",
+    "total_bytes": 4294967296,
+    "start_time": "0001-01-01T00:00:00Z",
+    "end_time": "0001-01-01T00:00:00Z"
+  }
+]
+-- extension.json (874 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "name": "Ad Blocker",
+    "id": "abcdefghijklmnopabcdefghijklmnop",
+    "description": "Blocks ads \u0026 trackers, \"fast\" \u003cb\u003e",
+    "version": "1.58.0",
+    "homepage_url": "https://adblock.example/?a=1\u0026b=\u003c2\u003e",
+    "enabled": true
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "name": "日本語拡張 🧩",
+    "id": "ponmlkjihgfedcbaponmlkjihgfedcba",
+    "description": "line one\nline two",
+    "version": "0.0.1",
+    "homepage_url": "",
+    "enabled": false
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "name": "Edge Helper",
+    "id": "aaaabbbbccccddddeeeeffffgggghhhh",
+    "description": "Installed under C:\\Program Files\\Helper",
+    "version": "2.0",
+    "homepage_url": "https://helper.example/",
+    "enabled": true
+  }
+]
+-- history.json (1112 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "url": "https://shop.example.com/cart?item=42\u0026qty=\u003c3\u003e",
+    "title": "Cart \"deals\" \u003cb\u003e\u0026\u003c/b\u003e, 日本語 🛒",
+    "visit_count": 42,
+    "last_visit": "2026-03-14T15:10:00.000001Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "url": "file:///C:/Users/Alice/notes.html",
+    "title": "multi\nline title",
+    "visit_count": 3,
+    "last_visit": "0001-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "url": "https://search.example.com/?q=a%26b\u0026lang=日本語",
+    "title": "",
+    "visit_count": 1000000,
+    "last_visit": "2025-07-07T07:07:07.7Z"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "url": "about:blank",
+    "title": " leading space",
+    "visit_count": 0,
+    "last_visit": "2025-01-01T00:00:00Z"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "url": "edge://settings/?a=1\u0026b=2",
+    "title": "C:\\Windows\\System32",
+    "visit_count": 7,
+    "last_visit": "2024-07-04T00:00:00.5Z"
+  }
+]
+-- localstorage.json (769 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "is_meta": false,
+    "url": "https://app.example.com",
+    "key": "prefs",
+    "value": "{\"theme\":\"dark\",\"greeting\":\"こんにちは 👋\",\"dir\":\"C:\\Temp\"}"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "is_meta": true,
+    "url": "https://app.example.com",
+    "key": "",
+    "value": "meta data, value bytes is [8 128 1]"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "is_meta": false,
+    "url": "https://example.org",
+    "key": "a\u0026b\u003cc\u003e",
+    "value": "multi\nline"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "is_meta": false,
+    "url": "https://edge.example",
+    "key": "日本語",
+    "value": ""
+  }
+]
+-- password.json (1301 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "url": "https://accounts.example.com/signin?continue=/mail\u0026hl=ja",
+    "username": "alice@example.com",
+    "password": "pa$$ \"quoted\", comma\\backslash\nnewline",
+    "created_at": "2026-03-14T15:09:26.535897932Z",
+    "store": "account"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "url": "https://例え.jp/ログイン",
+    "username": "日本語ユーザー",
+    "password": "🔑 emoji",
+    "created_at": "2025-11-05T06:07:08Z",
+    "store": "local"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "url": "http://192.168.0.1:8080/admin",
+    "username": "admin",
+    "password": " leading space",
+    "created_at": "2025-06-01T00:00:00.000000001Z",
+    "store": "local"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "url": "android://hash@com.example.app/",
+    "username": "",
+    "password": "",
+    "created_at": "0001-01-01T00:00:00Z",
+    "store": "local"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "url": "https://login.example.org/\u003ctenant\u003e/authorize?client=a\u0026scope=b",
+    "username": "CORP\\jdoe",
+    "password": "日本語パスワード",
+    "created_at": "2024-02-29T12:00:00.5Z",
+    "store": "account"
+  }
+]
+-- sessionstorage.json (557 bytes) --
+[
+  {
+    "browser": "Chrome",
+    "profile": "Default",
+    "is_meta": false,
+    "url": "https://app.example.com",
+    "key": "tab-id",
+    "value": "42"
+  },
+  {
+    "browser": "Chrome",
+    "profile": "Profile 1",
+    "is_meta": false,
+    "url": "https://example.org/?x=1\u0026y=\u003c2\u003e",
+    "key": "draft",
+    "value": "He said \"hi\", then left \\"
+  },
+  {
+    "browser": "Microsoft Edge",
+    "profile": "Default",
+    "is_meta": true,
+    "url": "https://edge.example",
+    "key": "",
+    "value": "meta data, value bytes is [16 2]"
+  }
+]

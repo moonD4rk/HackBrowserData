@@ -1,0 +1,128 @@
+-- bookmark.csv (1342 bytes) --
+﻿browser,profile,id,name,type,url,folder,created_at
+Chrome,Default,7,Café menu,url,https://shop.home.chrome.test/menu,Other bookmarks,2024-03-01T19:00:00Z
+Chrome,Default,6,Long read <with> & tags,url,https://news.home.chrome.test/long-read,Reading,2024-03-01T18:00:00Z
+Chrome,Default,4,Docs,url,https://docs.home.chrome.test/,Bookmarks bar,2024-03-01T17:00:00Z
+Chrome,Profile 1,7,Café menu,url,https://shop.work.chrome.test/menu,Other bookmarks,2024-06-01T19:00:00Z
+Chrome,Profile 1,6,Long read <with> & tags,url,https://news.work.chrome.test/long-read,Reading,2024-06-01T18:00:00Z
+Chrome,Profile 1,4,Docs,url,https://docs.work.chrome.test/,Bookmarks bar,2024-06-01T17:00:00Z
+Microsoft Edge,Default,7,Café menu,url,https://shop.home.edge.test/menu,Other bookmarks,2024-03-01T19:00:00Z
+Microsoft Edge,Default,6,Long read <with> & tags,url,https://news.home.edge.test/long-read,Reading,2024-03-01T18:00:00Z
+Microsoft Edge,Default,4,Docs,url,https://docs.home.edge.test/,Bookmarks bar,2024-03-01T17:00:00Z
+Microsoft Edge,Profile 1,7,Café menu,url,https://shop.work.edge.test/menu,Other bookmarks,2024-06-01T19:00:00Z
+Microsoft Edge,Profile 1,6,Long read <with> & tags,url,https://news.work.edge.test/long-read,Reading,2024-06-01T18:00:00Z
+Microsoft Edge,Profile 1,4,Docs,url,https://docs.work.edge.test/,Bookmarks bar,2024-06-01T17:00:00Z
+-- cookie.csv (2143 bytes) --
+﻿browser,profile,host,path,name,value,is_secure,is_http_only,has_expire,is_persistent,expire_at,created_at,same_site
+Chrome,Default,app.home.chrome.test,/,session,ephemeral,true,true,false,false,,2024-03-01T09:40:00Z,unspecified
+Chrome,Default,.home.chrome.test,/,tracker,opt-out,true,false,true,true,2026-03-01T09:00:00Z,2024-03-01T09:30:00Z,none
+Chrome,Default,www.home.chrome.test,/settings,prefs,theme=dark,false,false,true,true,2024-03-31T09:00:00Z,2024-03-01T09:20:00Z,strict
+Chrome,Default,.home.chrome.test,/,SID,sid-home.chrome.test,true,true,true,true,2025-03-01T09:00:00Z,2024-03-01T09:10:00Z,lax
+Chrome,Profile 1,app.work.chrome.test,/,session,ephemeral,true,true,false,false,,2024-06-01T09:40:00Z,unspecified
+Chrome,Profile 1,.work.chrome.test,/,tracker,opt-out,true,false,true,true,2026-06-01T09:00:00Z,2024-06-01T09:30:00Z,none
+Chrome,Profile 1,www.work.chrome.test,/settings,prefs,theme=dark,false,false,true,true,2024-07-01T09:00:00Z,2024-06-01T09:20:00Z,strict
+Chrome,Profile 1,.work.chrome.test,/,SID,sid-work.chrome.test,true,true,true,true,2025-06-01T09:00:00Z,2024-06-01T09:10:00Z,lax
+Microsoft Edge,Default,app.home.edge.test,/,session,ephemeral,true,true,false,false,,2024-03-01T09:40:00Z,unspecified
+Microsoft Edge,Default,.home.edge.test,/,tracker,opt-out,true,false,true,true,2026-03-01T09:00:00Z,2024-03-01T09:30:00Z,none
+Microsoft Edge,Default,www.home.edge.test,/settings,prefs,theme=dark,false,false,true,true,2024-03-31T09:00:00Z,2024-03-01T09:20:00Z,strict
+Microsoft Edge,Default,.home.edge.test,/,SID,sid-home.edge.test,true,true,true,true,2025-03-01T09:00:00Z,2024-03-01T09:10:00Z,lax
+Microsoft Edge,Profile 1,app.work.edge.test,/,session,ephemeral,true,true,false,false,,2024-06-01T09:40:00Z,unspecified
+Microsoft Edge,Profile 1,.work.edge.test,/,tracker,opt-out,true,false,true,true,2026-06-01T09:00:00Z,2024-06-01T09:30:00Z,none
+Microsoft Edge,Profile 1,www.work.edge.test,/settings,prefs,theme=dark,false,false,true,true,2024-07-01T09:00:00Z,2024-06-01T09:20:00Z,strict
+Microsoft Edge,Profile 1,.work.edge.test,/,SID,sid-work.edge.test,true,true,true,true,2025-06-01T09:00:00Z,2024-06-01T09:10:00Z,lax
+-- creditcard.csv (813 bytes) --
+﻿browser,profile,guid,name,number,exp_month,exp_year,nick_name,address,cvc,comment
+Chrome,Default,Alice Example-4-2031,Alice Example,4111111111111111,4,2031,Travel,billing-home,,
+Chrome,Default,Bob Example-11-2029,Bob Example,5500005555555559,11,2029,,,,
+Chrome,Profile 1,Alice Example-4-2031,Alice Example,4111111111111111,4,2031,Travel,billing-home,,
+Chrome,Profile 1,Bob Example-11-2029,Bob Example,5500005555555559,11,2029,,,,
+Microsoft Edge,Default,Alice Example-4-2031,Alice Example,4111111111111111,4,2031,Travel,billing-home,,
+Microsoft Edge,Default,Bob Example-11-2029,Bob Example,5500005555555559,11,2029,,,,
+Microsoft Edge,Profile 1,Alice Example-4-2031,Alice Example,4111111111111111,4,2031,Travel,billing-home,,
+Microsoft Edge,Profile 1,Bob Example-11-2029,Bob Example,5500005555555559,11,2029,,,,
+-- download.csv (1317 bytes) --
+﻿browser,profile,url,target_path,mime_type,total_bytes,start_time,end_time
+Chrome,Default,https://files.home.chrome.test/archive.tar.gz,/home/alice/Downloads/archive.tar.gz,application/gzip,1048576,2024-03-01T16:00:00Z,
+Chrome,Default,https://files.home.chrome.test/report.pdf,C:\Users\alice\Downloads\report.pdf,application/pdf,52344,2024-03-01T15:00:00Z,2024-03-01T15:00:03Z
+Chrome,Profile 1,https://files.work.chrome.test/archive.tar.gz,/home/alice/Downloads/archive.tar.gz,application/gzip,1048576,2024-06-01T16:00:00Z,
+Chrome,Profile 1,https://files.work.chrome.test/report.pdf,C:\Users\alice\Downloads\report.pdf,application/pdf,52344,2024-06-01T15:00:00Z,2024-06-01T15:00:03Z
+Microsoft Edge,Default,https://files.home.edge.test/archive.tar.gz,/home/alice/Downloads/archive.tar.gz,application/gzip,1048576,2024-03-01T16:00:00Z,
+Microsoft Edge,Default,https://files.home.edge.test/report.pdf,C:\Users\alice\Downloads\report.pdf,application/pdf,52344,2024-03-01T15:00:00Z,2024-03-01T15:00:03Z
+Microsoft Edge,Profile 1,https://files.work.edge.test/archive.tar.gz,/home/alice/Downloads/archive.tar.gz,application/gzip,1048576,2024-06-01T16:00:00Z,
+Microsoft Edge,Profile 1,https://files.work.edge.test/report.pdf,C:\Users\alice\Downloads\report.pdf,application/pdf,52344,2024-06-01T15:00:00Z,2024-06-01T15:00:03Z
+-- extension.csv (1372 bytes) --
+﻿browser,profile,name,id,description,version,homepage_url,enabled
+Chrome,Default,Tab Organizer,aaaabbbbccccddddeeeeffffgggghhhh,"Groups tabs by site, ""neatly"" & <fast>",2.4.1,https://tabs.example/,true
+Chrome,Default,Reader Mode,iiiijjjjkkkkllllmmmmnnnnoooopppp,Distraction-free reading,0.9.0,,false
+Chrome,Default,Legacy Unpacked,abcdabcdabcdabcdabcdabcdabcdabcd,,0.1,,true
+Chrome,Profile 1,Tab Organizer,aaaabbbbccccddddeeeeffffgggghhhh,"Groups tabs by site, ""neatly"" & <fast>",2.4.1,https://tabs.example/,true
+Chrome,Profile 1,Reader Mode,iiiijjjjkkkkllllmmmmnnnnoooopppp,Distraction-free reading,0.9.0,,false
+Chrome,Profile 1,Legacy Unpacked,abcdabcdabcdabcdabcdabcdabcdabcd,,0.1,,true
+Microsoft Edge,Default,Tab Organizer,aaaabbbbccccddddeeeeffffgggghhhh,"Groups tabs by site, ""neatly"" & <fast>",2.4.1,https://tabs.example/,true
+Microsoft Edge,Default,Reader Mode,iiiijjjjkkkkllllmmmmnnnnoooopppp,Distraction-free reading,0.9.0,,false
+Microsoft Edge,Default,Legacy Unpacked,abcdabcdabcdabcdabcdabcdabcdabcd,,0.1,,true
+Microsoft Edge,Profile 1,Tab Organizer,aaaabbbbccccddddeeeeffffgggghhhh,"Groups tabs by site, ""neatly"" & <fast>",2.4.1,https://tabs.example/,true
+Microsoft Edge,Profile 1,Reader Mode,iiiijjjjkkkkllllmmmmnnnnoooopppp,Distraction-free reading,0.9.0,,false
+Microsoft Edge,Profile 1,Legacy Unpacked,abcdabcdabcdabcdabcdabcdabcdabcd,,0.1,,true
+-- history.csv (1216 bytes) --
+﻿browser,profile,url,title,visit_count,last_visit
+Chrome,Default,https://www.home.chrome.test/,Home,42,2024-03-01T12:00:00Z
+Chrome,Default,https://docs.home.chrome.test/guide?q=go&lang=en,"Guide, ""quoted"" & <b>bold</b>",7,2024-03-01T13:00:00Z
+Chrome,Default,https://news.home.chrome.test/ja,ニュース,3,2024-03-01T14:00:00Z
+Chrome,Profile 1,https://www.work.chrome.test/,Home,42,2024-06-01T12:00:00Z
+Chrome,Profile 1,https://docs.work.chrome.test/guide?q=go&lang=en,"Guide, ""quoted"" & <b>bold</b>",7,2024-06-01T13:00:00Z
+Chrome,Profile 1,https://news.work.chrome.test/ja,ニュース,3,2024-06-01T14:00:00Z
+Microsoft Edge,Default,https://www.home.edge.test/,Home,42,2024-03-01T12:00:00Z
+Microsoft Edge,Default,https://docs.home.edge.test/guide?q=go&lang=en,"Guide, ""quoted"" & <b>bold</b>",7,2024-03-01T13:00:00Z
+Microsoft Edge,Default,https://news.home.edge.test/ja,ニュース,3,2024-03-01T14:00:00Z
+Microsoft Edge,Profile 1,https://www.work.edge.test/,Home,42,2024-06-01T12:00:00Z
+Microsoft Edge,Profile 1,https://docs.work.edge.test/guide?q=go&lang=en,"Guide, ""quoted"" & <b>bold</b>",7,2024-06-01T13:00:00Z
+Microsoft Edge,Profile 1,https://news.work.edge.test/ja,ニュース,3,2024-06-01T14:00:00Z
+-- localstorage.csv (1829 bytes) --
+﻿browser,profile,is_meta,url,key,value
+Chrome,Default,true,https://app.home.chrome.test,,"meta data, value bytes is [8 150 1]"
+Chrome,Default,true,https://app.home.chrome.test,,"meta data, value bytes is [16 32]"
+Chrome,Default,false,https://app.home.chrome.test,言語,日本語
+Chrome,Default,false,https://app.home.chrome.test,blob,"value is too long, length is 2101, supported max length is 2048"
+Chrome,Default,false,https://app.home.chrome.test,greeting,café
+Chrome,Profile 1,true,https://app.work.chrome.test,,"meta data, value bytes is [8 150 1]"
+Chrome,Profile 1,true,https://app.work.chrome.test,,"meta data, value bytes is [16 32]"
+Chrome,Profile 1,false,https://app.work.chrome.test,言語,日本語
+Chrome,Profile 1,false,https://app.work.chrome.test,blob,"value is too long, length is 2101, supported max length is 2048"
+Chrome,Profile 1,false,https://app.work.chrome.test,greeting,café
+Microsoft Edge,Default,true,https://app.home.edge.test,,"meta data, value bytes is [8 150 1]"
+Microsoft Edge,Default,true,https://app.home.edge.test,,"meta data, value bytes is [16 32]"
+Microsoft Edge,Default,false,https://app.home.edge.test,言語,日本語
+Microsoft Edge,Default,false,https://app.home.edge.test,blob,"value is too long, length is 2101, supported max length is 2048"
+Microsoft Edge,Default,false,https://app.home.edge.test,greeting,café
+Microsoft Edge,Profile 1,true,https://app.work.edge.test,,"meta data, value bytes is [8 150 1]"
+Microsoft Edge,Profile 1,true,https://app.work.edge.test,,"meta data, value bytes is [16 32]"
+Microsoft Edge,Profile 1,false,https://app.work.edge.test,言語,日本語
+Microsoft Edge,Profile 1,false,https://app.work.edge.test,blob,"value is too long, length is 2101, supported max length is 2048"
+Microsoft Edge,Profile 1,false,https://app.work.edge.test,greeting,café
+-- password.csv (1170 bytes) --
+﻿browser,profile,url,username,password,created_at,store
+Chrome,Default,https://shop.home.chrome.test/,alice@home.chrome.test,"pa,ss""word",2024-03-01T11:00:00Z,local
+Chrome,Default,https://sync.home.chrome.test/,alice,synced-secret,2024-03-01T10:30:00Z,account
+Chrome,Default,https://accounts.home.chrome.test/,alice,correct-horse-battery-staple,2024-03-01T10:00:00Z,local
+Chrome,Profile 1,https://shop.work.chrome.test/,alice@work.chrome.test,"pa,ss""word",2024-06-01T11:00:00Z,local
+Chrome,Profile 1,https://accounts.work.chrome.test/,alice,correct-horse-battery-staple,2024-06-01T10:00:00Z,local
+Microsoft Edge,Default,https://shop.home.edge.test/,alice@home.edge.test,"pa,ss""word",2024-03-01T11:00:00Z,local
+Microsoft Edge,Default,https://sync.home.edge.test/,alice,synced-secret,2024-03-01T10:30:00Z,account
+Microsoft Edge,Default,https://accounts.home.edge.test/,alice,correct-horse-battery-staple,2024-03-01T10:00:00Z,local
+Microsoft Edge,Profile 1,https://shop.work.edge.test/,alice@work.edge.test,"pa,ss""word",2024-06-01T11:00:00Z,local
+Microsoft Edge,Profile 1,https://accounts.work.edge.test/,alice,correct-horse-battery-staple,2024-06-01T10:00:00Z,local
+-- sessionstorage.csv (921 bytes) --
+﻿browser,profile,is_meta,url,key,value
+Chrome,Default,false,https://app.home.chrome.test/,draft,"Hello, world"
+Chrome,Default,false,https://app.home.chrome.test/,scrollY,640
+Chrome,Default,false,https://shop.home.chrome.test/,cart,"{""items"":2}"
+Chrome,Profile 1,false,https://app.work.chrome.test/,draft,"Hello, world"
+Chrome,Profile 1,false,https://app.work.chrome.test/,scrollY,640
+Chrome,Profile 1,false,https://shop.work.chrome.test/,cart,"{""items"":2}"
+Microsoft Edge,Default,false,https://app.home.edge.test/,draft,"Hello, world"
+Microsoft Edge,Default,false,https://app.home.edge.test/,scrollY,640
+Microsoft Edge,Default,false,https://shop.home.edge.test/,cart,"{""items"":2}"
+Microsoft Edge,Profile 1,false,https://app.work.edge.test/,draft,"Hello, world"
+Microsoft Edge,Profile 1,false,https://app.work.edge.test/,scrollY,640
+Microsoft Edge,Profile 1,false,https://shop.work.edge.test/,cart,"{""items"":2}"

@@ -46,11 +46,12 @@ It can also decrypt data **across machines and operating systems**: export the m
 | CocCoc         |   ✅²   |   ✅   |   -   |
 | Arc            |    ✅    |   ✅   |   -   |
 | DuckDuckGo³    |    ✅    |   -   |   -   |
+| Browser from Vought³ |    ✅    |   -   |   -   |
 | QQ³            |    ✅    |   -   |   -   |
-| 360 ChromeX³   |    ✅    |   -   |   -   |
-| 360 Chrome³    |    ✅    |   -   |   -   |
-| DC Browser³    |    ✅    |   -   |   -   |
-| Sogou Explorer³|    ✅    |   -   |   -   |
+| 360 Speed X³   |    ✅    |   -   |   -   |
+| 360 Speed³     |    ✅    |   -   |   -   |
+| DC³            |    ✅    |   -   |   -   |
+| Sogou³         |    ✅    |   -   |   -   |
 | Firefox        |    ✅    |   ✅   |   ✅   |
 | Safari¹        |    -    |   ✅   |   -   |
 
@@ -98,7 +99,7 @@ brew install zig                 # macOS
 scoop install zig                # Windows (scoop)
 # or download from https://ziglang.org/download/
 
-# 2. Build the payload (outputs crypto/windows/payload/abe_extractor_amd64.bin)
+# 2. Build the payload (outputs internal/abe/payload/abe_extractor_amd64.bin)
 make payload
 
 # 3. Build hack-browser-data.exe with the ABE payload embedded
@@ -112,7 +113,7 @@ The resulting `hack-browser-data.exe` includes full ABE cookie decryption on Chr
 ```
 $ hack-browser-data -h
 hack-browser-data decrypts and exports browser data from Chromium-based
-browsers and Firefox on Windows, macOS, and Linux.
+browsers, Firefox, and Safari on Windows, macOS, and Linux.
 
 GitHub: https://github.com/moonD4rk/HackBrowserData
 
@@ -135,7 +136,8 @@ Flags:
   -d, --dir string            output directory (default "results")
   -f, --format string         output format: csv|json|cookie-editor (default "json")
   -h, --help                  help for hack-browser-data
-      --keychain-pw string    macOS keychain password
+      --keychain-pw string    macOS keychain password (visible in ps and shell history)
+      --keychain-pw-stdin     read the macOS keychain password from the first line of stdin
   -p, --profile-path string   custom profile dir path, get with chrome://version
   -v, --verbose               enable debug logging
       --zip                   compress output to zip
@@ -154,10 +156,11 @@ Running `hack-browser-data` without a subcommand defaults to `dump`.
 | `--format`       | `-f`  | `json`    | Output format (csv\|json\|cookie-editor)                                                                                                   |
 | `--dir`          | `-d`  | `results` | Output directory                                                                                                                           |
 | `--profile-path` | `-p`  |           | Custom profile dir path, get with chrome://version                                                                                         |
-| `--keychain-pw`  |       |           | macOS keychain password                                                                                                                    |
+| `--keychain-pw`  |       |           | macOS keychain password (visible in `ps` and shell history)                                                                                |
+| `--keychain-pw-stdin` |  |           | Read the macOS keychain password from the first line of stdin                                                                              |
 | `--zip`          |       | `false`   | Compress output to zip                                                                                                                     |
 
-> `--format cookie-editor` writes **only cookies**, as a JSON array matching the Cookie-Editor browser extension's import format; non-cookie categories are skipped.
+> `--format cookie-editor` writes cookies as a JSON array matching the Cookie-Editor browser extension's import format; every other category is written exactly as the `json` format writes it.
 
 ### Cross-host decryption
 
@@ -190,7 +193,8 @@ Derives each Chromium installation's master keys on the origin host and writes t
 |-----------------|-------|----------|-------------------------------------------------|
 | `--browser`     | `-b`  | `all`    | Target browser (all\|chrome\|edge\|...)         |
 | `--output`      | `-o`  | *stdout* | Output file (written `0600`); stdout if omitted |
-| `--keychain-pw` |       |          | macOS keychain password                         |
+| `--keychain-pw` |       |          | macOS keychain password (visible in `ps` / history) |
+| `--keychain-pw-stdin` | |        | Read the keychain password from stdin's first line |
 
 #### `archive` - Pack decryption-relevant files for transport
 

@@ -1,0 +1,43 @@
+-- bookmark.csv (566 bytes) --
+﻿browser,profile,id,name,type,url,folder,created_at
+Safari,default,1,Docs,bookmark,https://docs.home.safari.test/,BookmarksBar,
+Safari,default,2,Long read <with> & tags,bookmark,https://news.home.safari.test/long-read,Reading,
+Safari,default,3,Home,bookmark,https://www.home.safari.test/,BookmarksBar,
+Safari,default,4,Café menu,bookmark,https://shop.home.safari.test/menu,BookmarksMenu,
+Safari,default,5,Saved post,bookmark,https://blog.home.safari.test/post,ReadingList,
+Safari,default,6,Untitled entry,bookmark,https://blog.home.safari.test/draft,ReadingList,
+-- cookie.csv (831 bytes) --
+﻿browser,profile,host,path,name,value,is_secure,is_http_only,has_expire,is_persistent,expire_at,created_at,same_site
+Safari,default,app.home.safari.test,/,csrf,token-123,false,true,true,true,2024-03-02T09:00:00Z,2024-03-01T09:40:00Z,
+Safari,default,.home.safari.test,/,tracker,opt-out,true,false,true,true,2026-03-01T09:00:00Z,2024-03-01T09:30:00Z,
+Safari,default,www.home.safari.test,/settings,prefs,theme=dark,false,false,true,true,2024-03-31T09:00:00Z,2024-03-01T09:20:00Z,
+Safari,default,.home.safari.test,/,SID,sid-home.safari.test,true,true,true,true,2025-03-01T09:00:00Z,2024-03-01T09:10:00Z,
+Safari,Work,wiki.work.safari.test,/,lang,en,false,false,true,true,2024-05-30T09:00:00Z,2024-03-01T16:00:00Z,
+Safari,Work,.work.safari.test,/,SSO,sso-work.safari.test,true,true,true,true,2024-03-08T09:00:00Z,2024-03-01T15:00:00Z,
+-- download.csv (383 bytes) --
+﻿browser,profile,url,target_path,mime_type,total_bytes,start_time,end_time
+Safari,default,https://files.home.safari.test/report.pdf,/Users/alice/Downloads/report.pdf,,52344,,
+Safari,default,https://files.home.safari.test/archive.tar.gz,/Users/alice/Downloads/archive.tar.gz,,2048,,
+Safari,Work,https://files.work.safari.test/slides.key,/Users/alice/Downloads/slides.key,,1048576,,
+-- extension.csv (416 bytes) --
+﻿browser,profile,name,id,description,version,homepage_url,enabled
+Safari,default,com.example.Blocker.Extension,com.example.Blocker.Extension (FGHIJ67890),,,,true
+Safari,default,com.example.Clipper.Extension,com.example.Clipper.Extension (ABCDE12345),,,,true
+Safari,default,com.example.Legacy,com.example.Legacy,,,,true
+Safari,default,com.example.Reader.Extension,com.example.Reader.Extension (KLMNO13579),,,,false
+-- history.csv (649 bytes) --
+﻿browser,profile,url,title,visit_count,last_visit
+Safari,default,https://www.home.safari.test/,Home,42,2024-03-01T12:00:00Z
+Safari,default,https://docs.home.safari.test/guide?q=go&lang=en,"Guide, ""quoted"" & <b>bold</b>",7,2024-03-01T13:00:00Z
+Safari,default,https://news.home.safari.test/ja,ニュース,3,2024-03-01T14:00:00Z
+Safari,default,https://files.home.safari.test/report.pdf,,0,
+Safari,Work,https://intranet.work.safari.test/,Intranet,12,2024-03-01T15:00:00Z
+Safari,Work,https://wiki.work.safari.test/onboarding,Onboarding,2,2024-03-01T16:00:00Z
+Safari,profile-9a1b2c3d,https://www.untitled.safari.test/,Untitled,1,2024-03-01T17:00:00Z
+-- localstorage.csv (423 bytes) --
+﻿browser,profile,is_meta,url,key,value
+Safari,default,false,https://cdn.home.safari.test:8443,consent,yes
+Safari,default,false,https://app.home.safari.test,blob,"value is too long, length is 2200, supported max length is 2048"
+Safari,default,false,https://app.home.safari.test,greeting,café
+Safari,default,false,https://app.home.safari.test,言語,日本語
+Safari,Work,false,https://app.work.safari.test,greeting,hello

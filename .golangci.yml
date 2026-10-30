@@ -47,6 +47,7 @@ linters:
     - nakedret
     - predeclared
     - revive
+    - tagliatelle
     - testifylint
     - unconvert
     - unparam
@@ -151,6 +152,12 @@ linters:
         - name: unexported-return
         - name: unused-parameter
           disabled: true
+    tagliatelle:
+      case:
+        use-field-name: true
+        rules:
+          json: snake
+          csv: snake
     staticcheck:
       checks:
         - "all"
@@ -172,6 +179,15 @@ linters:
           - errcheck
           - lll
           - goconst
+      # Test-support packages used only by _test.go; same leniency as the tests they serve.
+      - path: internal/(golden|browser/browsertest)/
+        linters:
+          - dupl
+          - funlen
+          - gosec
+          - errcheck
+          - lll
+          - goconst
       - source: "defer"
         linters:
           - errcheck
@@ -184,6 +200,9 @@ linters:
       - path: "masterkey/gcoredump_darwin.go"
         linters:
           - gocognit
+      - path-except: "^internal/(record|masterkey|snapshot)/"
+        linters:
+          - tagliatelle
 
 formatters:
   enable:

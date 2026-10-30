@@ -1,0 +1,32 @@
+entries=20
+chrome/Default/Bookmarks method=8 modified=1979-11-30T00:00:00Z size=17 crc32=b3abdc26
+chrome/Default/History method=8 modified=1979-11-30T00:00:00Z size=15 crc32=3e17b79c
+chrome/Default/Local Storage/leveldb/000003.log method=8 modified=1979-11-30T00:00:00Z size=40 crc32=15faa528
+chrome/Default/Local Storage/leveldb/CURRENT method=8 modified=1979-11-30T00:00:00Z size=37 crc32=8f6abec4
+chrome/Default/Local Storage/leveldb/MANIFEST-000001 method=8 modified=1979-11-30T00:00:00Z size=45 crc32=35e1957b
+chrome/Default/Login Data method=8 modified=1979-11-30T00:00:00Z size=18 crc32=142b1d76
+chrome/Default/Login Data For Account method=8 modified=1979-11-30T00:00:00Z size=30 crc32=9db5ee07
+chrome/Default/Network/Cookies method=8 modified=1979-11-30T00:00:00Z size=23 crc32=b51bbd79
+chrome/Default/Network/Cookies-shm method=8 modified=1979-11-30T00:00:00Z size=27 crc32=72008c70
+chrome/Default/Network/Cookies-wal method=8 modified=1979-11-30T00:00:00Z size=27 crc32=d3ccaf73
+chrome/Default/Preferences method=8 modified=1979-11-30T00:00:00Z size=19 crc32=b990cd74
+chrome/Default/Secure Preferences method=8 modified=1979-11-30T00:00:00Z size=26 crc32=28329a7f
+chrome/Default/Session Storage/000004.log method=8 modified=1979-11-30T00:00:00Z size=34 crc32=cf0c8c20
+chrome/Default/Session Storage/CURRENT method=8 modified=1979-11-30T00:00:00Z size=31 crc32=62eede41
+chrome/Default/Session Storage/MANIFEST-000001 method=8 modified=1979-11-30T00:00:00Z size=39 crc32=f0e90780
+chrome/Default/Web Data method=8 modified=1979-11-30T00:00:00Z size=16 crc32=aaefcc06
+chrome/Local State method=8 modified=1979-11-30T00:00:00Z size=11 crc32=015c5138
+chrome/Profile 1/Bookmarks method=8 modified=1979-11-30T00:00:00Z size=19 crc32=455804cf
+chrome/Profile 1/History method=8 modified=1979-11-30T00:00:00Z size=17 crc32=1f0023f8
+chrome/Profile 1/Local Storage/leveldb/000003.log method=8 modified=1979-11-30T00:00:00Z size=42 crc32=56ecc61f
+chrome/Profile 1/Local Storage/leveldb/CURRENT method=8 modified=1979-11-30T00:00:00Z size=39 crc32=0a50ecce
+chrome/Profile 1/Local Storage/leveldb/MANIFEST-000001 method=8 modified=1979-11-30T00:00:00Z size=47 crc32=cc8c6a04
+chrome/Profile 1/Login Data method=8 modified=1979-11-30T00:00:00Z size=20 crc32=cd0bb472
+chrome/Profile 1/Network/Cookies method=8 modified=1979-11-30T00:00:00Z size=25 crc32=184f7580
+chrome/Profile 1/Preferences method=8 modified=1979-11-30T00:00:00Z size=21 crc32=be2429c4
+chrome/Profile 1/Secure Preferences method=8 modified=1979-11-30T00:00:00Z size=28 crc32=fd021a26
+chrome/Profile 1/Session Storage/000004.log method=8 modified=1979-11-30T00:00:00Z size=36 crc32=481c79bb
+chrome/Profile 1/Session Storage/CURRENT method=8 modified=1979-11-30T00:00:00Z size=33 crc32=6290110a
+chrome/Profile 1/Session Storage/MANIFEST-000001 method=8 modified=1979-11-30T00:00:00Z size=41 crc32=8f635ae8
+chrome/Profile 1/Web Data method=8 modified=1979-11-30T00:00:00Z size=18 crc32=e0117ed3
+manifest.json method=8 modified=1979-11-30T00:00:00Z size=1004 crc32=ed341f82
