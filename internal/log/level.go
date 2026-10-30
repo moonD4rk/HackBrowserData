@@ -14,14 +14,6 @@ const (
 	// WarnLevel is used for undesired but relatively expected events,
 	// which may indicate a problem.
 	WarnLevel
-
-	// ErrorLevel is used for undesired and unexpected events that
-	// the program can recover from.
-	ErrorLevel
-
-	// FatalLevel is used for undesired and unexpected events that
-	// the program cannot recover from.
-	FatalLevel
 )
 
 func (l Level) String() string {
@@ -32,10 +24,6 @@ func (l Level) String() string {
 		return "INF"
 	case WarnLevel:
 		return "WRN"
-	case ErrorLevel:
-		return "ERR"
-	case FatalLevel:
-		return "FTL"
 	default:
 		return "???"
 	}

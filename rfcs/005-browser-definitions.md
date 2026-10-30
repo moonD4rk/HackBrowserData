@@ -60,6 +60,7 @@ Accessors (names per [RFC-004](004-naming-decisions.md)):
 ```go
 browser.Supported() []Def              // this OS's rows, in table order
 browser.Lookup(id string) (Def, bool)  // any row, whatever the OS
+browser.IDs() []string                 // this OS's IDs, sorted, for -b's help and errors
 ```
 
 ## How a browser produces data
@@ -97,7 +98,7 @@ Discovery answers one question — which user data dirs and profiles exist — a
 - **Every match counts.** Every `UserDataDirs` entry is expanded, globs included, and **every** existing match becomes its own `UserDataDir` — as in v1.1.0, which is what keeps the user data dirs of both of a machine's Arc MSIX packages. The first one of a `Def` gets the `DirID` `Def.ID`, later ones `-2`, `-3`… in path order, so IDs are stable from run to run.
 - **Errors are not absence.** A user data dir that does not exist yields nothing. Any other failure — permission denied, a malformed glob — is returned (joined across entries, next to whatever was found) and becomes an `error` result for that browser in the summary. In v1.1.0 both the Chromium and the Firefox profile scans returned nothing on any read error, and glob errors were dropped while an unmatched pattern was kept as a literal path, so "unreadable" looked exactly like "not installed".
 - **Profiles by v1.1.0's rules.** Chromium directories holding `Preferences` or `Preferences_02` (Tencent forks), with flat-layout and copied-tree fallbacks; Firefox directories holding known data files; Safari's default profile plus its named profiles (macOS 14+). Whatever the base, a profile counts only when it holds a file some category reads, so a profile created and never used is not listed, archived, or keyed. The named profiles are listed only inside `SafariTabs.db`, so Safari's Discover captures that one file into a temporary snapshot with the snapshot copier and reads the copy, never the live database.
-- **No source checks.** Whether a category's file exists is Plan's question, answered as `absent`. v1.1.0 checked every source while constructing the browser and silently dropped a profile that had none; `list` keeps that display rule (profiles with at least one source), but the decision lives outside discovery.
+- **No source checks.** Whether a category's file exists is Plan's question, answered as `absent`, or as `error` when the file cannot be checked. v1.1.0 checked every source while constructing the browser and silently dropped a profile that had none; `list` keeps that display rule (profiles with at least one source), but the decision lives outside discovery.
 - **`-p` replaces `UserDataDirs` for one `Def`.** When `DiscoverOptions.ProfilePath` is set, discovery reads that path instead of the table's entries, and each base interprets it by the rules in [RFC-009](009-cli-surface.md).
 
 ## Per-fork overrides — data stays data

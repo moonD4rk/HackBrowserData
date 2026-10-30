@@ -43,7 +43,7 @@ The external interface is frozen at v1.1.0: every item below behaves exactly as 
 | Archive           | zip layout `<browser-key>/<User Data layout>`, readable by v1.1.0 `restore`                                                           |
 | Exit status       | `0` when the run completes (including partial results and "no browsers found"); `1` when it cannot start or finish                    |
 
-Not part of the contract: log lines and the human-readable summary on stderr, and row order where v1.1.0's order is unspecified or wrong. Output differs from v1.1.0 only for listed bug fixes where v1.1.0's output was wrong — Firefox history order, Firefox bookmark fields, Safari bookmark IDs, Firefox logins from a profile whose key cannot be recovered, Yandex logins and cards whose data key cannot be recovered, the `browser` value `restore` stamps, and CocCoc cookies on a Windows machine that also has Yandex ([RFC-008](008-output-and-export.md)); each is called out where it is fixed.
+Not part of the contract: log lines and the human-readable summary on stderr, and row order where v1.1.0's order is unspecified or wrong. Output differs from v1.1.0 only for listed bug fixes where v1.1.0's output was wrong — Firefox history order, Firefox bookmark fields, Safari bookmark IDs, Firefox logins from a profile whose key cannot be recovered, Yandex logins and cards whose data key cannot be recovered, the `browser` value `restore` stamps, CocCoc cookies on a Windows machine that also has Yandex, and the `--zip` archive's file mode ([RFC-008](008-output-and-export.md)); each is called out where it is fixed.
 
 ## Hard constraints
 

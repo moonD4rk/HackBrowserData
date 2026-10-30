@@ -88,3 +88,10 @@ func TestDiscover_UnreadableDirIsReported(t *testing.T) {
 	assert.Equal(t, Extraction{DirID: "chrome"}, d.Failed[0].Extraction)
 	assert.Equal(t, OutcomeError, d.Failed[0].Outcome)
 }
+
+// Dropping a profile whose files cannot be checked would hide the failure; the plan reports it instead.
+func TestWithData_KeepsAProfileItCannotCheck(t *testing.T) {
+	dir := chromeDir(t, "chrome", "Default")
+	lock(t, filepath.Join(dir.Path, "Default"))
+	assert.Len(t, withData([]browser.UserDataDir{dir}), 1)
+}

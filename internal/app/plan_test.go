@@ -2,8 +2,10 @@ package app
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -114,4 +116,32 @@ func TestNewPlan_ExtractorWithoutSourcesRuns(t *testing.T) {
 	assert.Equal(t, []Extraction{{DirID: "safari", Profile: "default", Category: category.Password}}, got.Extractions)
 	assert.Empty(t, got.Files)
 	assert.Empty(t, got.Skipped)
+}
+
+// lock makes dir unsearchable until the test ends, so a Stat of anything under it fails with permission denied.
+func lock(t *testing.T, dir string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("mode bits do not restrict Stat on Windows")
+	}
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores mode bits")
+	}
+	require.NoError(t, os.Chmod(dir, 0))
+	t.Cleanup(func() { assert.NoError(t, os.Chmod(dir, 0o700)) })
+}
+
+// A candidate that cannot be checked is not absence: the extraction is an error, and nothing is captured for it.
+func TestNewPlan_UnreadableSourceIsAnError(t *testing.T) {
+	dir := chromeDir(t, "chrome", "Default")
+	lock(t, filepath.Join(dir.Path, "Default"))
+	base := fakeBase(map[category.Category]extractFunc{category.History: nil})
+
+	got := newPlan(Discovery{Dirs: []browser.UserDataDir{dir}}, Request{Categories: []category.Category{category.History}}, base)
+
+	require.Len(t, got.Skipped, 1)
+	assert.Equal(t, OutcomeError, got.Skipped[0].Outcome)
+	require.ErrorIs(t, got.Skipped[0].Err, fs.ErrPermission)
+	assert.Empty(t, got.Extractions)
+	assert.Empty(t, got.Files)
 }

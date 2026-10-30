@@ -57,9 +57,9 @@ func ValidateRestore(f RestoreFlags) (Request, masterkey.Dump, error) {
 	}
 	filter := strings.ToLower(strings.TrimSpace(f.Browser))
 	if filter == "" {
-		filter = "all"
+		filter = allBrowsers
 	}
-	if filter != "all" && len(vaultsOf(dump, filter)) == 0 {
+	if filter != allBrowsers && len(vaultsOf(dump, filter)) == 0 {
 		return Request{}, masterkey.Dump{}, fmt.Errorf("no vault for browser %q in keys (have: %s)", filter, vaultKeys(dump.Vaults))
 	}
 	req := Request{Browser: filter, Categories: categories, Format: format, Dir: f.Dir, Zip: f.Zip}
@@ -115,7 +115,7 @@ func fromManifest(root string, m snapshot.Manifest, vaults []masterkey.Vault, fi
 	var d Discovery
 	keys := make(map[browser.DirID]masterkey.Set)
 	for _, md := range m.Dirs {
-		if filter != "all" && md.Browser != filter {
+		if filter != allBrowsers && md.Browser != filter {
 			continue
 		}
 		v, ok := vaultOf(vaults, md)
@@ -247,7 +247,7 @@ func vaultDirID(v masterkey.Vault) browser.DirID {
 func vaultsOf(dump masterkey.Dump, filter string) []masterkey.Vault {
 	var out []masterkey.Vault
 	for _, v := range dump.Vaults {
-		if filter == "all" || strings.EqualFold(v.Browser, filter) {
+		if filter == allBrowsers || strings.EqualFold(v.Browser, filter) {
 			out = append(out, v)
 		}
 	}

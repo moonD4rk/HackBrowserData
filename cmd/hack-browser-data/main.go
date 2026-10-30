@@ -13,9 +13,8 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
-var verbose bool
-
 func rootCmd() *cobra.Command {
+	var verbose bool
 	root := &cobra.Command{
 		Use:   "hack-browser-data",
 		Short: "A CLI tool for decrypting and exporting browser data",
