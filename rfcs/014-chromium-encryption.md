@@ -101,7 +101,7 @@ Chrome 127 introduced App-Bound Encryption on Windows, identified by the `v20` p
 | 3B    | 12B    | remaining bytes                     |
 ```
 
-Decryption uses `DecryptChromiumGCM` with the ABE-retrieved key. Note: `DecryptChromiumGCM` strips only the version prefix (3B) and nonce (12B) before passing to AES-GCM; it does not strip any post-decrypt header from the result.
+Decryption strips the version prefix (3B) and nonce (12B) and passes the remaining bytes to AES-256-GCM (`crypto.AESGCMDecrypt`); no post-decrypt header is stripped from the result.
 
 ## 7. Decryption Flow
 

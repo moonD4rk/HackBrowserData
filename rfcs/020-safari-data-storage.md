@@ -14,7 +14,7 @@ Safari 17 (September 2023) introduced **multi-profile support**. Profile discove
 
 ## 2. Profile Structure
 
-Each `profileContext` (in `browser/safari/profiles.go`) tracks five fields:
+A Safari profile is identified by five pieces of information (`internal/browser/safari/profiles.go`):
 
 | Field        | Meaning                                                                   |
 | ------------ | ------------------------------------------------------------------------- |
@@ -50,7 +50,7 @@ Safari uses two different casings for the same profile UUID across the container
 | `Safari/Profiles/<UUID>/`         | Uppercase | `5604E6F5-02ED-4E40-8249-63DE7BC986C8` |
 | `WebKit/WebsiteDataStore/<uuid>/` | Lowercase | `5604e6f5-02ed-4e40-8249-63de7bc986c8` |
 
-`profileContext` stores both to avoid case-folding at every call site.
+Both casings are derived once at discovery, so no call site has to case-fold.
 
 ## 3. Data File Locations
 
@@ -246,10 +246,10 @@ The only encrypted category is passwords. Because they are not stored in Safari'
 - **macOS-only**. There is no Safari on Windows or Linux.
 - **Full Disk Access (TCC)** is required to read the sandboxed container. Without it, cookies / history / downloads / localStorage reads fail silently with permission errors at stat or open time. Legacy paths under `~/Library/Safari/` sometimes remain readable without FDA, but are mostly empty on modern systems.
 - **Live-file safety** follows a live-vs-temp split:
-  - **Live reads** (`SafariTabs.db` during profile discovery in `profiles.go`) use `?mode=ro&immutable=1`, which disables WAL replay and locking so the extractor cannot disturb a running Safari — it sees a consistent snapshot of the main DB as of read time, at the cost of missing any pending WAL content.
-  - **Temp-copy reads** (via `filemanager.Session.Acquire`) vary by file: `localstorage.sqlite3` uses `?mode=ro` so SQLite can replay the copied `-wal` sidecar; `History.db` opens with `PRAGMA journal_mode=off` (WAL replay not needed for read-only history queries). `Session.Acquire` copies the `-wal` / `-shm` sidecars alongside the main DB. Any `-shm` writes SQLite performs during replay land on the ephemeral copy and are deleted with the session.
+  - **Discovery read**: `SafariTabs.db` is copied into a temporary snapshot and opened `?mode=ro&immutable=1` on the copy, which disables WAL replay and locking — a running Safari is never touched, at the cost of missing any pending WAL content.
+  - **Snapshot reads** vary by file: `localstorage.sqlite3` uses `?mode=ro` so SQLite can replay the copied `-wal` sidecar; `History.db` opens with `PRAGMA journal_mode=off` (WAL replay not needed for read-only history queries). The snapshot copier copies the `-wal` / `-shm` sidecars alongside the main DB. Any `-shm` writes SQLite performs during replay land on the copy and are removed with the snapshot.
 - **Multi-profile availability**: requires Safari 17 (macOS 14 Sonoma) or newer. Older Safari versions have only the default profile; discovery degrades cleanly via the ReadDir fallback described in §2.1.
-- **File acquisition**: all per-profile files are copied into a `filemanager.Session` temp directory before extraction, except the discovery-time `SafariTabs.db` read which opens the live file directly. See [RFC-007](007-snapshot-and-acquisition.md) for the general pattern.
+- **File acquisition**: every file a profile reads, `SafariTabs.db` included, is copied into a temporary snapshot before it is read. See [RFC-007](007-snapshot-and-acquisition.md) for the general pattern.
 
 ## 8. Key Differences from Chromium and Firefox
 

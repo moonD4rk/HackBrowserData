@@ -62,7 +62,7 @@ make payload-clean   # rm internal/abe/payload/*.bin
 - **Naming**: follow Go conventions and the settled names in `rfcs/004-naming-decisions.md` — `Def` not `BrowserConfig`, `Extract` not `BrowsingData`
 - **Comment width**: wrap comments at 140 columns (matches `.golangci.yml` `lll.line-length`)
 - **Tests**: `internal/browser/browsertest` builds real fixture files (SQLite, JSON, LevelDB, plist) into a `t.TempDir()` — never a live browser, never a database mock; goldens live in each package's `testdata/` and `go test ./... -update` regenerates them
-- **Architecture**: see `rfcs/README.md` — design RFCs 000–012, format and technique RFCs 013–021
+- **Architecture**: see `rfcs/README.md` — design RFCs 000–011, format and technique RFCs 013–021
 
 ## Key Constraints
 

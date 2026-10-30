@@ -1,6 +1,6 @@
 # HackBrowserData RFCs
 
-This directory is HackBrowserData's design record. The design RFCs (000–012) describe how the program is organized — a single explicit pipeline, a flat `internal/` package tree, outcome-per-extraction reporting, and names that read the way Go wants them to read — while the tool's external interface stays exactly as it is in v1.1.0. The format and technique RFCs (013–021) describe how each browser stores and protects its data, and how the tool reads it.
+This directory is HackBrowserData's design record. The design RFCs (000–011) describe how the program is organized — a single explicit pipeline, a flat `internal/` package tree, outcome-per-extraction reporting, and names that read the way Go wants them to read — while the tool's external interface stays exactly as it is in v1.1.0. The format and technique RFCs (013–021) describe how each browser stores and protects its data, and how the tool reads it.
 
 Every RFC states the current design. When a decision changes, the RFC is edited in place and git keeps the history; a superseded RFC is removed rather than kept beside its replacement.
 
@@ -8,7 +8,7 @@ The design RFCs describe _architecture_ — how the program is organized, how da
 
 ## Why rewrite
 
-HackBrowserData is an MIT-licensed security-research tool with a large user base, presented at DEF CON. The rewrite serves three goals, in priority order:
+HackBrowserData is an MIT-licensed security-research tool with a large user base, presented at DEF CON. These RFCs serve three goals, in priority order:
 
 1. **A clean architecture that reads as a reference implementation.** The code is read on stage and by every contributor; it should teach the design, not apologize for it.
 2. **A better operator experience without breaking anyone.** Fast failures, honest reporting, no surprises — and every existing command line, script, and output consumer keeps working unchanged.
@@ -17,9 +17,9 @@ HackBrowserData is an MIT-licensed security-research tool with a large user base
 ## Hard constraints (non-negotiable)
 
 - **Go 1.20.** Windows 7 support depends on it. No Go 1.21+ features (`log/slog`, `slices`, `maps`, `cmp`, generic stdlib helpers that landed later), and no dependency version whose `go` directive is above 1.20.
-- **Compatible external interface.** Commands, flags, defaults, output files and their field names, the `keys.json` and archive formats, and exit codes stay as they are in v1.1.0 — the compatibility contract in [RFC-000](000-goals-and-constraints.md). The rewrite lands as a series of PRs on an integration branch and reaches `main` in one fast-forward, on the existing module path; there is no v2 ([RFC-012](012-migration-roadmap.md)).
+- **Compatible external interface.** Commands, flags, defaults, output files and their field names, the `keys.json` and archive formats, and exit codes stay as they are in v1.1.0 — the compatibility contract in [RFC-000](000-goals-and-constraints.md). It stays on the existing module path; there is no v2.
 - **MIT license**, cross-platform (Windows, macOS, Linux), fully offline. The tool never phones home.
-- **No new offensive capability.** The rewrite reorganizes and hardens existing, published functionality. It does not add targets, bypasses, or techniques.
+- **No new offensive capability.** The redesign reorganizes and hardens existing, published functionality. It does not add targets, bypasses, or techniques.
 
 ## Design
 
@@ -37,7 +37,6 @@ HackBrowserData is an MIT-licensed security-research tool with a large user base
 | [009](009-cli-surface.md)               | CLI Surface             | The unchanged command surface, validation order, keychain password input   |
 | [010](010-dependencies.md)              | Dependencies            | Keep / drop / pin, with rationale                                          |
 | [011](011-testing-and-quality.md)       | Testing & Quality       | Test strategy, compatibility tests, CI, lint                               |
-| [012](012-migration-roadmap.md)         | Migration Roadmap       | How the rewrite is delivered, phase by phase                               |
 
 ## Formats and techniques
 

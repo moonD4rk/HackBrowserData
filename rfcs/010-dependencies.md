@@ -20,22 +20,22 @@ Every dependency is justified or dropped. The bar: a dependency earns its place 
 | `github.com/otiai10/copy`                               | **DROP**             | It links `golang.org/x/sync` into every binary, and its Windows build imports `testing` and the `github.com/otiai10/mint` assertion library from non-test code, so both ship in the release exe. Every call already goes through one wrapper; a ~50-line copier in `internal/snapshot` (files, directories, skip list) replaces it. |
 | `github.com/stretchr/testify`                           | **KEEP (test-only)** | Assertions in tests; never linked into the binary.                                                                                                                                                                                                                                                                                  |
 
-`golang.org/x/text` needs no action: HBD does not import it and it is not linked into the binary. It stays in `go.mod` as `// indirect` only because goleveldb's test dependencies require it (`go mod why -m golang.org/x/text`), so dropping it is not something HBD code can do — and the project CLAUDE.md's "x/text will be removed" note is already moot.
+`golang.org/x/text` needs no action: HBD does not import it and it is not linked into the binary. It stays in `go.mod` as `// indirect` only because goleveldb's test dependencies require it (`go mod why -m golang.org/x/text`), so dropping it is not something HBD code can do.
 
 ## Indirect dependencies
 
-The `modernc.org/*` set (`libc`, `memory`, `mathutil`, …) comes in through `modernc.org/sqlite` and rides its pin. `go-humanize`, `golang-lru/v2`, `uuid`, `go-isatty`, `go-strftime`, `bigfft`, `snappy`, `tidwall/match` + `pretty`, `go.yaml.in/yaml/v3`, `x/sync`, `x/tools`, `x/text` are transitive. After dropping `otiai10/copy`, run `go mod tidy` under the Go 1.20 toolchain and confirm that `otiai10/mint` leaves the module graph and the `go` directive does not move.
+The `modernc.org/*` set (`libc`, `memory`, `mathutil`, …) comes in through `modernc.org/sqlite` and rides its pin. `go-humanize`, `golang-lru/v2`, `uuid`, `go-isatty`, `go-strftime`, `bigfft`, `snappy`, `tidwall/match` + `pretty`, `go.yaml.in/yaml/v3`, `x/sync`, `x/tools`, `x/text` are transitive. `otiai10/copy` and `otiai10/mint` are gone, and `go mod tidy` under the Go 1.20 toolchain leaves the `go` directive at 1.20.
 
 ## The Go 1.20 discipline
 
 - `go mod tidy` and `go mod verify` must be run with the **go@1.20** toolchain (per project CLAUDE.md), or a transitive dependency silently bumps the `go` directive and breaks the Windows 7 build.
 - Any candidate dependency is checked for its own `go` directive before adoption. A library requiring 1.21+ is disqualified regardless of merit.
 - Dependabot's ignore rules (`.github/dependabot.yml`) hold every pin above; a new pin gets its rule in the same PR.
-- CI must not follow `go.mod`. Today every workflow runs `actions/setup-go` with `go-version-file: go.mod`, so if a bump raises the `go` directive, CI installs the newer Go and passes. CI pins `go-version: '1.20.x'` instead and fails when `go.mod` says anything but `go 1.20` or gains a `toolchain` line ([RFC-011](011-testing-and-quality.md)).
+- CI must not follow `go.mod`: with `go-version-file: go.mod`, a bump that raised the `go` directive would make CI install the newer Go and pass. Every workflow pins `go-version: '1.20.x'` instead, and lint fails when `go.mod` says anything but `go 1.20` or gains a `toolchain` line ([RFC-011](011-testing-and-quality.md)).
 
 ## License hygiene
 
-The project is MIT; the shipped binary links only permissively licensed modules. The policy is an allowlist — MIT, BSD-2-Clause, BSD-3-Clause, Apache-2.0, ISC — checked against the modules actually linked into each release binary (`go list -deps` per GOOS), and a release that links anything else fails. Today's linked set is MIT (gjson, binarycookies), BSD (modernc, goleveldb, godbus, go-dbus-keyring, plist, the `x/` modules), and Apache-2.0 (cobra, keychainbreaker). `golang-lru/v2` (MPL-2.0) is in the module graph but not linked; the check keeps it that way.
+The project is MIT; the shipped binary links only permissively licensed modules. The policy is an allowlist — MIT, BSD-2-Clause, BSD-3-Clause, Apache-2.0, ISC — applied to the modules actually linked into a release binary (`go list -deps` per GOOS) and kept by review; an automated release check is DEFERRED. The linked set is MIT (gjson and the tidwall helpers, binarycookies, go-humanize, go-isatty, go-strftime), BSD (modernc, goleveldb, godbus, go-dbus-keyring, plist, snappy, uuid, bigfft, pflag, the `x/` modules), and Apache-2.0 (cobra, mousetrap, keychainbreaker). `golang-lru/v2` (MPL-2.0) is in the module graph but not linked, and must stay unlinked.
 
 BSD and Apache-2.0 require their notices in binary distributions, so each release archive ships a `THIRD_PARTY_NOTICES` file generated from the linked modules' license files.
 

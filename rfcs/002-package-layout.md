@@ -29,7 +29,7 @@ internal/
 
 The technique internals (the ABE payload, reflective injection, DPAPI and keychain specifics) sit behind `masterkey`, `keychain`, `winapi`, and the ABE unit by build tag. Their _mechanics_ are documented in the format and technique RFCs (013–021) and are out of scope for the design RFCs — here they are just packages with a contract ([RFC-006](006-key-retrieval-and-crypto.md)).
 
-**The ABE unit lives in `internal/abe/` and moved as one.** `native/` holds the first-party C sources and `Makefile.frag` and no Go files, since Go rejects C files in a package that does not use cgo; `native/bootstrap/` is the layout package generated from them; `payload/` embeds the built `.bin`, which `make payload` writes there because `//go:embed` only reaches files in the embedding package's directory or below; and `injector/` loads it. `make payload` and `make gen-layout` keep their names, and the built payload is byte-identical to the one built before the move.
+**The ABE unit lives in `internal/abe/`, as one unit.** `native/` holds the first-party C sources and `Makefile.frag` and no Go files, since Go rejects C files in a package that does not use cgo; `native/bootstrap/` is the layout package generated from them; `payload/` embeds the built `.bin`, which `make payload` writes there because `//go:embed` only reaches files in the embedding package's directory or below; and `injector/` loads it. `make payload` builds the payload and `make gen-layout` regenerates the layout package.
 
 ## Dependency direction
 
@@ -62,11 +62,11 @@ Review keeps the table, not a tool: a change that needs an edge the table does n
 
 ## Why `internal/` and nothing else (DECIDED)
 
-The current tree keeps packages at the module root (`browser/`, `crypto/`, `filemanager/`, `log/`, `masterkey/`, `output/`, `types/`, `utils/...`) and the project CLAUDE.md says "no `pkg/` + `internal/`." This RFC reverses that single decision, for the rewrite only, and keeps the "keep it simple" spirit by using `internal/` _instead of_ a split, not in addition to one.
+v1.1.0 kept packages at the module root (`browser/`, `crypto/`, `filemanager/`, `log/`, `masterkey/`, `output/`, `types/`, `utils/...`), and its CLAUDE.md said "no `pkg/` + `internal/`." This design reverses that one decision and keeps the "keep it simple" spirit by using `internal/` _instead of_ a split, not in addition to one.
 
 Reasons:
 
-1. **No Go-API burden.** Anything importable by path becomes a de-facto public API that external users pin to. HBD has no intended library consumers — it is a CLI. `internal/` makes that explicit and compiler-enforced, so we can rename and reshape freely across the whole rewrite. The CLI contract ([RFC-000](000-goals-and-constraints.md)) is the only compatibility obligation, and it is unaffected.
+1. **No Go-API burden.** Anything importable by path becomes a de-facto public API that external users pin to. HBD has no intended library consumers — it is a CLI. `internal/` makes that explicit and compiler-enforced, so packages can be renamed and reshaped freely. The CLI contract ([RFC-000](000-goals-and-constraints.md)) is the only compatibility obligation, and it is unaffected.
 2. **A clear seam.** `cmd/` is the only thing outside `internal/`. The boundary between "the program's entrypoint" and "the program" is visible in the tree.
 3. **It is still flat.** We are not introducing `pkg/` as well. There is exactly one home for library code, and it is `internal/`.
 
@@ -76,5 +76,5 @@ Trade-off accepted: the module stops being importable as a library. The module p
 
 - A package exists because it owns a _concept_, not because a file got long. `timeconv` and `category` are tiny on purpose. A package with nothing to own is not created — there is no `cli` (flags belong to `cmd`, rules to `app`) and no `textenc` (the CSV BOM is three bytes in `export`).
 - A concept with per-OS implementations lives in one package with `_windows.go` / `_darwin.go` / `_linux.go` files; callers import one package and get the right implementation at build time. A concept that exists on only one OS — the locked-file copy, the ABE bridge, the macOS login keychain — lives in its own package whose files are all built for that OS: `winapi`, `abe`, and `keychain`.
-- `winapi`, not `platform/windows`: a package named `windows` would collide with `golang.org/x/sys/windows`, which it imports, so every file would need an alias. `log` and `crypto` keep today's names although the standard library has packages of the same names: both are internal, and no file needs both.
-- No `utils` grab-bag. The old tree is redistributed to named homes: `utils/sqliteutil` → `sqlitex`; `utils/fileutil` and `filemanager` → `snapshot` (copy, zip transport) and `export` (`--zip`); `utils/{winapi,winutil}` → `winapi`; `utils/injector` and `crypto/windows/` → `abe`, moved as one unit; `types` → `category`, `record`, and `browser`; `output` → `export`; `log` → `internal/log`.
+- `winapi`, not `platform/windows`: a package named `windows` would collide with `golang.org/x/sys/windows`, which it imports, so every file would need an alias. `log` and `crypto` keep their v1.1.0 names although the standard library has packages of the same names: both are internal, and no file needs both.
+- No `utils` grab-bag. The v1.1.0 tree was redistributed to named homes: `utils/sqliteutil` → `sqlitex`; `utils/fileutil` and `filemanager` → `snapshot` (copy, zip transport) and `export` (`--zip`); `utils/{winapi,winutil}` → `winapi`; `utils/injector` and `crypto/windows/` → `abe`, moved as one unit; `types` → `category`, `record`, and `browser`; `output` → `export`; `log` → `internal/log`.
