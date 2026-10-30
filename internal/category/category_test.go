@@ -60,3 +60,9 @@ func TestZeroIsNone(t *testing.T) {
 	var c Category
 	assert.NotContains(t, All(), c)
 }
+
+func TestNames(t *testing.T) {
+	assert.Equal(t, []string{
+		"password", "cookie", "bookmark", "history", "download", "creditcard", "extension", "localstorage", "sessionstorage",
+	}, Names())
+}

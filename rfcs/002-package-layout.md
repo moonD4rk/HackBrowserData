@@ -40,7 +40,7 @@ Dependencies point downward and are listed exhaustively; anything not listed is 
 | `cmd/hack-browser-data`                                 | `app`, plus `browser` and `category` for help-text vocabulary (`-b` IDs, `-c` categories), `log` |
 | `app`                                                   | every package below                                                                              |
 | `browser/chromium`, `browser/firefox`, `browser/safari` | `browser`, `category`, `record`, `masterkey`, `crypto`, `snapshot`, `sqlitex`, `timeconv`, `log` |
-| `export`                                                | `category`, `record`, `log`                                                                      |
+| `export`                                                | `category`, `record`                                                                             |
 | `browser`                                               | `category`, `record`, `masterkey`, `snapshot`                                                    |
 | `masterkey`                                             | `crypto`, `winapi`, `abe`, `keychain`, `log`                                                     |
 | `snapshot`                                              | `winapi`, `log`                                                                                  |

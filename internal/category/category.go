@@ -47,6 +47,15 @@ func All() []Category {
 	return []Category{Password, Cookie, Bookmark, History, Download, CreditCard, Extension, LocalStorage, SessionStorage}
 }
 
+func Names() []string {
+	all := All()
+	names := make([]string, len(all))
+	for i, c := range all {
+		names[i] = c.String()
+	}
+	return names
+}
+
 func Parse(s string) (Category, error) {
 	for _, c := range All() {
 		if c.String() == s {

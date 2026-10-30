@@ -134,7 +134,7 @@ func ListRequest() (Request, error) {
 	if err != nil {
 		return Request{}, err
 	}
-	return Request{Browser: "all", Categories: category.All(), Home: home}, nil
+	return Request{Browser: allBrowsers, Categories: category.All(), Home: home}, nil
 }
 
 func homeDir() (string, error) {
@@ -145,20 +145,20 @@ func homeDir() (string, error) {
 	return home, nil
 }
 
+const allBrowsers = "all"
+
 // parseBrowser accepts all or one of this OS's browser IDs; an ID from another OS's table has nothing to find here.
 func parseBrowser(s string) (string, error) {
 	id := strings.ToLower(strings.TrimSpace(s))
-	if id == "" || id == "all" {
-		return "all", nil
+	if id == "" || id == allBrowsers {
+		return allBrowsers, nil
 	}
-	ids := []string{"all"}
 	for _, def := range browser.Supported() {
 		if def.ID == id {
 			return id, nil
 		}
-		ids = append(ids, def.ID)
 	}
-	return "", fmt.Errorf("unknown browser %q, available: %s", s, strings.Join(ids, "|"))
+	return "", fmt.Errorf("unknown browser %q, available: %s|%s", s, allBrowsers, strings.Join(browser.IDs(), "|"))
 }
 
 // checkOutputDir creates nothing: -d must already be a directory, or its nearest existing ancestor must be one that a
@@ -191,7 +191,7 @@ func checkProfilePath(id, path string) (string, error) {
 	if path == "" {
 		return "", nil
 	}
-	if id == "all" {
+	if id == allBrowsers {
 		log.Warnf("-p needs a specific -b; ignoring %s", path)
 		return "", nil
 	}
@@ -221,7 +221,7 @@ func parseCategories(s string) ([]category.Category, error) {
 		}
 		c, err := category.Parse(name)
 		if err != nil {
-			return nil, fmt.Errorf("%w, available: all|%s", err, categoryNames())
+			return nil, fmt.Errorf("%w, available: all|%s", err, strings.Join(category.Names(), ","))
 		}
 		if !seen[c] {
 			seen[c] = true
@@ -232,13 +232,4 @@ func parseCategories(s string) ([]category.Category, error) {
 		return nil, fmt.Errorf("no categories specified")
 	}
 	return categories, nil
-}
-
-func categoryNames() string {
-	all := category.All()
-	names := make([]string, len(all))
-	for i, c := range all {
-		names[i] = c.String()
-	}
-	return strings.Join(names, ",")
 }

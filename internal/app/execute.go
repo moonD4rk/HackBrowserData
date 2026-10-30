@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"sync"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
@@ -44,14 +45,30 @@ func execute(ctx context.Context, p Plan, req Request, extractors extractorsFunc
 	if err != nil {
 		return Summary{}, err
 	}
-	s, err := runPlan(ctx, p, w, extractors, keys, true)
-	return s, errors.Join(err, w.Close())
+	s, err := runner{w: w, extractors: extractors, keys: keys, announce: true}.run(ctx, p)
+	closeErr := w.Close()
+	announceOutput(w.Output())
+	return s, errors.Join(err, closeErr)
+}
+
+func announceOutput(out export.Output) {
+	if len(out.Files) == 0 {
+		return
+	}
+	fmt.Fprintln(os.Stderr)
+	log.Infof("Exported to %s/", out.Dir)
+	for _, f := range out.Files {
+		log.Infof("  %-24s %d entries", f.Name, f.Count)
+	}
+	if out.Zip != "" {
+		log.Infof("Compressed: %s/%s", out.Dir, out.Zip)
+	}
 }
 
 // Count runs every planned extraction with no key and the keychain locked, and counts the records instead of exporting
 // them, which is all list --detail shows.
 func Count(ctx context.Context, p Plan, req Request) (Summary, error) {
-	return runPlan(ctx, p, discard{}, extractorsWith(loginKeychain(req)), dumpKeys(nil), false)
+	return runner{w: discard{}, extractors: extractorsWith(loginKeychain(req)), keys: dumpKeys(nil)}.run(ctx, p)
 }
 
 // recordWriter takes each extraction's records as it finishes.
@@ -63,13 +80,21 @@ type discard struct{}
 
 func (discard) Write(category.Category, []record.Record) error { return nil }
 
-func runPlan(ctx context.Context, p Plan, w recordWriter, extractors extractorsFunc, keys keySource, announce bool) (Summary, error) {
+// runner is what every user data dir of one run shares; announce logs each dir as it starts.
+type runner struct {
+	w          recordWriter
+	extractors extractorsFunc
+	keys       keySource
+	announce   bool
+}
+
+func (r runner) run(ctx context.Context, p Plan) (Summary, error) {
 	results := append([]Result(nil), p.Skipped...)
 	for _, dir := range p.Dirs {
 		if err := ctx.Err(); err != nil {
 			return Summary{Results: results}, fmt.Errorf("run stopped: %w", err)
 		}
-		dirResults, err := executeDir(ctx, dir, p, w, extractors, keys, announce)
+		dirResults, err := r.runDir(ctx, dir, p)
 		results = append(results, dirResults...)
 		if err != nil {
 			return Summary{Results: results}, err
@@ -78,14 +103,12 @@ func runPlan(ctx context.Context, p Plan, w recordWriter, extractors extractorsF
 	return Summary{Results: results}, nil
 }
 
-func executeDir(ctx context.Context, dir browser.UserDataDir, p Plan, w recordWriter, extractors extractorsFunc,
-	keys keySource, announce bool,
-) ([]Result, error) {
+func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, p Plan) ([]Result, error) {
 	extractions := extractionsOf(p, dir.ID)
 	if len(extractions) == 0 {
 		return nil, nil
 	}
-	if announce {
+	if r.announce {
 		log.Infof("Extracting %s...", dir.Def.Name)
 	}
 
@@ -107,7 +130,7 @@ func executeDir(ctx context.Context, dir browser.UserDataDir, p Plan, w recordWr
 		masterKeys func(context.Context) masterkey.Set
 	)
 	if dir.Def.Base == browser.Chromium {
-		dk = &dirKeys{retrieve: func(ctx context.Context) (masterkey.Set, error) { return keys(ctx, dir, snap) }}
+		dk = &dirKeys{retrieve: func(ctx context.Context) (masterkey.Set, error) { return r.keys(ctx, dir, snap) }}
 		masterKeys = dk.get
 	}
 
@@ -115,7 +138,7 @@ func executeDir(ctx context.Context, dir browser.UserDataDir, p Plan, w recordWr
 	byProfile := make(map[string]browser.Extractors, len(dir.Profiles))
 	for _, prof := range dir.Profiles {
 		profiles[prof.Name] = prof
-		byProfile[prof.Name] = extractors(dir, prof)
+		byProfile[prof.Name] = r.extractors(dir, prof)
 	}
 
 	results := make([]Result, 0, len(extractions)+1)
@@ -132,7 +155,7 @@ func executeDir(ctx context.Context, dir browser.UserDataDir, p Plan, w recordWr
 		c := &collector{browser: dir.Def.Name, profile: prof.Name}
 		err := x.Extract(ctx, browser.NewProfileSnapshot(snap, prof, masterKeys), c)
 		// Records emitted before an extraction failed are kept, as they always were.
-		if writeErr := w.Write(e.Category, c.records); writeErr != nil {
+		if writeErr := r.w.Write(e.Category, c.records); writeErr != nil {
 			return results, writeErr
 		}
 		results = append(results, c.result(e, err))

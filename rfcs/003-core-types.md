@@ -55,6 +55,9 @@ type Source struct {
     Optional bool     // the extraction still runs without it
 }
 
+// Candidates are the Paths for profile p, relative to the user data dir, in priority order.
+func (s Source) Candidates(p Profile) []string
+
 // Extractor declares the sources a category needs and how to parse them.
 type Extractor struct {
     Sources []Source
@@ -65,9 +68,9 @@ type Extractor struct {
 type Extractors map[category.Category]Extractor
 ```
 
-Sources are static data: a base package declares them once per category and never rewrites them per profile. Plan joins a profile-scoped path with the profile's `Dir`, leaves a `Shared` one as it is, and captures the union once per user data dir — so `Local State`, or the Chromium `History` file that feeds both history and downloads, is copied once however many extractions need it. Safari is the exception: a named profile's files sit under two directories named for its UUID, so `safari.Extractors` builds each profile's sources from its `Dir`, and reaches files elsewhere under `~/Library` with `..` from there.
+Sources are static data: a base package declares them once per category and never rewrites them per profile. `Source.Candidates` joins a profile-scoped path with the profile's `Dir` and leaves a `Shared` one as it is, for Plan and `ProfileSnapshot.Path` alike; Plan captures the union once per user data dir — so `Local State`, or the Chromium `History` file that feeds both history and downloads, is copied once however many extractions need it. Safari is the exception: a named profile's files sit under two directories named for its UUID, so `safari.Extractors` builds each profile's sources from its `Dir`, and reaches files elsewhere under `~/Library` with `..` from there.
 
-An extraction is `absent` when a required source has no candidate on disk, or when all its sources are optional and none of the profile's own is there: a shared source such as `Local State` never makes an extraction present by itself. An extractor that reads no file — Safari's passwords, which come from the login keychain — always runs. Chromium passwords are two optional sources — `Login Data` (store `local`) and `Login Data For Account` (store `account`) — which reproduces v1.1.0's output, including a profile that only ever synced passwords, without a special case.
+An extraction is `absent` when a required source has no candidate on disk, or when all its sources are optional and none of the profile's own is there: a shared source such as `Local State` never makes an extraction present by itself. A candidate that cannot be checked — permission denied — makes the extraction an `error` instead, and its profile stays through discovery so the error is reported. An extractor that reads no file — Safari's passwords, which come from the login keychain — always runs. Chromium passwords are two optional sources — `Login Data` (store `local`) and `Login Data For Account` (store `account`) — which reproduces v1.1.0's output, including a profile that only ever synced passwords, without a special case.
 
 `Extractor` / `Extractors` are **DECIDED**.
 
@@ -129,7 +132,7 @@ type Plan struct {
     Dirs        []browser.UserDataDir // the discovered dirs, in output order
     Files       []snapshot.File       // union of files to capture, deduplicated by (user data dir, path)
     Extractions []Extraction          // what will run, in output order (RFC-008)
-    Skipped     []Result              // requested but can't run: unsupported, absent, or Discovery.Failed
+    Skipped     []Result              // requested but can't run: unsupported, absent, unreadable, or Discovery.Failed
 }
 
 func Discover(req Request) Discovery
@@ -201,6 +204,7 @@ func (c Category) String() string
 
 func All() []Category                  // every category, in the order above
 func Parse(s string) (Category, error) // the inverse of String, for -c
+func Names() []string                  // every category's String, in All's order
 ```
 
 The package is tiny on purpose, like `timeconv`: it exists so that `category.Cookie` and `record.Cookie` can each mean exactly what they say ([RFC-004](004-naming-decisions.md)). There is no `Category.Sensitive()`: with `-c all` as the frozen default, nothing would consume it.
@@ -364,4 +368,17 @@ type Writer struct{ /* unexported */ }
 func NewWriter(dir string, f Format, zip bool) (*Writer, error)
 func (w *Writer) Write(c category.Category, records []record.Record) error // one extraction's records; the writer sorts them (RFC-008)
 func (w *Writer) Close() error                                             // finishes every file; with --zip, packs them
+func (w *Writer) Output() Output                                           // what a clean Close left: the files, their counts, the zip
+
+// Output is what a clean Close left in the output dir; app prints the "Exported to" lines from it.
+type Output struct {
+    Dir   string
+    Files []File // each category file, in category order
+    Zip   string // the archive the files were packed into, with --zip
+}
+
+type File struct {
+    Name  string
+    Count int // records written
+}
 ```
