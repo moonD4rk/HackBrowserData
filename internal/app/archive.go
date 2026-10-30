@@ -56,7 +56,7 @@ func archiveFiles(p Plan, dirs []browser.UserDataDir) []snapshot.File {
 	for _, dir := range dirs {
 		for _, prof := range dir.Profiles {
 			for _, src := range chromium.ArchiveSources(dir) {
-				if f, ok := firstOnDisk(dir, prof, src); ok {
+				if f, ok, err := firstOnDisk(dir, prof, src); err == nil && ok {
 					add(f)
 				}
 			}

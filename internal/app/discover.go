@@ -20,11 +20,11 @@ type Discovery struct {
 func Discover(req Request) Discovery {
 	var d Discovery
 	for _, def := range browser.Supported() {
-		if req.Browser != "all" && def.ID != req.Browser {
+		if req.Browser != allBrowsers && def.ID != req.Browser {
 			continue
 		}
 		opts := browser.DiscoverOptions{Home: req.Home}
-		if req.Browser != "all" {
+		if req.Browser != allBrowsers {
 			opts.ProfilePath = req.ProfilePath
 		}
 		dirs, err := discover(def, opts)
@@ -37,7 +37,8 @@ func Discover(req Request) Discovery {
 }
 
 // withData keeps the profiles holding a file some category reads, and the user data dirs with such a profile: a
-// Preferences marker alone is no data, so a profile created and never used is not listed, archived, or keyed.
+// Preferences marker alone is no data, so a profile created and never used is not listed, archived, or keyed. A
+// profile whose files cannot be checked stays, so the plan reports the error.
 func withData(dirs []browser.UserDataDir) []browser.UserDataDir {
 	extractors := extractorsWith(nil)
 	var out []browser.UserDataDir
@@ -61,7 +62,7 @@ func hasData(dir browser.UserDataDir, p browser.Profile, ex browser.Extractors) 
 		if len(x.Sources) == 0 {
 			continue
 		}
-		if _, ok := locate(dir, p, x.Sources); ok {
+		if _, ok, err := locate(dir, p, x.Sources); ok || err != nil {
 			return true
 		}
 	}
