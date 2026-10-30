@@ -14,7 +14,7 @@ This RFC documents how HackBrowserData integrates ABE support end-to-end while k
 Related RFCs:
 
 - [RFC-014](014-chromium-encryption.md) — cipher versions (v10, v11, v20)
-- [RFC-015](015-key-retrieval-mechanisms.md) — `Retriever` / `ChainRetriever`
+- [RFC-015](015-key-retrieval-mechanisms.md) — `Retriever` / `RetrieveAll`
 - [RFC-021](021-windows-locked-file-bypass.md) — other Windows-specific handling
 
 ### 1.1 Compatibility contract
@@ -45,9 +45,8 @@ End-to-end flow when `hack-browser-data.exe` encounters a v20 Chromium cookie on
 **Stage 1 — Our process** (`hbd.exe`, `CGO_ENABLED=0`)
 
 ```
-browser/chromium.Extract()
-  → masterkey.Retrievers{V10: &DPAPIRetriever{}, V20: &ABERetriever{}}
-  → ABERetriever.RetrieveKey():
+masterkey.RetrieveAll(ctx, loc)          // v10 dpapiRetriever, v20 abeRetriever
+  → abeRetriever.Retrieve(ctx, loc):
       reads Local State → extracts APPB-prefixed blob
       resolves browser exe: install locations, then App Paths
   → internal/abe/injector.Reflective.Inject(exePath, payload, env)
@@ -97,7 +96,7 @@ DoExtractKey                  → see §4.2
 2. `ReadProcessMemory` for the 12-byte diagnostic header, then 32-byte key when `status == ready`.
 3. `TerminateProcess(browser)` — the target was a throwaway from the start.
 
-The returned key flows back up to `crypto.DecryptChromiumGCM` (cross-platform AES-256-GCM; see §5.3) and then to the usual cookie/password extraction pipeline.
+The returned key flows back up to the cross-platform AES-256-GCM path (`crypto.AESGCMDecrypt`; see §5.3) and then to the usual cookie/password extraction pipeline.
 
 ## 4. C payload — `internal/abe/native/`
 
@@ -195,9 +194,9 @@ Go consumes the same constants via **`go tool cgo -godefs`** (a development-time
 
 ### 5.3 Retriever wiring & v20 routing
 
-`masterkey.DefaultRetrievers()` on Windows returns a `Retrievers` struct with `V10 = &DPAPIRetriever{}` and `V20 = &ABERetriever{}`. The two tiers are wired independently — not in a ChainRetriever — because a single Chrome profile upgraded from pre-127 can carry mixed v10+v20 ciphertexts, and both keys must be available for `decryptValue` to route each ciphertext to its matching tier (see [RFC-015](015-key-retrieval-mechanisms.md) §4.4 and issue #578). `ABERetriever.RetrieveKey`:
+On Windows `RetrieveAll` runs a `dpapiRetriever` (v10) and an `abeRetriever` (v20), grouped by version and independent — not a first-success chain — because a single Chrome profile upgraded from pre-127 can carry mixed v10+v20 ciphertexts, and both keys must be available for `decryptValue` to route each ciphertext to its matching tier (see [RFC-015](015-key-retrieval-mechanisms.md) §4.4 and issue #578). `abeRetriever.Retrieve`:
 
-1. Reads `Local State` → extracts `os_crypt.app_bound_encrypted_key` → strips `APPB` prefix. If the field is missing, `ABERetriever` returns `(nil, nil)`, `V20` remains empty, and the independently-wired `V10` DPAPI tier still runs.
+1. Reads `Local State` → extracts `os_crypt.app_bound_encrypted_key` → strips `APPB` prefix. If the field is missing, `abeRetriever` returns `(nil, nil)`, v20 stays empty, and the independent v10 DPAPI tier still runs.
 2. Resolves browser executable via `internal/winapi/executable_windows.go` (install-location fallbacks → registry App Paths → running process; the install locations come first because an executable name such as `browser.exe` is shared by more than one vendor).
 3. Base64-encodes the encrypted blob and passes it as `HBD_ABE_ENC_B64` env var.
 4. `Reflective.Inject(exePath, payload, env)` runs the full flow in §3.
@@ -205,7 +204,7 @@ Go consumes the same constants via **`go tool cgo -godefs`** (a development-time
 
 On extraction success, logs at `Info` level (`abe: retrieved <browser> master key via reflective injection`).
 
-**v20 decryption** is cross-platform by design: `browser/chromium/decrypt.go` routes `CipherV20` → `crypto.DecryptChromiumGCM` (defined in `crypto/crypto.go`, uses `AESGCMDecrypt`). This lets Linux/macOS CI exercise the same decryption path as Windows — only the key-source side is platform-gated.
+**v20 decryption** is cross-platform by design: `internal/browser/chromium/cipher.go` routes a 32-byte (v20) key to `decryptGCM`, which calls `crypto.AESGCMDecrypt`. This lets Linux/macOS CI exercise the same decryption path as Windows — only the key-source side is platform-gated.
 
 ## 6. Build chain
 
@@ -296,7 +295,7 @@ Three steps.
 2. **Mine IIDs from TypeLib** — the interface IIDs live in the TypeLib resource of `<InstallDir>\Application\<version>\elevation_service.exe`. PowerShell + `ITypeLib.GetTypeInfo` enumerates them. Map `IElevator<Vendor>` → v1 IID, `IElevator2<Vendor>` → v2 IID (absent for older vendors).
 3. **Determine vtable slot** — count `IElevator` methods in the TypeLib. Chrome-family has 3 methods (slot 5). Edge prepends 3 placeholders (slot 8). Avast extends the interface further (slot 13).
 
-Edit `internal/abe/native/com_iid.c` (add the entry), `utils/winutil/browser_meta_windows.go` (add a matching `winutil.Entry` with the right `ABEKind` and install-path fallbacks; `Entry.Key` must equal the `BrowserConfig.Key` of the matching ABE-enabled config), `browser/browser_windows.go` (set `WindowsABE: true` on the new `BrowserConfig` so its `Key` doubles as the ABE / winutil.Table identifier), then `make payload-clean && make build-windows` and redeploy.
+Edit `internal/abe/native/com_iid.c` (add the C-side entry: exe, kind, CLSID, IIDs) and `internal/browser/table.go` (on the browser's `Def` row, set the `Windows` platform's `Exe`, `ExeFallbacks`, and `ABE` to the matching `masterkey.ABEKind`), then `make payload-clean && make build-windows` and redeploy. `TestABERowsMatchPayloadTable` fails at `go test` time if a Go `ABE` row has no `com_iid.c` row with the same exe and kind.
 
 ## 12. Known issues & future work
 
@@ -319,8 +318,8 @@ Edit `internal/abe/native/com_iid.c` (add the entry), `utils/winutil/browser_met
 
 ## 13. Related RFCs
 
-| RFC                                                               | Relation                                                                                             |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| [RFC-014 Chromium Encryption](014-chromium-encryption.md)         | v10/v11/v20 cipher format reference; v20 now implemented on Windows per this RFC                     |
-| [RFC-015 Key Retrieval](015-key-retrieval-mechanisms.md)          | `masterkey.Retrievers` taxonomy; Windows populates V10 (DPAPI) + V20 (ABE) as independent tier slots |
-| [RFC-021 Windows Locked Files](021-windows-locked-file-bypass.md) | Sibling Windows-specific workaround (handle duplication for locked DBs)                              |
+| RFC                                                               | Relation                                                                                     |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| [RFC-014 Chromium Encryption](014-chromium-encryption.md)         | v10/v11/v20 cipher format reference; v20 now implemented on Windows per this RFC             |
+| [RFC-015 Key Retrieval](015-key-retrieval-mechanisms.md)          | `masterkey` retriever taxonomy; Windows runs V10 (DPAPI) + V20 (ABE) as independent versions |
+| [RFC-021 Windows Locked Files](021-windows-locked-file-bypass.md) | Sibling Windows-specific workaround (handle duplication for locked DBs)                      |
