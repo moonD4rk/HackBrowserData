@@ -59,8 +59,9 @@ linters:
     - gocognit
     - nestif
 
-    # Note: copyloopvar, intrange, modernize, perfsprint require Go 1.22+
+    # Note: copyloopvar, intrange, modernize require Go 1.22+
     # They will be enabled when Go version constraint is lifted.
+    # perfsprint has no Go version floor; it stays off for now, as its findings are mechanical errors.New swaps.
 
   settings:
     depguard:
@@ -194,9 +195,6 @@ linters:
       - text: "SELECT"
         linters:
           - gosec
-      - path: "cmd/hack-browser-data/main.go"
-        linters:
-          - lll
       - path: "masterkey/gcoredump_darwin.go"
         linters:
           - gocognit
@@ -210,7 +208,8 @@ formatters:
     - goimports
   settings:
     gofumpt:
-      extra-rules: true
+      extra:
+        group-params: true
     goimports:
       local-prefixes:
         - github.com/moond4rk/hackbrowserdata

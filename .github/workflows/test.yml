@@ -29,9 +29,9 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: go test -v ./...
 
-      - name: Run tests with coverage
+      - name: Run tests with race detector and coverage
         if: matrix.os != 'windows-latest'
-        run: go test -v -coverprofile=coverage.out ./...
+        run: go test -v -race -coverprofile=coverage.out ./...
 
       - name: Upload coverage
         if: matrix.os == 'ubuntu-latest'
