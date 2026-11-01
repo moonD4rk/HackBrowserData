@@ -29,7 +29,7 @@ These guard the contract; a failure means something a user can see has changed.
 
 ## Golden files
 
-Export and extractor tests compare against checked-in golden outputs. Deterministic ordering is what makes goldens stable — without it, goldens would flap. A `-update` flag regenerates them on intentional changes. Goldens double as documentation of the exact output shape, useful for the README and for talks.
+Export and extractor tests compare against checked-in golden outputs. Deterministic ordering is what makes goldens stable — without it, goldens would flap. Setting `HBD_UPDATE_GOLDEN=1` regenerates them on intentional changes. Goldens double as documentation of the exact output shape, useful for the README and for talks.
 
 Each golden lives beside the package whose output it pins: the export goldens in `export`, `keys.json` in `masterkey`, and the `extract`, `archive`, and `restore` goldens — all of which run the pipeline — in `app`; the flag-surface and `list` goldens stay in `cmd/hack-browser-data`. Shared fixture builders are in `internal/browser/browsertest`, the comparison helpers in `internal/golden`. A golden holds what no other golden already implies: the Cookie-Editor golden holds only `cookie.json`, because every other category is asserted to match the json output byte for byte, and `restore` is asserted to match the extract output except for its `browser` stamp.
 

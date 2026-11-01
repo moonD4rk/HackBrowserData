@@ -1,9 +1,8 @@
-// Package golden compares test output against files in the calling package's testdata/, which -update rewrites.
+// Package golden compares test output against files in the calling package's testdata/, which HBD_UPDATE_GOLDEN=1 rewrites.
 package golden
 
 import (
 	"archive/zip"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,21 +14,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var update = flag.Bool("update", false, "rewrite the golden files from the current code")
+// updateEnv is an environment variable, not a test flag: go test ./... passes a flag to packages that do not define it,
+// and reading the variable at test time keys go test's cache on it.
+const updateEnv = "HBD_UPDATE_GOLDEN"
 
 const dir = "testdata"
 
-// Assert compares got with testdata/<name>, rewriting it first when -update is set.
+// Assert compares got with testdata/<name>, rewriting it first when HBD_UPDATE_GOLDEN=1.
 func Assert(t testing.TB, name, got string) {
 	t.Helper()
 	path := filepath.Join(dir, name)
-	if *update {
+	if os.Getenv(updateEnv) == "1" {
 		require.NoError(t, os.MkdirAll(dir, 0o755))
 		require.NoError(t, os.WriteFile(path, []byte(got), 0o644))
 	}
 	want, err := os.ReadFile(path)
 	require.NoError(t, err)
-	assert.Equal(t, string(want), got, "regenerate with: go test ./... -run '%s' -update", t.Name())
+	assert.Equal(t, string(want), got, "regenerate with: %s=1 go test ./... -run '%s'", updateEnv, t.Name())
 }
 
 // Read returns testdata/<name>.
