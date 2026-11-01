@@ -11,7 +11,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// safariBookmark mirrors the plist structure of Safari's Bookmarks.plist.
 type safariBookmark struct {
 	Type          string           `plist:"WebBookmarkType"`
 	Title         string           `plist:"Title"`
@@ -47,8 +46,7 @@ func extractBookmarks(path string, out browser.Collector) error {
 	return nil
 }
 
-// walkBookmarks collects the leaves in tree order. A leaf's ID is its position among them, counting from 1, because
-// the plist stores no number and an index within one folder repeats across folders.
+// A leaf's ID is its position among all leaves, from 1: the plist stores no number, and per-folder indexes repeat.
 func walkBookmarks(nodes []safariBookmark, folder string, out *[]record.Bookmark) {
 	for _, node := range nodes {
 		switch node.Type {

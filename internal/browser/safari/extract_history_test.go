@@ -38,7 +38,6 @@ func TestExtractHistories(t *testing.T) {
 	assert.Equal(t, 50, got[1].VisitCount)
 	assert.Equal(t, 200, got[2].VisitCount)
 
-	// Verify field mapping.
 	assert.Equal(t, "https://github.com", got[0].URL)
 	assert.Equal(t, "https://go.dev", got[1].URL)
 	assert.Equal(t, "https://example.com", got[2].URL)

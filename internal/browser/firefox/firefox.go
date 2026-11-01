@@ -1,5 +1,4 @@
-// Package firefox is the Firefox base: where Firefox keeps its profiles, how their files are parsed, and how each
-// profile's own key4.db opens its logins.
+// Package firefox is the Firefox base: profile discovery, file parsing, and each profile's own key4.db.
 package firefox
 
 import (
@@ -32,8 +31,7 @@ var extractors = browser.Extractors{
 	category.LocalStorage: plain(file("webappsstore.sqlite"), extractLocalStorage),
 }
 
-// Discover finds def's Profiles directory and the profiles in it. -p names one profile: its parent is the Profiles
-// directory, and only that profile is selected.
+// -p names one profile: its parent is the Profiles directory, and only that profile is selected.
 func Discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserDataDir, error) {
 	if opts.ProfilePath != "" {
 		return profileAt(def, opts.ProfilePath), nil
@@ -85,8 +83,7 @@ func dirID(def browser.Def, i int) browser.DirID {
 	return browser.DirID(fmt.Sprintf("%s-%d", def.ID, i+1))
 }
 
-// discoverProfiles takes every subdirectory holding a file some category reads, since profile directories have random
-// names; key4.db alone does not make one.
+// Profile directories have random names, so any subdirectory holding a source counts; key4.db alone does not.
 func discoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
 	entries, err := os.ReadDir(dir.Path)
 	if err != nil {
@@ -117,7 +114,6 @@ func hasDataFile(dir string) bool {
 	return false
 }
 
-// Extractors maps every category a Firefox profile supports to its extractor.
 func Extractors(_ browser.UserDataDir, _ browser.Profile) browser.Extractors {
 	ex := make(browser.Extractors, len(extractors))
 	for c, e := range extractors {
@@ -141,8 +137,7 @@ func plain(src browser.Source, parse func(string, browser.Collector) error) brow
 	}
 }
 
-// extractLogins derives the profile's key only once a login needs it. Without a key the logins are still exported,
-// their username and password empty, and the reason is the extraction's first problem.
+// The key is derived only once a login needs it; without one the logins export with empty secrets.
 func extractLogins(_ context.Context, ps browser.ProfileSnapshot, out browser.Collector) error {
 	path, err := ps.Path(loginsJSON)
 	if err != nil {

@@ -131,7 +131,6 @@ func lock(t *testing.T, dir string) {
 	t.Cleanup(func() { assert.NoError(t, os.Chmod(dir, 0o700)) })
 }
 
-// A candidate that cannot be checked is not absence: the extraction is an error, and nothing is captured for it.
 func TestNewPlan_UnreadableSourceIsAnError(t *testing.T) {
 	dir := chromeDir(t, "chrome", "Default")
 	lock(t, filepath.Join(dir.Path, "Default"))

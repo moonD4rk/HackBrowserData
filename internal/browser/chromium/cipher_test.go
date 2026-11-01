@@ -33,12 +33,10 @@ func TestDetectVersion(t *testing.T) {
 	}
 }
 
-// --- Cross-OS Chromium v10/v11 decryption ---
-// decryptGCM / decryptCBC are platform-neutral, so these run on every
-// GOOS and prove a key dumped on one platform decrypts that platform's data anywhere.
+// decryptGCM and decryptCBC are platform-neutral, so a key dumped on one OS decrypts its data on any OS.
 
 var (
-	// cbcKey is the 16-byte AES-128-CBC tier (macOS/Linux v10/v11); gcmKey the 32-byte AES-256-GCM tier (Windows v10 / v20).
+	// cbcKey is the 16-byte tier (macOS/Linux v10, v11); gcmKey the 32-byte tier (Windows v10, v20).
 	cbcKey   = bytes.Repeat([]byte("moond4rk"), 2)
 	gcmKey   = bytes.Repeat([]byte("moond4rk"), 4)
 	gcmNonce = cbcKey[:12]
@@ -66,9 +64,7 @@ func TestDecryptCBC_CrossPlatform(t *testing.T) {
 	assert.Equal(t, plaintext, got)
 }
 
-// TestKEmptyKey_MatchesChromium pins the runtime-derived kEmptyKey to Chromium's
-// reference bytes in os_crypt_linux.cc; now cross-platform since kEmptyKey is
-// defined for every GOOS.
+// Pins the derived kEmptyKey to the reference bytes in Chromium's os_crypt_linux.cc.
 func TestKEmptyKey_MatchesChromium(t *testing.T) {
 	want := []byte{
 		0xd0, 0xd0, 0xec, 0x9c, 0x7d, 0x77, 0xd4, 0x3a,

@@ -11,8 +11,6 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// yandexLoginAAD is SHA1(origin_url \x00 username_element \x00 username_value \x00 password_element \x00 signon_realm),
-// with keyID appended when the profile has a master password (v1 always passes nil).
 func yandexLoginAAD(originURL, usernameElem, usernameVal, passwordElem, signonRealm string, keyID []byte) []byte {
 	h := sha1.New()
 	h.Write([]byte(originURL))
@@ -34,7 +32,6 @@ func yandexLoginAAD(originURL, usernameElem, usernameVal, passwordElem, signonRe
 	return out
 }
 
-// yandexCardAAD is the raw guid bytes (+ keyID if the profile has a master password).
 func yandexCardAAD(guid string, keyID []byte) []byte {
 	if len(keyID) == 0 {
 		return []byte(guid)
@@ -48,7 +45,6 @@ func yandexCardAAD(guid string, keyID []byte) []byte {
 // errYandexMasterPasswordSet fails the extraction; unsealing a master-password profile is deferred.
 var errYandexMasterPasswordSet = errors.New("yandex: profile protected by master password, skipping")
 
-// loadYandexDataKey honors the master-password gate and returns the per-DB data key.
 func loadYandexDataKey(dbPath string, masterKey []byte) ([]byte, error) {
 	if len(masterKey) == 0 {
 		return nil, fmt.Errorf("yandex: master key not available")

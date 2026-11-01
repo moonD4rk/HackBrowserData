@@ -71,8 +71,6 @@ func writeAll(t *testing.T, dir string, f Format, extractions ...extraction) {
 	require.NoError(t, w.Close())
 }
 
-// --- Format ---
-
 func TestParseFormat(t *testing.T) {
 	tests := []struct {
 		in   string
@@ -102,8 +100,6 @@ func TestNewWriter_CreatesDir(t *testing.T) {
 	require.NoError(t, err)
 	assert.DirExists(t, dir)
 }
-
-// --- CSV output ---
 
 func TestWrite_CSV_Password(t *testing.T) {
 	dir := t.TempDir()
@@ -161,8 +157,6 @@ func TestWrite_CSV_UTF8BOM(t *testing.T) {
 	assert.Equal(t, utf8BOM, raw[:3], "CSV should start with UTF-8 BOM")
 	assert.Equal(t, 1, bytes.Count(raw, utf8BOM), "one BOM however many writes")
 }
-
-// --- JSON output ---
 
 func TestWrite_JSON_Password(t *testing.T) {
 	dir := t.TempDir()
@@ -231,8 +225,6 @@ func TestWrite_JSON_NoBOM(t *testing.T) {
 	}
 }
 
-// --- CookieEditor output ---
-
 func TestWrite_CookieEditor(t *testing.T) {
 	dir := t.TempDir()
 	writeAll(t, dir, CookieEditor, chromeExtractions()...)
@@ -256,12 +248,9 @@ func TestWrite_CookieEditor_FallbackJSON(t *testing.T) {
 	dir := t.TempDir()
 	writeAll(t, dir, CookieEditor, extraction{category.Password, []record.Record{&record.Login{URL: "https://a.com"}}})
 
-	// non-cookie categories fall back to standard JSON format
 	_, err := os.Stat(filepath.Join(dir, "password.json"))
 	assert.False(t, os.IsNotExist(err), "password.json should be created via JSON fallback")
 }
-
-// --- File creation ---
 
 func TestWrite_EmptyCategoryNoFile(t *testing.T) {
 	dir := t.TempDir()
@@ -286,8 +275,6 @@ func TestWrite_NoData(t *testing.T) {
 	assert.Empty(t, entries, "no files should be created when no data added")
 }
 
-// --- Appending extractions ---
-
 func TestWrite_AppendsExtractionsInWriteOrder(t *testing.T) {
 	dir := t.TempDir()
 	older := &record.History{Browser: "Chrome", Profile: "Default", URL: "https://a.example", VisitCount: 1}
@@ -302,8 +289,6 @@ func TestWrite_AppendsExtractionsInWriteOrder(t *testing.T) {
 	assert.Equal(t, []record.History{*older, *busier}, rows, "each extraction is sorted on its own, then appended")
 }
 
-// --- Error paths ---
-
 func TestWrite_RejectsRecordOfAnotherCategory(t *testing.T) {
 	dir := t.TempDir()
 	w, err := NewWriter(dir, JSON, false)
@@ -316,7 +301,6 @@ func TestWrite_RejectsRecordOfAnotherCategory(t *testing.T) {
 	assert.Empty(t, entries)
 }
 
-// A failed Write must not cost the files already written: Close still completes them.
 func TestClose_AfterFailedWriteKeepsEarlierFiles(t *testing.T) {
 	dir := t.TempDir()
 	w, err := NewWriter(dir, JSON, false)
@@ -350,8 +334,6 @@ func TestClose_OutputListsTheFilesInCategoryOrder(t *testing.T) {
 
 	assert.Equal(t, Output{Dir: dir, Files: []File{{Name: "password.json", Count: 2}, {Name: "history.json", Count: 1}}}, w.Output())
 }
-
-// --- --zip ---
 
 func TestClose_ZipReplacesTheFilesWithOneArchive(t *testing.T) {
 	loose := filepath.Join(t.TempDir(), "results")
@@ -413,8 +395,6 @@ func TestClose_ZipWithNothingWrittenFails(t *testing.T) {
 	assert.Empty(t, dirNames(t, dir))
 }
 
-// --- helpers ---
-
 func zipAll(dir string, extractions ...extraction) error {
 	w, err := NewWriter(dir, CSV, true)
 	if err != nil {
@@ -470,7 +450,6 @@ func readCSV(t *testing.T, path string) [][]string {
 	t.Helper()
 	raw, err := os.ReadFile(path)
 	require.NoError(t, err)
-	// Skip UTF-8 BOM if present
 	content := string(raw)
 	if strings.HasPrefix(content, string(utf8BOM)) {
 		content = content[len(utf8BOM):]

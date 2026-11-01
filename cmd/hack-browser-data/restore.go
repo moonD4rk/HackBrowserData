@@ -69,8 +69,6 @@ func runRestore(ctx context.Context, stderr io.Writer, f app.RestoreFlags) error
 	return err
 }
 
-// openRestoreData returns the snapshot directory restore reads from: --data-dir in place, or --data-zip extracted
-// into a temporary one.
 func openRestoreData(dataDir, dataZip string) (*snapshot.Dir, error) {
 	if dataDir != "" {
 		return snapshot.Open(dataDir), nil

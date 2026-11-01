@@ -11,8 +11,6 @@ import (
 	"sync/atomic"
 )
 
-// NewLogger creates and returns a new instance of Logger.
-// Default level is InfoLevel (Debug messages are suppressed unless SetVerbose is called).
 func NewLogger(base Base) *Logger {
 	if base == nil {
 		base = newBase(os.Stderr)
@@ -20,22 +18,16 @@ func NewLogger(base Base) *Logger {
 	return &Logger{base: base, minLevel: InfoLevel}
 }
 
-// Logger logs messages to io.Writer at various log levels.
 type Logger struct {
 	base Base
 
-	// Minimum log level for this logger.
-	// Messages with level lower than this won't be outputted.
 	minLevel Level
 }
 
-// canLogAt reports whether logger can log at level v.
 func (l *Logger) canLogAt(v Level) bool {
 	return v >= Level(atomic.LoadInt32((*int32)(&l.minLevel)))
 }
 
-// SetLevel sets the logger level.
-// It panics if v is less than DebugLevel or greater than WarnLevel.
 func (l *Logger) SetLevel(v Level) {
 	if v < DebugLevel || v > WarnLevel {
 		panic("log: invalid log level")
@@ -43,13 +35,9 @@ func (l *Logger) SetLevel(v Level) {
 	atomic.StoreInt32((*int32)(&l.minLevel), int32(v))
 }
 
-// baseCallerSkip is the number of frames to skip in runtime.Caller to reach
-// the actual call site. Both package-level functions (log.Xxx -> logMsg -> base.Log)
-// and Logger methods (Logger.Xxx -> logMsg -> base.Log) add exactly one frame
-// above logMsg, so the skip is the same: base.Log(0) -> logMsg(1) -> caller_wrapper(2) -> caller(3).
+// Frames between runtime.Caller and the caller: base.Log, logMsg, and the exported Debugf/Infof/Warnf.
 const baseCallerSkip = 3
 
-// logMsg is the internal method all public methods delegate to.
 func (l *Logger) logMsg(lvl Level, msg string) {
 	if !l.canLogAt(lvl) {
 		return
@@ -69,18 +57,10 @@ func (l *Logger) Warnf(format string, args ...any) {
 	l.logMsg(WarnLevel, fmt.Sprintf(format, args...))
 }
 
-// Base is the interface that underlies the Logger. It receives the caller
-// skip count, log level, and formatted message.
 type Base interface {
 	Log(callerSkip int, lvl Level, msg string)
 }
 
-// baseLogger writes formatted log messages to an io.Writer.
-// Output format:
-//
-//	[DBG] file.go:42: message
-//	[INF] message
-//	[WRN] message
 type baseLogger struct {
 	out io.Writer
 	mu  sync.Mutex
@@ -90,8 +70,7 @@ func newBase(out io.Writer) *baseLogger {
 	return &baseLogger{out: out}
 }
 
-// continuation is the indent for multi-line messages.
-// Width matches "[DBG] " (6 chars).
+// continuation lines a message's later lines up under its first, past the "[DBG] " label.
 const continuation = "      "
 
 func (l *baseLogger) Log(callerSkip int, lvl Level, msg string) {
@@ -120,7 +99,6 @@ func (l *baseLogger) Log(callerSkip int, lvl Level, msg string) {
 	l.mu.Unlock()
 }
 
-// formatLabel returns the bracketed level label, e.g. "[DBG]".
 func (l *baseLogger) formatLabel(lvl Level) string {
 	return "[" + lvl.String() + "]"
 }

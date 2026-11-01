@@ -15,8 +15,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// Chromium localStorage LevelDB key prefixes and string format bytes.
-// Reference: https://chromium.googlesource.com/chromium/src/+/main/components/services/storage/dom_storage/local_storage_impl.cc
+// Key prefixes and format bytes from Chromium's components/services/storage/dom_storage/local_storage_impl.cc.
 const (
 	localStorageVersionKey     = "VERSION"
 	localStorageMetaPrefix     = "META:"
@@ -56,8 +55,7 @@ func extractLocalStorage(path string, out browser.Collector) error {
 	return iter.Error()
 }
 
-// parseLocalStorageEntry classifies a LevelDB key/value pair and decodes it.
-// Returns false for VERSION entries and any unrecognized keys. META entries are kept with IsMeta=true.
+// VERSION and unknown keys are dropped; META entries are kept with IsMeta set.
 func parseLocalStorageEntry(key, value []byte) (record.LocalStorage, bool) {
 	switch {
 	case bytes.Equal(key, []byte(localStorageVersionKey)):
@@ -101,8 +99,7 @@ func parseLocalStorageDataEntry(key, value []byte) record.LocalStorage {
 	return entry
 }
 
-// decodeChromiumString decodes a Chromium-encoded string.
-// Format byte 0x01 = Latin-1, 0x00 = UTF-16 LE.
+// The first byte selects the encoding: 0x01 is Latin-1, 0x00 is UTF-16 LE.
 func decodeChromiumString(b []byte) (string, error) {
 	if len(b) == 0 {
 		return "", fmt.Errorf("empty chromium string")
@@ -117,8 +114,6 @@ func decodeChromiumString(b []byte) (string, error) {
 	}
 }
 
-// decodeLatin1 converts ISO-8859-1 bytes to a valid UTF-8 Go string.
-// Latin-1 byte values map 1:1 to Unicode code points U+0000–U+00FF.
 func decodeLatin1(b []byte) string {
 	runes := make([]rune, len(b))
 	for i, c := range b {
@@ -127,7 +122,6 @@ func decodeLatin1(b []byte) string {
 	return string(runes)
 }
 
-// decodeUTF16LE decodes a UTF-16 Little-Endian byte slice to a Go string.
 func decodeUTF16LE(b []byte) (string, error) {
 	if len(b) == 0 {
 		return "", nil
@@ -156,13 +150,7 @@ func decodeLocalStorageValue(value []byte) string {
 	return decoded
 }
 
-// extractSessionStorage reads Chromium session storage LevelDB.
-//
-// LevelDB key format:
-//
-//	namespace-<guid>-<origin> → <map_id>   (origin mapping)
-//	map-<map_id>-<key_name>  → <value>     (actual data, UTF-16 LE)
-//	next-map-id / version                  (metadata, skipped)
+// Keys are namespace-<guid>-<origin> -> map_id and map-<map_id>-<key> -> UTF-16 LE value; the rest is metadata.
 func extractSessionStorage(path string, out browser.Collector) error {
 	if _, err := os.Stat(path); err != nil {
 		return fmt.Errorf("leveldb path %q: %w", path, err)
@@ -173,8 +161,6 @@ func extractSessionStorage(path string, out browser.Collector) error {
 	}
 	defer db.Close()
 
-	// Pass 1: build map_id → origin lookup from namespace entries.
-	// Key: "namespace-<guid>-<origin>", Value: "<map_id>" (ASCII digits).
 	originByMapID := make(map[string]string)
 	iter := db.NewIterator(nil, nil)
 	for iter.Next() {
@@ -182,9 +168,7 @@ func extractSessionStorage(path string, out browser.Collector) error {
 		if !strings.HasPrefix(key, "namespace-") {
 			continue
 		}
-		// Extract origin by finding "-https://", "-http://", or "-chrome://" in the key.
-		// Namespace GUIDs use underscores (e.g., "03b2df3a_0d95_4d55_ae57_...") so
-		// there is no ambiguity with the origin separator.
+		// Namespace GUIDs use underscores, so the first -https://, -http://, or -chrome:// starts the origin.
 		origin := extractNamespaceOrigin(key)
 		if origin == "" {
 			continue
@@ -197,7 +181,6 @@ func extractSessionStorage(path string, out browser.Collector) error {
 		return fmt.Errorf("read namespace entries: %w", err)
 	}
 
-	// Pass 2: read map entries and resolve origins.
 	var entries []record.SessionStorage
 	iter2 := db.NewIterator(nil, nil)
 	defer iter2.Release()
@@ -232,9 +215,6 @@ func extractSessionStorage(path string, out browser.Collector) error {
 	return iter2.Error()
 }
 
-// extractNamespaceOrigin extracts the origin from a namespace key.
-// Key format: "namespace-<guid_with_underscores>-<origin>"
-// The GUID uses underscores, so we find the origin by looking for "-http" or "-chrome".
 func extractNamespaceOrigin(key string) string {
 	for _, prefix := range []string{"-https://", "-http://", "-chrome://"} {
 		idx := strings.Index(key, prefix)
@@ -245,8 +225,7 @@ func extractNamespaceOrigin(key string) string {
 	return ""
 }
 
-// decodeSessionStorageValue decodes a session storage value.
-// Values are raw UTF-16 LE (no format byte prefix, unlike localStorage).
+// Values are raw UTF-16 LE, without localStorage's format byte.
 func decodeSessionStorageValue(value []byte) string {
 	if len(value) == 0 {
 		return ""

@@ -45,7 +45,7 @@ func TestStamp(t *testing.T) {
 	}
 }
 
-// The tags are the output's field names and column headers, so they stay snake_case(field name) and lead with the stamp.
+// The tags are the output's field names and column headers, so they stay snake_case and lead with the stamp.
 func TestTags_AreSnakeCaseFieldNames(t *testing.T) {
 	for _, r := range allRecords() {
 		typ := reflect.TypeOf(r).Elem()

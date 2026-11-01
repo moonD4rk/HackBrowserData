@@ -6,8 +6,7 @@ type DiscoverOptions struct {
 	ProfilePath string // the -p value; "" when not given
 }
 
-// DirID names one user data dir: Def.ID for the first one of a Def, then "-2", "-3"… in Path order. Its own type
-// keeps it from being passed where a Def.ID belongs: the two are equal on a machine with one Arc.
+// DirID is Def.ID, then "-2", "-3"... in Path order; its own type keeps it apart from a Def.ID, which it often equals.
 type DirID string
 
 // UserDataDir is one browser data directory found on this machine; ID also names its snapshot and archive directory.

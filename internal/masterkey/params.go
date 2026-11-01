@@ -8,7 +8,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/crypto"
 )
 
-// pbkdf2Params holds platform-specific PBKDF2 parameters (each platform file defines its own).
 type pbkdf2Params struct {
 	salt       []byte
 	iterations int

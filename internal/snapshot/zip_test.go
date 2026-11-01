@@ -143,7 +143,6 @@ func TestZip_WritesThroughASymlinkedArchive(t *testing.T) {
 	assert.Len(t, zr.File, 1, "the archive lands in the link's target")
 }
 
-// snapshotSource is a snapshot directory holding one captured file.
 func snapshotSource(t *testing.T) string {
 	t.Helper()
 	src := t.TempDir()

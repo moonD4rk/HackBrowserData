@@ -33,7 +33,6 @@ func extractPasswords(ctx context.Context, kc LoginKeychain, out browser.Collect
 	return nil
 }
 
-// buildURL constructs a URL from InternetPassword fields.
 func buildURL(protocol, server string, port uint32, path string) string {
 	if server == "" {
 		return ""

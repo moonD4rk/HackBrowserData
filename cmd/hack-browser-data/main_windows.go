@@ -12,8 +12,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/winapi"
 )
 
-// configureDoubleClickMode hides the console and bypasses cobra's
-// double-click guard when launched from Explorer (issue #344).
+// configureDoubleClickMode lets a double-click from Explorer run the tool with its console hidden (issue #344).
 func configureDoubleClickMode() {
 	if !mousetrap.StartedByExplorer() {
 		return

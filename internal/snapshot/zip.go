@@ -44,8 +44,7 @@ func (d *Dir) Zip(dst string) (err error) {
 	return nil
 }
 
-// zipTarget follows a symlinked dst and reports an archive already there, so replacing it keeps the link and the
-// mode that writing through os.Create would have kept.
+// Replacing an archive through a symlinked dst keeps the link and the mode os.Create would have kept.
 func zipTarget(dst string) (string, fs.FileInfo, error) {
 	target := dst
 	if resolved, err := filepath.EvalSymlinks(dst); err == nil {

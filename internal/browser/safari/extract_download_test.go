@@ -23,8 +23,7 @@ func buildTestDownloadsPlist(t *testing.T, dl safariDownloads) string {
 }
 
 func TestExtractDownloads_DefaultProfileOnly(t *testing.T) {
-	// Mixed-owner plist: only entries tagged with DefaultProfile (or untagged, for
-	// pre-profile Safari) should surface for the default profile.
+	// Only DefaultProfile and untagged (pre-profile) entries surface for the default profile.
 	const namedUUID = "5604E6F5-02ED-4E40-8249-63DE7BC986C8"
 	dl := safariDownloads{
 		DownloadHistory: []safariDownloadEntry{

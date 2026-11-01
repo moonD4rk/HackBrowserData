@@ -13,8 +13,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// buildTestBinaryCookies constructs a minimal valid Cookies.binarycookies file
-// containing the given cookies. Each cookie is placed in its own page.
+// Each cookie goes in its own page of a minimal Cookies.binarycookies file.
 func buildTestBinaryCookies(t *testing.T, cookies []testCookie) string {
 	t.Helper()
 
@@ -38,7 +37,6 @@ func buildTestBinaryCookies(t *testing.T, cookies []testCookie) string {
 		require.NoError(t, binary.Write(f, binary.BigEndian, uint32(len(p))))
 	}
 
-	// Page data
 	for _, p := range pages {
 		_, err = f.Write(p)
 		require.NoError(t, err)
@@ -64,11 +62,7 @@ func buildPage(c testCookie) []byte {
 	cpath := c.path + "\x00"
 	value := c.value + "\x00"
 
-	// Cookie binary layout (all offsets are from cookie start):
-	//   size(4) + unknown1(4) + flags(4) + unknown2(4)
-	//   + domainOff(4) + nameOff(4) + pathOff(4) + valueOff(4) + commentOff(4)
-	//   + endHeader(4) + expires(8) + creation(8)
-	//   = 56 bytes header, then string data
+	// A cookie is a 56-byte header (sizes, flags, string offsets, expiry, creation), then its strings.
 	const headerSize = 56
 	domainOffset := uint32(headerSize)
 	nameOffset := domainOffset + uint32(len(domain))
@@ -86,18 +80,14 @@ func buildPage(c testCookie) []byte {
 		flags = 0x1
 	}
 
-	// Build cookie bytes (little-endian)
+	// Cookie fields are little-endian, unlike the file header.
 	cookie := make([]byte, cookieSize)
 	binary.LittleEndian.PutUint32(cookie[0:], cookieSize)
-	// cookie[4:8] = unknown1 (zero)
 	binary.LittleEndian.PutUint32(cookie[8:], flags)
-	// cookie[12:16] = unknown2 (zero)
 	binary.LittleEndian.PutUint32(cookie[16:], domainOffset)
 	binary.LittleEndian.PutUint32(cookie[20:], nameOffset)
 	binary.LittleEndian.PutUint32(cookie[24:], pathOffset)
 	binary.LittleEndian.PutUint32(cookie[28:], valueOffset)
-	// cookie[32:36] = commentOffset (zero = no comment)
-	// cookie[36:40] = endHeader marker (zero)
 	binary.LittleEndian.PutUint64(cookie[40:], math.Float64bits(c.expires))
 	binary.LittleEndian.PutUint64(cookie[48:], math.Float64bits(c.creation))
 	copy(cookie[domainOffset:], domain)
@@ -106,12 +96,11 @@ func buildPage(c testCookie) []byte {
 	copy(cookie[valueOffset:], value)
 
 	// Page layout: marker(4) + cookieCount(4) + offsets(4*N) + endMarker(4) + cookies
-	const pageHeaderSize = 16 // marker + count + 1 offset + end marker
+	const pageHeaderSize = 16
 	page := make([]byte, pageHeaderSize+len(cookie))
 	copy(page[0:4], []byte{0x00, 0x00, 0x01, 0x00}) // page start marker
 	binary.LittleEndian.PutUint32(page[4:], 1)      // 1 cookie
 	binary.LittleEndian.PutUint32(page[8:], pageHeaderSize)
-	// page[12:16] = page end marker (zero)
 	copy(page[pageHeaderSize:], cookie)
 
 	return page
@@ -141,8 +130,7 @@ func TestExtractCookies(t *testing.T) {
 	assert.Equal(t, ".example.com", cookies[0].Host)
 	assert.Equal(t, ".go.dev", cookies[1].Host)
 
-	// Verify field mapping
-	c := cookies[0] // .example.com cookie
+	c := cookies[0]
 	assert.Equal(t, "session", c.Name)
 	assert.Equal(t, "abc123", c.Value)
 	assert.Equal(t, "/", c.Path)

@@ -9,7 +9,6 @@ import (
 )
 
 func TestReadKey4DB(t *testing.T) {
-	// Create a minimal key4.db with metaData and nssPrivate tables
 	path := createTestDB(t, "key4.db",
 		[]string{
 			`CREATE TABLE metaData (id TEXT PRIMARY KEY, item1 BLOB, item2 BLOB)`,

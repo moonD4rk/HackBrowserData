@@ -1,5 +1,4 @@
-// Package chromium is the Chromium base: where Chromium-family browsers keep their profiles, how their files are
-// parsed, and where a user data dir's keys come from.
+// Package chromium is the Chromium base: profile discovery, file parsing, and where a user data dir's keys come from.
 package chromium
 
 import (
@@ -14,12 +13,10 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// profileMarkers name the per-profile preferences file Chromium writes on first use; QQ Browser and Sogou Explorer write
-// Preferences_02. The marker keeps Crashpad, ShaderCache, and the like from passing as profiles.
+// Sogou and QQ write Preferences_02; a marker keeps dirs like Crashpad and ShaderCache from passing as profiles.
 var profileMarkers = []string{"Preferences", "Preferences_02"}
 
-// Discover finds def's user data dirs and their profiles. A user data dir that does not exist yields nothing; any
-// other failure is returned, joined across dirs, beside whatever was found.
+// A user data dir that does not exist yields nothing; any other failure is returned beside whatever was found.
 func Discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserDataDir, error) {
 	if dir, ok := profileAt(def, opts.ProfilePath); ok {
 		return []browser.UserDataDir{dir}, nil
@@ -54,8 +51,7 @@ func DiscoverAt(def browser.Def, id browser.DirID, path string) (browser.UserDat
 	return dir, nil
 }
 
-// profileAt reads -p as the path chrome://version shows: a directory with a profile marker but no Local State is one
-// profile, so its parent is the user data dir that holds the keys, and only that profile is selected.
+// -p is the path chrome://version shows: a profile dir without Local State selects that profile of its parent.
 func profileAt(def browser.Def, path string) (browser.UserDataDir, bool) {
 	if path == "" || !isProfileDir(path) || hasAnySource(path, localState.Paths) {
 		return browser.UserDataDir{}, false
@@ -70,8 +66,7 @@ func profileAt(def browser.Def, path string) (browser.UserDataDir, bool) {
 	}, true
 }
 
-// userDataDirPaths keeps every glob match, so both of a machine's Arc packages are found. Joining with "/" keeps the
-// path strings keys.json has always recorded; -p replaces the table's entries.
+// Every glob match is kept, for both of a machine's Arc packages; "/" joins keep the paths keys.json has recorded.
 func userDataDirPaths(def browser.Def, opts browser.DiscoverOptions) ([]string, error) {
 	if opts.ProfilePath != "" {
 		return []string{opts.ProfilePath}, nil
@@ -115,8 +110,7 @@ func discoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
 		return profiles, nil
 	}
 
-	// Flat layout (older Opera): data files directly under the user data dir. Check the root before the subdir fallback
-	// so a stray source-bearing subdir can't suppress root discovery.
+	// Flat layout (older Opera): check the root before subdirs, so a stray source-bearing subdir can't hide it.
 	sources := profileSourcePaths(dir)
 	if hasAnySource(dir.Path, sources) {
 		return []browser.Profile{{Name: filepath.Base(dir.Path)}}, nil
@@ -169,8 +163,7 @@ func hasAnySource(dir string, paths []string) bool {
 	return false
 }
 
-// KeyLocator says where the user data dir's keys are: the Local State in snap and its browser's OS fields. On macOS
-// the caller adds the run's login keychain.
+// On macOS the caller adds the run's login keychain to the Locator.
 func KeyLocator(dir browser.UserDataDir, snap snapshot.Snapshot) (masterkey.Locator, error) {
 	p := dir.Def.Platform()
 	loc := masterkey.Locator{KeychainLabel: p.KeychainLabel, Exe: p.Exe, ExeFallbacks: p.ExeFallbacks, ABE: p.ABE}
@@ -189,8 +182,7 @@ func KeySources(_ browser.UserDataDir) []browser.Source {
 	return []browser.Source{localState}
 }
 
-// ArchiveSources are what an archive keeps beside the categories' own files: Local State, and each profile's marker so
-// that a reader without the manifest still finds every profile.
+// ArchiveSources add Local State and each profile's marker, so a reader without the manifest finds every profile.
 func ArchiveSources(_ browser.UserDataDir) []browser.Source {
 	sources := []browser.Source{localState}
 	for _, marker := range profileMarkers {

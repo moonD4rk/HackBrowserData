@@ -2,10 +2,8 @@ package log
 
 import "fmt"
 
-// defaultLogger is the default logger used by the package-level functions.
 var defaultLogger = NewLogger(nil)
 
-// SetVerbose lowers the package-level logger to DebugLevel.
 func SetVerbose() {
 	defaultLogger.SetLevel(DebugLevel)
 }

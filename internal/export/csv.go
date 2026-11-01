@@ -8,7 +8,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// utf8BOM is written at the start of CSV files for Excel compatibility.
+// Excel reads a CSV file as UTF-8 only when it starts with a BOM.
 var utf8BOM = []byte{0xEF, 0xBB, 0xBF}
 
 type csvEncoder struct {

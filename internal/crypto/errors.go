@@ -2,7 +2,6 @@ package crypto
 
 import "errors"
 
-// Sentinel errors for crypto operations.
 var (
 	errShortCiphertext  = errors.New("ciphertext too short")
 	errInvalidBlockSize = errors.New("ciphertext is not a multiple of the block size")

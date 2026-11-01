@@ -28,7 +28,6 @@ var (
 	libraryDir  = browser.UserDataDir{Def: testDef(), Profiles: []browser.Profile{defaultProfile, workProfile}}
 )
 
-// sourcePaths is where each category's candidates land under ~/Library once joined with the profile's Dir.
 func sourcePaths(p browser.Profile, ex browser.Extractors) map[category.Category][]string {
 	got := make(map[category.Category][]string, len(ex))
 	for c, e := range ex {
@@ -70,7 +69,6 @@ func TestExtractors_NamedProfileSources(t *testing.T) {
 	}, sourcePaths(workProfile, Extractors(libraryDir, workProfile, nil)))
 }
 
-// snapshotOf lays fixture files out as the Safari user data dir's snapshot, keyed by their path under ~/Library.
 func snapshotOf(t *testing.T, files map[string]string) snapshot.Snapshot {
 	t.Helper()
 	root := t.TempDir()

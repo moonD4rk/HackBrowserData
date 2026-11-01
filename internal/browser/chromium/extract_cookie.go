@@ -71,10 +71,7 @@ func extractCookies(masterKeys masterkey.Set, path string, out browser.Collector
 	return nil
 }
 
-// stripCookieHash removes the SHA256(host_key) prefix from a decrypted cookie value. Chrome 130+
-// (Cookie DB schema version 24) prepends SHA256(domain) to the cookie value before encryption to
-// prevent cross-domain cookie replay attacks. If the first 32 bytes don't match SHA256(hostKey), the
-// value is returned unchanged, which handles both older Chrome versions and tampered data.
+// Chrome 130+ prepends SHA256(host_key) to the value; a value whose prefix does not match is returned unchanged.
 func stripCookieHash(value []byte, hostKey string) []byte {
 	if len(value) < sha256.Size {
 		return value

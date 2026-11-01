@@ -11,10 +11,7 @@ import (
 
 const des3KeySize = 24 // 3DES uses 24-byte (192-bit) keys
 
-// ASN1PBE represents a Password-Based Encryption structure from Firefox's NSS.
-// The key parameter semantics vary by implementation:
-//   - privateKeyPBE / passwordCheckPBE: key is the global salt used for key derivation
-//   - credentialPBE: key is the already-derived master key
+// The key is the global salt for privateKeyPBE and passwordCheckPBE, and the derived master key for credentialPBE.
 type ASN1PBE interface {
 	Decrypt(key []byte) ([]byte, error)
 	Encrypt(key, plaintext []byte) ([]byte, error)
@@ -38,14 +35,6 @@ func NewASN1PBE(b []byte) (pbe ASN1PBE, err error) {
 	return nil, errDecodeASN1
 }
 
-// privateKeyPBE Struct
-//
-//	SEQUENCE (2 elem)
-//		OBJECT IDENTIFIER
-//		SEQUENCE (2 elem)
-//			OCTET STRING (20 byte)
-//			INTEGER 1
-//	OCTET STRING (16 byte)
 type privateKeyPBE struct {
 	AlgoAttr struct {
 		asn1.ObjectIdentifier
@@ -67,18 +56,7 @@ func (n privateKeyPBE) Encrypt(globalSalt, plaintext []byte) ([]byte, error) {
 	return DES3Encrypt(key, iv, plaintext)
 }
 
-// deriveKeyAndIV implements NSS PBE-SHA1-3DES key derivation.
 // Reference: https://searchfox.org/mozilla-central/source/security/nss/lib/softoken/lowpbe.c
-//
-// Derivation steps:
-//
-//	hp    = SHA1(globalSalt)
-//	ck    = SHA1(hp || entrySalt)
-//	hmac1 = HMAC-SHA1(ck, paddedSalt)
-//	k1    = HMAC-SHA1(ck, paddedSalt || entrySalt)
-//	k2    = HMAC-SHA1(ck, hmac1 || entrySalt)
-//	dk    = k1 || k2  (40 bytes)
-//	key   = dk[:24], iv = dk[32:]
 func (n privateKeyPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
 	entrySalt := n.AlgoAttr.SaltAttr.EntrySalt
 	hp := sha1.Sum(globalSalt)
@@ -98,23 +76,6 @@ func (n privateKeyPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
 	return dk[:24], dk[len(dk)-8:]
 }
 
-// passwordCheckPBE Struct
-//
-//	SEQUENCE (2 elem)
-//		OBJECT IDENTIFIER
-//	    SEQUENCE (2 elem)
-//	    SEQUENCE (2 elem)
-//	      	OBJECT IDENTIFIER
-//	       	SEQUENCE (4 elem)
-//	       	OCTET STRING (32 byte)
-//	      		INTEGER 1
-//	       		INTEGER 32
-//	       		SEQUENCE (1 elem)
-//	          	OBJECT IDENTIFIER
-//	    SEQUENCE (2 elem)
-//	      	OBJECT IDENTIFIER
-//	      	OCTET STRING (14 byte)
-//	OCTET STRING (16 byte)
 type passwordCheckPBE struct {
 	AlgoAttr  algoAttr
 	Encrypted []byte
@@ -167,13 +128,6 @@ func (m passwordCheckPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
 	return key, iv
 }
 
-// credentialPBE Struct
-//
-//	OCTET STRING (16 byte)
-//	SEQUENCE (2 elem)
-//			OBJECT IDENTIFIER
-//			OCTET STRING (8 byte)
-//	OCTET STRING (16 byte)
 type credentialPBE struct {
 	KeyCheck []byte
 	Algo     struct {

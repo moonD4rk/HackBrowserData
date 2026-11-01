@@ -88,7 +88,6 @@ func (d *Dir) Snapshot(dirID string) Snapshot {
 	return Snapshot{dirID: dirID, root: d.path, failed: d.failed}
 }
 
-// Close removes a temporary snapshot directory and leaves an opened one in place.
 func (d *Dir) Close() error {
 	if !d.temp {
 		return nil
@@ -105,8 +104,7 @@ type Snapshot struct {
 	failed map[string]error
 }
 
-// Path returns rel's location in the snapshot, or why it is not there: fs.ErrNotExist when it was never captured
-// or had vanished before Capture reached it, else the copy's error.
+// Path reports fs.ErrNotExist for a file never captured or gone before Capture reached it, else the copy's error.
 func (s Snapshot) Path(rel string) (string, error) {
 	local, err := localPath(s.dirID, rel)
 	if err != nil {

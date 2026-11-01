@@ -14,8 +14,7 @@ import (
 
 var errNoPassword = errors.New("macOS login password not given and stdin is not a terminal")
 
-// keychainPassword picks the run's one source of the macOS login password, read when the keychain is first opened: a
-// flag, else a no-echo prompt on a terminal, else none, which leaves keychain-protected data as metadata only.
+// keychainPassword is read lazily: a flag, else a no-echo prompt on a terminal, else none (metadata only).
 func keychainPassword(f Flags, stdin *os.File) (func(context.Context) (string, error), error) {
 	switch {
 	case f.KeychainPassword != "" && f.KeychainPasswordStdin:

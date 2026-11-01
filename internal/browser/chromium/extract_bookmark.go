@@ -26,7 +26,6 @@ func extractBookmarks(path string, out browser.Collector) error {
 	return nil
 }
 
-// walkBookmarks recursively traverses the bookmark tree, collecting URL entries.
 func walkBookmarks(node gjson.Result, folder string, out *[]record.Bookmark) {
 	nodeType := node.Get("type").String()
 	if nodeType == "url" {

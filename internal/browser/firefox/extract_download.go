@@ -30,8 +30,7 @@ func extractDownloads(path string, out browser.Collector) error {
 				StartTime: timeconv.UnixMicro(dateAdded),
 			}
 
-			// Firefox stores download metadata as: "target_path,{json}"
-			// Parse the JSON part to extract fileSize and endTime.
+			// Firefox stores the content as "target_path,{json}"; the JSON holds fileSize and endTime.
 			contentList := strings.SplitN(content, ",{", 2)
 			if len(contentList) == 2 {
 				entry.TargetPath = contentList[0]

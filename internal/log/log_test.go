@@ -8,7 +8,7 @@ import (
 )
 
 func TestSetVerbose(t *testing.T) {
-	t.Cleanup(func() { defaultLogger.SetLevel(InfoLevel) }) // restore package default
+	t.Cleanup(func() { defaultLogger.SetLevel(InfoLevel) })
 
 	assert.False(t, defaultLogger.canLogAt(DebugLevel), "Debug must be suppressed by default")
 	SetVerbose()

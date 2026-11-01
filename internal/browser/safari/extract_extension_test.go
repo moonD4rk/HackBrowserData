@@ -12,15 +12,9 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// testExtensionEntry mirrors the shape of one entry in Safari's Extensions.plist:
-// an untyped dictionary keyed by string. Using a map (instead of safariExtension)
-// lets tests omit keys like Enabled for AppExtension-style fixtures, matching
-// what Safari actually writes.
+// A map rather than safariExtension, so fixtures can omit Enabled as App Extensions do.
 type testExtensionEntry map[string]any
 
-// writeTestExtensionsPlist writes an Extensions.plist under
-// <container>/Safari/<subdir>/Extensions.plist. subdir is either
-// "AppExtensions" or "WebExtensions".
 func writeTestExtensionsPlist(t *testing.T, container, subdir string, entries map[string]testExtensionEntry) {
 	t.Helper()
 	dir := filepath.Join(container, "Safari", subdir)

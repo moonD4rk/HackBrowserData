@@ -1,4 +1,4 @@
-// Package golden compares test output against files in the calling package's testdata/, which HBD_UPDATE_GOLDEN=1 rewrites.
+// Package golden compares test output with files in the calling package's testdata/; HBD_UPDATE_GOLDEN=1 rewrites them.
 package golden
 
 import (
@@ -14,13 +14,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// updateEnv is an environment variable, not a test flag: go test ./... passes a flag to packages that do not define it,
-// and reading the variable at test time keys go test's cache on it.
+// An env var, not a test flag, reaches every package of go test ./... and, read at test time, keys its cache.
 const updateEnv = "HBD_UPDATE_GOLDEN"
 
 const dir = "testdata"
 
-// Assert compares got with testdata/<name>, rewriting it first when HBD_UPDATE_GOLDEN=1.
 func Assert(t testing.TB, name, got string) {
 	t.Helper()
 	path := filepath.Join(dir, name)
@@ -33,7 +31,6 @@ func Assert(t testing.TB, name, got string) {
 	assert.Equal(t, string(want), got, "regenerate with: %s=1 go test ./... -run '%s'", updateEnv, t.Name())
 }
 
-// Read returns testdata/<name>.
 func Read(t testing.TB, name string) string {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join(dir, name))
@@ -41,7 +38,6 @@ func Read(t testing.TB, name string) string {
 	return string(data)
 }
 
-// Bundle renders every regular file in dir as a named, length-tagged block, in directory order.
 func Bundle(t testing.TB, dir string) string {
 	t.Helper()
 	entries, err := os.ReadDir(dir)
@@ -54,7 +50,6 @@ func Bundle(t testing.TB, dir string) string {
 	return BundleFiles(t, dir, names...)
 }
 
-// BundleFiles renders the named files under dir as named, length-tagged blocks, in the given order.
 func BundleFiles(t testing.TB, dir string, names ...string) string {
 	t.Helper()
 	var b strings.Builder
@@ -70,7 +65,6 @@ func BundleFiles(t testing.TB, dir string, names ...string) string {
 	return b.String()
 }
 
-// DirFiles maps each file name under dir to its contents.
 func DirFiles(t testing.TB, dir string) map[string]string {
 	t.Helper()
 	entries, err := os.ReadDir(dir)
@@ -84,8 +78,7 @@ func DirFiles(t testing.TB, dir string) map[string]string {
 	return files
 }
 
-// AssertJSONFallback checks that Cookie-Editor output matches the json output for every category but cookies, whose
-// own format Cookie-Editor alone writes.
+// Cookie-Editor writes its own format for cookies only, so every other file must match the json output.
 func AssertJSONFallback(t testing.TB, cookieEditorDir, jsonDir string) {
 	t.Helper()
 	got, want := DirFiles(t, cookieEditorDir), DirFiles(t, jsonDir)
@@ -95,7 +88,6 @@ func AssertJSONFallback(t testing.TB, cookieEditorDir, jsonDir string) {
 	assert.Equal(t, want, got)
 }
 
-// ZipListing renders a zip's entries as one deterministic line each: name, method, modified time, size, and CRC.
 func ZipListing(t testing.TB, path string) string {
 	t.Helper()
 	r, err := zip.OpenReader(path)

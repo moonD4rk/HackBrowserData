@@ -14,8 +14,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/crypto"
 )
 
-// home's logins open only with its second key candidate (AES-256) and work's with its only one (3DES), so the golden
-// covers the candidate check and both login ciphers.
+// home's logins open only with its second key candidate and work's with its only one, so the golden covers both paths.
 var firefoxFixtureProfiles = []struct {
 	dir        string
 	label      string

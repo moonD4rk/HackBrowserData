@@ -52,7 +52,7 @@ func TestExtractExtensions(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 2) // system (location=5) and component (location=10) skipped
 
-	// Verify field mapping (order may vary since gjson.ForEach iterates map)
+	// gjson.ForEach walks a map, so the order may vary.
 	ids := map[string]bool{}
 	for _, ext := range got {
 		ids[ext.ID] = true
@@ -108,7 +108,6 @@ func TestExtractOperaExtensions(t *testing.T) {
 		}
 	}`)
 
-	// extractOperaExtensions should find extensions under opsettings
 	var out testCollector
 	err := extractOperaExtensions(path, &out)
 	got := collected[record.Extension](t, &out)

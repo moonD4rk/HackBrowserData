@@ -30,7 +30,6 @@ func TestExtractCookies(t *testing.T) {
 	assert.Equal(t, ".example.com", got[0].Host)
 	assert.Equal(t, ".new.com", got[1].Host)
 
-	// Verify field mapping — Firefox cookies are plaintext
 	assert.Equal(t, "token", got[1].Name)
 	assert.Equal(t, "xyz789", got[1].Value)
 	assert.Equal(t, "/api", got[1].Path)

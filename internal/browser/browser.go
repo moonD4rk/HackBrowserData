@@ -1,5 +1,4 @@
-// Package browser holds the browser table and what the base packages hand the pipeline: user data dirs, profiles,
-// and the extractors that read them.
+// Package browser holds the browser table and the types the base packages hand the pipeline.
 package browser
 
 import (
@@ -42,7 +41,7 @@ func (b Base) String() string {
 	}
 }
 
-// Platform is how one browser appears on one OS; a Platform without UserDataDirs means the OS is not supported.
+// A Platform without UserDataDirs means the browser is not supported on that OS.
 type Platform struct {
 	UserDataDirs  []string // slash-separated, relative to the home directory; globs allowed
 	KeychainLabel string   // macOS Keychain account / Linux Secret Service label; "" = none

@@ -83,7 +83,7 @@ func (w *Writer) write(c category.Category, records []record.Record) error {
 	return nil
 }
 
-// Close finishes the files even after a failed Write, so they keep what was written; only a clean run lists them in Output.
+// Close completes the files even after a failed Write, so they keep what was written; only a clean run fills Output.
 func (w *Writer) Close() error {
 	var (
 		errs  []error
@@ -138,7 +138,7 @@ func (w *Writer) pack() error {
 	return nil
 }
 
-// writeZip writes the zip under a temp name beside dst and renames it into place once it is complete.
+// writeZip renames a finished temp file into place, so dst is never a partial zip.
 func writeZip(dst, dir string, names []string) (err error) {
 	tmp, err := os.OpenFile(dst+".tmp", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {

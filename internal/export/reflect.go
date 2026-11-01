@@ -10,7 +10,6 @@ import (
 
 var timeType = reflect.TypeOf(time.Time{})
 
-// structCSVHeader extracts CSV column names from a struct's csv tags.
 func structCSVHeader(v any) []string {
 	t := reflect.Indirect(reflect.ValueOf(v)).Type()
 	headers := make([]string, 0, t.NumField())
@@ -24,8 +23,6 @@ func structCSVHeader(v any) []string {
 	return headers
 }
 
-// structCSVRow converts a struct's field values to CSV string values,
-// including only fields that have a csv tag.
 func structCSVRow(v any) []string {
 	val := reflect.Indirect(reflect.ValueOf(v))
 	t := val.Type()
@@ -39,9 +36,6 @@ func structCSVRow(v any) []string {
 	return row
 }
 
-// tagName extracts the tag value for the given key from a struct field.
-// Uses Lookup (not Get) to distinguish "no tag" from "empty tag".
-// Returns "" if the tag is absent, empty, or "-".
 func tagName(f reflect.StructField, key string) string {
 	tag, ok := f.Tag.Lookup(key)
 	if !ok || tag == "-" {
@@ -57,7 +51,6 @@ func tagName(f reflect.StructField, key string) string {
 }
 
 func fieldToString(v reflect.Value) string {
-	// Check time.Time before kind switch since it's a struct.
 	if v.Type() == timeType {
 		t, _ := v.Interface().(time.Time)
 		return formatTime(t)

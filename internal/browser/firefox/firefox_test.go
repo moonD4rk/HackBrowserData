@@ -30,7 +30,6 @@ func touch(t *testing.T, parts ...string) {
 	require.NoError(t, os.WriteFile(path, []byte("{}"), 0o600))
 }
 
-// snapshotOf lays fixture files out as one user data dir's snapshot, keyed by their path relative to the dir.
 func snapshotOf(t *testing.T, files map[string]string) snapshot.Snapshot {
 	t.Helper()
 	root := t.TempDir()
@@ -122,8 +121,7 @@ func TestExtractors_CoverFirefoxCategories(t *testing.T) {
 	}
 }
 
-// Without key4.db the logins are still exported with empty secrets, and the missing key is the first problem; before,
-// decrypting a legacy-cipher login without a key panicked and ended the run.
+// Without key4.db the logins export with empty secrets; before, a legacy-cipher login without a key panicked.
 func TestExtractLogins_WithoutKeyStore(t *testing.T) {
 	enc := loginPBEBase64(t)
 	logins := createTestJSON(t, "logins.json", fmt.Sprintf(`{"logins": [{"hostname": "https://a.test",

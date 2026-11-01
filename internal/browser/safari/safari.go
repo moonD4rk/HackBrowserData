@@ -1,5 +1,4 @@
-// Package safari is the Safari base: where Safari keeps its default and named profiles under ~/Library, how their
-// files are parsed, and the login keychain its passwords come from.
+// Package safari is the Safari base: default and named profiles under ~/Library, their files, and the login keychain.
 package safari
 
 import (
@@ -35,8 +34,7 @@ type LoginKeychain interface {
 	InternetPasswords(ctx context.Context) ([]keychainbreaker.InternetPassword, error)
 }
 
-// Discover finds Safari's data under ~/Library: the default profile, whose Dir is the Safari directory, and the named
-// profiles SafariTabs.db lists. -p names another Safari directory, whose parent stands in for ~/Library.
+// The default profile's Dir is the Safari directory; -p names another one, whose parent stands in for ~/Library.
 func Discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserDataDir, error) {
 	var errs []error
 	var dirs []browser.UserDataDir
@@ -73,9 +71,8 @@ func dirID(def browser.Def, i int) browser.DirID {
 	return browser.DirID(fmt.Sprintf("%s-%d", def.ID, i+1))
 }
 
-// Extractors maps the categories a Safari profile supports to their extractors. A named profile's files sit under
-// two directories named for its UUID, so its sources are built from Profile.Dir; the keychain, Bookmarks.plist, and
-// the extension plists carry no profile tag, so only the default profile reads them.
+// A named profile's files sit under two directories named for its UUID, so its sources are built from Profile.Dir.
+// The keychain, Bookmarks.plist, and the extension plists carry no profile tag, so only the default profile reads them.
 func Extractors(dir browser.UserDataDir, p browser.Profile, kc LoginKeychain) browser.Extractors {
 	library := func(rel string) string { return fromLibrary(p, rel) }
 	uuid, named := profileUUID(p)
@@ -143,8 +140,7 @@ func plain(src browser.Source, parse func(string, browser.Collector) error) brow
 	}
 }
 
-// passwordsFrom reads no file, so the extraction always runs; the keychain stays locked without a usable password and
-// yields metadata only.
+// It reads no file, so it always runs; without a usable password the keychain stays locked and yields metadata only.
 func passwordsFrom(kc LoginKeychain) func(context.Context, browser.ProfileSnapshot, browser.Collector) error {
 	return func(ctx context.Context, _ browser.ProfileSnapshot, out browser.Collector) error {
 		if kc == nil {
@@ -154,8 +150,6 @@ func passwordsFrom(kc LoginKeychain) func(context.Context, browser.ProfileSnapsh
 	}
 }
 
-// downloadsOf keeps the entries of one profile: Downloads.plist is shared, and each entry names the profile it
-// belongs to.
 func downloadsOf(owner string) func(string, browser.Collector) error {
 	return func(path string, out browser.Collector) error { return extractDownloads(path, owner, out) }
 }

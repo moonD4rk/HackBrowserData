@@ -32,7 +32,6 @@ func TestExtractBookmarks(t *testing.T) {
 	assert.Equal(t, "Go Website", got[0].Name)
 	assert.Equal(t, "GitHub", got[1].Name)
 
-	// Verify field mapping
 	assert.Equal(t, "https://github.com", got[1].URL)
 	assert.Equal(t, int64(2), got[1].ID)
 	assert.Equal(t, "url", got[1].Type)

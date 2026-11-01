@@ -8,7 +8,6 @@ import (
 	"testing"
 )
 
-// encryptAESGCM is a test helper that produces a GCM ciphertext with caller-supplied AAD.
 func encryptAESGCM(t *testing.T, key, nonce, plaintext, aad []byte) []byte {
 	t.Helper()
 	block, err := aes.NewCipher(key)
@@ -22,8 +21,7 @@ func encryptAESGCM(t *testing.T, key, nonce, plaintext, aad []byte) []byte {
 	return aead.Seal(nil, nonce, plaintext, aad)
 }
 
-// testPlaintextPayloadLen: plaintext size before AES-GCM seal inside meta.local_encryptor_data.
-// 96 (blob) - 12 (nonce) - 16 (tag) = 68 bytes.
+// 96 (blob) - 12 (nonce) - 16 (tag) = 68 bytes of payload before sealing.
 const testPlaintextPayloadLen = yandexIntKeyBlobLen - gcmNonceSize - 16
 
 func buildLocalEncryptorBlob(t *testing.T, masterKey, dataKey []byte) []byte {
@@ -90,8 +88,6 @@ func TestDecryptYandexIntermediateKey_BadSignature(t *testing.T) {
 	}
 }
 
-// TestDecryptYandexIntermediateKey_TrailingDataIgnored verifies that trailing bytes past
-// signature+32 are discarded.
 func TestDecryptYandexIntermediateKey_TrailingDataIgnored(t *testing.T) {
 	masterKey := bytes.Repeat([]byte{0x11}, 32)
 	nonce := bytes.Repeat([]byte{0xAB}, gcmNonceSize)

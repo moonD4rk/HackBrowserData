@@ -13,7 +13,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 )
 
-// decryptPBE combines base64 decode + ASN1 PBE parse + decrypt into one call.
 func decryptPBE(encoded string, masterKey []byte) ([]byte, error) {
 	raw, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {

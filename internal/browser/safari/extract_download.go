@@ -23,9 +23,7 @@ type safariDownloadEntry struct {
 	DownloadIdentifier string `plist:"DownloadEntryIdentifier"`
 }
 
-// extractDownloads reads Downloads.plist (shared across Safari profiles) and returns only the entries
-// owned by ownerUUID — either "DefaultProfile" or a named profile's uppercase UUID. Entries written by
-// older Safari (no ProfileUUID field) are attributed to the default profile.
+// Downloads.plist is shared across profiles: entries are kept by owner UUID, and untagged ones are the default's.
 func extractDownloads(path, ownerUUID string, out browser.Collector) error {
 	f, err := os.Open(path)
 	if err != nil {

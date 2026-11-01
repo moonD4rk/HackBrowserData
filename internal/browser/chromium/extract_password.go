@@ -51,8 +51,7 @@ func extractPasswordsWithQuery(masterKeys masterkey.Set, path string, store reco
 	return nil
 }
 
-// extractYandexPasswords walks Ya Passman Data.
-// Note: URL column is origin_url — it's what the per-row AAD is computed over (not action_url).
+// The URL column is origin_url, which the per-row AAD covers, not action_url.
 func extractYandexPasswords(masterKeys masterkey.Set, path string, out browser.Collector) error {
 	dataKey, keyErr := loadYandexDataKey(path, masterKeys[masterkey.V10])
 

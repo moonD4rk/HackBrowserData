@@ -38,8 +38,7 @@ func keysFreeze(t *testing.T, dump masterkey.Dump, host masterkey.Host) masterke
 	return dump
 }
 
-// keysVaultsDump is what dumpkeys wrote for the golden's machine: two Chromium installs, the Opera and Yandex forks, and
-// a vault whose v20 key failed, which keeps its v10 key; a Firefox install and a vault with no key are not in it.
+// Two Chromium installs, the Opera and Yandex forks, and a vault that kept its v10 key when v20 failed.
 func keysVaultsDump(t *testing.T) masterkey.Dump {
 	t.Helper()
 	return masterkey.Dump{

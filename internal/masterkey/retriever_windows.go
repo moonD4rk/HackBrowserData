@@ -16,7 +16,6 @@ import (
 // Both run: a profile upgraded past Chrome 127 holds v10 and v20 values side by side.
 var platformRetrievers = []Retriever{dpapiRetriever{}, abeRetriever{}}
 
-// dpapiRetriever unwraps Chrome's Local State os_crypt.encrypted_key via Windows DPAPI.
 type dpapiRetriever struct{}
 
 func (dpapiRetriever) Version() Version { return V10 }

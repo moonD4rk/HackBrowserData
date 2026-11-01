@@ -36,9 +36,7 @@ GitHub: https://github.com/moonD4rk/HackBrowserData`,
 	dump := dumpCmd()
 	root.AddCommand(dump, dumpKeysCmd(), archiveCmd(), restoreCmd(), listCmd(), versionCmd())
 
-	// Default to dump when no subcommand is given.
-	// Copy dump flags to root so that `hack-browser-data -b chrome`
-	// works the same as `hack-browser-data dump -b chrome`.
+	// Without a subcommand the root runs dump, as v1.1.0 did, so it carries dump's flags too.
 	root.RunE = func(cmd *cobra.Command, args []string) error {
 		dump.SetContext(cmd.Context())
 		return dump.RunE(dump, args)

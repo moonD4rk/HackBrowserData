@@ -303,12 +303,10 @@ func TestNewASN1PBE_InvalidData(t *testing.T) {
 }
 
 func TestCredentialPBE_AES256CBC(t *testing.T) {
-	// Test the Firefox 144+ AES-256-CBC path (IV length = 16).
-	// Construct a credentialPBE with a 16-byte IV to exercise the AES branch.
-	masterKey := bytes.Repeat([]byte("k"), 32) // AES-256 key
-	iv := bytes.Repeat([]byte{0x01}, 16)       // 16-byte IV → AES-CBC path
+	// Firefox 144+ path: a 16-byte IV selects AES-256-CBC.
+	masterKey := bytes.Repeat([]byte("k"), 32)
+	iv := bytes.Repeat([]byte{0x01}, 16)
 
-	// Encrypt plaintext to get valid ciphertext for round-trip test.
 	encrypted, err := AESCBCEncrypt(masterKey, iv, pbePlaintext)
 	require.NoError(t, err)
 
@@ -328,7 +326,6 @@ func TestCredentialPBE_AES256CBC(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, pbePlaintext, decrypted)
 
-	// Verify encrypt round-trip
 	reEncrypted, err := pbe.Encrypt(masterKey, pbePlaintext)
 	require.NoError(t, err)
 	assert.Equal(t, encrypted, reEncrypted)

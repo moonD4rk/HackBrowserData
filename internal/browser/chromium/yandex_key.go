@@ -24,7 +24,6 @@ var (
 	errYandexKeyTooShort    = errors.New("yandex: decrypted intermediate key shorter than 32 bytes")
 )
 
-// decryptYandexIntermediateKey unwraps the per-DB data key from meta.local_encryptor_data.
 func decryptYandexIntermediateKey(masterKey, blob []byte) ([]byte, error) {
 	idx := bytes.Index(blob, localEncryptorPrefix)
 	if idx < 0 {

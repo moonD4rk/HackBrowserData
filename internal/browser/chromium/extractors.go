@@ -29,8 +29,7 @@ var defaultExtractors = browser.Extractors{
 	category.SessionStorage: plain(directory("Session Storage"), extractSessionStorage),
 }
 
-// overrides holds the forks with their own on-disk format: Yandex's password and card databases, and the Opera family's
-// extension settings. It is keyed by Def.ID, never by DirID, which differs for a second user data dir of one browser.
+// overrides is keyed by Def.ID, never DirID, which differs for a second user data dir of one browser.
 var overrides = map[string]browser.Extractors{
 	"yandex": {
 		category.Password:   encrypted(file("Ya Passman Data"), extractYandexPasswords),
@@ -45,7 +44,6 @@ var operaExtractors = browser.Extractors{
 	category.Extension: plain(file("Secure Preferences"), extractOperaExtensions),
 }
 
-// Extractors maps every category a Chromium profile supports to its extractor, with the forks' own formats applied.
 func Extractors(dir browser.UserDataDir, _ browser.Profile) browser.Extractors {
 	ex := make(browser.Extractors, len(defaultExtractors))
 	for c, e := range defaultExtractors {
@@ -87,8 +85,7 @@ func plain(src browser.Source, parse func(string, browser.Collector) error) brow
 	}
 }
 
-// extractPasswordStores reads both password databases: a profile that only ever synced passwords has just the account
-// one, and one database failing does not hide the other's logins.
+// A profile that only synced passwords has just the account store, and one store failing keeps the other's logins.
 func extractPasswordStores(ctx context.Context, ps browser.ProfileSnapshot, out browser.Collector) error {
 	stores := []struct {
 		src   browser.Source

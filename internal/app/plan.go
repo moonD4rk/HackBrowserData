@@ -11,16 +11,14 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// Extraction is one category of data from one profile of one user data dir. It is plain data, looked up again when it
-// runs, so a Plan prints as it is and compares with reflect.DeepEqual.
+// Extraction is plain data, looked up again when it runs, so a Plan prints as it is and compares with DeepEqual.
 type Extraction struct {
 	DirID    browser.DirID
 	Profile  string            // Profile.Name; "" in a result about a whole user data dir
 	Category category.Category // zero in a result about a whole user data dir
 }
 
-// Plan is what a run will do: the extractions in output order, the files they need captured once each, and the
-// requested extractions that cannot run.
+// Plan lists extractions in output order, each file to capture once, and the requested extractions that cannot run.
 type Plan struct {
 	Dirs        []browser.UserDataDir
 	Files       []snapshot.File
@@ -30,8 +28,7 @@ type Plan struct {
 
 type extractorsFunc func(browser.UserDataDir, browser.Profile) browser.Extractors
 
-// NewPlan crosses every discovered profile with the requested categories. It only stats files; it opens nothing.
-// Planning reads only the extractors' sources, so it needs no keychain.
+// NewPlan only stats files and reads only the extractors' sources, so it opens nothing and needs no keychain.
 func NewPlan(d Discovery, req Request) Plan {
 	return newPlan(d, req, extractorsWith(nil))
 }
@@ -71,9 +68,8 @@ func newPlan(d Discovery, req Request, extractors extractorsFunc) Plan {
 	return p
 }
 
-// locate finds each source's first candidate on disk. An extraction needs every required source and at least one of
-// the profile's own; a shared one such as Local State never makes it present by itself. An extraction that reads no
-// file, such as Safari's keychain passwords, always runs. A candidate that cannot be checked is an error, not absence.
+// An extraction needs every required source and one of the profile's own: Local State alone never makes it present.
+// One that reads no file always runs, and a candidate that cannot be checked is an error, not absence.
 func locate(dir browser.UserDataDir, p browser.Profile, sources []browser.Source) ([]snapshot.File, bool, error) {
 	if len(sources) == 0 {
 		return nil, true, nil

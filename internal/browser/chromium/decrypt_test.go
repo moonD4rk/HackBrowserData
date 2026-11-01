@@ -66,11 +66,7 @@ func TestDecryptValue_V11(t *testing.T) {
 	assert.Equal(t, plaintext, got)
 }
 
-// TestDecryptValue_V10_V11_SlotSeparation is the Linux analog of the #578 regression test: a
-// profile carrying both v10 (peanuts) and v11 (keyring) ciphertexts must route each prefix to
-// its own slot, not share a single key. Build-tag scoped to darwin/linux because v10/v11 use
-// AES-CBC on these platforms; Windows uses AES-GCM for v10 and is covered separately by
-// decrypt_windows_test.go.
+// Linux analog of #578: v10 and v11 values in one profile must each route to their own key.
 func TestDecryptValue_V10_V11_SlotSeparation(t *testing.T) {
 	k10 := bytes.Repeat([]byte{0x10}, 16) // V10 slot key (peanuts-derived kV10Key)
 	k11 := bytes.Repeat([]byte{0x11}, 16) // V11 slot key (keyring-derived kV11Key)
