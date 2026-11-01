@@ -15,8 +15,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
-// encryptWithDPAPI encrypts data using Windows DPAPI (CryptProtectData).
-// This is the reverse of DecryptDPAPI, used only for testing.
 func encryptWithDPAPI(plaintext []byte) ([]byte, error) {
 	crypt32 := syscall.NewLazyDLL("Crypt32.dll")
 	kernel32 := syscall.NewLazyDLL("Kernel32.dll")
@@ -54,9 +52,8 @@ func encryptWithDPAPI(plaintext []byte) ([]byte, error) {
 }
 
 func TestDecryptValue_V10_Windows(t *testing.T) {
-	// Windows v10 is AES-256-GCM, so the master key is 32 bytes; decryptValue routes v10 by key
-	// length (32B→GCM). testAESKey is 16B, so this uses an explicit 32B key.
-	key32 := []byte("0123456789abcdef0123456789abcdef") // 32 bytes
+	// Windows v10 keys are 32 bytes, which routes them to GCM.
+	key32 := []byte("0123456789abcdef0123456789abcdef")
 	plaintext := []byte("test_secret_value")
 	nonce := []byte("123456789012") // 12-byte nonce
 
@@ -72,7 +69,6 @@ func TestDecryptValue_V10_Windows(t *testing.T) {
 }
 
 func TestDecryptValue_DPAPI_Windows(t *testing.T) {
-	// Round-trip: encrypt with CryptProtectData, decrypt with decryptValue
 	plaintext := []byte("dpapi_test_secret")
 
 	encrypted, err := encryptWithDPAPI(plaintext)

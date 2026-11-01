@@ -29,16 +29,14 @@ var darwinParams = pbkdf2Params{
 
 const securityCmdTimeout = 30 * time.Second
 
-// The v10 strategies in order, first success wins: the securityd dump (root only), the run's login keychain,
-// then the `security` CLI, which may prompt.
+// First success wins; the security CLI goes last because it may prompt.
 var platformRetrievers = []Retriever{
 	&gcoredumpRetriever{},
 	keychainRetriever{},
 	&securityRetriever{cache: make(map[string]securityResult)},
 }
 
-// gcoredumpRetriever extracts keychain secrets via CVE-2025-24204 (dumps securityd memory; needs root).
-// Records are cached once (sync.Once) so the dump runs a single time across all browsers.
+// Records are read once (sync.Once), so the dump runs a single time for all browsers.
 type gcoredumpRetriever struct {
 	once    sync.Once
 	records []keychainbreaker.GenericPassword
@@ -74,8 +72,7 @@ func findStorageKey(records []keychainbreaker.GenericPassword, storage string) (
 	return nil, fmt.Errorf("%q: %w", storage, errStorageNotFound)
 }
 
-// keychainRetriever reads the label's secret from the run's login keychain (no root). Without a keychain, or with a
-// locked one, it steps aside: the keychain reports why once for the whole run.
+// Without a keychain, or with a locked one, it steps aside: the keychain reports why once for the run.
 type keychainRetriever struct{}
 
 func (keychainRetriever) Version() Version { return V10 }
@@ -94,8 +91,7 @@ func (keychainRetriever) Retrieve(ctx context.Context, loc Locator) ([]byte, err
 	return darwinParams.deriveKey(secret), nil
 }
 
-// securityRetriever queries Keychain via the macOS `security` CLI (may prompt). Results are
-// cached per storage name so each browser's key is fetched once.
+// Results are cached per storage name, so each browser's key is fetched, and prompted for, once.
 type securityRetriever struct {
 	mu    sync.Mutex
 	cache map[string]securityResult
@@ -135,8 +131,7 @@ func (r *securityRetriever) retrieveKeyOnce(ctx context.Context, storage string)
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 			return nil, fmt.Errorf("security command timed out after %s", securityCmdTimeout)
 		}
-		// `security` exits non-zero with empty stderr when the user denies the prompt or mistypes;
-		// surface that instead of the cryptic "exit status 128 ()".
+		// `security` exits non-zero with empty stderr when the prompt is denied; say so instead of "exit status 128 ()".
 		stderrStr := strings.TrimSpace(stderr.String())
 		if stderrStr == "" {
 			return nil, fmt.Errorf("security command: %w (likely keychain access denied or wrong password)", err)

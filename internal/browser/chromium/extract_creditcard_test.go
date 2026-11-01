@@ -29,7 +29,6 @@ func TestExtractCreditCards(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
-	// Verify field mapping
 	assert.Equal(t, "John Doe", got[0].Name)
 	assert.Equal(t, "12", got[0].ExpMonth)
 	assert.Equal(t, "2025", got[0].ExpYear)

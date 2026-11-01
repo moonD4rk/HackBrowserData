@@ -11,8 +11,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// DumpKeys retrieves each Chromium user data dir's keys for keys.json, capturing only its Local State. A dir whose
-// keys partly fail keeps the rest, because a v20 failure must not cost a usable v10 key; a dir with none is left out.
+// DumpKeys keeps the keys that worked when a dir's others fail, and leaves out a dir with none.
 // It fails only when the run is stopped, so a stopped run writes no keys.json.
 func DumpKeys(ctx context.Context, d Discovery, req Request) (masterkey.Dump, error) {
 	return dumpKeysWith(ctx, d, machineKeys(loginKeychain(req)))

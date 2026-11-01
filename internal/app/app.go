@@ -1,6 +1,4 @@
-// Package app runs the pipeline: Validate turns flags into a Request, Discover finds the user data dirs, NewPlan crosses
-// them with the requested categories, Execute captures, extracts, and exports one user data dir at a time, and Report
-// prints what every extraction got.
+// Package app runs the pipeline: Validate, Discover, NewPlan, Execute, and Report.
 package app
 
 import (
@@ -19,7 +17,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
-// Flags are a run's command-line values as cobra parsed them.
 type Flags struct {
 	Browser               string
 	Categories            string
@@ -31,7 +28,6 @@ type Flags struct {
 	KeychainPasswordStdin bool
 }
 
-// Request is a validated run.
 type Request struct {
 	Browser     string // "all" or one Def.ID
 	Categories  []category.Category
@@ -41,15 +37,13 @@ type Request struct {
 	ProfilePath string
 	Home        string
 
-	// KeychainPassword yields the macOS login password when the login keychain is first opened; "" leaves it locked.
-	// nil, as list has it, leaves the keychain locked without saying so.
+	// Called when the login keychain is first opened; "" leaves it locked, and nil, as list has it, does so silently.
 	KeychainPassword func(ctx context.Context) (string, error)
 	// Keys are a dump's keys by user data dir; nil retrieves every dir's keys from this machine.
 	Keys map[browser.DirID]masterkey.Set
 }
 
-// Validate checks every flag before any browser is touched or any secret is read, and resolves the home directory, so
-// nothing later reads the environment.
+// Validate checks every flag before any browser or secret is touched, so a bad flag fails fast.
 func Validate(f Flags) (Request, error) {
 	return validate(f, os.Stdin)
 }
@@ -94,7 +88,6 @@ func validate(f Flags, stdin *os.File) (Request, error) {
 	}, nil
 }
 
-// ValidateKeys checks dumpkeys' flags: the browser, and how the keychain password is given.
 func ValidateKeys(f Flags) (Request, error) {
 	id, err := parseBrowser(f.Browser)
 	if err != nil {
@@ -111,7 +104,7 @@ func ValidateKeys(f Flags) (Request, error) {
 	return Request{Browser: id, Home: home, KeychainPassword: password}, nil
 }
 
-// ValidateArchive checks archive's flags. An archive copies files and reads no secret.
+// ValidateArchive takes no keychain password: an archive copies files and reads no secret.
 func ValidateArchive(f Flags) (Request, error) {
 	id, err := parseBrowser(f.Browser)
 	if err != nil {
@@ -161,8 +154,7 @@ func parseBrowser(s string) (string, error) {
 	return "", fmt.Errorf("unknown browser %q, available: %s|%s", s, allBrowsers, strings.Join(browser.IDs(), "|"))
 }
 
-// checkOutputDir creates nothing: -d must already be a directory, or its nearest existing ancestor must be one that a
-// directory can be created in.
+// checkOutputDir creates nothing: -d, or its nearest existing ancestor, must be a directory we can create in.
 func checkOutputDir(dir string) error {
 	path := filepath.Clean(dir)
 	for {
@@ -205,8 +197,7 @@ func checkProfilePath(id, path string) (string, error) {
 	return path, nil
 }
 
-// parseCategories reads a comma-separated -c value; a repeated category is kept once, or its records would be
-// exported twice.
+// parseCategories keeps a repeated category once, or its records would be exported twice.
 func parseCategories(s string) ([]category.Category, error) {
 	s = strings.TrimSpace(s)
 	if strings.EqualFold(s, "all") {

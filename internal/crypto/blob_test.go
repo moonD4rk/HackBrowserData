@@ -8,7 +8,6 @@ import (
 	"testing"
 )
 
-// encryptAESGCM is a test helper that produces a GCM ciphertext with caller-supplied AAD.
 func encryptAESGCM(t *testing.T, key, nonce, plaintext, aad []byte) []byte {
 	t.Helper()
 	block, err := aes.NewCipher(key)

@@ -10,7 +10,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// defaultExtensionKeys are the JSON paths tried for standard Chromium browsers.
 var defaultExtensionKeys = []string{
 	"extensions.settings",
 	"settings.extensions",
@@ -21,9 +20,7 @@ func extractExtensions(path string, out browser.Collector) error {
 	return extractExtensionsWithKeys(path, defaultExtensionKeys, out)
 }
 
-// extractExtensionsWithKeys reads Secure Preferences and looks for extension
-// settings under the given JSON key paths. This allows browser variants
-// (e.g. Opera with "extensions.opsettings") to reuse the same parsing logic.
+// Browser variants keep extension settings under other JSON paths, such as Opera's extensions.opsettings.
 func extractExtensionsWithKeys(path string, keys []string, out browser.Collector) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -70,9 +67,7 @@ func extractExtensionsWithKeys(path string, keys []string, out browser.Collector
 	return nil
 }
 
-// isExtensionEnabled checks whether an extension is enabled.
-// Modern Chrome uses disable_reasons (array): empty [] = enabled, non-empty [1] = disabled.
-// Older Chrome uses state (int): 1 = enabled.
+// Modern Chrome sets disable_reasons (empty means enabled); older Chrome sets state, where 1 means enabled.
 func isExtensionEnabled(ext gjson.Result) bool {
 	reasons := ext.Get("disable_reasons")
 	if reasons.Exists() {
@@ -81,9 +76,6 @@ func isExtensionEnabled(ext gjson.Result) bool {
 	return ext.Get("state").Int() == 1
 }
 
-// extractOperaExtensions extracts extensions from Opera's Secure Preferences,
-// which stores extension data under "extensions.opsettings" instead of the
-// standard "extensions.settings".
 func extractOperaExtensions(path string, out browser.Collector) error {
 	return extractExtensionsWithKeys(path, []string{"extensions.opsettings"}, out)
 }

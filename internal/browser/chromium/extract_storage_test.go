@@ -14,9 +14,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// ---------------------------------------------------------------------------
-// decodeChromiumString
-// ---------------------------------------------------------------------------
 func TestDecodeChromiumString(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -79,10 +76,6 @@ func TestDecodeChromiumString(t *testing.T) {
 		})
 	}
 }
-
-// ---------------------------------------------------------------------------
-// parseLocalStorageEntry
-// ---------------------------------------------------------------------------
 
 func TestParseLocalStorageEntry(t *testing.T) {
 	tests := []struct {
@@ -162,10 +155,6 @@ func TestParseLocalStorageEntry(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// extractLocalStorage (integration with LevelDB)
-// ---------------------------------------------------------------------------
-
 func setupLocalStorageLevelDB(t *testing.T) string {
 	t.Helper()
 	return createTestLevelDB(t, map[string]string{
@@ -213,10 +202,6 @@ func TestExtractLocalStorage(t *testing.T) {
 	assert.Equal(t, "abc123", byKey["token"])
 	assert.Equal(t, "データ", byKey["テスト"])
 }
-
-// ---------------------------------------------------------------------------
-// extractSessionStorage
-// ---------------------------------------------------------------------------
 
 func TestExtractSessionStorage(t *testing.T) {
 	dir := setupSessionStorageLevelDB(t)
@@ -285,8 +270,6 @@ func testEncodeUTF16(s string) []byte {
 	return result
 }
 
-// testEncodeUTF16Raw encodes as raw UTF-16 LE without format byte prefix
-// (used by session storage values).
 func testEncodeUTF16Raw(s string) []byte {
 	encoded := utf16.Encode([]rune(s))
 	result := make([]byte, 0, len(encoded)*2)

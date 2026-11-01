@@ -1,4 +1,4 @@
-// Package timeconv converts browser timestamps to UTC; browsers write 0 for "unset", so non-positive input is the zero time.
+// Package timeconv converts browser timestamps to UTC; a non-positive input, which browsers write for unset, is zero.
 package timeconv
 
 import "time"

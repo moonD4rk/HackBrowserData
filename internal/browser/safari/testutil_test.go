@@ -17,9 +17,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// ---------------------------------------------------------------------------
-// Real Safari table schemas — extracted via `sqlite3 History.db ".schema"`.
-// ---------------------------------------------------------------------------
+// Real Safari schemas from sqlite3 History.db .schema, so the queries are tested against the columns Safari has.
 
 const safariHistoryItemsSchema = `CREATE TABLE history_items (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,10 +47,6 @@ const safariHistoryVisitsSchema = `CREATE TABLE history_visits (
 	score INTEGER NOT NULL DEFAULT 0
 )`
 
-// ---------------------------------------------------------------------------
-// INSERT helpers
-// ---------------------------------------------------------------------------
-
 func insertHistoryItem(id int, url, domainExpansion string, visitCount int) string {
 	return fmt.Sprintf(
 		`INSERT INTO history_items (id, url, domain_expansion, visit_count)
@@ -68,10 +62,6 @@ func insertHistoryVisit(id, historyItem int, visitTime float64, title string) st
 		id, historyItem, visitTime, title,
 	)
 }
-
-// ---------------------------------------------------------------------------
-// Test fixture builders
-// ---------------------------------------------------------------------------
 
 func createTestDB(t *testing.T, name string, schemas []string, inserts ...string) string { //nolint:unparam // name will vary when future data types are added
 	t.Helper()
@@ -91,19 +81,12 @@ func createTestDB(t *testing.T, name string, schemas []string, inserts ...string
 	return path
 }
 
-// ---------------------------------------------------------------------------
-// SafariTabs.db fixtures
-// ---------------------------------------------------------------------------
-
-// tabRow describes one profile entry to stamp into the fake SafariTabs.db.
 type tabRow struct {
 	uuid  string
 	title string
 }
 
-// writeSafariTabsDB creates a minimal SafariTabs.db at path containing only
-// the bookmarks columns discoverSafariProfiles reads. Every row gets
-// subtype=2 (profile record) so the production query picks it up.
+// Every row gets subtype=2, the profile record the production query selects.
 func writeSafariTabsDB(t *testing.T, path string, rows []tabRow) {
 	t.Helper()
 	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
@@ -126,20 +109,12 @@ func writeSafariTabsDB(t *testing.T, path string, rows []tabRow) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// LocalStorage fixtures — modern WebKit nested Origins layout
-// ---------------------------------------------------------------------------
-
-// testLocalStorageItem is one key/value pair written to an ItemTable row.
-// Value is encoded as UTF-16 LE, matching WebKit's on-disk format.
+// Value is written as UTF-16 LE, as WebKit stores it.
 type testLocalStorageItem struct {
 	Key, Value string
 }
 
-// buildTestLocalStorageDir creates a root dir that mirrors Safari 17+'s nested
-// localStorage layout (<root>/<h1>/<h2>/origin + LocalStorage/localstorage.sqlite3)
-// for each origin URL passed in. Origins are written as first-party (top == frame);
-// for partitioned-origin coverage, use buildTestPartitionedLocalStorage.
+// Every origin is written first-party, with top == frame.
 func buildTestLocalStorageDir(t *testing.T, origins map[string][]testLocalStorageItem) string {
 	t.Helper()
 	root := filepath.Join(t.TempDir(), "Origins")
@@ -154,8 +129,6 @@ func buildTestLocalStorageDir(t *testing.T, origins map[string][]testLocalStorag
 	return root
 }
 
-// writeTestOriginStore writes one <root>/<topHash>/<frameHash>/ tree with the given
-// origins encoded into the binary origin file and items inserted into localstorage.sqlite3.
 func writeTestOriginStore(t *testing.T, root, topHash, frameHash, topOrigin, frameOrigin string, items []testLocalStorageItem) {
 	t.Helper()
 	frameDir := filepath.Join(root, topHash, frameHash)
@@ -182,10 +155,7 @@ func writeTestOriginStore(t *testing.T, root, topHash, frameHash, topOrigin, fra
 	require.NoError(t, db.Close())
 }
 
-// encodeOriginFile mirrors WebKit's SecurityOrigin binary serialization. Layout per origin
-// block: length-prefixed scheme record, length-prefixed host record, then a port marker
-// (0x00 for the scheme default, or 0x01 + uint16_le port). Two blocks back-to-back: top-frame
-// then frame.
+// WebKit's SecurityOrigin layout: per block a scheme record, a host record, and a port marker; top, then frame.
 func encodeOriginFile(topOrigin, frameOrigin string) []byte {
 	var buf []byte
 	buf = appendOriginBlock(buf, topOrigin)
@@ -215,8 +185,7 @@ func appendOriginRecord(buf []byte, s string) []byte {
 	return append(buf, []byte(s)...)
 }
 
-// splitTestOriginURL parses "https://example.com[:port]" into (scheme, host, port).
-// Port 0 means the URL had no explicit port (use scheme default).
+// Port 0 means the URL had no explicit port.
 func splitTestOriginURL(u string) (scheme, host string, port uint16) {
 	idx := strings.Index(u, "://")
 	if idx < 0 {
@@ -232,11 +201,7 @@ func splitTestOriginURL(u string) (scheme, host string, port uint16) {
 	return scheme, rest, 0
 }
 
-// writeLocalStorageDB creates a minimal localstorage.sqlite3 at path with ItemTable populated
-// from items. When addNullKey is true, a NULL-key row is inserted first to exercise the
-// skip-NULL-key logic in readLocalStorageFile / countLocalStorageFile. This is a direct-DB
-// variant of buildTestLocalStorageDir — use it when the test targets one DB, not the full
-// Origins nesting.
+// addNullKey inserts a NULL-key row first, to exercise the reader's skip of NULL keys.
 func writeLocalStorageDB(t *testing.T, path string, items []testLocalStorageItem, addNullKey bool) {
 	t.Helper()
 	db, err := sql.Open("sqlite", path)
@@ -260,8 +225,6 @@ func writeLocalStorageDB(t *testing.T, path string, items []testLocalStorageItem
 	require.NoError(t, db.Close())
 }
 
-// encodeUTF16LE is the inverse of extract_storage.go's decodeUTF16LE — it mirrors
-// the WebKit encoding so test fixtures round-trip through the extractor.
 func encodeUTF16LE(s string) []byte {
 	u16 := utf16.Encode([]rune(s))
 	buf := make([]byte, 2*len(u16))
@@ -278,7 +241,6 @@ func mkFile(t *testing.T, parts ...string) {
 	require.NoError(t, os.WriteFile(path, []byte("test"), 0o644))
 }
 
-// testCollector keeps what an extractor hands it, in order.
 type testCollector struct {
 	records []record.Record
 	fails   []error

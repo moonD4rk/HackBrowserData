@@ -33,7 +33,6 @@ func TestExtractPasswords(t *testing.T) {
 	assert.Equal(t, "https://old.com", got[0].URL)
 	assert.Equal(t, "https://new.com", got[1].URL)
 
-	// Verify field mapping
 	assert.Equal(t, "bob", got[1].Username)
 	assert.False(t, got[1].CreatedAt.IsZero())
 	// Password is empty because masterKey is nil (decrypt returns empty)
@@ -41,8 +40,7 @@ func TestExtractPasswords(t *testing.T) {
 	assert.Equal(t, record.StoreLocal, got[1].Store)
 }
 
-// A credential whose blob cannot be decrypted must still be reported, otherwise a missing
-// master key would silently shrink the export instead of yielding empty passwords.
+// An undecryptable credential is still listed, or a missing key would silently shrink the export.
 func TestExtractPasswords_UndecryptableBlobStillListed(t *testing.T) {
 	path := createTestDB(t, "Login Data", loginsSchema,
 		insertLogin("https://enc.com", "https://enc.com/login", "carol", "763130deadbeef", 13350000000000000),

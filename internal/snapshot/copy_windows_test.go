@@ -41,8 +41,7 @@ func TestCopy_PlainWhenNotLocked(t *testing.T) {
 	assert.Equal(t, testData, copied)
 }
 
-// openExclusive opens a file with exclusive lock (dwShareMode=0),
-// simulating Chrome's PRAGMA locking_mode=EXCLUSIVE behavior.
+// Share mode 0 locks the file the way Chrome's locking_mode=EXCLUSIVE does.
 func openExclusive(t *testing.T, path string) syscall.Handle {
 	t.Helper()
 	srcPtr, err := syscall.UTF16PtrFromString(path)
@@ -51,7 +50,7 @@ func openExclusive(t *testing.T, path string) syscall.Handle {
 	handle, err := syscall.CreateFile(
 		srcPtr,
 		syscall.GENERIC_READ|syscall.GENERIC_WRITE,
-		0, // exclusive: no sharing
+		0,
 		nil,
 		syscall.OPEN_EXISTING,
 		syscall.FILE_ATTRIBUTE_NORMAL,

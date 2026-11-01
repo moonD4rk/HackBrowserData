@@ -232,8 +232,7 @@ type safariFixtureEndpoint struct {
 	port         uint16
 }
 
-// One partition of a WebKit origins root: top and frame differ for third-party storage, and an origin without
-// localStorage items keeps only its origin file.
+// Top and frame differ for third-party storage; an origin without localStorage items keeps only its origin file.
 func safariFixtureOrigin(t *testing.T, root string, top, frame safariFixtureEndpoint, items ...[2]string) {
 	t.Helper()
 	dir := filepath.Join(root, safariFixtureHash(top), safariFixtureHash(frame))

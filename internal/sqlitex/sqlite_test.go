@@ -10,7 +10,6 @@ import (
 )
 
 func TestEachRow(t *testing.T) {
-	// Create a temp SQLite database
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "test.db")
 
@@ -23,7 +22,6 @@ func TestEachRow(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, db.Close())
 
-	// Query using our helper
 	var names []string
 	err = eachRow(dbPath, false, "SELECT name FROM items ORDER BY id", func(rows *sql.Rows) error {
 		var name string

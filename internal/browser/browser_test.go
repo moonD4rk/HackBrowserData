@@ -97,8 +97,7 @@ func TestTableRows(t *testing.T) {
 	}
 }
 
-// The payload looks a browser up by its executable inside the browser process, so its C table is the other half of each
-// ABE row. It may list browsers the Go table does not.
+// The payload finds a browser by its executable, so every Go ABE row needs a C row; the C table may list more.
 func TestABERowsMatchPayloadTable(t *testing.T) {
 	src, err := os.ReadFile("../abe/native/com_iid.c")
 	require.NoError(t, err)

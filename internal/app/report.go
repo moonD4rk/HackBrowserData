@@ -6,8 +6,7 @@ import (
 	"text/tabwriter"
 )
 
-// Report writes every result as one line, in output order. The summary is additive: it is not part of the output
-// contract, and it never changes the exit status.
+// The summary is not part of the output contract and never changes the exit status.
 func Report(w io.Writer, s Summary) error {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, "Browser\tProfile\tCategory\tResult\tRecords\tDetail")

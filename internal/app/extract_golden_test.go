@@ -16,7 +16,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
-// The extract goldens pin dump's output on fixtures; the fixtures' keys are handed in, since no secret store holds them.
+// The fixtures' keys are handed in, since no secret store holds them.
 func TestExtractGolden(t *testing.T) {
 	home := t.TempDir()
 	keys := make(map[browser.DirID]masterkey.Set)

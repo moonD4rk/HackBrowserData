@@ -7,7 +7,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// Stable, so ties and keyless categories keep source order; Safari's bookmarks and downloads have no timestamp to sort by.
+// Stable, so ties and keyless records keep source order: Safari's bookmarks and downloads have no timestamp.
 func sortRecords(records []record.Record) {
 	sort.SliceStable(records, func(i, j int) bool {
 		return keyOf(records[i]).before(keyOf(records[j]))

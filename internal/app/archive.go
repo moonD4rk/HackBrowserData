@@ -11,9 +11,8 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// Archive captures every Chromium user data dir into one snapshot directory, records what it holds in the manifest,
-// and zips it to dst. Beside the requested categories' files it keeps Local State and each profile's marker, so a
-// reader without the manifest still finds the profiles. It returns how many files and directories were captured.
+// Archive also keeps Local State and each profile's marker, so a reader without the manifest still finds the profiles.
+// It returns how many files and directories were captured.
 func Archive(ctx context.Context, d Discovery, req Request, dst string) (int, error) {
 	var dirs []browser.UserDataDir
 	for _, dir := range d.Dirs {

@@ -16,7 +16,6 @@ func testDef() browser.Def {
 	return browser.Def{ID: "safari", Name: "Safari", Base: browser.Safari, Darwin: p, Linux: p, Windows: p}
 }
 
-// libraryAt lays out a fake home: ~/Library/Safari with a History.db, and the container beside it.
 func libraryAt(t *testing.T, home string) (container string) {
 	t.Helper()
 	mkFile(t, home, "Library", "Safari", "History.db")
@@ -118,8 +117,7 @@ func TestDiscover_EmptyDBIsAuthoritative(t *testing.T) {
 	assert.Equal(t, []browser.Profile{defaultProfile}, discoverProfiles(t, home))
 }
 
-// Without SafariTabs.db the Profiles directory is listed and names are synthesized; directories without data are kept,
-// because whether a category's file exists is the plan's question.
+// Without SafariTabs.db the Profiles dir is listed; dirs without data stay, since a file's presence is Plan's question.
 func TestDiscover_MissingDBFallsBackToReadDir(t *testing.T) {
 	const uuid = "11111111-2222-3333-4444-555555555555"
 	const empty = "4E2D8DD0-A7D2-4684-939A-898B7675C700"

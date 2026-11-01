@@ -32,7 +32,6 @@ func TestExtractDownloads(t *testing.T) {
 	assert.Equal(t, "https://example.com/old.zip", got[0].URL)
 	assert.Equal(t, "https://example.com/new.pdf", got[1].URL)
 
-	// Verify field mapping
 	assert.Equal(t, "/tmp/new.pdf", got[1].TargetPath)
 	assert.False(t, got[1].StartTime.IsZero())
 }

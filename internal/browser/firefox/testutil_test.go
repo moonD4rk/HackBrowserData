@@ -13,9 +13,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// ---------------------------------------------------------------------------
-// Real Firefox table schemas — extracted via `sqlite3 <db> ".schema <table>"`.
-// ---------------------------------------------------------------------------
+// Real Firefox schemas from sqlite3 .schema, so the queries are tested against the columns browsers have.
 
 const mozCookiesSchema = `CREATE TABLE moz_cookies (
 	id INTEGER PRIMARY KEY,
@@ -95,10 +93,6 @@ const webappsstore2Schema = `CREATE TABLE webappsstore2 (
 	value TEXT
 )`
 
-// ---------------------------------------------------------------------------
-// INSERT helpers
-// ---------------------------------------------------------------------------
-
 func insertMozCookie(name, value, host, path string, creationTime, expiry int64, isSecure, isHTTPOnly int) string {
 	return fmt.Sprintf(
 		`INSERT INTO moz_cookies (name, value, host, path, creationTime, expiry, isSecure, isHttpOnly, lastAccessed)
@@ -139,11 +133,6 @@ func insertWebappsstore(originKey, key, value string) string {
 	)
 }
 
-// ---------------------------------------------------------------------------
-// Test fixture builders
-// ---------------------------------------------------------------------------
-
-// installFile copies a test fixture file into a profile directory.
 func installFile(t *testing.T, profileDir, srcPath, dstName string) {
 	t.Helper()
 	data, err := os.ReadFile(srcPath)
@@ -176,7 +165,6 @@ func createTestJSON(t *testing.T, name, content string) string {
 	return path
 }
 
-// testCollector keeps what an extractor hands it, in order.
 type testCollector struct {
 	records []record.Record
 	fails   []error

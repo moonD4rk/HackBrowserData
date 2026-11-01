@@ -27,7 +27,6 @@ func TestExtractLocalStorage(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 3)
 
-	// Verify field mapping by collecting into lookup
 	byKey := map[string]string{}
 	for _, entry := range got {
 		byKey[entry.URL+"/"+entry.Key] = entry.Value

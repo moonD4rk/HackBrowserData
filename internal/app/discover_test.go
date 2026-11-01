@@ -12,7 +12,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 )
 
-// installAt creates a profile where this OS's table expects the browser's user data dir under home.
 func installAt(t *testing.T, home, id string) string {
 	t.Helper()
 	def := lookup(t, id)
@@ -60,7 +59,7 @@ func TestDiscover_ProfilePathNeedsOneBrowser(t *testing.T) {
 	assert.NotEqual(t, custom, d.Dirs[0].Path, "-p is ignored without a specific browser")
 }
 
-// A profile created and never used holds only its Preferences marker; it is not listed, archived, or keyed, as today.
+// A profile created and never used holds only its Preferences marker, so it is not listed, archived, or keyed.
 func TestDiscover_KeepsOnlyProfilesWithData(t *testing.T) {
 	home := t.TempDir()
 	chrome := installAt(t, home, "chrome")

@@ -15,20 +15,9 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// Modern WebKit (Safari 17+) stores localStorage under a nested, partitioned layout rooted at
-// either WebsiteDataStore/<uuid>/Origins (per named profile) or WebsiteData/Default
-// (the pre-profile default store). Within that root:
-//
-//	<root>/<top-frame-hash>/<frame-hash>/origin                         — binary; encodes top+frame origins
-//	<root>/<top-frame-hash>/<frame-hash>/LocalStorage/localstorage.sqlite3
-//
-// top-hash == frame-hash ⇒ first-party; they differ for third-party partitioned storage.
-// We report the frame origin because that's what window.localStorage exposes to JS.
-// ItemTable: (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB NOT NULL ON CONFLICT FAIL);
-// value BLOBs are UTF-16 LE strings.
-//
-// The flat "LocalStorage/<scheme>_<host>_<port>.localstorage" directory that older builds used
-// is empty on current Safari and is no longer a supported source.
+// Safari 17+ keeps localStorage at <root>/<top-hash>/<frame-hash>/{origin,LocalStorage/localstorage.sqlite3},
+// where root is WebsiteDataStore/<uuid>/Origins or WebsiteData/Default; the hashes differ for third-party storage.
+// The frame origin is reported, since window.localStorage exposes it; the old flat layout is no longer read.
 
 const (
 	webkitOriginFile         = "origin"
@@ -45,9 +34,7 @@ const (
 	originEncUTF16 = 0x00 // UTF-16 LE
 )
 
-// Port marker values after the (scheme, host) pair in an origin block.
-// 0x00  → port is the scheme default (stored as 0).
-// 0x01  → next two bytes are a uint16_le port.
+// After scheme and host, 0x00 means the default port and 0x01 a uint16 LE port in the next two bytes.
 const (
 	originPortDefaultMarker = 0x00
 	originPortExplicitFlag  = 0x01
@@ -84,9 +71,7 @@ func extractLocalStorage(root string, out browser.Collector) error {
 	return nil
 }
 
-// findOriginDataDirs returns <root>/<h1>/<h2>/ paths that contain both an "origin" file and
-// a "LocalStorage/localstorage.sqlite3" database. Non-directory entries, the "salt" sibling,
-// and partition dirs without localStorage data are silently skipped.
+// Only dirs holding both an origin file and a localstorage.sqlite3 count; the salt sibling and the rest are skipped.
 func findOriginDataDirs(root string) ([]string, error) {
 	topEntries, err := os.ReadDir(root)
 	if err != nil {
@@ -120,18 +105,14 @@ func findOriginDataDirs(root string) ([]string, error) {
 	return out, nil
 }
 
-// originEndpoint is one half of an origin file (top-frame or frame). Port 0 means the scheme
-// default (443 for https, 80 for http) and is omitted from the URL rendering.
+// Port 0 is the scheme's default and is left out of the URL.
 type originEndpoint struct {
 	scheme string
 	host   string
 	port   uint16
 }
 
-// readOriginFile parses WebKit's SecurityOrigin binary serialization and returns the frame
-// origin URL (scheme://host[:port]). The file holds two origin blocks back-to-back: top-frame
-// then frame. When the frame block is missing/unreadable we fall back to the top-frame so we
-// can still attribute the data to *something* meaningful.
+// The file holds the top-frame block, then the frame block; without a readable frame the top frame is reported.
 func readOriginFile(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -143,7 +124,6 @@ func readOriginFile(path string) (string, error) {
 	}
 	frame, _, ferr := readOriginBlock(data, pos)
 	if ferr != nil {
-		// Partitioned info unavailable — attribute to the top-frame origin.
 		frame = top
 	}
 	if frame.scheme == "" || frame.host == "" {
@@ -152,8 +132,6 @@ func readOriginFile(path string) (string, error) {
 	return formatOriginURL(frame), nil
 }
 
-// readOriginBlock reads one origin block: scheme record, host record, port marker.
-// Returns the parsed endpoint and the byte offset immediately after the block.
 func readOriginBlock(data []byte, pos int) (originEndpoint, int, error) {
 	var ep originEndpoint
 	var err error
@@ -208,8 +186,6 @@ func readOriginString(data []byte, pos int) (string, int, error) {
 	}
 }
 
-// decodeLatin1 converts ISO-8859-1 bytes to a valid UTF-8 Go string. Latin-1 byte values map
-// 1:1 to Unicode code points U+0000–U+00FF. Mirrors the helper in chromium/extract_storage.go.
 func decodeLatin1(b []byte) string {
 	runes := make([]rune, len(b))
 	for i, c := range b {
@@ -232,8 +208,8 @@ type localStorageItem struct {
 }
 
 func readLocalStorageFile(path string) ([]localStorageItem, error) {
-	// mode=ro without immutable, so SQLite replays the copied -wal sidecar and surfaces entries Safari has not yet
-	// checkpointed. ORDER BY key, rowid makes exports byte-for-byte stable across runs and SQLite versions.
+	// mode=ro without immutable lets SQLite replay the copied -wal, so entries Safari has not checkpointed appear.
+	// ORDER BY key, rowid keeps exports stable across runs and SQLite versions.
 	dsn := "file:" + path + "?mode=ro"
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
@@ -259,9 +235,7 @@ func readLocalStorageFile(path string) ([]localStorageItem, error) {
 			continue
 		}
 		if !key.Valid {
-			// NULL keys would collide with legitimate empty-string keys in the output and are
-			// not meaningful localStorage entries. The UNIQUE constraint in ItemTable still
-			// permits multiple NULL rows in SQLite, so we filter them here.
+			// NULL keys would collide with empty-string keys in the output, and ItemTable's UNIQUE still allows several.
 			log.Debugf("safari localstorage: skip row with NULL key in %s", path)
 			continue
 		}
@@ -273,8 +247,7 @@ func readLocalStorageFile(path string) ([]localStorageItem, error) {
 	return items, rows.Err()
 }
 
-// decodeLocalStorageValue treats the BLOB as UTF-16 LE. Values at or above the cap are replaced
-// with a size marker to keep JSON/CSV output bounded, matching chromium/extract_storage.go.
+// Values at or above the cap become a size marker to bound the output, as in chromium/extract_storage.go.
 func decodeLocalStorageValue(b []byte) string {
 	if len(b) >= maxLocalStorageValueLength {
 		return fmt.Sprintf(
@@ -285,8 +258,7 @@ func decodeLocalStorageValue(b []byte) string {
 	return decodeUTF16LE(b)
 }
 
-// decodeUTF16LE returns the input as a Go string on odd-length (malformed) inputs; WebKit values
-// are always even-length in practice but we don't want a stray byte to drop a whole row.
+// An odd-length value comes back as is, so a stray byte does not drop the row.
 func decodeUTF16LE(b []byte) string {
 	if len(b) == 0 {
 		return ""

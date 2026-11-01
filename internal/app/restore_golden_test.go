@@ -87,7 +87,6 @@ func chromiumFixtureKeysFile(t *testing.T) string {
 	return path
 }
 
-// restoreGolden drives the restore pipeline the way the cobra command does, and returns the output directory.
 func restoreGolden(t *testing.T, f app.RestoreFlags) string {
 	t.Helper()
 	if f.Categories == "" {

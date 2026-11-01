@@ -14,18 +14,9 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// ---------------------------------------------------------------------------
-// Shared test constants for Chromium encryption.
-// Reusable across decrypt, cookie, password, and creditcard tests.
-// ---------------------------------------------------------------------------
-
-// testAESKey is a 16-byte AES-128 key for constructing test ciphertext.
 var testAESKey = []byte("0123456789abcdef")
 
-// ---------------------------------------------------------------------------
-// Real Chrome table schemas — extracted via `sqlite3 <db> ".schema <table>"`.
-// Using complete schemas ensures our SQL queries work against real browser data.
-// ---------------------------------------------------------------------------
+// Real Chrome schemas from sqlite3 .schema, so the queries are tested against the columns browsers have.
 
 const loginsSchema = `CREATE TABLE logins (
 	origin_url VARCHAR NOT NULL,
@@ -141,10 +132,7 @@ const creditCardsSchema = `CREATE TABLE credit_cards (
 	nickname VARCHAR
 )`
 
-// ---------------------------------------------------------------------------
-// INSERT helpers — each returns one SQL statement with only the fields
-// our extract functions care about; other NOT NULL columns get defaults.
-// ---------------------------------------------------------------------------
+// Each insert sets only the fields the extractors read; other NOT NULL columns take their defaults.
 
 func insertLogin(originURL, actionURL, username, pwdHex string, dateCreated int64) string {
 	return fmt.Sprintf(
@@ -194,13 +182,6 @@ func insertCreditCard(name string, month, year int, encNumberHex, nickName, addr
 	)
 }
 
-// ---------------------------------------------------------------------------
-// Test fixture builders
-// ---------------------------------------------------------------------------
-
-// installFile copies a test fixture file into a profile directory.
-// This bridges per-category setup functions (which return standalone paths)
-// and browser-level integration tests (which need files inside a profile).
 func installFile(t *testing.T, profileDir, srcPath, dstName string) {
 	t.Helper()
 	data, err := os.ReadFile(srcPath)
@@ -208,7 +189,6 @@ func installFile(t *testing.T, profileDir, srcPath, dstName string) {
 	require.NoError(t, os.WriteFile(filepath.Join(profileDir, dstName), data, 0o644))
 }
 
-// createTestDB creates a SQLite database with the given schema and insert statements.
 func createTestDB(t *testing.T, name, schema string, inserts ...string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), name)
@@ -226,7 +206,6 @@ func createTestDB(t *testing.T, name, schema string, inserts ...string) string {
 	return path
 }
 
-// createTestJSON creates a file with the given JSON content.
 func createTestJSON(t *testing.T, name, content string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), name)
@@ -234,7 +213,6 @@ func createTestJSON(t *testing.T, name, content string) string {
 	return path
 }
 
-// createTestLevelDB creates a LevelDB directory with the given key-value pairs.
 func createTestLevelDB(t *testing.T, entries map[string]string) string {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), "leveldb")
@@ -247,7 +225,6 @@ func createTestLevelDB(t *testing.T, entries map[string]string) string {
 	return dir
 }
 
-// testCollector keeps what an extractor hands it, in order.
 type testCollector struct {
 	records []record.Record
 	fails   []error

@@ -30,7 +30,6 @@ func TestExtractDownloads(t *testing.T) {
 	assert.Equal(t, "https://old.com/file.zip", got[0].URL)
 	assert.Equal(t, "https://new.com/doc.pdf", got[1].URL)
 
-	// Verify field mapping
 	assert.Equal(t, "/tmp/new.pdf", got[1].TargetPath)
 	assert.Equal(t, "application/pdf", got[1].MimeType)
 	assert.Equal(t, int64(2048), got[1].TotalBytes)

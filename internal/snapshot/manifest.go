@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 )
 
-// ManifestVersion is the manifest.json schema this build writes and reads.
 const ManifestVersion = 1
 
 const manifestName = "manifest.json"
@@ -20,8 +19,6 @@ type Manifest struct {
 	Dirs    []ManifestDir `json:"dirs"`
 }
 
-// ManifestDir is one user data dir in the snapshot directory: its DirID, the browser it belongs to, and what was
-// captured from it.
 type ManifestDir struct {
 	ID       string            `json:"id"`
 	Browser  string            `json:"browser"`

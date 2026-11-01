@@ -1,5 +1,4 @@
-// Package masterkey retrieves Chromium master keys (per-platform retrievers + a cross-host Dump format).
-// Firefox and Safari own their own key paths and don't route through here.
+// Package masterkey retrieves Chromium master keys; Firefox and Safari keep their own key paths.
 package masterkey
 
 import (
@@ -31,7 +30,6 @@ type Retriever interface {
 // ErrNotApplicable is a retriever's way of stepping aside; it never counts as a failure.
 var ErrNotApplicable = errors.New("retriever not applicable")
 
-// errStorageNotFound: the browser's account is absent from the credential store (keychain/keyring).
 var errStorageNotFound = errors.New("not found in credential store") //nolint:unused // only used on darwin and linux
 
 // Locator is where one user data dir's keys are found; each retriever reads only the fields of its OS.
@@ -59,8 +57,7 @@ const (
 	ABEAvast
 )
 
-// RetrieveAll runs this OS's retrievers in order. Per version the first key wins and later retrievers are not
-// tried; a version's error is reported only when all its retrievers fail, and a v20 failure never drops the v10 key.
+// Per version the first key wins, and an error is reported only when every retriever of that version fails.
 func RetrieveAll(ctx context.Context, loc Locator) (Set, error) {
 	return retrieveAll(ctx, loc, platformRetrievers)
 }

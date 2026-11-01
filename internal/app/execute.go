@@ -19,18 +19,16 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// runKeychain is the run's one login keychain, read by the Chromium v10 retriever and the Safari password extractor;
-// nil off macOS.
+// runKeychain is the run's one login keychain, shared by Chromium's v10 key and Safari's passwords; nil off macOS.
 type runKeychain interface {
 	masterkey.LoginKeychain
 	safari.LoginKeychain
 }
 
-// keySource retrieves one user data dir's Chromium keys, reading what it needs from the dir's snapshot.
 type keySource func(ctx context.Context, dir browser.UserDataDir, snap snapshot.Snapshot) (masterkey.Set, error)
 
-// Execute runs Capture, Extract, and Export one user data dir at a time, so at most one dir's copies are on disk. Its
-// error means the run could not finish, such as a failed output write; every other failure is a Result.
+// Execute handles one user data dir at a time, so at most one dir's copies are on disk.
+// Its error means the run could not finish; every other failure is a Result.
 func Execute(ctx context.Context, p Plan, req Request) (Summary, error) {
 	kc := loginKeychain(req)
 	keys := dumpKeys(req.Keys)
@@ -65,13 +63,11 @@ func announceOutput(out export.Output) {
 	}
 }
 
-// Count runs every planned extraction with no key and the keychain locked, and counts the records instead of exporting
-// them, which is all list --detail shows.
+// Count runs the plan with no key and the keychain locked, counting records instead of exporting them.
 func Count(ctx context.Context, p Plan, req Request) (Summary, error) {
 	return runner{w: discard{}, extractors: extractorsWith(loginKeychain(req)), keys: dumpKeys(nil)}.run(ctx, p)
 }
 
-// recordWriter takes each extraction's records as it finishes.
 type recordWriter interface {
 	Write(c category.Category, records []record.Record) error
 }
@@ -200,7 +196,6 @@ func closeSnapshot(d *snapshot.Dir) {
 	}
 }
 
-// collector stamps every record with its browser and profile, and keeps one extraction's output for the writer.
 type collector struct {
 	browser, profile string
 	records          []record.Record
@@ -221,8 +216,7 @@ func (c *collector) Fail(err error) {
 	log.Debugf("%s/%s: %v", c.browser, c.profile, err)
 }
 
-// result applies the outcome rules: a source that vanished after planning is absent, and problems with no record to
-// show for them are an error, while problems beside records are partial.
+// A source gone since planning is absent; failures with no record are an error, and beside records, partial.
 func (c *collector) result(e Extraction, err error) Result {
 	r := Result{Extraction: e, Count: len(c.records), Failed: c.failed}
 	switch {
@@ -240,8 +234,7 @@ func (c *collector) result(e Extraction, err error) Result {
 	return r
 }
 
-// dirKeys retrieves a user data dir's keys on first use and keeps them, and the error, for the dir's other profiles.
-// Go 1.20 has no sync.OnceValues.
+// dirKeys retrieves a dir's keys on first use, for all its profiles; Go 1.20 has no sync.OnceValues.
 type dirKeys struct {
 	once     sync.Once
 	retrieve func(context.Context) (masterkey.Set, error)

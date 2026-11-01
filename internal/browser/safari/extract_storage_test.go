@@ -14,10 +14,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// ---------------------------------------------------------------------------
-// readOriginBlock / readOriginFile
-// ---------------------------------------------------------------------------
-
 func TestReadOriginBlock_FirstParty(t *testing.T) {
 	data := encodeOriginFile("https://example.com", "https://example.com")
 	top, pos, err := readOriginBlock(data, 0)
@@ -40,8 +36,7 @@ func TestReadOriginBlock_NonDefaultPort(t *testing.T) {
 }
 
 func TestReadOriginBlock_Latin1HighByte(t *testing.T) {
-	// WebKit stores scheme/host records with encoding byte 0x01 = Latin-1. Verify high-byte
-	// bytes decode as Latin-1 (é = 0xE9) rather than being passed through as invalid UTF-8.
+	// Scheme and host records are Latin-1 (0x01), so é is 0xE9, not invalid UTF-8 passed through.
 	data := []byte{
 		0x04, 0x00, 0x00, 0x00, 0x01, 'h', 't', 't', 'p', // scheme "http"
 		0x04, 0x00, 0x00, 0x00, 0x01, 'c', 'a', 'f', 0xe9, // host "café" (Latin-1)
@@ -71,8 +66,7 @@ func TestReadOriginFile_FramePreferred(t *testing.T) {
 }
 
 func TestReadOriginFile_FallbackToTop(t *testing.T) {
-	// Write only the top-frame block — no frame follows. Extractor should still succeed by
-	// falling back to the top-frame origin.
+	// Only the top-frame block is written; the extractor falls back to it.
 	var buf []byte
 	buf = appendOriginBlock(buf, "https://example.com")
 	originPath := filepath.Join(t.TempDir(), "origin")
@@ -90,10 +84,6 @@ func TestReadOriginFile_Malformed(t *testing.T) {
 	_, err := readOriginFile(originPath)
 	require.Error(t, err)
 }
-
-// ---------------------------------------------------------------------------
-// decodeUTF16LE / decodeLocalStorageValue
-// ---------------------------------------------------------------------------
 
 func TestDecodeUTF16LE(t *testing.T) {
 	t.Run("ascii", func(t *testing.T) {
@@ -121,10 +111,6 @@ func TestDecodeLocalStorageValue_Truncates(t *testing.T) {
 	assert.Contains(t, got, "too long")
 	assert.Contains(t, got, "2048")
 }
-
-// ---------------------------------------------------------------------------
-// extractLocalStorage — end-to-end over real nested layout fixtures
-// ---------------------------------------------------------------------------
 
 func TestExtractLocalStorage_SingleOrigin(t *testing.T) {
 	root := buildTestLocalStorageDir(t, map[string][]testLocalStorageItem{
@@ -243,8 +229,7 @@ func TestExtractLocalStorage_SkipsSaltAndStrayFiles(t *testing.T) {
 }
 
 func TestExtractLocalStorage_SkipsFrameDirsWithoutDB(t *testing.T) {
-	// Partition dirs that only have "origin" but no LocalStorage/ subdir must not error out —
-	// real Safari has plenty of these (cookies-only partitions).
+	// Partition dirs with only an origin file are common (cookies-only) and must not fail the extraction.
 	root := filepath.Join(t.TempDir(), "Origins")
 	frameDir := filepath.Join(root, "topHash", "frameHash")
 	require.NoError(t, os.MkdirAll(frameDir, 0o755))
@@ -272,10 +257,6 @@ func TestExtractLocalStorage_EmptyRoot(t *testing.T) {
 	assert.Empty(t, entries)
 }
 
-// ---------------------------------------------------------------------------
-// NULL-key handling — readLocalStorageFile skips NULL keys.
-// ---------------------------------------------------------------------------
-
 func TestReadLocalStorageFile_SkipsNullKey(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "ls.sqlite3")
 	writeLocalStorageDB(t, dbPath, []testLocalStorageItem{
@@ -290,8 +271,7 @@ func TestReadLocalStorageFile_SkipsNullKey(t *testing.T) {
 }
 
 func TestReadLocalStorageFile_ReturnsRowsInKeyOrder(t *testing.T) {
-	// Rows are inserted in reverse alphabetical order; ORDER BY key, rowid in the extractor
-	// query must surface them ascending so exports are deterministic across runs.
+	// Rows go in reverse order; ORDER BY key, rowid must return them ascending so exports are deterministic.
 	dbPath := filepath.Join(t.TempDir(), "ls.sqlite3")
 	writeLocalStorageDB(t, dbPath, []testLocalStorageItem{
 		{Key: "zebra", Value: "z"},

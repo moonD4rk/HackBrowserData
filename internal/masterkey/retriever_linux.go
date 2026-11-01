@@ -19,11 +19,9 @@ var linuxParams = pbkdf2Params{
 	hashFunc:   sha1.New,
 }
 
-// One per prefix Chromium emits: v10 = PBKDF2("peanuts") when no keyring exists, v11 = PBKDF2(keyring secret).
-// A profile carries both if the host moved between headless and keyring sessions.
+// A profile holds both v10 and v11 values when its host moved between headless and keyring sessions.
 var platformRetrievers = []Retriever{posixRetriever{}, dbusRetriever{}}
 
-// dbusRetriever queries GNOME Keyring / KDE Wallet via D-Bus Secret Service.
 type dbusRetriever struct{}
 
 func (dbusRetriever) Version() Version { return V11 }
@@ -76,8 +74,7 @@ func (dbusRetriever) Retrieve(_ context.Context, loc Locator) ([]byte, error) {
 	return nil, fmt.Errorf("%q: %w", storage, errStorageNotFound)
 }
 
-// posixRetriever derives Chromium's kV10Key via PBKDF2 over the hardcoded "peanuts" password — the
-// deterministic v10 key used when no keyring exists (headless/Docker/CI). Mirrors PosixKeyProvider.
+// posixRetriever covers hosts without a keyring (headless, Docker, CI), mirroring Chromium's PosixKeyProvider.
 type posixRetriever struct{}
 
 func (posixRetriever) Version() Version { return V10 }

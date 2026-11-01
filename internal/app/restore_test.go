@@ -29,7 +29,6 @@ func vault(browserKey string) masterkey.Vault {
 	return masterkey.Vault{Browser: browserKey, Kind: "chromium", Keys: masterkey.Set{masterkey.V10: []byte(browserKey)}}
 }
 
-// layoutProfile lays out one restorable profile under root/<rel>.
 func layoutProfile(t *testing.T, root, rel string) {
 	t.Helper()
 	touch(t, root, filepath.FromSlash(rel), "Default", "Preferences")

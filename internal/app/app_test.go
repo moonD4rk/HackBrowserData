@@ -56,7 +56,6 @@ func TestValidate_RejectsBadInput(t *testing.T) {
 	}
 }
 
-// otherOSBrowser is a browser in the table that the running OS does not have.
 func otherOSBrowser(t *testing.T) string {
 	t.Helper()
 	for _, id := range []string{"sogou", "safari"} {

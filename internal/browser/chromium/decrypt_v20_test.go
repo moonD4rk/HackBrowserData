@@ -10,10 +10,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
-// TestDecryptValue_V20 is cross-platform because v20's ciphertext format
-// (AES-GCM with 12-byte nonce) is platform-independent; only the key source
-// (Chrome ABE on Windows) differs by OS. Running on Linux/macOS CI protects
-// the routing in decryptValue + crypto.DecryptChromiumGCM from regressions.
+// v20's format is the same on every OS, so CI on Linux and macOS guards its routing too.
 func TestDecryptValue_V20(t *testing.T) {
 	plaintext := []byte("v20_test_value")
 	nonce := []byte("v20_nonce_12") // 12-byte AES-GCM nonce
@@ -35,9 +32,7 @@ func TestDecryptValue_V20_ShortCiphertext(t *testing.T) {
 	require.Error(t, err)
 }
 
-// TestDecryptValue_V10_CrossHostGCM proves a v10 ciphertext sealed with a 32-byte
-// AES-256 key (a Windows-origin dump) decrypts via decryptValue on any host — the
-// core cross-OS guarantee. testAESKey is 16B, so this uses an explicit 32B key.
+// A v10 value sealed with a 32-byte key, as on Windows, decrypts on any host: the cross-OS guarantee.
 func TestDecryptValue_V10_CrossHostGCM(t *testing.T) {
 	key32 := []byte("0123456789abcdef0123456789abcdef") // 32 bytes
 	plaintext := []byte("v10_cross_host")

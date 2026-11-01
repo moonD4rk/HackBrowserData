@@ -12,7 +12,7 @@ import (
 
 var refTime = time.Date(2026, 1, 15, 10, 30, 0, 0, time.UTC)
 
-// allRecordTypes lists every record type. If a new record type is added, it must be included here.
+// allRecordTypes must list every record type, or a new one escapes these checks.
 var allRecordTypes = []record.Record{
 	&record.Login{},
 	&record.Cookie{},

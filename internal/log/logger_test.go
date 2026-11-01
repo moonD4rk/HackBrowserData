@@ -188,11 +188,9 @@ func TestDefaultLevelIsInfo(t *testing.T) {
 	var buf bytes.Buffer
 	logger := NewLogger(newBase(&buf))
 
-	// Debug should be suppressed at default level (InfoLevel).
 	logger.Debugf("debug msg")
 	assert.Empty(t, buf.String(), "Debug should be suppressed at default InfoLevel")
 
-	// Info should be visible at default level.
 	logger.Infof("info msg")
 	assert.Contains(t, buf.String(), "info msg")
 }

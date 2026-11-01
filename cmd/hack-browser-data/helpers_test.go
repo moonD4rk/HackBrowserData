@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// setHome points the commands' home directory at a fixture: HOME, and USERPROFILE, which Windows reads instead.
+// Windows reads USERPROFILE rather than HOME, so both point at the fixture.
 func setHome(t *testing.T, home string) {
 	t.Helper()
 	t.Setenv("HOME", home)

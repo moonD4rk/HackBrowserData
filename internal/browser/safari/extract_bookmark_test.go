@@ -63,7 +63,6 @@ func TestExtractBookmarks(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, bookmarks, 3)
 
-	// Verify folder assignment
 	assert.Equal(t, "GitHub", bookmarks[0].Name)
 	assert.Equal(t, "https://github.com", bookmarks[0].URL)
 	assert.Equal(t, "BookmarksBar", bookmarks[0].Folder)

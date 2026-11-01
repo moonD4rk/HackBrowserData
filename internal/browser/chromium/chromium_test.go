@@ -29,7 +29,6 @@ func touch(t *testing.T, parts ...string) {
 	require.NoError(t, os.WriteFile(path, []byte("{}"), 0o600))
 }
 
-// snapshotOf lays fixture files out as one user data dir's snapshot, keyed by their path relative to the dir.
 func snapshotOf(t *testing.T, files map[string]string) snapshot.Snapshot {
 	t.Helper()
 	root := t.TempDir()

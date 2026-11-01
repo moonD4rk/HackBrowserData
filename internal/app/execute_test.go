@@ -166,7 +166,6 @@ func TestExecute_HistoryNeverRetrievesKeys(t *testing.T) {
 	assert.Equal(t, 1, calls)
 }
 
-// At most one user data dir's copies are on disk: a dir's snapshot is removed before the next dir is captured.
 func TestExecute_RemovesEachSnapshotBeforeTheNextDir(t *testing.T) {
 	var captured []string
 	base := fakeBase(map[category.Category]extractFunc{

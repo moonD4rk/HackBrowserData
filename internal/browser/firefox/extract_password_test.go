@@ -13,8 +13,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// These values are from crypto/asn1pbe_test.go loginPBETestCases.
-// loginPBE hex decrypts to "Hello, World!" with globalSalt = "moond4rk" * 3.
+// From crypto's loginPBETestCases: decrypts to "Hello, World!" with globalSalt = "moond4rk" * 3.
 const loginPBEHex = "303b0410f8000000000000000000000000000001301506092a864886f70d010503040830313233343536370410fe968b6565149114ea688defd6683e45"
 
 var testGlobalSalt = bytes.Repeat([]byte("moond4rk"), 3) // 24 bytes
@@ -31,7 +30,6 @@ func loginPBEBase64(t *testing.T) string {
 func TestExtractPasswords(t *testing.T) {
 	encB64 := loginPBEBase64(t)
 
-	// Construct a logins.json with known encrypted username/password
 	json := fmt.Sprintf(`{
 		"logins": [
 			{
@@ -52,7 +50,6 @@ func TestExtractPasswords(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 
-	// Both username and password decrypt to "Hello, World!"
 	assert.Equal(t, "Hello, World!", got[0].Username)
 	assert.Equal(t, "Hello, World!", got[0].Password)
 	assert.Equal(t, "https://example.com/login", got[0].URL)
@@ -106,8 +103,8 @@ func TestExtractPasswords_DecryptFailureKeepsEntry(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, "https://bad.com", got[0].URL)
-	assert.Empty(t, got[0].Username) // decrypt failed → empty
-	assert.Empty(t, got[0].Password) // decrypt failed → empty
+	assert.Empty(t, got[0].Username)
+	assert.Empty(t, got[0].Password)
 	assert.Len(t, out.fails, 2)
 }
 

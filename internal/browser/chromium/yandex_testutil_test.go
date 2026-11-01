@@ -16,19 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ---------------------------------------------------------------------------
-// Yandex-specific SQLite schemas and test fixtures.
-//
-// Ya Passman Data:
-//   - meta(key, value)              holds local_encryptor_data
-//   - active_keys(key_id, sealed_key) non-empty sealed_key = master password set
-//   - logins(...)                   same column set as Chromium, minus columns we
-//                                   don't query, plus a signon_realm NOT NULL
-//
-// Ya Credit Cards:
-//   - meta(key, value)              holds its own local_encryptor_data
-//   - records(guid, public_data, private_data)
-// ---------------------------------------------------------------------------
+// Ya Passman Data holds meta, active_keys, and logins; Ya Credit Cards holds meta and records.
 
 const yandexLoginsSchema = `CREATE TABLE logins (
 	origin_url VARCHAR NOT NULL,
@@ -57,21 +45,15 @@ const yandexRecordsSchema = `CREATE TABLE records (
 	private_data BLOB
 )`
 
-// yandexTestNonce is a fixed 12-byte nonce used across fixtures so test failures
-// are easy to reproduce by hand. Real Yandex uses CSPRNG nonces per row.
+// A fixed nonce keeps failures reproducible by hand; Yandex itself draws a random one per row.
 var yandexTestNonce = bytes.Repeat([]byte{0x77}, 12)
 
-// yandexMasterKeyBlobNonce is a fixed 12-byte nonce for sealing the intermediate
-// data key inside meta.local_encryptor_data. Distinct from yandexTestNonce so a
-// test mix-up surfaces as a decrypt error rather than a false pass.
+// Distinct from yandexTestNonce, so mixing the two up fails to decrypt instead of passing.
 var yandexMasterKeyBlobNonce = bytes.Repeat([]byte{0xAB}, 12)
 
-// yandexSignatureForFixtures duplicates crypto.yandexSignature so tests can
-// construct blobs without the crypto package exporting its internal constant.
-// Protobuf header bytes: field1 varint=1, field2 len=32.
+// Protobuf header: field 1 varint 1, field 2 length 32.
 var yandexSignatureForFixtures = []byte{0x08, 0x01, 0x12, 0x20}
 
-// yandexSealAESGCM seals plaintext under (key, nonce, aad) using AES-GCM.
 func yandexSealAESGCM(t *testing.T, key, nonce, plaintext, aad []byte) []byte {
 	t.Helper()
 	block, err := aes.NewCipher(key)
@@ -81,9 +63,7 @@ func yandexSealAESGCM(t *testing.T, key, nonce, plaintext, aad []byte) []byte {
 	return aead.Seal(nil, nonce, plaintext, aad)
 }
 
-// buildYandexLocalEncryptorBlob produces the exact byte layout stored in
-// meta.local_encryptor_data: [preamble]"v10"[12B nonce][68B plaintext + 16B GCM tag].
-// The plaintext is signature (4B) + dataKey (32B) + zero padding to 68B.
+// meta.local_encryptor_data: preamble, "v10", nonce, then signature and key sealed and padded to 68 bytes.
 func buildYandexLocalEncryptorBlob(t *testing.T, masterKey, dataKey []byte) []byte {
 	t.Helper()
 	plaintext := append([]byte{}, yandexSignatureForFixtures...)
@@ -99,17 +79,12 @@ func buildYandexLocalEncryptorBlob(t *testing.T, masterKey, dataKey []byte) []by
 	return blob
 }
 
-// yandexPassword describes one row of test data for the logins table.
 type yandexPassword struct {
 	OriginURL, UsernameElem, UsernameVal, PasswordElem, SignonRealm, Password string
 	DateCreated                                                               int64
 }
 
-// setupYandexPasswordDB creates a Ya Passman Data SQLite file with meta,
-// active_keys, and logins populated. Each logins row is sealed under dataKey
-// using the same per-row AAD derivation the production extractor expects.
-// Set hasMasterPassword=true to simulate a profile protected by a master
-// password (a non-empty sealed_key row).
+// hasMasterPassword adds a non-empty sealed_key row, as a master-password profile has.
 func setupYandexPasswordDB(t *testing.T, masterKey, dataKey []byte, hasMasterPassword bool, rows ...yandexPassword) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "Ya Passman Data")
@@ -149,16 +124,12 @@ func setupYandexPasswordDB(t *testing.T, masterKey, dataKey []byte, hasMasterPas
 	return path
 }
 
-// yandexCreditCard describes one row of test data for the records table.
 type yandexCreditCard struct {
 	GUID                                     string
 	CardHolder, CardTitle, ExpYear, ExpMonth string
 	FullCardNumber, PinCode, SecretComment   string
 }
 
-// setupYandexCreditCardDB creates a Ya Credit Cards SQLite file with meta and
-// records populated. Each record's private_data is sealed under dataKey with
-// AAD = guid bytes, matching the production extractor.
 func setupYandexCreditCardDB(t *testing.T, masterKey, dataKey []byte, rows ...yandexCreditCard) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "Ya Credit Cards")

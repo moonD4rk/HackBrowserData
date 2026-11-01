@@ -72,12 +72,7 @@ func TestAESGCMDecrypt(t *testing.T) {
 	assert.Equal(t, plainText, decrypted)
 }
 
-// --- Bug-fix verification tests ---
-// These tests verify the fixes for known issues in the crypto primitives.
-// Tests marked with t.Skip document bugs that exist before the fix.
-
 func TestPkcs5Padding_NoMutation(t *testing.T) {
-	// pkcs5Padding should not mutate the original slice's backing array.
 	src := make([]byte, 3, 32) // len=3, cap=32 — append won't allocate
 	copy(src, "abc")
 	backup := make([]byte, cap(src))
@@ -85,7 +80,7 @@ func TestPkcs5Padding_NoMutation(t *testing.T) {
 
 	padded := pkcs5Padding(src, 16)
 	assert.Len(t, padded, 16)
-	assert.Equal(t, []byte("abc"), src) // original length unchanged
+	assert.Equal(t, []byte("abc"), src)
 
 	// The bytes beyond len(src) in the original backing array must not be touched.
 	current := make([]byte, cap(src))

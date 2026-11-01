@@ -9,14 +9,13 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/browser/safari"
 )
 
-// Discovery is what Discover found: the user data dirs, and an error result for each browser whose data could not be
-// read, which is reported rather than mistaken for absence.
+// Discovery holds an error result per browser whose data could not be read, so it is reported, not taken as absence.
 type Discovery struct {
 	Dirs   []browser.UserDataDir
 	Failed []Result
 }
 
-// Discover looks for the requested browsers on this machine. -p applies only when one browser is named.
+// Discover applies -p only when one browser is named.
 func Discover(req Request) Discovery {
 	var d Discovery
 	for _, def := range browser.Supported() {
@@ -36,9 +35,7 @@ func Discover(req Request) Discovery {
 	return d
 }
 
-// withData keeps the profiles holding a file some category reads, and the user data dirs with such a profile: a
-// Preferences marker alone is no data, so a profile created and never used is not listed, archived, or keyed. A
-// profile whose files cannot be checked stays, so the plan reports the error.
+// withData drops profiles holding no file any category reads, such as a bare Preferences, but keeps unreadable ones.
 func withData(dirs []browser.UserDataDir) []browser.UserDataDir {
 	extractors := extractorsWith(nil)
 	var out []browser.UserDataDir
@@ -69,8 +66,7 @@ func hasData(dir browser.UserDataDir, p browser.Profile, ex browser.Extractors) 
 	return false
 }
 
-// discover and extractorsWith dispatch on the base here, because the base packages import browser and so browser
-// cannot call them.
+// The base packages import browser, so the dispatch on Base lives here rather than in browser.
 func discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserDataDir, error) {
 	switch def.Base {
 	case browser.Chromium:

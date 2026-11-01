@@ -16,8 +16,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// SafariTabs.db lists profiles in bookmarks rows with subtype=2. external_uuid "DefaultProfile"
-// is the sentinel for the implicit default, which has no per-UUID directory.
+// Profiles are SafariTabs.db bookmarks rows with subtype=2; "DefaultProfile" is the default, which has no UUID dir.
 const (
 	safariTabsDBRelPath    = containerDir + "/Safari/SafariTabs.db"
 	safariProfileSubtype   = 2
@@ -34,15 +33,12 @@ var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-
 func namedProfiles(library string) []browser.Profile {
 	named, err := readNamedProfilesFromDB(library)
 	if err != nil {
-		// Empty DB (nil, nil) is authoritative; fall back only when DB itself is unreadable.
 		named = readNamedProfilesFromDir(library)
 	}
 	return named
 }
 
-// readNamedProfilesFromDB returns (nil, err) when the DB is missing/unreadable so the caller can
-// try the ReadDir fallback; (slice, nil) — possibly empty — is authoritative.
-// Discovery reads a snapshot copy, never the live file Safari has open.
+// A copy is read, never the live file Safari has open; (nil, err) means unreadable, any slice is authoritative.
 func readNamedProfilesFromDB(library string) ([]browser.Profile, error) {
 	d, err := snapshot.Temp()
 	if err != nil {
@@ -101,7 +97,7 @@ func readNamedProfilesFromDB(library string) ([]browser.Profile, error) {
 	return out, nil
 }
 
-// readNamedProfilesFromDir is the fallback for missing SafariTabs.db. Names are synthesized from UUIDs.
+// Names are synthesized from UUIDs when SafariTabs.db is missing.
 func readNamedProfilesFromDir(library string) []browser.Profile {
 	entries, err := os.ReadDir(filepath.Join(library, filepath.FromSlash(namedProfilesDir)))
 	if err != nil {
@@ -125,7 +121,6 @@ func newNamedProfile(upperUUID, title string) browser.Profile {
 
 func isCanonicalUUID(s string) bool { return uuidPattern.MatchString(s) }
 
-// resolveProfileName prefers the SafariTabs.db title, falling back to "profile-<uuid[:8]>".
 func resolveProfileName(title, upperUUID string) string {
 	if name := sanitizeProfileName(title); name != "" {
 		return name
@@ -141,7 +136,6 @@ func sanitizeProfileName(name string) string {
 	return unsafeNameChars.ReplaceAllString(name, "_")
 }
 
-// disambiguateNames appends "-2", "-3", … to duplicate names, in place.
 func disambiguateNames(profiles []browser.Profile) {
 	occurrences := make(map[string]int, len(profiles))
 	for i := range profiles {

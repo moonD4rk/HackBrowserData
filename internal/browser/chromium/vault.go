@@ -6,8 +6,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 )
 
-// A keys.json vault names its on-disk format by kind, so a reader without the browser in its table still picks the
-// forks' own files.
+// A vault names its on-disk format by kind, so a reader without the browser in its table still picks its files.
 const (
 	kindChromium = "chromium"
 	kindYandex   = "chromium-yandex"
@@ -22,7 +21,6 @@ var kinds = map[string]string{
 	"vought":   kindOpera,
 }
 
-// VaultKind is def's kind in keys.json.
 func VaultKind(def browser.Def) string {
 	if kind, ok := kinds[def.ID]; ok {
 		return kind

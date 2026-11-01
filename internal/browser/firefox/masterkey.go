@@ -37,32 +37,21 @@ func retrieveMasterKey(key4Path, loginsPath string) ([]byte, error) {
 	return nil, fmt.Errorf("derived %d key(s) but none could decrypt logins", len(keys))
 }
 
-// key4DB holds the parsed contents of Firefox's key4.db NSS key storage.
-//
-// Firefox stores the master encryption key in key4.db using two SQLite tables:
-//   - metaData: contains the global salt and an encrypted "password-check" marker
-//   - nssPrivate: contains one or more encrypted master key candidates
-//
-// Reference: https://searchfox.org/mozilla-central/source/security/nss/lib/softoken/
+// See https://searchfox.org/mozilla-central/source/security/nss/lib/softoken/ for key4.db's layout.
 type key4DB struct {
 	globalSalt    []byte       // metaData.item1: salt used as PBE decryption input
 	passwordCheck []byte       // metaData.item2: encrypted marker to verify DB integrity
 	privateKeys   []privateKey // nssPrivate rows: encrypted master key candidates
 }
 
-// privateKey is a single encrypted master key entry from nssPrivate.
 type privateKey struct {
 	encrypted []byte // a11: PBE-encrypted master key blob
 	typeTag   []byte // a102: key type identifier (must match nssKeyTypeTag)
 }
 
-// nssKeyTypeTag identifies valid master key entries in key4.db.
-// Only nssPrivate rows where a102 matches this tag contain actual master keys;
-// other rows may be certificates or other NSS objects.
-// See: https://searchfox.org/mozilla-central/source/security/nss/lib/softoken/pkcs11i.h
+// Only nssPrivate rows tagged with this a102 value hold keys; see softoken/pkcs11i.h in NSS.
 var nssKeyTypeTag = []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 
-// readKey4DB opens key4.db and parses it into a structured key4DB.
 func readKey4DB(path string) (*key4DB, error) {
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
@@ -101,8 +90,6 @@ func readKey4DB(path string) (*key4DB, error) {
 	return &record, nil
 }
 
-// deriveKeys verifies the database integrity via the password-check marker,
-// then decrypts all valid master key candidates.
 func (k *key4DB) deriveKeys() ([][]byte, error) {
 	if err := k.verifyPasswordCheck(); err != nil {
 		return nil, err
@@ -123,8 +110,6 @@ func (k *key4DB) deriveKeys() ([][]byte, error) {
 	return keys, nil
 }
 
-// verifyPasswordCheck decrypts the password-check marker from metaData
-// to confirm the database is valid and accessible.
 func (k *key4DB) verifyPasswordCheck() error {
 	pbe, err := crypto.NewASN1PBE(k.passwordCheck)
 	if err != nil {
@@ -140,7 +125,6 @@ func (k *key4DB) verifyPasswordCheck() error {
 	return nil
 }
 
-// decryptPrivateKey decrypts a single master key candidate using the global salt.
 func (k *key4DB) decryptPrivateKey(pk privateKey) ([]byte, error) {
 	pbe, err := crypto.NewASN1PBE(pk.encrypted)
 	if err != nil {
@@ -153,20 +137,16 @@ func (k *key4DB) decryptPrivateKey(pk privateKey) ([]byte, error) {
 	if len(derivedKey) < 24 {
 		return nil, fmt.Errorf("derived key too short: %d bytes (need >= 24)", len(derivedKey))
 	}
-	// Firefox 144+ uses AES-256-CBC instead of 3DES; the full derived key
-	// must be preserved to support modern cipher suites.
+	// Firefox 144+ uses AES-256-CBC, so the whole derived key is kept rather than 3DES's 24 bytes.
 	return derivedKey, nil
 }
 
-// encryptedLogin holds PBE-encrypted credentials from logins.json,
-// used as test samples for master key validation.
 type encryptedLogin struct {
-	username []byte // PBE-encrypted username blob
-	password []byte // PBE-encrypted password blob
+	username []byte
+	password []byte
 }
 
-// validateKeyWithLogins reads logins.json and returns the first key that
-// can successfully decrypt an actual login entry. Returns nil if no key matches.
+// validateKeyWithLogins returns nil when no key decrypts a login.
 func validateKeyWithLogins(keys [][]byte, loginsPath string) []byte {
 	raw, err := os.ReadFile(loginsPath)
 	if err != nil {
@@ -184,8 +164,7 @@ func validateKeyWithLogins(keys [][]byte, loginsPath string) []byte {
 	return nil
 }
 
-// sampleEncryptedLogins extracts up to 5 encrypted login entries from
-// logins.json as test samples for master key validation.
+// Up to 5 logins are enough to tell which key opens them.
 func sampleEncryptedLogins(raw []byte) []encryptedLogin {
 	arr := gjson.GetBytes(raw, "logins").Array()
 	var samples []encryptedLogin
@@ -206,8 +185,6 @@ func sampleEncryptedLogins(raw []byte) []encryptedLogin {
 	return samples
 }
 
-// tryDecryptLogins checks if masterKey can decrypt at least one encrypted
-// login entry (both username and password).
 func tryDecryptLogins(masterKey []byte, samples []encryptedLogin) bool {
 	for _, login := range samples {
 		userPBE, err := crypto.NewASN1PBE(login.username)

@@ -11,14 +11,8 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
-// eachRow opens a SQLite database, optionally disables journal mode (required
-// for Firefox databases), runs the query, and calls scanFn for each row.
-//
-// It validates the database file exists before opening to prevent sql.Open from
-// silently creating an empty database.
-//
-// scanFn should return nil to continue iteration, or an error to skip the current
-// row (the error is logged at debug level and iteration continues).
+// journalOff is for Firefox databases; the file is checked first so sql.Open never creates an empty one.
+// A row whose scanFn returns an error is skipped and logged at debug level.
 func eachRow(dbPath string, journalOff bool, query string, scanFn func(*sql.Rows) error) error {
 	if _, err := os.Stat(dbPath); err != nil {
 		return fmt.Errorf("database file: %w", err)

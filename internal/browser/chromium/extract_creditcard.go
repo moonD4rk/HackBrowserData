@@ -19,7 +19,6 @@ const (
 	yandexCreditCardQuery = `SELECT guid, public_data, private_data FROM records`
 )
 
-// yandexPublicData is the plaintext JSON in records.public_data.
 type yandexPublicData struct {
 	CardHolder      string `json:"card_holder"`
 	CardTitle       string `json:"card_title"`
@@ -27,7 +26,6 @@ type yandexPublicData struct {
 	ExpireDateMonth string `json:"expire_date_month"`
 }
 
-// yandexPrivateData is the AES-GCM-sealed JSON in records.private_data.
 type yandexPrivateData struct {
 	FullCardNumber string `json:"full_card_number"`
 	PinCode        string `json:"pin_code"`

@@ -60,7 +60,7 @@ make payload-clean   # rm internal/abe/payload/*.bin
 - **Error handling**: `fmt.Errorf("context: %w", err)` for wrapping, never `_ =` to ignore errors
 - **Logging**: `log.Debugf` for record-level diagnostics, `log.Infof` for user-facing progress/status, `log.Warnf` for unexpected conditions. Extract methods should return errors, not log them.
 - **Naming**: follow Go conventions and the settled names in `rfcs/004-naming-decisions.md` — `Def` not `BrowserConfig`, `Extract` not `BrowsingData`
-- **Comment width**: wrap comments at 140 columns (matches `.golangci.yml` `lll.line-length`)
+- **Comments**: none by default; when one is needed, one line of at most 120 characters that says why, never what the code does (up to 3 lines only when the reason cannot fit)
 - **Tests**: `internal/browser/browsertest` builds real fixture files (SQLite, JSON, LevelDB, plist) into a `t.TempDir()` — never a live browser, never a database mock; goldens live in each package's `testdata/` and `HBD_UPDATE_GOLDEN=1 go test ./...` regenerates them
 - **Architecture**: see `rfcs/README.md` — design RFCs 000–011, format and technique RFCs 013–021
 

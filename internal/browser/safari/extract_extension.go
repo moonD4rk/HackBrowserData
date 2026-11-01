@@ -13,21 +13,11 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// Safari keeps extensions in two sibling plists under the container's Safari dir:
-//
-//	Safari/AppExtensions/Extensions.plist   — legacy App Extensions (XPC-based)
-//	Safari/WebExtensions/Extensions.plist   — modern Safari Web Extensions
-//
-// Both files share the same top-level shape: a dictionary keyed by
-// "<bundleID> (<teamID>)". Only WebExtensions carry an `Enabled` field;
-// an App Extension that appears in the plist is implicitly enabled.
-// extensionKeyPattern matches the "<bundleID> (<teamID>)" key format Safari uses.
+// Safari keeps App Extensions and Web Extensions in two plists keyed by "<bundleID> (<teamID>)".
+// Only Web Extensions carry Enabled; a listed App Extension is enabled.
 var extensionKeyPattern = regexp.MustCompile(`^(\S+)\s+\(([^)]+)\)$`)
 
-// safariExtension mirrors the per-extension dict value in Extensions.plist.
-// Only fields that map onto record.Extension are decoded; richer fields
-// (Permissions, AccessibleOrigins, …) are intentionally ignored for the
-// minimum implementation.
+// Only the fields record.Extension needs are decoded.
 type safariExtension struct {
 	Enabled *bool `plist:"Enabled"`
 }
@@ -97,8 +87,7 @@ func decodeSafariExtensionsPlist(path string) ([]extensionRecord, error) {
 	return records, nil
 }
 
-// bundleIDFromExtensionKey extracts the bundle ID from a "<bundleID> (<teamID>)"
-// key; falls back to the trimmed full key when the format doesn't match.
+// A key that does not match the pattern falls back to the whole trimmed key.
 func bundleIDFromExtensionKey(key string) string {
 	if m := extensionKeyPattern.FindStringSubmatch(key); m != nil {
 		return m[1]

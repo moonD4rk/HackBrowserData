@@ -7,8 +7,6 @@ import (
 	"fmt"
 )
 
-// AESCBCEncrypt encrypts data using AES-CBC mode with PKCS5 padding.
-// Supports all AES key sizes: 16 bytes (AES-128), 24 bytes (AES-192), or 32 bytes (AES-256).
 func AESCBCEncrypt(key, iv, plaintext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -17,8 +15,6 @@ func AESCBCEncrypt(key, iv, plaintext []byte) ([]byte, error) {
 	return cbcEncrypt(block, iv, plaintext)
 }
 
-// AESCBCDecrypt decrypts data using AES-CBC mode with PKCS5 unpadding.
-// Supports all AES key sizes: 16 bytes (AES-128), 24 bytes (AES-192), or 32 bytes (AES-256).
 func AESCBCDecrypt(key, iv, ciphertext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -27,7 +23,6 @@ func AESCBCDecrypt(key, iv, ciphertext []byte) ([]byte, error) {
 	return cbcDecrypt(block, iv, ciphertext)
 }
 
-// DES3Encrypt encrypts data using 3DES-CBC mode with PKCS5 padding.
 func DES3Encrypt(key, iv, plaintext []byte) ([]byte, error) {
 	block, err := des.NewTripleDESCipher(key)
 	if err != nil {
@@ -36,7 +31,6 @@ func DES3Encrypt(key, iv, plaintext []byte) ([]byte, error) {
 	return cbcEncrypt(block, iv, plaintext)
 }
 
-// DES3Decrypt decrypts data using 3DES-CBC mode with PKCS5 unpadding.
 func DES3Decrypt(key, iv, ciphertext []byte) ([]byte, error) {
 	block, err := des.NewTripleDESCipher(key)
 	if err != nil {
@@ -47,7 +41,6 @@ func DES3Decrypt(key, iv, ciphertext []byte) ([]byte, error) {
 
 const gcmNonceSize = 12
 
-// AESGCMEncrypt encrypts data using AES-GCM mode.
 func AESGCMEncrypt(key, nonce, plaintext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -63,7 +56,6 @@ func AESGCMEncrypt(key, nonce, plaintext []byte) ([]byte, error) {
 	return aead.Seal(nil, nonce, plaintext, nil), nil
 }
 
-// AESGCMDecrypt decrypts data using AES-GCM mode.
 func AESGCMDecrypt(key, nonce, ciphertext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -79,8 +71,7 @@ func AESGCMDecrypt(key, nonce, ciphertext []byte) ([]byte, error) {
 	return aead.Open(nil, nonce, ciphertext, nil)
 }
 
-// AESGCMDecryptBlob decrypts a blob shaped as [12B nonce][ciphertext+16B GCM tag] with caller-supplied AAD.
-// Used by protocols that wrap AES-GCM output with a fixed-length nonce prefix (Yandex passwords/cards).
+// blob is [12-byte nonce][ciphertext + 16-byte tag], as Yandex stores it.
 func AESGCMDecryptBlob(key, blob, aad []byte) ([]byte, error) {
 	if len(blob) < gcmNonceSize {
 		return nil, errShortCiphertext
@@ -139,8 +130,7 @@ func paddingZero(src []byte, length int) []byte {
 	return dst
 }
 
-// pkcs5Padding adds PKCS5/PKCS7 padding to src.
-// Always returns a new slice; never modifies src.
+// pkcs5Padding always returns a new slice and never modifies src.
 func pkcs5Padding(src []byte, blockSize int) []byte {
 	n := blockSize - (len(src) % blockSize)
 	dst := make([]byte, len(src)+n)

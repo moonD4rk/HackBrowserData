@@ -40,8 +40,7 @@ func reverseString(s string) string {
 	return string(b)
 }
 
-// parseOriginKey converts Firefox's reversed origin format to a URL.
-// Example: "moc.buhtig.:https:443" → "https://github.com:443"
+// Firefox reverses the host: "moc.buhtig.:https:443" is https://github.com:443.
 func parseOriginKey(originKey string) string {
 	parts := strings.SplitN(originKey, ":", 3)
 	if len(parts) < 2 {
