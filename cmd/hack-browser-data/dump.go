@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io"
 
 	"github.com/spf13/cobra"
 
@@ -21,7 +22,7 @@ func dumpCmd() *cobra.Command {
   hack-browser-data dump -f cookie-editor
   hack-browser-data dump --zip`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runDump(cmd.Context(), f)
+			return runDump(cmd.Context(), cmd.ErrOrStderr(), f)
 		},
 	}
 
@@ -42,7 +43,7 @@ func keychainPasswordFlags(cmd *cobra.Command, f *app.Flags) {
 	cmd.MarkFlagsMutuallyExclusive("keychain-pw", "keychain-pw-stdin")
 }
 
-func runDump(ctx context.Context, f app.Flags) error {
+func runDump(ctx context.Context, stderr io.Writer, f app.Flags) error {
 	req, err := app.Validate(f)
 	if err != nil {
 		return err
@@ -50,14 +51,14 @@ func runDump(ctx context.Context, f app.Flags) error {
 	d := app.Discover(req)
 	if len(d.Dirs) == 0 {
 		if len(d.Failed) > 0 {
-			report(app.Summary{Results: d.Failed})
+			report(stderr, app.Summary{Results: d.Failed})
 		}
 		log.Warnf("no browsers found")
 		return nil
 	}
 	summary, err := app.Execute(ctx, app.NewPlan(d, req), req)
 	if ctx.Err() == nil {
-		report(summary)
+		report(stderr, summary)
 	}
 	return err
 }

@@ -84,3 +84,11 @@ func TestProfileSnapshotMasterKeys(t *testing.T) {
 	assert.Equal(t, want, ps.MasterKeys(context.Background()))
 	assert.Equal(t, 1, calls)
 }
+
+func TestSource_Candidates(t *testing.T) {
+	p := Profile{Name: "Default", Dir: "Default"}
+	assert.Equal(t, []string{"Default/Network/Cookies", "Default/Cookies"}, Source{Paths: []string{"Network/Cookies", "Cookies"}}.Candidates(p))
+	assert.Equal(t, []string{"Local State"}, Source{Paths: []string{"Local State"}, Shared: true}.Candidates(p))
+	assert.Equal(t, []string{"History"}, Source{Paths: []string{"History"}}.Candidates(Profile{Name: "default"}),
+		"a user data dir that is itself the profile")
+}

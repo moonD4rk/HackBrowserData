@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -334,6 +335,20 @@ func TestClose_AfterFailedWriteKeepsEarlierFiles(t *testing.T) {
 	var cookies []record.Cookie
 	readJSON(t, filepath.Join(dir, "cookie.json"), &cookies)
 	assert.Empty(t, cookies)
+	assert.Zero(t, w.Output(), "a failed run lists nothing")
+}
+
+func TestClose_OutputListsTheFilesInCategoryOrder(t *testing.T) {
+	dir := t.TempDir()
+	w, err := NewWriter(dir, JSON, false)
+	require.NoError(t, err)
+	require.NoError(t, w.Write(category.History, []record.Record{&record.History{URL: "https://a.example"}}))
+	require.NoError(t, w.Write(category.Password, []record.Record{
+		&record.Login{URL: "https://b.example"}, &record.Login{URL: "https://c.example"},
+	}))
+	require.NoError(t, w.Close())
+
+	assert.Equal(t, Output{Dir: dir, Files: []File{{Name: "password.json", Count: 2}, {Name: "history.json", Count: 1}}}, w.Output())
 }
 
 // --- --zip ---
@@ -367,6 +382,29 @@ func TestClose_ZipFailureKeepsTheFiles(t *testing.T) {
 
 	require.Error(t, zipAll(dir, chromeExtractions()...))
 	assert.Equal(t, []string{"cookie.csv", "history.csv", "password.csv", "results.zip"}, dirNames(t, dir))
+}
+
+func TestClose_ZipOutputNamesTheArchive(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "results")
+	w, err := NewWriter(dir, CSV, true)
+	require.NoError(t, err)
+	require.NoError(t, w.Write(category.Password, []record.Record{&record.Login{URL: "https://a.example"}}))
+	require.NoError(t, w.Close())
+
+	assert.Equal(t, Output{Dir: dir, Files: []File{{Name: "password.csv", Count: 1}}, Zip: "results.zip"}, w.Output())
+}
+
+// The zip holds the same records as the category files, so it gets their owner-only mode.
+func TestClose_ZipIsOwnerOnly(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows has no mode bits to check")
+	}
+	dir := filepath.Join(t.TempDir(), "results")
+	require.NoError(t, zipAll(dir, chromeExtractions()...))
+
+	info, err := os.Stat(filepath.Join(dir, "results.zip"))
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
 }
 
 func TestClose_ZipWithNothingWrittenFails(t *testing.T) {

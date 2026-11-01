@@ -54,7 +54,7 @@ Enumerates which supported browsers are present and which profiles each one has,
 
 ### 3. Plan
 
-The cross product. For each user data dir, each profile, and each requested category, the profile's `Extractors` say whether the category is supported and which source files it needs. Plan turns that into a flat list of `Extraction`s, a `Skipped` list with a reason for every requested pair that can't run (`unsupported` by this browser, `absent` on disk) plus Discover's failures, and the union of files to capture, deduplicated by user data dir and path — so a file two categories share (Chromium `History` feeds both history and downloads) is copied once (v1.1.0 copied it twice). Plan only stats files; it opens nothing. A `Plan` is plain data, with no functions inside, so `list` prints it and tests compare it.
+The cross product. For each user data dir, each profile, and each requested category, the profile's `Extractors` say whether the category is supported and which source files it needs. Plan turns that into a flat list of `Extraction`s, a `Skipped` list with a reason for every requested pair that can't run (`unsupported` by this browser, `absent` on disk, `error` when a file cannot be checked) plus Discover's failures, and the union of files to capture, deduplicated by user data dir and path — so a file two categories share (Chromium `History` feeds both history and downloads) is copied once (v1.1.0 copied it twice). Plan only stats files; it opens nothing. A `Plan` is plain data, with no functions inside, so `list` prints it and tests compare it.
 
 **In:** an `app.Discovery` + `app.Request`. **Out:** `app.Plan{Dirs, Files, Extractions, Skipped}`. **Owner:** `app.NewPlan`.
 
@@ -96,7 +96,7 @@ Every extraction resolves to exactly one outcome. This is the single most import
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
 | `ok`          | Ran with no record-level problems. A source with no rows is `ok` with zero records, not `absent`.                                      | 224 cookies decrypted.                   |
 | `partial`     | Ran and emitted records, but reported record-level problems — a secret that could not be recovered, a row that could not be parsed.    | 224 cookies, 4 with an empty value.      |
-| `absent`      | Supported, but a required source wasn't on disk, or none of its optional ones was.                                                     | Browser installed, no `Login Data` file. |
+| `absent`      | Supported, but a required source wasn't on disk, or none of its optional ones was; an unreadable one is `error`.                       | Browser installed, no `Login Data` file. |
 | `unsupported` | This browser can't produce this category.                                                                                              | Firefox credit cards.                    |
 | `error`       | Failed as a whole: the extractor returned an error, a source failed to copy, or problems were reported and no record could be emitted. | Snapshot copy failed.                    |
 

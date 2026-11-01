@@ -20,9 +20,10 @@ type Writer struct{ /* unexported */ }
 func NewWriter(dir string, f Format, zip bool) (*Writer, error)
 func (w *Writer) Write(c category.Category, records []record.Record) error // one extraction's records, appended in plan order
 func (w *Writer) Close() error                                             // finishes every file; with --zip, packs them
+func (w *Writer) Output() Output                                           // what a clean Close left: the files, their counts, the zip
 ```
 
-Export writes one file per non-empty category: `password.csv`, `cookie.json`, and so on — `<category>.<ext>`, where the extension is `csv` or `json` (`cookie-editor` writes `.json`). A category with no records produces no file. The output directory is created with mode `0750` and each file with `0600`, as in v1.1.0. One `-f` value per run, as in v1.1.0.
+Export writes one file per non-empty category: `password.csv`, `cookie.json`, and so on — `<category>.<ext>`, where the extension is `csv` or `json` (`cookie-editor` writes `.json`). A category with no records produces no file. The output directory is created with mode `0750` and each file with `0600`, as in v1.1.0; the `--zip` archive gets `0600` too, where v1.1.0 created it `0666` before the umask, usually readable by every local user. `Close` itself prints nothing: `Output` lists the files with their record counts and the zip, and `app` prints the "Exported to" lines from it. One `-f` value per run, as in v1.1.0.
 
 ## Formats
 

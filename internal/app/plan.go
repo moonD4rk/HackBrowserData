@@ -1,8 +1,9 @@
 package app
 
 import (
+	"errors"
+	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
@@ -48,7 +49,11 @@ func newPlan(d Discovery, req Request, extractors extractorsFunc) Plan {
 					p.Skipped = append(p.Skipped, Result{Extraction: e, Outcome: OutcomeUnsupported})
 					continue
 				}
-				files, ok := locate(dir, prof, x.Sources)
+				files, ok, err := locate(dir, prof, x.Sources)
+				if err != nil {
+					p.Skipped = append(p.Skipped, Result{Extraction: e, Outcome: OutcomeError, Err: err})
+					continue
+				}
 				if !ok {
 					p.Skipped = append(p.Skipped, Result{Extraction: e, Outcome: OutcomeAbsent})
 					continue
@@ -68,35 +73,37 @@ func newPlan(d Discovery, req Request, extractors extractorsFunc) Plan {
 
 // locate finds each source's first candidate on disk. An extraction needs every required source and at least one of
 // the profile's own; a shared one such as Local State never makes it present by itself. An extraction that reads no
-// file, such as Safari's keychain passwords, always runs.
-func locate(dir browser.UserDataDir, p browser.Profile, sources []browser.Source) ([]snapshot.File, bool) {
+// file, such as Safari's keychain passwords, always runs. A candidate that cannot be checked is an error, not absence.
+func locate(dir browser.UserDataDir, p browser.Profile, sources []browser.Source) ([]snapshot.File, bool, error) {
 	if len(sources) == 0 {
-		return nil, true
+		return nil, true, nil
 	}
 	var files []snapshot.File
 	present := false
 	for _, src := range sources {
-		f, ok := firstOnDisk(dir, p, src)
+		f, ok, err := firstOnDisk(dir, p, src)
 		switch {
+		case err != nil:
+			return nil, false, err
 		case ok:
 			files = append(files, f)
 			present = present || !src.Shared
 		case !src.Optional:
-			return nil, false
+			return nil, false, nil
 		}
 	}
-	return files, present
+	return files, present, nil
 }
 
-func firstOnDisk(dir browser.UserDataDir, p browser.Profile, src browser.Source) (snapshot.File, bool) {
-	for _, rel := range src.Paths {
-		if !src.Shared {
-			rel = path.Join(p.Dir, rel)
-		}
+func firstOnDisk(dir browser.UserDataDir, p browser.Profile, src browser.Source) (snapshot.File, bool, error) {
+	for _, rel := range src.Candidates(p) {
 		info, err := os.Stat(filepath.Join(dir.Path, filepath.FromSlash(rel)))
-		if err == nil && info.IsDir() == src.IsDir {
-			return snapshot.File{DirID: string(dir.ID), From: dir.Path, Rel: rel, IsDir: src.IsDir}, true
+		switch {
+		case err == nil && info.IsDir() == src.IsDir:
+			return snapshot.File{DirID: string(dir.ID), From: dir.Path, Rel: rel, IsDir: src.IsDir}, true, nil
+		case err != nil && !errors.Is(err, fs.ErrNotExist):
+			return snapshot.File{}, false, err
 		}
 	}
-	return snapshot.File{}, false
+	return snapshot.File{}, false, nil
 }

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 
@@ -128,4 +129,10 @@ func TestABERowsMatchPayloadTable(t *testing.T) {
 			assert.Equalf(t, w.ABE, kind, "%s: com_iid.c dispatches %s as another ABE kind", d.ID, w.Exe)
 		}
 	}
+}
+
+func TestIDs_AreSupportedSorted(t *testing.T) {
+	ids := IDs()
+	assert.True(t, sort.StringsAreSorted(ids), "the -b help has always listed them sorted")
+	assert.ElementsMatch(t, idsOn(Def.Platform), ids)
 }

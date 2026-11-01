@@ -39,7 +39,7 @@ func TestLoggerDebug(t *testing.T) {
 			var buf bytes.Buffer
 			logger := NewLogger(newBase(&buf))
 			logger.SetLevel(DebugLevel)
-			logger.Debug(message)
+			logger.Debugf("%s", message)
 			got := buf.String()
 			assert.Regexp(t, tc.wantedPattern, got)
 		})
@@ -55,7 +55,7 @@ func TestLoggerInfo(t *testing.T) {
 		t.Run(tc.description, func(t *testing.T) {
 			var buf bytes.Buffer
 			logger := NewLogger(newBase(&buf))
-			logger.Info(message)
+			logger.Infof("%s", message)
 			got := buf.String()
 			assert.Regexp(t, tc.wantedPattern, got)
 		})
@@ -71,52 +71,9 @@ func TestLoggerWarn(t *testing.T) {
 		t.Run(tc.description, func(t *testing.T) {
 			var buf bytes.Buffer
 			logger := NewLogger(newBase(&buf))
-			logger.Warn(message)
+			logger.Warnf("%s", message)
 			got := buf.String()
 			assert.Regexp(t, tc.wantedPattern, got)
-		})
-	}
-}
-
-func TestLoggerError(t *testing.T) {
-	for _, tc := range baseTestCases {
-		tc := tc
-		tc.level = ErrorLevel
-		message := tc.message + tc.suffix
-		tc.wantedPattern = fmt.Sprintf(`^\[ERR\] %s\n$`, tc.message)
-		t.Run(tc.description, func(t *testing.T) {
-			var buf bytes.Buffer
-			logger := NewLogger(newBase(&buf))
-			logger.Error(message)
-			got := buf.String()
-			assert.Regexp(t, tc.wantedPattern, got)
-		})
-	}
-}
-
-func TestLoggerFatal(t *testing.T) {
-	originalOsExit := osExit
-	defer func() { osExit = originalOsExit }()
-
-	for _, tc := range baseTestCases {
-		tc := tc
-		tc.level = FatalLevel
-		message := tc.message + tc.suffix
-		tc.wantedPattern = fmt.Sprintf(`^\[FTL\] %s\n$`, tc.message)
-		t.Run(tc.description, func(t *testing.T) {
-			var buf bytes.Buffer
-			exitCalled := false
-			exitCode := 0
-			osExit = func(code int) {
-				exitCalled = true
-				exitCode = code
-			}
-			logger := NewLogger(newBase(&buf))
-			logger.Fatal(message)
-			got := buf.String()
-			assert.Regexp(t, tc.wantedPattern, got)
-			assert.True(t, exitCalled)
-			assert.Equal(t, 1, exitCode)
 		})
 	}
 }
@@ -196,63 +153,16 @@ func TestLoggerWarnf(t *testing.T) {
 	}
 }
 
-func TestLoggerErrorf(t *testing.T) {
-	for _, tc := range formatTestCases {
-		tc := tc
-		tc.level = ErrorLevel
-		message := fmt.Sprintf(tc.format, tc.args...)
-		tc.wantedPattern = fmt.Sprintf(`^\[ERR\] %s\n$`, message)
-		t.Run(tc.description, func(t *testing.T) {
-			var buf bytes.Buffer
-			logger := NewLogger(newBase(&buf))
-			logger.Errorf(tc.format, tc.args...)
-			got := buf.String()
-			assert.Regexp(t, tc.wantedPattern, got)
-		})
-	}
-}
-
-func TestLoggerFatalf(t *testing.T) {
-	originalOsExit := osExit
-	defer func() { osExit = originalOsExit }()
-	for _, tc := range formatTestCases {
-		tc := tc
-		tc.level = FatalLevel
-		message := fmt.Sprintf(tc.format, tc.args...)
-		tc.wantedPattern = fmt.Sprintf(`^\[FTL\] %s\n$`, message)
-		t.Run(tc.description, func(t *testing.T) {
-			var buf bytes.Buffer
-			exitCalled := false
-			exitCode := 0
-			osExit = func(code int) {
-				exitCalled = true
-				exitCode = code
-			}
-			logger := NewLogger(newBase(&buf))
-			logger.Fatalf(tc.format, tc.args...)
-			got := buf.String()
-			assert.Regexp(t, tc.wantedPattern, got)
-			assert.True(t, exitCalled)
-			assert.Equal(t, 1, exitCode)
-		})
-	}
-}
-
 func TestLoggerWithLowerLevels(t *testing.T) {
-	originalOsExit := osExit
-	defer func() { osExit = originalOsExit }()
-
-	levels := []Level{DebugLevel, InfoLevel, WarnLevel, ErrorLevel, FatalLevel}
+	levels := []Level{DebugLevel, InfoLevel, WarnLevel}
 	ops := []struct {
 		op      string
 		level   Level
 		logFunc func(*Logger)
 	}{
-		{"Debug", DebugLevel, func(l *Logger) { l.Debug("hello") }},
-		{"Info", InfoLevel, func(l *Logger) { l.Info("hello") }},
-		{"Warn", WarnLevel, func(l *Logger) { l.Warn("hello") }},
-		{"Error", ErrorLevel, func(l *Logger) { l.Error("hello") }},
-		{"Fatal", FatalLevel, func(l *Logger) { l.Fatal("hello") }},
+		{"Debugf", DebugLevel, func(l *Logger) { l.Debugf("hello") }},
+		{"Infof", InfoLevel, func(l *Logger) { l.Infof("hello") }},
+		{"Warnf", WarnLevel, func(l *Logger) { l.Warnf("hello") }},
 	}
 
 	for _, setLevel := range levels {
@@ -262,10 +172,6 @@ func TestLoggerWithLowerLevels(t *testing.T) {
 			logger.SetLevel(setLevel)
 
 			expectedOutput := op.level >= setLevel
-			exitCalled := false
-			osExit = func(code int) {
-				exitCalled = true
-			}
 			op.logFunc(logger)
 
 			output := buf.String()
@@ -273,9 +179,6 @@ func TestLoggerWithLowerLevels(t *testing.T) {
 				assert.NotEmpty(t, output, "setLevel=%s op=%s should produce output", setLevel, op.op)
 			} else {
 				assert.Empty(t, output, "setLevel=%s op=%s should be suppressed", setLevel, op.op)
-			}
-			if op.op == "Fatal" && expectedOutput {
-				assert.True(t, exitCalled, "Fatal should call osExit")
 			}
 		}
 	}
@@ -286,11 +189,11 @@ func TestDefaultLevelIsInfo(t *testing.T) {
 	logger := NewLogger(newBase(&buf))
 
 	// Debug should be suppressed at default level (InfoLevel).
-	logger.Debug("debug msg")
+	logger.Debugf("debug msg")
 	assert.Empty(t, buf.String(), "Debug should be suppressed at default InfoLevel")
 
 	// Info should be visible at default level.
-	logger.Info("info msg")
+	logger.Infof("info msg")
 	assert.Contains(t, buf.String(), "info msg")
 }
 
@@ -298,7 +201,7 @@ func TestDebugIncludesFileLine(t *testing.T) {
 	var buf bytes.Buffer
 	logger := NewLogger(newBase(&buf))
 	logger.SetLevel(DebugLevel)
-	logger.Debug("test location")
+	logger.Debugf("test location")
 	got := buf.String()
 	assert.Regexp(t, `^\[DBG\] logger_test\.go:\d+: test location\n$`, got)
 }
@@ -306,14 +209,14 @@ func TestDebugIncludesFileLine(t *testing.T) {
 func TestInfoHasLabel(t *testing.T) {
 	var buf bytes.Buffer
 	logger := NewLogger(newBase(&buf))
-	logger.Info("clean message")
+	logger.Infof("clean message")
 	assert.Equal(t, "[INF] clean message\n", buf.String())
 }
 
 func TestMultilineMessageIndented(t *testing.T) {
 	var buf bytes.Buffer
 	logger := NewLogger(newBase(&buf))
-	logger.Warn("line1\nline2\nline3")
+	logger.Warnf("line1\nline2\nline3")
 	got := buf.String()
 	assert.Equal(t, "[WRN] line1\n      line2\n      line3\n", got)
 }

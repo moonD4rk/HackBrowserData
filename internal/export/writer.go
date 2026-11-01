@@ -11,7 +11,6 @@ import (
 	"sort"
 
 	"github.com/moond4rk/hackbrowserdata/internal/category"
-	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
@@ -21,6 +20,19 @@ type Writer struct {
 	compress bool
 	files    map[category.Category]*categoryFile
 	failed   bool
+	out      Output
+}
+
+// Output is what a clean Close left in the output dir: each category file in category order, and the zip with --zip.
+type Output struct {
+	Dir   string
+	Files []File
+	Zip   string
+}
+
+type File struct {
+	Name  string
+	Count int // records written
 }
 
 type categoryFile struct {
@@ -71,12 +83,16 @@ func (w *Writer) write(c category.Category, records []record.Record) error {
 	return nil
 }
 
-// Close finishes the files even after a failed Write, so they keep what was written; only a clean run lists them.
+// Close finishes the files even after a failed Write, so they keep what was written; only a clean run lists them in Output.
 func (w *Writer) Close() error {
-	var errs []error
+	var (
+		errs  []error
+		files []File
+	)
 	for _, c := range category.All() {
 		if cf, ok := w.files[c]; ok {
 			errs = append(errs, cf.close())
+			files = append(files, File{Name: cf.name, Count: cf.count})
 		}
 	}
 	if err := errors.Join(errs...); err != nil {
@@ -91,17 +107,15 @@ func (w *Writer) Close() error {
 		}
 		return nil
 	}
-	fmt.Fprintln(os.Stderr)
-	log.Infof("Exported to %s/", w.dir)
-	for _, c := range category.All() {
-		if cf, ok := w.files[c]; ok {
-			log.Infof("  %-24s %d entries", cf.name, cf.count)
-		}
-	}
+	w.out = Output{Dir: w.dir, Files: files}
 	if w.compress {
 		return w.pack()
 	}
 	return nil
+}
+
+func (w *Writer) Output() Output {
+	return w.out
 }
 
 // pack removes the loose files only after the zip is in place, so a failure leaves every one of them where it was.
@@ -120,13 +134,13 @@ func (w *Writer) pack() error {
 			return fmt.Errorf("compress: remove %s: %w", name, err)
 		}
 	}
-	log.Infof("Compressed: %s/%s", w.dir, zipName)
+	w.out.Zip = zipName
 	return nil
 }
 
 // writeZip writes the zip under a temp name beside dst and renames it into place once it is complete.
 func writeZip(dst, dir string, names []string) (err error) {
-	tmp, err := os.OpenFile(dst+".tmp", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
+	tmp, err := os.OpenFile(dst+".tmp", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return fmt.Errorf("create %s: %w", dst, err)
 	}

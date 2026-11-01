@@ -2,7 +2,11 @@
 // and the extractors that read them.
 package browser
 
-import "github.com/moond4rk/hackbrowserdata/internal/masterkey"
+import (
+	"sort"
+
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
+)
 
 // Def is one browser HBD knows. ID is the -b value and the keys.json vault key; Name is stamped on every record.
 type Def struct {
@@ -56,6 +60,17 @@ func Supported() []Def {
 		}
 	}
 	return out
+}
+
+// IDs are this OS's browser IDs, sorted as the -b help has always listed them.
+func IDs() []string {
+	defs := Supported()
+	ids := make([]string, len(defs))
+	for i, d := range defs {
+		ids[i] = d.ID
+	}
+	sort.Strings(ids)
+	return ids
 }
 
 // Lookup finds a browser by ID in the whole table, whatever the running OS, so restore resolves another host's vaults.

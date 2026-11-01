@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/spf13/cobra"
 
@@ -22,7 +23,7 @@ func restoreCmd() *cobra.Command {
   hack-browser-data restore --keys keys.json --data-dir ./chrome-userdata -b chrome
   ssh origin "hack-browser-data dumpkeys" | hack-browser-data restore --keys - --data-zip data.zip`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runRestore(cmd.Context(), f)
+			return runRestore(cmd.Context(), cmd.ErrOrStderr(), f)
 		},
 	}
 
@@ -41,7 +42,7 @@ func restoreCmd() *cobra.Command {
 	return cmd
 }
 
-func runRestore(ctx context.Context, f app.RestoreFlags) error {
+func runRestore(ctx context.Context, stderr io.Writer, f app.RestoreFlags) error {
 	req, dump, err := app.ValidateRestore(f)
 	if err != nil {
 		return err
@@ -63,7 +64,7 @@ func runRestore(ctx context.Context, f app.RestoreFlags) error {
 	req.Keys = keys
 	summary, err := app.Execute(ctx, app.NewPlan(d, req), req)
 	if ctx.Err() == nil {
-		report(summary)
+		report(stderr, summary)
 	}
 	return err
 }

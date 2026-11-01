@@ -22,6 +22,18 @@ type Source struct {
 	Optional bool // the extraction still runs without it
 }
 
+// Candidates are the Paths for profile p, relative to the user data dir, in priority order.
+func (s Source) Candidates(p Profile) []string {
+	rels := make([]string, len(s.Paths))
+	for i, rel := range s.Paths {
+		if !s.Shared {
+			rel = path.Join(p.Dir, rel)
+		}
+		rels[i] = rel
+	}
+	return rels
+}
+
 // Extractor declares the sources a category needs and how to parse them.
 type Extractor struct {
 	Sources []Source
@@ -55,10 +67,7 @@ func NewProfileSnapshot(snap snapshot.Snapshot, p Profile, masterKeys func(conte
 // Path returns where src was captured: its first candidate present in the snapshot. A candidate that was never captured
 // is skipped; one whose copy failed returns that copy's error.
 func (ps ProfileSnapshot) Path(src Source) (string, error) {
-	for _, rel := range src.Paths {
-		if !src.Shared {
-			rel = path.Join(ps.Profile.Dir, rel)
-		}
+	for _, rel := range src.Candidates(ps.Profile) {
 		p, err := ps.snap.Path(rel)
 		if errors.Is(err, fs.ErrNotExist) {
 			continue

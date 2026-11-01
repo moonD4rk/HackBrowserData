@@ -35,9 +35,9 @@ func (l *Logger) canLogAt(v Level) bool {
 }
 
 // SetLevel sets the logger level.
-// It panics if v is less than DebugLevel or greater than FatalLevel.
+// It panics if v is less than DebugLevel or greater than WarnLevel.
 func (l *Logger) SetLevel(v Level) {
-	if v < DebugLevel || v > FatalLevel {
+	if v < DebugLevel || v > WarnLevel {
 		panic("log: invalid log level")
 	}
 	atomic.StoreInt32((*int32)(&l.minLevel), int32(v))
@@ -57,46 +57,16 @@ func (l *Logger) logMsg(lvl Level, msg string) {
 	l.base.Log(baseCallerSkip, lvl, msg)
 }
 
-func (l *Logger) Debug(args ...any) {
-	l.logMsg(DebugLevel, fmt.Sprint(args...))
-}
-
 func (l *Logger) Debugf(format string, args ...any) {
 	l.logMsg(DebugLevel, fmt.Sprintf(format, args...))
-}
-
-func (l *Logger) Info(args ...any) {
-	l.logMsg(InfoLevel, fmt.Sprint(args...))
 }
 
 func (l *Logger) Infof(format string, args ...any) {
 	l.logMsg(InfoLevel, fmt.Sprintf(format, args...))
 }
 
-func (l *Logger) Warn(args ...any) {
-	l.logMsg(WarnLevel, fmt.Sprint(args...))
-}
-
 func (l *Logger) Warnf(format string, args ...any) {
 	l.logMsg(WarnLevel, fmt.Sprintf(format, args...))
-}
-
-func (l *Logger) Error(args ...any) {
-	l.logMsg(ErrorLevel, fmt.Sprint(args...))
-}
-
-func (l *Logger) Errorf(format string, args ...any) {
-	l.logMsg(ErrorLevel, fmt.Sprintf(format, args...))
-}
-
-func (l *Logger) Fatal(args ...any) {
-	l.logMsg(FatalLevel, fmt.Sprint(args...))
-	osExit(1)
-}
-
-func (l *Logger) Fatalf(format string, args ...any) {
-	l.logMsg(FatalLevel, fmt.Sprintf(format, args...))
-	osExit(1)
 }
 
 // Base is the interface that underlies the Logger. It receives the caller
@@ -111,8 +81,6 @@ type Base interface {
 //	[DBG] file.go:42: message
 //	[INF] message
 //	[WRN] message
-//	[ERR] message
-//	[FTL] message
 type baseLogger struct {
 	out io.Writer
 	mu  sync.Mutex
@@ -121,8 +89,6 @@ type baseLogger struct {
 func newBase(out io.Writer) *baseLogger {
 	return &baseLogger{out: out}
 }
-
-var osExit = os.Exit
 
 // continuation is the indent for multi-line messages.
 // Width matches "[DBG] " (6 chars).
