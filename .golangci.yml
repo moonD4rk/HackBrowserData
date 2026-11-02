@@ -211,7 +211,7 @@ linters:
       - path: "masterkey/gcoredump_darwin.go"
         linters:
           - gocognit
-      - path-except: "^internal/(record|masterkey|snapshot)/"
+      - path-except: "^internal/(record|masterkey)/"
         linters:
           - tagliatelle
 

@@ -82,7 +82,7 @@ The `go 1.20` directive constrains more than the standard library:
 
 ## Tooling
 
-- **golangci-lint v2** — the project's existing config, extended with `tagliatelle` (`case.use-field-name: true`, `case.rules: {json: snake, csv: snake}`) on the packages that own a wire format — `record`, `masterkey` (`keys.json`), and `snapshot` (`manifest.json`); the Cookie-Editor encoder and any struct that mirrors a browser's own file format stay outside it. `lll` stays at 140.
+- **golangci-lint v2** — the project's existing config, extended with `tagliatelle` (`case.use-field-name: true`, `case.rules: {json: snake, csv: snake}`) on the packages that own a wire format — `record` and `masterkey` (`keys.json`); the Cookie-Editor encoder and any struct that mirrors a browser's own file format stay outside it. `lll` stays at 140.
 - **gofumpt** + **goimports** with `-local github.com/moond4rk/hackbrowserdata`.
 - **CI matrix**: Go pinned to `1.20.x` (not `go-version-file`) on Windows, macOS, and Linux; build + vet + lint + test; a step that fails unless `go.mod` says `go 1.20` with no `toolchain` line. The Windows ABE path is additionally validated on a dedicated Windows host against the current cookie/key baseline, not in hosted CI.
 

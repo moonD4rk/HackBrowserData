@@ -17,7 +17,7 @@ internal/
   record/                     record types (Login, Cookie, …) and the Record interface; field names frozen by the output contract
   masterkey/                  Chromium key Set, Retriever, RetrieveAll, keys.json Dump; OS secret stores by build tag
   crypto/                     pure decrypt primitives over bytes (AES-CBC/GCM, 3DES, PBKDF2, ASN.1 PBE)
-  snapshot/                   snapshot Dir and Snapshot, Capture, manifest, zip transport, the copier
+  snapshot/                   snapshot Dir and Snapshot, Capture, zip transport, the copier
   export/                     Writer; csv / json / cookie-editor encoders; --zip packaging
   sqlitex/                    thin modernc.org/sqlite helpers (open read-only by path, query)
   timeconv/                   browser epoch conversions (Chromium/WebKit, Unix, Firefox, Core Data)

@@ -53,7 +53,7 @@ func runRestore(ctx context.Context, stderr io.Writer, flags app.RestoreFlags) e
 	}
 	defer closeRestoreData(data)
 
-	discovery, keys, err := app.RestoreDiscovery(data, dump, options)
+	discovery, keys, err := app.RestoreDiscovery(data.Path(), dump, options)
 	if err != nil {
 		return err
 	}

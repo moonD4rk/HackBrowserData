@@ -48,8 +48,8 @@ func TestRestoreGolden(t *testing.T) {
 		assert.Equal(t, want, golden.Bundle(t, unzipped.Path()))
 	})
 
-	// An archive written before the manifest is the bare <browser-key>/ layout, which the vaults resolve.
-	t.Run("data-zip without a manifest", func(t *testing.T) {
+	// An archive v1.1.0 wrote is the same <browser-name>/ layout, which the vaults resolve.
+	t.Run("data-zip", func(t *testing.T) {
 		dataZip := filepath.Join(t.TempDir(), "data.zip")
 		require.NoError(t, snapshot.Open(data).Zip(dataZip))
 
@@ -105,7 +105,7 @@ func restoreGolden(t *testing.T, flags app.RestoreFlags) string {
 	}
 	defer data.Close()
 
-	discovery, keys, err := app.RestoreDiscovery(data, dump, options)
+	discovery, keys, err := app.RestoreDiscovery(data.Path(), dump, options)
 	require.NoError(t, err)
 	options.Keys = keys
 	_, err = app.Execute(context.Background(), app.NewPlan(discovery, options), options)
