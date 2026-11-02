@@ -121,7 +121,7 @@ Most file specs belong to one profile (cookies, history) and are declared relati
 Two Chromium facts concern a whole user data dir rather than one category, and both stay in the Chromium base, so `app` never spells a Chromium file name:
 
 - **Key material.** The extractors that decrypt — passwords, cookies, credit cards — list `Local State` as a `Shared` file spec, so it is captured only when a decrypting category is requested. `KeyLocator` builds the dir's `masterkey.Locator` from the captured `Local State` and the `Platform` fields; on macOS `app` adds the run's login keychain, then wraps retrieval in the dir's call-once, which every `ProfileSnapshot` of the dir shares as its `MasterKeys` ([RFC-006](006-key-retrieval-and-crypto.md)).
-- **Layout markers.** `archive` also captures `Local State` and each profile's `Preferences` (or `Preferences_02`) marker, so a reader without the manifest can still find every profile; `ArchiveFileSpecs` names them.
+- **Layout markers.** `archive` also captures `Local State` and each profile's `Preferences` (or `Preferences_02`) marker, by which `restore` rediscovers every profile; `ArchiveFileSpecs` names them.
 
 ## Adding a browser (the whole motion)
 

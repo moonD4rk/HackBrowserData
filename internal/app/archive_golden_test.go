@@ -104,11 +104,7 @@ func TestArchiveGolden(t *testing.T) {
 
 			prefix := archiveLayoutBrowser + "/"
 			names := archiveLayoutEntryNames(t, out)
-			assert.Contains(t, names, "manifest.json")
 			for _, name := range names {
-				if name == "manifest.json" {
-					continue
-				}
 				assert.Truef(t, strings.HasPrefix(name, prefix), "entry %q lacks the %q prefix", name, prefix)
 				assert.NotContains(t, name, `\`)
 				assert.NotEqual(t, "LOCK", path.Base(name))
@@ -135,7 +131,6 @@ func TestArchiveRestoreRoundTrip(t *testing.T) {
 	archive := filepath.Join(t.TempDir(), "data.zip")
 	_, err = app.Archive(context.Background(), app.Discover(options), options, archive)
 	require.NoError(t, err)
-	require.Contains(t, archiveLayoutEntryNames(t, archive), "manifest.json")
 
 	out := restoreGolden(t, app.RestoreFlags{Keys: chromiumFixtureKeysFile(t), DataZip: archive, Dir: t.TempDir()})
 	assert.Equal(t, golden.Read(t, "extract-json.golden"), golden.Bundle(t, out))

@@ -11,8 +11,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// Archive also keeps Local State and each profile's marker, so a reader without the manifest still finds the profiles.
-// It returns how many files and directories were captured.
+// Archive returns how many files and directories it captured.
 func Archive(ctx context.Context, discovery Discovery, options Options, archivePath string) (int, error) {
 	var dirs []browser.UserDataDir
 	for _, dir := range discovery.Dirs {
@@ -30,12 +29,9 @@ func Archive(ctx context.Context, discovery Discovery, options Options, archiveP
 	if err := snapshotDir.Capture(ctx, files); err != nil {
 		return 0, err
 	}
-	manifest, fileCount := manifestOf(snapshotDir, dirs, files)
+	fileCount := countCaptured(snapshotDir, files)
 	if fileCount == 0 {
 		return 0, errors.New("no decryption-relevant files found to archive")
-	}
-	if err := snapshotDir.WriteManifest(manifest); err != nil {
-		return 0, err
 	}
 	if err := snapshotDir.Zip(archivePath); err != nil {
 		return 0, fmt.Errorf("write archive %s: %w", archivePath, err)
@@ -67,30 +63,15 @@ func archiveFiles(plan Plan, dirs []browser.UserDataDir) []snapshot.File {
 	return files
 }
 
-// manifestOf lists each dir's files that reached the snapshot; one whose copy failed is reported and left out.
-func manifestOf(snapshotDir *snapshot.Dir, dirs []browser.UserDataDir, files []snapshot.File) (snapshot.Manifest, int) {
-	manifest := snapshot.Manifest{Version: snapshot.ManifestVersion, Dirs: []snapshot.ManifestDir{}}
+// countCaptured counts the files that reached the snapshot, reporting each one whose copy failed.
+func countCaptured(snapshotDir *snapshot.Dir, files []snapshot.File) int {
 	fileCount := 0
-	for _, dir := range dirs {
-		manifestEntry := snapshot.ManifestDir{ID: string(dir.ID), Browser: dir.Browser.Name, Base: dir.Browser.Base.String()}
-		for _, profile := range dir.Profiles {
-			manifestEntry.Profiles = append(manifestEntry.Profiles, snapshot.ManifestProfile{Name: profile.Name, Dir: profile.Dir})
+	for _, file := range files {
+		if _, err := snapshotDir.Snapshot(file.UserDataDirID).Path(file.RelativePath); err != nil {
+			log.Warnf("archive: acquire %s/%s: %v", file.UserDataDirID, file.RelativePath, err)
+			continue
 		}
-		captured := snapshotDir.Snapshot(string(dir.ID))
-		for _, file := range files {
-			if file.UserDataDirID != string(dir.ID) {
-				continue
-			}
-			if _, err := captured.Path(file.RelativePath); err != nil {
-				log.Warnf("archive: acquire %s/%s: %v", file.UserDataDirID, file.RelativePath, err)
-				continue
-			}
-			manifestEntry.Files = append(manifestEntry.Files, file.RelativePath)
-			fileCount++
-		}
-		if len(manifestEntry.Files) > 0 {
-			manifest.Dirs = append(manifest.Dirs, manifestEntry)
-		}
+		fileCount++
 	}
-	return manifest, fileCount
+	return fileCount
 }

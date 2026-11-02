@@ -176,7 +176,7 @@ func KeyFileSpecs(_ browser.UserDataDir) []browser.FileSpec {
 	return []browser.FileSpec{localState}
 }
 
-// ArchiveFileSpecs add Local State and each profile's marker, so a reader without the manifest finds every profile.
+// ArchiveFileSpecs add each profile's marker, by which restore rediscovers the profiles, and Local State as v1.1.0 did.
 func ArchiveFileSpecs(_ browser.UserDataDir) []browser.FileSpec {
 	fileSpecs := []browser.FileSpec{localState}
 	for _, marker := range profileMarkers {

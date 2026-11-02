@@ -13,7 +13,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/export"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
-	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
 // RestoreFlags are restore's command-line values as cobra parsed them.
@@ -96,83 +95,12 @@ func readKeys(path string) (masterkey.Dump, error) {
 	return dump, nil
 }
 
-// RestoreDiscovery rebuilds the user data dirs in data, and their keys from dump: from the manifest when data has one,
-// else by today's rules, where the vaults' keys name subdirectories or data is one browser's User Data.
+// RestoreDiscovery rebuilds the user data dirs under root, and their keys, from the dump: each vault names a
+// subdirectory of root, or root is one browser's User Data.
 func RestoreDiscovery(
-	data *snapshot.Dir, dump masterkey.Dump, options Options,
+	root string, dump masterkey.Dump, options Options,
 ) (Discovery, map[browser.UserDataDirID]masterkey.Set, error) {
 	vaults := vaultsOf(dump, options.Browser)
-	manifest, ok, err := data.ReadManifest()
-	if err != nil {
-		return Discovery{}, nil, err
-	}
-	if ok {
-		discovery, keys := fromManifest(data.Path(), manifest, vaults, options.Browser)
-		return discovery, keys, nil
-	}
-	return fromLayout(data.Path(), vaults)
-}
-
-func fromManifest(
-	root string, manifest snapshot.Manifest, vaults []masterkey.Vault, filter string,
-) (Discovery, map[browser.UserDataDirID]masterkey.Set) {
-	var discovery Discovery
-	keys := make(map[browser.UserDataDirID]masterkey.Set)
-	for _, manifestEntry := range manifest.Dirs {
-		if filter != allBrowsers && manifestEntry.Browser != filter {
-			continue
-		}
-		vault, ok := vaultOf(vaults, manifestEntry)
-		if !ok {
-			log.Warnf("restore: %s has no keys, skipping", manifestEntry.ID)
-			continue
-		}
-		dir, err := manifestDir(root, manifestEntry, vault)
-		if err != nil {
-			log.Warnf("restore: %s: %v", manifestEntry.ID, err)
-			continue
-		}
-		discovery.Dirs = append(discovery.Dirs, dir)
-		keys[dir.ID] = vault.Keys
-	}
-	return discovery, keys
-}
-
-// vaultOf finds an entry's keys: the vault carrying its ID, or for a browser's first dir the vault of that browser.
-func vaultOf(vaults []masterkey.Vault, manifestEntry snapshot.ManifestDir) (masterkey.Vault, bool) {
-	for _, vault := range vaults {
-		if vaultUserDataDirID(vault) == browser.UserDataDirID(manifestEntry.ID) {
-			return vault, true
-		}
-	}
-	return masterkey.Vault{}, false
-}
-
-// manifestDir trusts no path in the manifest that would leave its own directory of the archive.
-func manifestDir(root string, manifestEntry snapshot.ManifestDir, vault masterkey.Vault) (browser.UserDataDir, error) {
-	if manifestEntry.Base != browser.Chromium.String() {
-		return browser.UserDataDir{}, fmt.Errorf("base %q is not restorable", manifestEntry.Base)
-	}
-	if !isPathElement(manifestEntry.ID) {
-		return browser.UserDataDir{}, fmt.Errorf("id %q is not a directory name", manifestEntry.ID)
-	}
-	restoredBrowser, err := vaultBrowser(vault)
-	if err != nil {
-		return browser.UserDataDir{}, err
-	}
-	dir := browser.UserDataDir{
-		ID: browser.UserDataDirID(manifestEntry.ID), Browser: restoredBrowser, Path: filepath.Join(root, manifestEntry.ID),
-	}
-	for _, manifestProfile := range manifestEntry.Profiles {
-		if manifestProfile.Dir != "" && !filepath.IsLocal(filepath.FromSlash(manifestProfile.Dir)) {
-			return browser.UserDataDir{}, fmt.Errorf("profile dir %q is outside the archive", manifestProfile.Dir)
-		}
-		dir.Profiles = append(dir.Profiles, browser.Profile{Name: manifestProfile.Name, Dir: manifestProfile.Dir})
-	}
-	return dir, nil
-}
-
-func fromLayout(root string, vaults []masterkey.Vault) (Discovery, map[browser.UserDataDirID]masterkey.Set, error) {
 	archived := false
 	for _, vault := range vaults {
 		if dirExists(filepath.Join(root, string(vaultUserDataDirID(vault)))) {
@@ -266,10 +194,6 @@ func vaultKeys(vaults []masterkey.Vault) string {
 		keys = append(keys, strings.ToLower(vault.Browser))
 	}
 	return strings.Join(keys, ", ")
-}
-
-func isPathElement(name string) bool {
-	return name != "" && name != "." && filepath.IsLocal(name) && !strings.ContainsAny(name, `/\`)
 }
 
 func dirExists(path string) bool {

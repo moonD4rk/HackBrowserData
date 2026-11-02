@@ -48,13 +48,13 @@ Because it holds those copies, a temporary snapshot directory is created with mo
 
 A snapshot directory is `<dir>/<user-data-dir-id>/<path relative to the user data dir>`: one subdirectory, one snapshot, per user data dir. For the first user data dir of a browser the ID is its `Browser.Name`, so the layout is exactly v1.1.0's archive layout (`<browser-key>/<User Data layout>`) and v1.1.0's `restore` reads new archives unchanged. A second one of the same browser — the second of Arc's two MSIX packages on Windows — gets `arc-2/`, where v1.1.0's archive keyed every file by browser key alone and silently dropped it.
 
-An archive captures what v1.1.0's did — `Local State` and each profile's `Preferences` marker (both named by the Chromium base, [RFC-005](005-browser-definitions.md)), the requested categories' files, and the account-synced `Login Data For Account` — so a reader without the manifest can still find every profile.
+An archive captures what v1.1.0's did — `Local State` and each profile's `Preferences` marker (both named by the Chromium base, [RFC-005](005-browser-definitions.md)), the requested categories' files, and the account-synced `Login Data For Account` — so `restore` rediscovers every profile from the layout alone.
 
 `keys.json` joins to the archive by the vault's `browser` key, as in v1.1.0. A vault for a second user data dir carries an extra optional `id` field (`"arc-2"`) — the `UserDataDirID` on the wire, per the wire-name rule; readers that don't know the field, including v1.1.0, ignore it and restore the first one. The dump version stays `"2"`.
 
-## Manifest
+## No manifest
 
-A new snapshot directory carries `manifest.json` at its root: a schema version, and per user data dir its ID, `Browser.Name`, `Base`, profiles, and captured paths. `restore` uses it, when present, to rebuild user data dirs and profiles without re-discovering anything — that is its `Discovery` ([RFC-003](003-core-types.md)) — and then runs Extract → Export → Report exactly as a live run would. Restore trusts no manifest path that would leave its own directory of the archive. Archives without a manifest — every archive v1.1.0 made — still restore through the keys.json vaults plus the directory layout. v1.1.0 ignores the extra file.
+An archive holds only the layout. `restore` rebuilds user data dirs and profiles from the keys.json vaults plus that layout, which is the only way v1.1.0's archives can restore, and the same way serves every archive this version writes, so a manifest would only be a second description of the layout to keep in step with it. Restore then runs Extract → Export → Report exactly as a live run would. One thing the layout cannot carry is a flat-layout profile's original name (older Opera keeps its profile at the user data dir root): such a profile restores under its archive directory's name, as it did in v1.1.0.
 
 ## Copy semantics
 

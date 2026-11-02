@@ -11,7 +11,6 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
-	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
 func keysFile(t *testing.T, vaults ...masterkey.Vault) string {
@@ -60,30 +59,21 @@ func TestValidateRestore_RejectsBadInput(t *testing.T) {
 	assert.Len(t, dump.Vaults, 1)
 }
 
-func TestRestoreDiscovery_FromManifest(t *testing.T) {
+func TestRestoreDiscovery_SecondUserDataDir(t *testing.T) {
 	root := t.TempDir()
-	data := snapshot.Open(root)
-	require.NoError(t, data.WriteManifest(snapshot.Manifest{Version: snapshot.ManifestVersion, Dirs: []snapshot.ManifestDir{
-		{ID: "chrome", Browser: "chrome", Base: "chromium", Profiles: []snapshot.ManifestProfile{{Name: "Default", Dir: "Default"}}},
-		{ID: "arc-2", Browser: "arc", Base: "chromium", Profiles: []snapshot.ManifestProfile{{Name: "Work", Dir: "Profile 1"}}},
-		{ID: "../outside", Browser: "chrome", Base: "chromium"},
-		{ID: "edge", Browser: "edge", Base: "chromium", Profiles: []snapshot.ManifestProfile{{Name: "Default", Dir: "../../etc"}}},
-	}}))
-	arc2 := testVault("arc")
-	arc2.ID = "arc-2"
-	dump := masterkey.Dump{Vaults: []masterkey.Vault{testVault("chrome"), testVault("arc"), arc2, testVault("edge")}}
+	layoutProfile(t, root, "arc")
+	layoutProfile(t, root, "arc-2")
+	second := testVault("arc")
+	second.ID = "arc-2"
+	second.Keys = masterkey.Set{masterkey.V10: []byte("arc-2")}
+	dump := masterkey.Dump{Vaults: []masterkey.Vault{testVault("chrome"), testVault("arc"), second}}
 
-	discovery, keys, err := RestoreDiscovery(data, dump, Options{Browser: "all"})
+	discovery, keys, err := RestoreDiscovery(root, dump, Options{Browser: "arc"})
 	require.NoError(t, err)
-	assert.Equal(t, []browser.UserDataDirID{"chrome", "arc-2"}, userDataDirIDs(discovery), "a manifest path that leaves its directory is refused")
-	assert.Equal(t, "Chrome", discovery.Dirs[0].Browser.DisplayName, "restore sets the display name, as dump does")
+	assert.Equal(t, []browser.UserDataDirID{"arc", "arc-2"}, userDataDirIDs(discovery), "a vault's ID names its directory")
 	assert.Equal(t, filepath.Join(root, "arc-2"), discovery.Dirs[1].Path)
-	assert.Equal(t, []browser.Profile{{Name: "Work", Dir: "Profile 1"}}, discovery.Dirs[1].Profiles)
-	assert.Equal(t, masterkey.Set{masterkey.V10: []byte("arc")}, keys["arc-2"])
-
-	discovery, _, err = RestoreDiscovery(data, dump, Options{Browser: "arc"})
-	require.NoError(t, err)
-	assert.Equal(t, []browser.UserDataDirID{"arc-2"}, userDataDirIDs(discovery))
+	assert.Equal(t, "Arc", discovery.Dirs[1].Browser.DisplayName, "restore sets the display name, as dump does")
+	assert.Equal(t, masterkey.Set{masterkey.V10: []byte("arc-2")}, keys["arc-2"])
 }
 
 func TestRestoreDiscovery_FromLayout(t *testing.T) {
@@ -94,7 +84,7 @@ func TestRestoreDiscovery_FromLayout(t *testing.T) {
 	nightly.Kind = "chromium-yandex"
 	dump := masterkey.Dump{Vaults: []masterkey.Vault{testVault("chrome"), nightly, testVault("chrome"), testVault("edge")}}
 
-	discovery, keys, err := RestoreDiscovery(snapshot.Open(root), dump, Options{Browser: "all"})
+	discovery, keys, err := RestoreDiscovery(root, dump, Options{Browser: "all"})
 	require.NoError(t, err)
 	assert.Equal(t, []browser.UserDataDirID{"chrome", "nightly"}, userDataDirIDs(discovery), "a repeated vault restores once, one without data not at all")
 	assert.Len(t, keys, 2)
@@ -108,10 +98,10 @@ func TestRestoreDiscovery_OneUserDataNeedsOneVault(t *testing.T) {
 	touch(t, root, "Default", "History")
 	dump := masterkey.Dump{Vaults: []masterkey.Vault{testVault("chrome"), testVault("edge")}}
 
-	_, _, err := RestoreDiscovery(snapshot.Open(root), dump, Options{Browser: "all"})
+	_, _, err := RestoreDiscovery(root, dump, Options{Browser: "all"})
 	require.Error(t, err)
 
-	discovery, _, err := RestoreDiscovery(snapshot.Open(root), dump, Options{Browser: "edge"})
+	discovery, _, err := RestoreDiscovery(root, dump, Options{Browser: "edge"})
 	require.NoError(t, err)
 	require.Equal(t, []browser.UserDataDirID{"edge"}, userDataDirIDs(discovery))
 	assert.Equal(t, root, discovery.Dirs[0].Path)
