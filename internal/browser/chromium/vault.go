@@ -21,18 +21,18 @@ var kinds = map[string]string{
 	"vought":   kindOpera,
 }
 
-func VaultKind(def browser.Def) string {
-	if kind, ok := kinds[def.ID]; ok {
+func VaultKind(chromiumBrowser browser.Browser) string {
+	if kind, ok := kinds[chromiumBrowser.Name]; ok {
 		return kind
 	}
 	return kindChromium
 }
 
-// FormatID is the Def.ID whose extractors read a vault of kind; a plain Chromium vault keeps its own id.
-func FormatID(kind, id string) (string, error) {
+// FormatName is the browser Name whose extractors read a vault of kind; a plain Chromium vault keeps its own name.
+func FormatName(kind, name string) (string, error) {
 	switch kind {
 	case kindChromium:
-		return id, nil
+		return name, nil
 	case kindYandex:
 		return "yandex", nil
 	case kindOpera:

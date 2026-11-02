@@ -25,8 +25,8 @@ var safariFixtureStart = time.Date(2024, 3, 1, 9, 0, 0, 0, time.UTC)
 
 func SafariLibrary(t *testing.T, library string) {
 	t.Helper()
-	at := safariFixtureStart.Add
-	visit := func(offset time.Duration) float64 { return safariFixtureCoreData(at(offset)) }
+	timeAt := safariFixtureStart.Add
+	visit := func(offset time.Duration) float64 { return safariFixtureCoreData(timeAt(offset)) }
 	day := 24 * time.Hour
 	legacyHome := filepath.Join(library, "Safari")
 	container := filepath.Join(library, "Containers", "com.apple.Safari", "Data", "Library")
@@ -66,21 +66,21 @@ func SafariLibrary(t *testing.T, library string) {
 		[]safariFixtureCookie{
 			{
 				domain: ".home.safari.test", name: "SID", path: "/", value: "sid-home.safari.test", flags: 0x5,
-				expires: at(365 * day), created: at(10*time.Minute + 750*time.Millisecond),
+				expires: timeAt(365 * day), created: timeAt(10*time.Minute + 750*time.Millisecond),
 			},
 			{
 				domain: "www.home.safari.test", name: "prefs", path: "/settings", value: "theme=dark",
-				expires: at(30 * day), created: at(20 * time.Minute),
+				expires: timeAt(30 * day), created: timeAt(20 * time.Minute),
 			},
 		},
 		[]safariFixtureCookie{
 			{
 				domain: ".home.safari.test", name: "tracker", path: "/", value: "opt-out", flags: 0x1,
-				expires: at(730 * day), created: at(30 * time.Minute),
+				expires: timeAt(730 * day), created: timeAt(30 * time.Minute),
 			},
 			{
 				domain: "app.home.safari.test", name: "csrf", path: "/", value: "token-123", flags: 0x4,
-				expires: at(day), created: at(40 * time.Minute),
+				expires: timeAt(day), created: timeAt(40 * time.Minute),
 			},
 		},
 	)))
@@ -88,18 +88,18 @@ func SafariLibrary(t *testing.T, library string) {
 	fixtureWrite(t, filepath.Join(library, "Cookies", "Cookies.binarycookies"), string(safariFixtureCookieFile(t,
 		[]safariFixtureCookie{{
 			domain: "old.home.safari.test", name: "legacy", path: "/", value: "stale",
-			expires: at(day), created: at(time.Minute),
+			expires: timeAt(day), created: timeAt(time.Minute),
 		}},
 	)))
 	fixtureWrite(t, filepath.Join(workStore, "Cookies", "Cookies.binarycookies"), string(safariFixtureCookieFile(t,
 		[]safariFixtureCookie{
 			{
 				domain: ".work.safari.test", name: "SSO", path: "/", value: "sso-work.safari.test", flags: 0x5,
-				expires: at(7 * day), created: at(6 * time.Hour),
+				expires: timeAt(7 * day), created: timeAt(6 * time.Hour),
 			},
 			{
 				domain: "wiki.work.safari.test", name: "lang", path: "/", value: "en",
-				expires: at(90 * day), created: at(7 * time.Hour),
+				expires: timeAt(90 * day), created: timeAt(7 * time.Hour),
 			},
 		},
 	)))
@@ -129,18 +129,18 @@ func SafariLibrary(t *testing.T, library string) {
 	safariFixturePlist(t, filepath.Join(container, "Safari", "WebExtensions", "Extensions.plist"), safariFixtureWebExtensions)
 }
 
-func safariFixtureCoreData(ts time.Time) float64 {
+func safariFixtureCoreData(timestamp time.Time) float64 {
 	const unixToCoreDataSeconds = 978_307_200
-	return float64(ts.UnixMilli())/1000 - unixToCoreDataSeconds
+	return float64(timestamp.UnixMilli())/1000 - unixToCoreDataSeconds
 }
 
-// Safari writes binary plists; the fixtures keep XML so they read like plutil's XML output.
+// safariFixturePlist writes XML, though Safari writes binary plists, so the fixtures read like plutil's XML output.
 func safariFixturePlist(t *testing.T, path, body string) {
 	t.Helper()
-	var v any
-	_, err := plist.Unmarshal([]byte(`<plist version="1.0">`+body+`</plist>`), &v)
+	var value any
+	_, err := plist.Unmarshal([]byte(`<plist version="1.0">`+body+`</plist>`), &value)
 	require.NoError(t, err)
-	data, err := plist.Marshal(v, plist.BinaryFormat)
+	data, err := plist.Marshal(value, plist.BinaryFormat)
 	require.NoError(t, err)
 	fixtureWrite(t, path, string(data))
 }
@@ -166,7 +166,7 @@ type safariFixtureCookieHeader struct {
 	Created       float64
 }
 
-// Each argument is one page of the jar.
+// safariFixtureCookieFile takes one page of the jar per argument.
 func safariFixtureCookieFile(t *testing.T, pages ...[]safariFixtureCookie) []byte {
 	t.Helper()
 	encoded := make([][]byte, len(pages))
@@ -184,47 +184,47 @@ func safariFixtureCookieFile(t *testing.T, pages ...[]safariFixtureCookie) []byt
 func safariFixtureCookiePage(t *testing.T, cookies []safariFixtureCookie) []byte {
 	t.Helper()
 	records := make([][]byte, len(cookies))
-	for i, c := range cookies {
-		records[i] = safariFixtureCookieRecord(t, c)
+	for i, cookie := range cookies {
+		records[i] = safariFixtureCookieRecord(t, cookie)
 	}
 	page := binary.LittleEndian.AppendUint32([]byte{0x00, 0x00, 0x01, 0x00}, uint32(len(cookies)))
 	offset := 4 + 4 + 4*len(cookies) + 4
-	for _, r := range records {
+	for _, encodedRecord := range records {
 		page = binary.LittleEndian.AppendUint32(page, uint32(offset))
-		offset += len(r)
+		offset += len(encodedRecord)
 	}
 	page = append(page, 0x00, 0x00, 0x00, 0x00)
-	for _, r := range records {
-		page = append(page, r...)
+	for _, encodedRecord := range records {
+		page = append(page, encodedRecord...)
 	}
 	return page
 }
 
-func safariFixtureCookieRecord(t *testing.T, c safariFixtureCookie) []byte {
+func safariFixtureCookieRecord(t *testing.T, cookie safariFixtureCookie) []byte {
 	t.Helper()
 	header := safariFixtureCookieHeader{
-		Flags:   c.flags,
-		Expires: safariFixtureCoreData(c.expires),
-		Created: safariFixtureCoreData(c.created),
+		Flags:   cookie.flags,
+		Expires: safariFixtureCoreData(cookie.expires),
+		Created: safariFixtureCoreData(cookie.created),
 	}
 	headerSize := uint32(binary.Size(header))
 	var strs []byte
-	for _, f := range []struct {
+	for _, field := range []struct {
 		offset *uint32
 		value  string
 	}{
-		{&header.DomainOffset, c.domain},
-		{&header.NameOffset, c.name},
-		{&header.PathOffset, c.path},
-		{&header.ValueOffset, c.value},
+		{&header.DomainOffset, cookie.domain},
+		{&header.NameOffset, cookie.name},
+		{&header.PathOffset, cookie.path},
+		{&header.ValueOffset, cookie.value},
 	} {
-		*f.offset = headerSize + uint32(len(strs))
-		strs = append(append(strs, f.value...), 0x00)
+		*field.offset = headerSize + uint32(len(strs))
+		strs = append(append(strs, field.value...), 0x00)
 	}
 	header.Size = headerSize + uint32(len(strs))
-	var b bytes.Buffer
-	require.NoError(t, binary.Write(&b, binary.LittleEndian, header))
-	return append(b.Bytes(), strs...)
+	var buffer bytes.Buffer
+	require.NoError(t, binary.Write(&buffer, binary.LittleEndian, header))
+	return append(buffer.Bytes(), strs...)
 }
 
 type safariFixtureEndpoint struct {
@@ -232,7 +232,7 @@ type safariFixtureEndpoint struct {
 	port         uint16
 }
 
-// Top and frame differ for third-party storage; an origin without localStorage items keeps only its origin file.
+// safariFixtureOrigin takes top and frame, which differ for third-party storage; without items, one origin file stays.
 func safariFixtureOrigin(t *testing.T, root string, top, frame safariFixtureEndpoint, items ...[2]string) {
 	t.Helper()
 	dir := filepath.Join(root, safariFixtureHash(top), safariFixtureHash(frame))
@@ -240,37 +240,37 @@ func safariFixtureOrigin(t *testing.T, root string, top, frame safariFixtureEndp
 	if len(items) == 0 {
 		return
 	}
-	stmts := []string{safariFixtureItemTableSchema}
+	statements := []string{safariFixtureItemTableSchema}
 	for _, item := range items {
-		stmts = append(stmts, fmt.Sprintf(`INSERT INTO ItemTable (key, value) VALUES ('%s', x'%x')`, item[0], safariFixtureUTF16(item[1])))
+		statements = append(statements, fmt.Sprintf(`INSERT INTO ItemTable (key, value) VALUES ('%s', x'%x')`, item[0], safariFixtureUTF16(item[1])))
 	}
-	fixtureSQLite(t, filepath.Join(dir, "LocalStorage", "localstorage.sqlite3"), stmts...)
+	fixtureSQLite(t, filepath.Join(dir, "LocalStorage", "localstorage.sqlite3"), statements...)
 }
 
-func safariFixtureHash(e safariFixtureEndpoint) string {
-	sum := sha256.Sum256([]byte(fmt.Sprintf("%s://%s:%d", e.scheme, e.host, e.port)))
+func safariFixtureHash(endpoint safariFixtureEndpoint) string {
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%s://%s:%d", endpoint.scheme, endpoint.host, endpoint.port)))
 	return hex.EncodeToString(sum[:])
 }
 
-func safariFixtureOriginBlock(e safariFixtureEndpoint) []byte {
+func safariFixtureOriginBlock(endpoint safariFixtureEndpoint) []byte {
 	const latin1, defaultPort, explicitPort = 0x01, 0x00, 0x01
-	var b []byte
-	for _, s := range []string{e.scheme, e.host} {
-		b = binary.LittleEndian.AppendUint32(b, uint32(len(s)))
-		b = append(append(b, latin1), s...)
+	var block []byte
+	for _, part := range []string{endpoint.scheme, endpoint.host} {
+		block = binary.LittleEndian.AppendUint32(block, uint32(len(part)))
+		block = append(append(block, latin1), part...)
 	}
-	if e.port == 0 {
-		return append(b, defaultPort)
+	if endpoint.port == 0 {
+		return append(block, defaultPort)
 	}
-	return binary.LittleEndian.AppendUint16(append(b, explicitPort), e.port)
+	return binary.LittleEndian.AppendUint16(append(block, explicitPort), endpoint.port)
 }
 
-func safariFixtureUTF16(s string) []byte {
-	var b []byte
-	for _, u := range utf16.Encode([]rune(s)) {
-		b = binary.LittleEndian.AppendUint16(b, u)
+func safariFixtureUTF16(text string) []byte {
+	var encoded []byte
+	for _, unit := range utf16.Encode([]rune(text)) {
+		encoded = binary.LittleEndian.AppendUint16(encoded, unit)
 	}
-	return b
+	return encoded
 }
 
 func safariFixtureInsertHistoryItem(id int, url string, visitCount int) string {

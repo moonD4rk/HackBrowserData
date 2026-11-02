@@ -55,12 +55,12 @@ func TestExtractHistories_Dedup(t *testing.T) {
 	require.Len(t, got, 3)
 
 	// GitHub (item 1) should have the later visit_time and its title.
-	for _, h := range got {
-		if h.URL == "https://github.com" {
+	for _, history := range got {
+		if history.URL == "https://github.com" {
 			// 705067600 + 978307200 = 1683374800 (unix)
-			assert.Equal(t, int64(1683374800), h.LastVisit.Unix())
+			assert.Equal(t, int64(1683374800), history.LastVisit.Unix())
 			// Title must come from the latest visit row, not an arbitrary one.
-			assert.Equal(t, "GitHub - Latest", h.Title)
+			assert.Equal(t, "GitHub - Latest", history.Title)
 			return
 		}
 	}

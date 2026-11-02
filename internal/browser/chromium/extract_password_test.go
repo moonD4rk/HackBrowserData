@@ -40,7 +40,7 @@ func TestExtractPasswords(t *testing.T) {
 	assert.Equal(t, record.StoreLocal, got[1].Store)
 }
 
-// An undecryptable credential is still listed, or a missing key would silently shrink the export.
+// TestExtractPasswords_UndecryptableBlobStillListed keeps such a login, or a missing key would shrink the export.
 func TestExtractPasswords_UndecryptableBlobStillListed(t *testing.T) {
 	path := createTestDB(t, "Login Data", loginsSchema,
 		insertLogin("https://enc.com", "https://enc.com/login", "carol", "763130deadbeef", 13350000000000000),
@@ -122,8 +122,8 @@ func TestExtractYandexPasswords_WithoutAKeyKeepsTheLogins(t *testing.T) {
 	require.NoError(t, extractYandexPasswords(nil, path, &out))
 	logins := collected[record.Login](t, &out)
 	require.Len(t, logins, 2)
-	for _, l := range logins {
-		assert.Empty(t, l.Password)
+	for _, login := range logins {
+		assert.Empty(t, login.Password)
 	}
 	assert.Len(t, out.fails, 2, "each login without its password is a record-level problem")
 }
@@ -152,9 +152,9 @@ func TestExtractYandexPasswords_WrongMasterKey(t *testing.T) {
 func TestYandexLoginAAD_NoMasterPassword(t *testing.T) {
 	got := yandexLoginAAD("https://example.com/", "user", "alice", "pass", "https://example.com/", nil)
 
-	h := sha1.New()
-	h.Write([]byte("https://example.com/\x00user\x00alice\x00pass\x00https://example.com/"))
-	want := h.Sum(nil)
+	hasher := sha1.New()
+	hasher.Write([]byte("https://example.com/\x00user\x00alice\x00pass\x00https://example.com/"))
+	want := hasher.Sum(nil)
 
 	assert.Equal(t, want, got)
 	assert.Len(t, got, sha1.Size)

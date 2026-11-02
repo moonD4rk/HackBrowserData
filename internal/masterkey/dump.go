@@ -28,7 +28,7 @@ type Host struct {
 	User     string `json:"user,omitempty"`
 }
 
-// Kind names the engine, so a consumer can read a vault without the browser in its own table.
+// Vault names its engine in Kind, so a consumer can read a vault without the browser in its own table.
 type Vault struct {
 	Browser string `json:"browser"`
 	// ID names a second user data dir of the same browser ("arc-2"); the first one's is Browser, so it is left out.
@@ -49,34 +49,34 @@ func NewDump() Dump {
 }
 
 func currentHost() Host {
-	h := Host{OS: runtime.GOOS, Arch: runtime.GOARCH}
+	host := Host{OS: runtime.GOOS, Arch: runtime.GOARCH}
 	if name, err := os.Hostname(); err == nil {
-		h.Hostname = name
+		host.Hostname = name
 	}
-	if u, err := user.Current(); err == nil {
-		h.User = u.Username
+	if currentUser, err := user.Current(); err == nil {
+		host.User = currentUser.Username
 	}
-	return h
+	return host
 }
 
-func (d Dump) WriteJSON(w io.Writer) error {
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(d); err != nil {
+func (d Dump) WriteJSON(writer io.Writer) error {
+	encoder := json.NewEncoder(writer)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(d); err != nil {
 		return fmt.Errorf("encode dump: %w", err)
 	}
 	return nil
 }
 
 // ReadJSON rejects a version it cannot interpret, since a silent misparse is worse than an error.
-func ReadJSON(r io.Reader) (Dump, error) {
-	var d Dump
-	dec := json.NewDecoder(r)
-	if err := dec.Decode(&d); err != nil {
+func ReadJSON(reader io.Reader) (Dump, error) {
+	var dump Dump
+	decoder := json.NewDecoder(reader)
+	if err := decoder.Decode(&dump); err != nil {
 		return Dump{}, fmt.Errorf("decode dump: %w", err)
 	}
-	if d.Version != DumpVersion {
-		return Dump{}, fmt.Errorf("unsupported dump version %q (this build expects %q)", d.Version, DumpVersion)
+	if dump.Version != DumpVersion {
+		return Dump{}, fmt.Errorf("unsupported dump version %q (this build expects %q)", dump.Version, DumpVersion)
 	}
-	return d, nil
+	return dump, nil
 }

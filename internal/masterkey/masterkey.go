@@ -57,39 +57,39 @@ const (
 	ABEAvast
 )
 
-// Per version the first key wins, and an error is reported only when every retriever of that version fails.
-func RetrieveAll(ctx context.Context, loc Locator) (Set, error) {
-	return retrieveAll(ctx, loc, platformRetrievers)
+// RetrieveAll keeps the first key per version and reports an error only when every retriever of that version fails.
+func RetrieveAll(ctx context.Context, locator Locator) (Set, error) {
+	return retrieveAll(ctx, locator, platformRetrievers)
 }
 
-func retrieveAll(ctx context.Context, loc Locator, retrievers []Retriever) (Set, error) {
+func retrieveAll(ctx context.Context, locator Locator, retrievers []Retriever) (Set, error) {
 	keys := make(Set)
 	var versions []Version
 	failures := make(map[Version][]error)
-	for _, r := range retrievers {
-		v := r.Version()
-		if _, ok := keys[v]; ok {
+	for _, retriever := range retrievers {
+		version := retriever.Version()
+		if _, ok := keys[version]; ok {
 			continue
 		}
-		if _, ok := failures[v]; !ok {
-			versions = append(versions, v)
-			failures[v] = nil
+		if _, ok := failures[version]; !ok {
+			versions = append(versions, version)
+			failures[version] = nil
 		}
-		key, err := r.Retrieve(ctx, loc)
+		key, err := retriever.Retrieve(ctx, locator)
 		switch {
 		case errors.Is(err, ErrNotApplicable):
 		case err != nil:
-			log.Debugf("%s retriever %T failed: %v", v, r, err)
-			failures[v] = append(failures[v], err)
+			log.Debugf("%s retriever %T failed: %v", version, retriever, err)
+			failures[version] = append(failures[version], err)
 		case len(key) > 0:
-			keys[v] = key
+			keys[version] = key
 		}
 	}
 
 	var errs []error
-	for _, v := range versions {
-		if _, ok := keys[v]; !ok && len(failures[v]) > 0 {
-			errs = append(errs, fmt.Errorf("%s: %w", v, errors.Join(failures[v]...)))
+	for _, version := range versions {
+		if _, ok := keys[version]; !ok && len(failures[version]) > 0 {
+			errs = append(errs, fmt.Errorf("%s: %w", version, errors.Join(failures[version]...)))
 		}
 	}
 	return keys, errors.Join(errs...)

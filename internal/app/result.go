@@ -44,6 +44,6 @@ type Summary struct {
 	Results []Result
 }
 
-func dirFailure(id browser.DirID, err error) Result {
-	return Result{Extraction: Extraction{DirID: id}, Outcome: OutcomeError, Err: err}
+func dirFailure(id browser.UserDataDirID, err error) Result {
+	return Result{Extraction: Extraction{UserDataDirID: id}, Outcome: OutcomeError, Err: err}
 }

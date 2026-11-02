@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -19,18 +20,18 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
-// Only GCM-sealed values (v10 under a 32-byte key, v20) decrypt identically on every OS.
+// ChromiumKeys hold only GCM keys (v10 under a 32-byte key, v20), whose values decrypt identically on every OS.
 var ChromiumKeys = masterkey.Set{
 	masterkey.V10: []byte("0123456789abcdef0123456789abcdef"),
 	masterkey.V20: []byte("0123456789abcdef"),
 }
 
 var ChromiumInstalls = []struct {
-	Key  string
-	Name string
+	Name        string
+	DisplayName string
 }{
-	{Key: "chrome", Name: "Chrome"},
-	{Key: "edge", Name: "Microsoft Edge"},
+	{Name: "chrome", DisplayName: "Chrome"},
+	{Name: "edge", DisplayName: "Microsoft Edge"},
 }
 
 var ChromiumProfiles = []struct {
@@ -45,28 +46,28 @@ var ChromiumProfiles = []struct {
 
 func ChromiumInstallations(t *testing.T, root string) {
 	t.Helper()
-	for _, inst := range ChromiumInstalls {
-		ChromiumUserData(t, filepath.Join(root, inst.Key), inst.Key)
+	for _, fixture := range ChromiumInstalls {
+		ChromiumUserData(t, filepath.Join(root, fixture.Name), fixture.Name)
 	}
 }
 
-func ChromiumUserData(t *testing.T, userDataDir, browserKey string) {
+func ChromiumUserData(t *testing.T, userDataDir, browserName string) {
 	t.Helper()
 	fixtureWrite(t, filepath.Join(userDataDir, "Local State"), "{}")
-	for _, p := range ChromiumProfiles {
-		site := p.label + "." + browserKey + ".test"
-		chromiumFixtureProfile(t, filepath.Join(userDataDir, p.Dir), site, p.start, p.accountLogins)
+	for _, fixtureProfile := range ChromiumProfiles {
+		site := fixtureProfile.label + "." + browserName + ".test"
+		chromiumFixtureProfile(t, filepath.Join(userDataDir, fixtureProfile.Dir), site, fixtureProfile.start, fixtureProfile.accountLogins)
 	}
 }
 
 func chromiumFixtureProfile(t *testing.T, dir, site string, start time.Time, accountLogins bool) {
 	t.Helper()
-	at := func(offset time.Duration) int64 { return chromiumFixtureMicros(start.Add(offset)) }
+	chromiumTimeAt := func(offset time.Duration) int64 { return chromiumFixtureMicros(start.Add(offset)) }
 	link := func(host, path string) string { return "https://" + host + "." + site + path }
-	v10 := func(plaintext string) string {
+	sealV10 := func(plaintext string) string {
 		return chromiumFixtureSeal(t, "v10", ChromiumKeys[masterkey.V10], plaintext)
 	}
-	v20 := func(plaintext string) string {
+	sealV20 := func(plaintext string) string {
 		return chromiumFixtureSeal(t, "v20", ChromiumKeys[masterkey.V20], plaintext)
 	}
 	// Chrome 130+ seals SHA256(host_key) ahead of the cookie value, which extraction must strip again.
@@ -80,40 +81,40 @@ func chromiumFixtureProfile(t *testing.T, dir, site string, start time.Time, acc
 
 	fixtureSQLite(t, filepath.Join(dir, "Login Data"), chromiumFixtureLoginsSchema,
 		chromiumFixtureInsertLogin(link("accounts", "/"), link("accounts", "/login"), "alice",
-			v10("correct-horse-battery-staple"), at(time.Hour)),
-		chromiumFixtureInsertLogin(link("shop", "/"), link("shop", "/signin"), "alice@"+site, v10(`pa,ss"word`), at(2*time.Hour)),
+			sealV10("correct-horse-battery-staple"), chromiumTimeAt(time.Hour)),
+		chromiumFixtureInsertLogin(link("shop", "/"), link("shop", "/signin"), "alice@"+site, sealV10(`pa,ss"word`), chromiumTimeAt(2*time.Hour)),
 	)
 	if accountLogins {
 		fixtureSQLite(t, filepath.Join(dir, "Login Data For Account"), chromiumFixtureLoginsSchema,
-			chromiumFixtureInsertLogin(link("sync", "/"), link("sync", "/auth"), "alice", v10("synced-secret"), at(90*time.Minute)),
+			chromiumFixtureInsertLogin(link("sync", "/"), link("sync", "/auth"), "alice", sealV10("synced-secret"), chromiumTimeAt(90*time.Minute)),
 		)
 	}
 
 	domain, www, app := "."+site, "www."+site, "app."+site
 	fixtureSQLite(t, filepath.Join(dir, "Network", "Cookies"), chromiumFixtureCookiesSchema,
-		chromiumFixtureInsertCookie("SID", domain, "/", v20(hostBound(domain, "sid-"+site)),
-			at(10*time.Minute+123456*time.Microsecond), at(365*day), 1, 1, 1),
-		chromiumFixtureInsertCookie("prefs", www, "/settings", v10("theme=dark"), at(20*time.Minute), at(30*day), 0, 0, 2),
-		chromiumFixtureInsertCookie("tracker", domain, "/", v20(hostBound(domain, "opt-out")), at(30*time.Minute), at(730*day), 1, 0, 0),
-		chromiumFixtureInsertCookie("session", app, "/", v20("ephemeral"), at(40*time.Minute), 0, 1, 1, -1),
+		chromiumFixtureInsertCookie("SID", domain, "/", sealV20(hostBound(domain, "sid-"+site)),
+			chromiumTimeAt(10*time.Minute+123456*time.Microsecond), chromiumTimeAt(365*day), 1, 1, 1),
+		chromiumFixtureInsertCookie("prefs", www, "/settings", sealV10("theme=dark"), chromiumTimeAt(20*time.Minute), chromiumTimeAt(30*day), 0, 0, 2),
+		chromiumFixtureInsertCookie("tracker", domain, "/", sealV20(hostBound(domain, "opt-out")), chromiumTimeAt(30*time.Minute), chromiumTimeAt(730*day), 1, 0, 0),
+		chromiumFixtureInsertCookie("session", app, "/", sealV20("ephemeral"), chromiumTimeAt(40*time.Minute), 0, 1, 1, -1),
 	)
 
 	fixtureSQLite(t, filepath.Join(dir, "History"), chromiumFixtureURLsSchema, chromiumFixtureDownloadsSchema,
-		chromiumFixtureInsertURL(link("www", "/"), "Home", 42, at(3*time.Hour)),
-		chromiumFixtureInsertURL(link("docs", "/guide?q=go&lang=en"), `Guide, "quoted" & <b>bold</b>`, 7, at(4*time.Hour)),
-		chromiumFixtureInsertURL(link("news", "/ja"), "ニュース", 3, at(5*time.Hour)),
+		chromiumFixtureInsertURL(link("www", "/"), "Home", 42, chromiumTimeAt(3*time.Hour)),
+		chromiumFixtureInsertURL(link("docs", "/guide?q=go&lang=en"), `Guide, "quoted" & <b>bold</b>`, 7, chromiumTimeAt(4*time.Hour)),
+		chromiumFixtureInsertURL(link("news", "/ja"), "ニュース", 3, chromiumTimeAt(5*time.Hour)),
 		chromiumFixtureInsertDownload(`C:\Users\alice\Downloads\report.pdf`, link("files", "/report.pdf"), "application/pdf",
-			52344, at(6*time.Hour), at(6*time.Hour+3*time.Second)),
+			52344, chromiumTimeAt(6*time.Hour), chromiumTimeAt(6*time.Hour+3*time.Second)),
 		chromiumFixtureInsertDownload("/home/alice/Downloads/archive.tar.gz", link("files", "/archive.tar.gz"), "application/gzip",
-			1048576, at(7*time.Hour), 0),
+			1048576, chromiumTimeAt(7*time.Hour), 0),
 	)
 
 	fixtureWrite(t, filepath.Join(dir, "Bookmarks"),
-		fmt.Sprintf(chromiumFixtureBookmarks, site, at(0), at(8*time.Hour), at(9*time.Hour), at(10*time.Hour)))
+		fmt.Sprintf(chromiumFixtureBookmarks, site, chromiumTimeAt(0), chromiumTimeAt(8*time.Hour), chromiumTimeAt(9*time.Hour), chromiumTimeAt(10*time.Hour)))
 
 	fixtureSQLite(t, filepath.Join(dir, "Web Data"), chromiumFixtureCreditCardsSchema,
-		chromiumFixtureInsertCreditCard("Alice Example", 4, 2031, v10("4111111111111111"), "Travel", "billing-home"),
-		chromiumFixtureInsertCreditCard("Bob Example", 11, 2029, v10("5500005555555559"), "", ""),
+		chromiumFixtureInsertCreditCard("Alice Example", 4, 2031, sealV10("4111111111111111"), "Travel", "billing-home"),
+		chromiumFixtureInsertCreditCard("Bob Example", 11, 2029, sealV10("5500005555555559"), "", ""),
 	)
 
 	fixtureWrite(t, filepath.Join(dir, "Secure Preferences"), chromiumFixtureSecurePreferences)
@@ -149,37 +150,49 @@ func chromiumFixtureSeal(t *testing.T, version string, key []byte, plaintext str
 	return hex.EncodeToString(append(append([]byte(version), nonce...), sealed...))
 }
 
-func chromiumFixtureMicros(ts time.Time) int64 {
+func chromiumFixtureMicros(timestamp time.Time) int64 {
 	const unixToChromiumEpochMicros = 11_644_473_600_000_000
-	return ts.UnixMicro() + unixToChromiumEpochMicros
+	return timestamp.UnixMicro() + unixToChromiumEpochMicros
 }
 
-func chromiumFixtureLatin1(s string) string { return "\x01" + s }
+func chromiumFixtureLatin1(text string) string { return "\x01" + text }
 
-func chromiumFixtureUTF16(s string) string { return "\x00" + chromiumFixtureUTF16Raw(s) }
+func chromiumFixtureUTF16(text string) string { return "\x00" + chromiumFixtureUTF16Raw(text) }
 
-func chromiumFixtureUTF16Raw(s string) string {
-	units := utf16.Encode([]rune(s))
-	b := make([]byte, 2*len(units))
-	for i, u := range units {
-		binary.LittleEndian.PutUint16(b[2*i:], u)
+func chromiumFixtureUTF16Raw(text string) string {
+	units := utf16.Encode([]rune(text))
+	encoded := make([]byte, 2*len(units))
+	for i, unit := range units {
+		binary.LittleEndian.PutUint16(encoded[2*i:], unit)
 	}
-	return string(b)
+	return string(encoded)
 }
 
 func chromiumFixtureLevelDB(t *testing.T, dir string, entries map[string]string) {
 	t.Helper()
 	keys := make([]string, 0, len(entries))
-	for k := range entries {
-		keys = append(keys, k)
+	for key := range entries {
+		keys = append(keys, key)
 	}
 	sort.Strings(keys)
-	db, err := leveldb.OpenFile(dir, nil)
-	require.NoError(t, err)
-	for _, k := range keys {
-		require.NoError(t, db.Put([]byte(k), []byte(entries[k]), nil))
+	database := OpenLevelDB(t, dir)
+	for _, key := range keys {
+		require.NoError(t, database.Put([]byte(key), []byte(entries[key]), nil))
 	}
-	require.NoError(t, db.Close())
+	require.NoError(t, database.Close())
+}
+
+// OpenLevelDB retries on Windows, where a just-written file can stay locked by a scanner and fail OpenFile.
+func OpenLevelDB(t *testing.T, dir string) *leveldb.DB {
+	t.Helper()
+	for attempt := 1; ; attempt++ {
+		database, err := leveldb.OpenFile(dir, nil)
+		if err == nil || runtime.GOOS != "windows" || attempt == 5 {
+			require.NoError(t, err)
+			return database
+		}
+		time.Sleep(time.Duration(attempt) * 100 * time.Millisecond)
+	}
 }
 
 func chromiumFixtureInsertLogin(originURL, actionURL, username, pwdHex string, dateCreated int64) string {

@@ -13,15 +13,15 @@ import (
 )
 
 func TestReport(t *testing.T) {
-	cookie := Extraction{DirID: "chrome", Profile: "Default", Category: category.Cookie}
-	var buf bytes.Buffer
-	require.NoError(t, Report(&buf, Summary{Results: []Result{
+	cookie := Extraction{UserDataDirID: "chrome", Profile: "Default", Category: category.Cookie}
+	var buffer bytes.Buffer
+	require.NoError(t, Report(&buffer, Summary{Results: []Result{
 		{Extraction: cookie, Outcome: OutcomePartial, Count: 224, Failed: 4},
 		dirFailure("arc-2", errors.New("permission denied")),
-		{Extraction: Extraction{DirID: "edge", Profile: "Default", Category: category.Password}},
+		{Extraction: Extraction{UserDataDirID: "edge", Profile: "Default", Category: category.Password}},
 	}}))
 
-	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	lines := strings.Split(strings.TrimSpace(buffer.String()), "\n")
 	require.Len(t, lines, 4)
 	assert.Equal(t, []string{"chrome", "Default", "cookie", "partial", "224", "4", "not", "recovered"}, strings.Fields(lines[1]))
 	assert.Equal(t, []string{"arc-2", "-", "-", "error", "0", "permission", "denied"}, strings.Fields(lines[2]))

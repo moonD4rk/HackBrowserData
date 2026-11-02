@@ -27,12 +27,12 @@ func extractPasswordsWithQuery(masterKeys masterkey.Set, path string, store reco
 	logins, err := sqlitex.QueryRows(path, false, query,
 		func(rows *sql.Rows) (record.Login, error) {
 			var url, username string
-			var pwd []byte
+			var encryptedPassword []byte
 			var created int64
-			if err := rows.Scan(&url, &username, &pwd, &created); err != nil {
+			if err := rows.Scan(&url, &username, &encryptedPassword, &created); err != nil {
 				return record.Login{}, err
 			}
-			password, err := decryptValue(masterKeys, pwd)
+			password, err := decryptValue(masterKeys, encryptedPassword)
 			if err != nil {
 				out.Fail(fmt.Errorf("decrypt password for %s: %w", url, err))
 			}
@@ -51,7 +51,7 @@ func extractPasswordsWithQuery(masterKeys masterkey.Set, path string, store reco
 	return nil
 }
 
-// The URL column is origin_url, which the per-row AAD covers, not action_url.
+// extractYandexPasswords reads origin_url, which the per-row AAD covers, not action_url.
 func extractYandexPasswords(masterKeys masterkey.Set, path string, out browser.Collector) error {
 	dataKey, keyErr := loadYandexDataKey(path, masterKeys[masterkey.V10])
 

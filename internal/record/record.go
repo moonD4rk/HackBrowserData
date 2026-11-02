@@ -6,18 +6,13 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
-// Record is sealed by the unexported stamp, so only this package's types are records.
+// Record is one output row; the collector sets its Browser and Profile, so extractors leave both empty.
 type Record interface {
 	Category() category.Category
-	stamp(browser, profile string)
+	SetBrowserAndProfile(browser, profile string)
 }
 
-// Stamp is exported because the sealing method stamp cannot be called from other packages.
-func Stamp(r Record, browser, profile string) {
-	r.stamp(browser, profile)
-}
-
-// Named Login, not Password: the row holds a URL and a user name as well as the password.
+// Login is named for the whole row, not Password: it holds a URL and a user name as well as the password.
 type Login struct {
 	Browser   string    `json:"browser" csv:"browser"`
 	Profile   string    `json:"profile" csv:"profile"`
@@ -83,7 +78,7 @@ type Download struct {
 	EndTime    time.Time `json:"end_time" csv:"end_time"`
 }
 
-// CreditCard's CVC and Comment are Yandex-specific; Chromium leaves them empty.
+// CreditCard has Yandex-only CVC and Comment fields; Chromium leaves them empty.
 type CreditCard struct {
 	Browser  string `json:"browser" csv:"browser"`
 	Profile  string `json:"profile" csv:"profile"`
@@ -138,12 +133,38 @@ func (r *Extension) Category() category.Category      { return category.Extensio
 func (r *LocalStorage) Category() category.Category   { return category.LocalStorage }
 func (r *SessionStorage) Category() category.Category { return category.SessionStorage }
 
-func (r *Login) stamp(browser, profile string)          { r.Browser, r.Profile = browser, profile }
-func (r *Cookie) stamp(browser, profile string)         { r.Browser, r.Profile = browser, profile }
-func (r *Bookmark) stamp(browser, profile string)       { r.Browser, r.Profile = browser, profile }
-func (r *History) stamp(browser, profile string)        { r.Browser, r.Profile = browser, profile }
-func (r *Download) stamp(browser, profile string)       { r.Browser, r.Profile = browser, profile }
-func (r *CreditCard) stamp(browser, profile string)     { r.Browser, r.Profile = browser, profile }
-func (r *Extension) stamp(browser, profile string)      { r.Browser, r.Profile = browser, profile }
-func (r *LocalStorage) stamp(browser, profile string)   { r.Browser, r.Profile = browser, profile }
-func (r *SessionStorage) stamp(browser, profile string) { r.Browser, r.Profile = browser, profile }
+func (r *Login) SetBrowserAndProfile(browser, profile string) {
+	r.Browser, r.Profile = browser, profile
+}
+
+func (r *Cookie) SetBrowserAndProfile(browser, profile string) {
+	r.Browser, r.Profile = browser, profile
+}
+
+func (r *Bookmark) SetBrowserAndProfile(browser, profile string) {
+	r.Browser, r.Profile = browser, profile
+}
+
+func (r *History) SetBrowserAndProfile(browser, profile string) {
+	r.Browser, r.Profile = browser, profile
+}
+
+func (r *Download) SetBrowserAndProfile(browser, profile string) {
+	r.Browser, r.Profile = browser, profile
+}
+
+func (r *CreditCard) SetBrowserAndProfile(browser, profile string) {
+	r.Browser, r.Profile = browser, profile
+}
+
+func (r *Extension) SetBrowserAndProfile(browser, profile string) {
+	r.Browser, r.Profile = browser, profile
+}
+
+func (r *LocalStorage) SetBrowserAndProfile(browser, profile string) {
+	r.Browser, r.Profile = browser, profile
+}
+
+func (r *SessionStorage) SetBrowserAndProfile(browser, profile string) {
+	r.Browser, r.Profile = browser, profile
+}

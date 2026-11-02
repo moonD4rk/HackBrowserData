@@ -16,20 +16,20 @@ func extractExtensions(path string, out browser.Collector) error {
 	}
 
 	var extensions []record.Extension
-	for _, v := range gjson.GetBytes(data, "addons").Array() {
+	for _, value := range gjson.GetBytes(data, "addons").Array() {
 		// Only include user-installed extensions
 		// https://searchfox.org/mozilla-central/source/toolkit/mozapps/extensions/internal/XPIDatabase.jsm#157
-		if v.Get("location").String() != "app-profile" {
+		if value.Get("location").String() != "app-profile" {
 			continue
 		}
 
 		extensions = append(extensions, record.Extension{
-			Name:        v.Get("defaultLocale.name").String(),
-			ID:          v.Get("id").String(),
-			Description: v.Get("defaultLocale.description").String(),
-			Version:     v.Get("version").String(),
-			HomepageURL: v.Get("defaultLocale.homepageURL").String(),
-			Enabled:     v.Get("active").Bool(),
+			Name:        value.Get("defaultLocale.name").String(),
+			ID:          value.Get("id").String(),
+			Description: value.Get("defaultLocale.description").String(),
+			Version:     value.Get("version").String(),
+			HomepageURL: value.Get("defaultLocale.homepageURL").String(),
+			Enabled:     value.Get("active").Bool(),
 		})
 	}
 	emit(out, extensions)

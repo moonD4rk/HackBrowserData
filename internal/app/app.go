@@ -28,8 +28,8 @@ type Flags struct {
 	KeychainPasswordStdin bool
 }
 
-type Request struct {
-	Browser     string // "all" or one Def.ID
+type Options struct {
+	Browser     string // "all" or one Browser.Name
 	Categories  []category.Category
 	Format      export.Format
 	Dir         string
@@ -37,97 +37,97 @@ type Request struct {
 	ProfilePath string
 	Home        string
 
-	// Called when the login keychain is first opened; "" leaves it locked, and nil, as list has it, does so silently.
+	// KeychainPassword runs when the keychain first opens; "" leaves it locked, and nil, as list has it, silently.
 	KeychainPassword func(ctx context.Context) (string, error)
 	// Keys are a dump's keys by user data dir; nil retrieves every dir's keys from this machine.
-	Keys map[browser.DirID]masterkey.Set
+	Keys map[browser.UserDataDirID]masterkey.Set
 }
 
 // Validate checks every flag before any browser or secret is touched, so a bad flag fails fast.
-func Validate(f Flags) (Request, error) {
-	return validate(f, os.Stdin)
+func Validate(flags Flags) (Options, error) {
+	return validate(flags, os.Stdin)
 }
 
-func validate(f Flags, stdin *os.File) (Request, error) {
-	id, err := parseBrowser(f.Browser)
+func validate(flags Flags, stdin *os.File) (Options, error) {
+	browserName, err := parseBrowser(flags.Browser)
 	if err != nil {
-		return Request{}, err
+		return Options{}, err
 	}
-	categories, err := parseCategories(f.Categories)
+	categories, err := parseCategories(flags.Categories)
 	if err != nil {
-		return Request{}, err
+		return Options{}, err
 	}
-	format, err := export.ParseFormat(f.Format)
+	format, err := export.ParseFormat(flags.Format)
 	if err != nil {
-		return Request{}, err
+		return Options{}, err
 	}
-	if err := checkOutputDir(f.Dir); err != nil {
-		return Request{}, err
+	if err := checkOutputDir(flags.Dir); err != nil {
+		return Options{}, err
 	}
-	profilePath, err := checkProfilePath(id, f.ProfilePath)
+	profilePath, err := checkProfilePath(browserName, flags.ProfilePath)
 	if err != nil {
-		return Request{}, err
+		return Options{}, err
 	}
-	password, err := keychainPassword(f, stdin)
+	password, err := keychainPassword(flags, stdin)
 	if err != nil {
-		return Request{}, err
+		return Options{}, err
 	}
 	home, err := homeDir()
 	if err != nil {
-		return Request{}, err
+		return Options{}, err
 	}
-	return Request{
-		Browser:          id,
+	return Options{
+		Browser:          browserName,
 		Categories:       categories,
 		Format:           format,
-		Dir:              f.Dir,
-		Zip:              f.Zip,
+		Dir:              flags.Dir,
+		Zip:              flags.Zip,
 		ProfilePath:      profilePath,
 		Home:             home,
 		KeychainPassword: password,
 	}, nil
 }
 
-func ValidateKeys(f Flags) (Request, error) {
-	id, err := parseBrowser(f.Browser)
+func ValidateKeys(flags Flags) (Options, error) {
+	browserName, err := parseBrowser(flags.Browser)
 	if err != nil {
-		return Request{}, err
+		return Options{}, err
 	}
-	password, err := keychainPassword(f, os.Stdin)
+	password, err := keychainPassword(flags, os.Stdin)
 	if err != nil {
-		return Request{}, err
+		return Options{}, err
 	}
 	home, err := homeDir()
 	if err != nil {
-		return Request{}, err
+		return Options{}, err
 	}
-	return Request{Browser: id, Home: home, KeychainPassword: password}, nil
+	return Options{Browser: browserName, Home: home, KeychainPassword: password}, nil
 }
 
 // ValidateArchive takes no keychain password: an archive copies files and reads no secret.
-func ValidateArchive(f Flags) (Request, error) {
-	id, err := parseBrowser(f.Browser)
+func ValidateArchive(flags Flags) (Options, error) {
+	browserName, err := parseBrowser(flags.Browser)
 	if err != nil {
-		return Request{}, err
+		return Options{}, err
 	}
-	categories, err := parseCategories(f.Categories)
+	categories, err := parseCategories(flags.Categories)
 	if err != nil {
-		return Request{}, err
+		return Options{}, err
 	}
 	home, err := homeDir()
 	if err != nil {
-		return Request{}, err
+		return Options{}, err
 	}
-	return Request{Browser: id, Categories: categories, Home: home}, nil
+	return Options{Browser: browserName, Categories: categories, Home: home}, nil
 }
 
-// ListRequest is what list reads: every browser and category, with the keychain left locked, so counting never prompts.
-func ListRequest() (Request, error) {
+// ListOptions is what list reads: every browser and category, with the keychain left locked, so counting never prompts.
+func ListOptions() (Options, error) {
 	home, err := homeDir()
 	if err != nil {
-		return Request{}, err
+		return Options{}, err
 	}
-	return Request{Browser: allBrowsers, Categories: category.All(), Home: home}, nil
+	return Options{Browser: allBrowsers, Categories: category.All(), Home: home}, nil
 }
 
 func homeDir() (string, error) {
@@ -140,18 +140,18 @@ func homeDir() (string, error) {
 
 const allBrowsers = "all"
 
-// parseBrowser accepts all or one of this OS's browser IDs; an ID from another OS's table has nothing to find here.
-func parseBrowser(s string) (string, error) {
-	id := strings.ToLower(strings.TrimSpace(s))
-	if id == "" || id == allBrowsers {
+// parseBrowser accepts all or one of this OS's browser names; a name from another OS's table has nothing to find here.
+func parseBrowser(value string) (string, error) {
+	name := strings.ToLower(strings.TrimSpace(value))
+	if name == "" || name == allBrowsers {
 		return allBrowsers, nil
 	}
-	for _, def := range browser.Supported() {
-		if def.ID == id {
-			return id, nil
+	for _, supportedBrowser := range browser.Supported() {
+		if supportedBrowser.Name == name {
+			return name, nil
 		}
 	}
-	return "", fmt.Errorf("unknown browser %q, available: %s|%s", s, allBrowsers, strings.Join(browser.IDs(), "|"))
+	return "", fmt.Errorf("unknown browser %q, available: %s|%s", value, allBrowsers, strings.Join(browser.Names(), "|"))
 }
 
 // checkOutputDir creates nothing: -d, or its nearest existing ancestor, must be a directory we can create in.
@@ -179,11 +179,11 @@ func checkOutputDir(dir string) error {
 }
 
 // checkProfilePath keeps -p only when one browser is named; with -b all it is ignored, as it always was, but now said.
-func checkProfilePath(id, path string) (string, error) {
+func checkProfilePath(browserName, path string) (string, error) {
 	if path == "" {
 		return "", nil
 	}
-	if id == allBrowsers {
+	if browserName == allBrowsers {
 		log.Warnf("-p needs a specific -b; ignoring %s", path)
 		return "", nil
 	}
@@ -198,25 +198,25 @@ func checkProfilePath(id, path string) (string, error) {
 }
 
 // parseCategories keeps a repeated category once, or its records would be exported twice.
-func parseCategories(s string) ([]category.Category, error) {
-	s = strings.TrimSpace(s)
-	if strings.EqualFold(s, "all") {
+func parseCategories(value string) ([]category.Category, error) {
+	value = strings.TrimSpace(value)
+	if strings.EqualFold(value, "all") {
 		return category.All(), nil
 	}
 	var categories []category.Category
 	seen := make(map[category.Category]bool)
-	for _, name := range strings.Split(s, ",") {
+	for _, name := range strings.Split(value, ",") {
 		name = strings.TrimSpace(strings.ToLower(name))
 		if name == "" {
 			continue
 		}
-		c, err := category.Parse(name)
+		dataCategory, err := category.Parse(name)
 		if err != nil {
 			return nil, fmt.Errorf("%w, available: all|%s", err, strings.Join(category.Names(), ","))
 		}
-		if !seen[c] {
-			seen[c] = true
-			categories = append(categories, c)
+		if !seen[dataCategory] {
+			seen[dataCategory] = true
+			categories = append(categories, dataCategory)
 		}
 	}
 	if len(categories) == 0 {

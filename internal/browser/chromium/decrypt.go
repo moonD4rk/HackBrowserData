@@ -6,7 +6,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
-// A profile can mix versions, so a missing key fails only the values sealed under that version.
+// decryptValue fails only the values sealed under a version whose key is missing, since a profile can mix versions.
 func decryptValue(masterKeys masterkey.Set, ciphertext []byte) ([]byte, error) {
 	if len(ciphertext) == 0 {
 		return nil, nil

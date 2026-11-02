@@ -12,17 +12,17 @@ import (
 )
 
 func yandexLoginAAD(originURL, usernameElem, usernameVal, passwordElem, signonRealm string, keyID []byte) []byte {
-	h := sha1.New()
-	h.Write([]byte(originURL))
-	h.Write([]byte{0})
-	h.Write([]byte(usernameElem))
-	h.Write([]byte{0})
-	h.Write([]byte(usernameVal))
-	h.Write([]byte{0})
-	h.Write([]byte(passwordElem))
-	h.Write([]byte{0})
-	h.Write([]byte(signonRealm))
-	sum := h.Sum(nil)
+	hasher := sha1.New()
+	hasher.Write([]byte(originURL))
+	hasher.Write([]byte{0})
+	hasher.Write([]byte(usernameElem))
+	hasher.Write([]byte{0})
+	hasher.Write([]byte(usernameVal))
+	hasher.Write([]byte{0})
+	hasher.Write([]byte(passwordElem))
+	hasher.Write([]byte{0})
+	hasher.Write([]byte(signonRealm))
+	sum := hasher.Sum(nil)
 	if len(keyID) == 0 {
 		return sum
 	}
@@ -52,18 +52,18 @@ func loadYandexDataKey(dbPath string, masterKey []byte) ([]byte, error) {
 	if _, err := os.Stat(dbPath); err != nil {
 		return nil, fmt.Errorf("yandex db file: %w", err)
 	}
-	db, err := sql.Open("sqlite", dbPath)
+	database, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer database.Close()
 
-	if hasMasterPassword(db) {
+	if hasMasterPassword(database) {
 		return nil, errYandexMasterPasswordSet
 	}
 
 	var blob []byte
-	if err := db.QueryRow("SELECT value FROM meta WHERE key = 'local_encryptor_data'").Scan(&blob); err != nil {
+	if err := database.QueryRow("SELECT value FROM meta WHERE key = 'local_encryptor_data'").Scan(&blob); err != nil {
 		return nil, fmt.Errorf("read local_encryptor_data: %w", err)
 	}
 
@@ -75,9 +75,9 @@ func loadYandexDataKey(dbPath string, masterKey []byte) ([]byte, error) {
 }
 
 // hasMasterPassword: missing table (Ya Credit Cards) or empty sealed_key both mean false.
-func hasMasterPassword(db *sql.DB) bool {
+func hasMasterPassword(database *sql.DB) bool {
 	var sealed sql.NullString
-	if err := db.QueryRow("SELECT sealed_key FROM active_keys").Scan(&sealed); err != nil {
+	if err := database.QueryRow("SELECT sealed_key FROM active_keys").Scan(&sealed); err != nil {
 		return false
 	}
 	return sealed.Valid && strings.TrimSpace(sealed.String) != ""

@@ -19,6 +19,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
+// darwinParams follow Chromium's os_crypt_mac.mm:
 // https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157
 var darwinParams = pbkdf2Params{
 	salt:       []byte("saltysalt"),
@@ -29,14 +30,14 @@ var darwinParams = pbkdf2Params{
 
 const securityCmdTimeout = 30 * time.Second
 
-// First success wins; the security CLI goes last because it may prompt.
+// platformRetrievers stop at the first success; the security CLI goes last because it may prompt.
 var platformRetrievers = []Retriever{
 	&gcoredumpRetriever{},
 	keychainRetriever{},
 	&securityRetriever{cache: make(map[string]securityResult)},
 }
 
-// Records are read once (sync.Once), so the dump runs a single time for all browsers.
+// gcoredumpRetriever reads records once (sync.Once), so the dump runs a single time for all browsers.
 type gcoredumpRetriever struct {
 	once    sync.Once
 	records []keychainbreaker.GenericPassword
@@ -46,7 +47,7 @@ type gcoredumpRetriever struct {
 func (*gcoredumpRetriever) Version() Version { return V10 }
 
 // Retrieve steps aside on failure: the common "needs root" case isn't warning-worthy and would drown real warnings.
-func (r *gcoredumpRetriever) Retrieve(_ context.Context, loc Locator) ([]byte, error) {
+func (r *gcoredumpRetriever) Retrieve(_ context.Context, locator Locator) ([]byte, error) {
 	r.once.Do(func() {
 		r.records, r.err = DecryptKeychainRecords()
 	})
@@ -55,7 +56,7 @@ func (r *gcoredumpRetriever) Retrieve(_ context.Context, loc Locator) ([]byte, e
 		return nil, ErrNotApplicable
 	}
 
-	key, err := findStorageKey(r.records, loc.KeychainLabel)
+	key, err := findStorageKey(r.records, locator.KeychainLabel)
 	if err != nil {
 		log.Debugf("gcoredump: %v", err)
 		return nil, ErrNotApplicable
@@ -64,24 +65,24 @@ func (r *gcoredumpRetriever) Retrieve(_ context.Context, loc Locator) ([]byte, e
 }
 
 func findStorageKey(records []keychainbreaker.GenericPassword, storage string) ([]byte, error) {
-	for _, rec := range records {
-		if rec.Account == storage {
-			return darwinParams.deriveKey(rec.Password), nil
+	for _, genericPassword := range records {
+		if genericPassword.Account == storage {
+			return darwinParams.deriveKey(genericPassword.Password), nil
 		}
 	}
 	return nil, fmt.Errorf("%q: %w", storage, errStorageNotFound)
 }
 
-// Without a keychain, or with a locked one, it steps aside: the keychain reports why once for the run.
+// keychainRetriever steps aside without a keychain or with a locked one; the keychain reports why once for the run.
 type keychainRetriever struct{}
 
 func (keychainRetriever) Version() Version { return V10 }
 
-func (keychainRetriever) Retrieve(ctx context.Context, loc Locator) ([]byte, error) {
-	if loc.Keychain == nil {
+func (keychainRetriever) Retrieve(ctx context.Context, locator Locator) ([]byte, error) {
+	if locator.Keychain == nil {
 		return nil, ErrNotApplicable
 	}
-	secret, err := loc.Keychain.GenericPassword(ctx, loc.KeychainLabel)
+	secret, err := locator.Keychain.GenericPassword(ctx, locator.KeychainLabel)
 	if errors.Is(err, keychain.ErrLocked) {
 		return nil, ErrNotApplicable
 	}
@@ -91,9 +92,9 @@ func (keychainRetriever) Retrieve(ctx context.Context, loc Locator) ([]byte, err
 	return darwinParams.deriveKey(secret), nil
 }
 
-// Results are cached per storage name, so each browser's key is fetched, and prompted for, once.
+// securityRetriever caches results per storage name, so each browser's key is fetched, and prompted for, once.
 type securityRetriever struct {
-	mu    sync.Mutex
+	mutex sync.Mutex
 	cache map[string]securityResult
 }
 
@@ -104,13 +105,13 @@ type securityResult struct {
 
 func (*securityRetriever) Version() Version { return V10 }
 
-func (r *securityRetriever) Retrieve(ctx context.Context, loc Locator) ([]byte, error) {
-	storage := loc.KeychainLabel
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (r *securityRetriever) Retrieve(ctx context.Context, locator Locator) ([]byte, error) {
+	storage := locator.KeychainLabel
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	if res, ok := r.cache[storage]; ok {
-		return res.key, res.err
+	if cached, ok := r.cache[storage]; ok {
+		return cached.key, cached.err
 	}
 
 	key, err := r.retrieveKeyOnce(ctx, storage)
@@ -123,11 +124,11 @@ func (r *securityRetriever) retrieveKeyOnce(ctx context.Context, storage string)
 	defer cancel()
 
 	var stdout, stderr bytes.Buffer
-	cmd := exec.CommandContext(ctx, "security", "find-generic-password", "-wa", strings.TrimSpace(storage)) //nolint:gosec
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	command := exec.CommandContext(ctx, "security", "find-generic-password", "-wa", strings.TrimSpace(storage)) //nolint:gosec
+	command.Stdout = &stdout
+	command.Stderr = &stderr
 
-	if err := cmd.Run(); err != nil {
+	if err := command.Run(); err != nil {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 			return nil, fmt.Errorf("security command timed out after %s", securityCmdTimeout)
 		}

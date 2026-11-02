@@ -23,7 +23,7 @@ type Keychain struct {
 	password PasswordFunc
 
 	openOnce sync.Once
-	kc       *keychainbreaker.Keychain
+	opened   *keychainbreaker.Keychain
 	err      error
 
 	genericOnce sync.Once
@@ -40,21 +40,21 @@ func (k *Keychain) GenericPassword(ctx context.Context, account string) ([]byte,
 	if err := k.open(ctx); err != nil {
 		return nil, err
 	}
-	if !k.kc.Unlocked() {
+	if !k.opened.Unlocked() {
 		if k.err != nil {
 			return nil, k.err
 		}
 		return nil, ErrLocked
 	}
 	k.genericOnce.Do(func() {
-		k.generic, k.genericErr = k.kc.GenericPasswords()
+		k.generic, k.genericErr = k.opened.GenericPasswords()
 	})
 	if k.genericErr != nil {
 		return nil, fmt.Errorf("read generic passwords: %w", k.genericErr)
 	}
-	for _, rec := range k.generic {
-		if rec.Account == account {
-			return rec.Password, nil
+	for _, genericPassword := range k.generic {
+		if genericPassword.Account == account {
+			return genericPassword.Password, nil
 		}
 	}
 	return nil, fmt.Errorf("%q: %w", account, errNotFound)
@@ -65,7 +65,7 @@ func (k *Keychain) InternetPasswords(ctx context.Context) ([]keychainbreaker.Int
 	if err := k.open(ctx); err != nil {
 		return nil, err
 	}
-	passwords, err := k.kc.InternetPasswords()
+	passwords, err := k.opened.InternetPasswords()
 	if err != nil {
 		return nil, fmt.Errorf("read internet passwords: %w", err)
 	}
@@ -79,15 +79,15 @@ func (k *Keychain) Err() error {
 
 func (k *Keychain) open(ctx context.Context) error {
 	k.openOnce.Do(func() {
-		kc, err := keychainbreaker.Open(keychainbreaker.WithFile(k.path))
+		opened, err := keychainbreaker.Open(keychainbreaker.WithFile(k.path))
 		if err != nil {
 			k.err = fmt.Errorf("open login keychain: %w", err)
 			return
 		}
-		k.kc = kc
+		k.opened = opened
 		k.err = k.unlock(ctx)
 	})
-	if k.kc == nil {
+	if k.opened == nil {
 		return k.err
 	}
 	return nil
@@ -97,18 +97,18 @@ func (k *Keychain) open(ctx context.Context) error {
 func (k *Keychain) unlock(ctx context.Context) error {
 	password, err := k.password(ctx)
 	if err != nil {
-		if tryErr := k.kc.TryUnlock(); tryErr != nil {
+		if tryErr := k.opened.TryUnlock(); tryErr != nil {
 			return fmt.Errorf("%w: read password: %w", ErrLocked, errors.Join(err, tryErr))
 		}
 		return fmt.Errorf("%w: read password: %w", ErrLocked, err)
 	}
 	if password == "" {
-		if err := k.kc.TryUnlock(); err != nil {
+		if err := k.opened.TryUnlock(); err != nil {
 			return fmt.Errorf("%w: %w", ErrLocked, err)
 		}
 		return ErrLocked
 	}
-	if err := k.kc.TryUnlock(keychainbreaker.WithPassword(password)); err != nil {
+	if err := k.opened.TryUnlock(keychainbreaker.WithPassword(password)); err != nil {
 		return fmt.Errorf("%w: %w", ErrLocked, err)
 	}
 	return nil

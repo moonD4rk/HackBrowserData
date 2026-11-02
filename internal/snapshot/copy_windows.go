@@ -8,10 +8,10 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/winapi"
 )
 
-func copyLocked(src, dst string) error {
-	data, err := winapi.ReadLockedFile(src)
+func copyLocked(from, into string) error {
+	data, err := winapi.ReadLockedFile(from)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dst, data, 0o600)
+	return os.WriteFile(into, data, 0o600)
 }

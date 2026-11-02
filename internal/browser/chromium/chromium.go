@@ -13,19 +13,19 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// Sogou and QQ write Preferences_02; a marker keeps dirs like Crashpad and ShaderCache from passing as profiles.
+// profileMarkers add Preferences_02 for Sogou and QQ; a marker keeps dirs like Crashpad from passing as profiles.
 var profileMarkers = []string{"Preferences", "Preferences_02"}
 
-// A user data dir that does not exist yields nothing; any other failure is returned beside whatever was found.
-func Discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserDataDir, error) {
-	if dir, ok := profileAt(def, opts.ProfilePath); ok {
+// Discover yields nothing for a missing user data dir; any other failure is returned beside whatever was found.
+func Discover(chromiumBrowser browser.Browser, options browser.DiscoverOptions) ([]browser.UserDataDir, error) {
+	if dir, ok := profileAt(chromiumBrowser, options.ProfilePath); ok {
 		return []browser.UserDataDir{dir}, nil
 	}
-	paths, err := userDataDirPaths(def, opts)
+	paths, err := userDataDirPaths(chromiumBrowser, options)
 	errs := []error{err}
 	var dirs []browser.UserDataDir
 	for i, path := range paths {
-		dir := browser.UserDataDir{ID: dirID(def, i), Def: def, Path: path}
+		dir := browser.UserDataDir{ID: chromiumBrowser.UserDataDirID(i), Browser: chromiumBrowser, Path: path}
 		profiles, err := discoverProfiles(dir)
 		if errors.Is(err, fs.ErrNotExist) {
 			continue
@@ -41,8 +41,8 @@ func Discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserData
 }
 
 // DiscoverAt reads the profiles of a user data dir the table does not name, such as a copy restore was given.
-func DiscoverAt(def browser.Def, id browser.DirID, path string) (browser.UserDataDir, error) {
-	dir := browser.UserDataDir{ID: id, Def: def, Path: path}
+func DiscoverAt(chromiumBrowser browser.Browser, id browser.UserDataDirID, path string) (browser.UserDataDir, error) {
+	dir := browser.UserDataDir{ID: id, Browser: chromiumBrowser, Path: path}
 	profiles, err := discoverProfiles(dir)
 	if err != nil {
 		return dir, err
@@ -51,47 +51,39 @@ func DiscoverAt(def browser.Def, id browser.DirID, path string) (browser.UserDat
 	return dir, nil
 }
 
-// -p is the path chrome://version shows: a profile dir without Local State selects that profile of its parent.
-func profileAt(def browser.Def, path string) (browser.UserDataDir, bool) {
-	if path == "" || !isProfileDir(path) || hasAnySource(path, localState.Paths) {
+// profileAt takes chrome://version's path: a profile dir without Local State selects that profile of its parent.
+func profileAt(chromiumBrowser browser.Browser, path string) (browser.UserDataDir, bool) {
+	if path == "" || !isProfileDir(path) || hasAnyFile(path, localState.Paths) {
 		return browser.UserDataDir{}, false
 	}
 	clean := filepath.Clean(path)
 	name := filepath.Base(clean)
 	return browser.UserDataDir{
-		ID:       dirID(def, 0),
-		Def:      def,
+		ID:       chromiumBrowser.UserDataDirID(0),
+		Browser:  chromiumBrowser,
 		Path:     filepath.Dir(clean),
 		Profiles: []browser.Profile{{Name: name, Dir: name}},
 	}, true
 }
 
-// Every glob match is kept, for both of a machine's Arc packages; "/" joins keep the paths keys.json has recorded.
-func userDataDirPaths(def browser.Def, opts browser.DiscoverOptions) ([]string, error) {
-	if opts.ProfilePath != "" {
-		return []string{opts.ProfilePath}, nil
+// userDataDirPaths keeps every glob match, for both Arc packages; "/" joins keep the paths keys.json recorded.
+func userDataDirPaths(chromiumBrowser browser.Browser, options browser.DiscoverOptions) ([]string, error) {
+	if options.ProfilePath != "" {
+		return []string{options.ProfilePath}, nil
 	}
 	var (
 		paths []string
 		errs  []error
 	)
-	for _, rel := range def.Platform().UserDataDirs {
-		matches, err := filepath.Glob(opts.Home + "/" + rel)
+	for _, relativePath := range chromiumBrowser.Platform().UserDataDirs {
+		matches, err := filepath.Glob(options.Home + "/" + relativePath)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("user data dir %q: %w", rel, err))
+			errs = append(errs, fmt.Errorf("user data dir %q: %w", relativePath, err))
 			continue
 		}
 		paths = append(paths, matches...)
 	}
 	return paths, errors.Join(errs...)
-}
-
-// dirID numbers by path order among the matches, so IDs stay the same from run to run.
-func dirID(def browser.Def, i int) browser.DirID {
-	if i == 0 {
-		return browser.DirID(def.ID)
-	}
-	return browser.DirID(fmt.Sprintf("%s-%d", def.ID, i+1))
 }
 
 func discoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
@@ -101,25 +93,25 @@ func discoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
 	}
 
 	var profiles []browser.Profile
-	for _, e := range entries {
-		if e.IsDir() && !isSkippedDir(e.Name()) && isProfileDir(filepath.Join(dir.Path, e.Name())) {
-			profiles = append(profiles, browser.Profile{Name: e.Name(), Dir: e.Name()})
+	for _, entry := range entries {
+		if entry.IsDir() && !isSkippedDir(entry.Name()) && isProfileDir(filepath.Join(dir.Path, entry.Name())) {
+			profiles = append(profiles, browser.Profile{Name: entry.Name(), Dir: entry.Name()})
 		}
 	}
 	if len(profiles) > 0 {
 		return profiles, nil
 	}
 
-	// Flat layout (older Opera): check the root before subdirs, so a stray source-bearing subdir can't hide it.
-	sources := profileSourcePaths(dir)
-	if hasAnySource(dir.Path, sources) {
+	// Flat layout (older Opera): check the root before subdirs, so a stray subdir holding profile files can't hide it.
+	profileFiles := profileFilePaths(dir)
+	if hasAnyFile(dir.Path, profileFiles) {
 		return []browser.Profile{{Name: filepath.Base(dir.Path)}}, nil
 	}
 
-	// Restored or copied trees may omit the marker, which no category reads, so any source-bearing subdir is a profile.
-	for _, e := range entries {
-		if e.IsDir() && !isSkippedDir(e.Name()) && hasAnySource(filepath.Join(dir.Path, e.Name()), sources) {
-			profiles = append(profiles, browser.Profile{Name: e.Name(), Dir: e.Name()})
+	// Copied or restored trees may lack the marker, which no category reads, so a subdir with profile files is one too.
+	for _, entry := range entries {
+		if entry.IsDir() && !isSkippedDir(entry.Name()) && hasAnyFile(filepath.Join(dir.Path, entry.Name()), profileFiles) {
+			profiles = append(profiles, browser.Profile{Name: entry.Name(), Dir: entry.Name()})
 		}
 	}
 	return profiles, nil
@@ -142,51 +134,53 @@ func isSkippedDir(name string) bool {
 	return false
 }
 
-func profileSourcePaths(dir browser.UserDataDir) []string {
+func profileFilePaths(dir browser.UserDataDir) []string {
 	var paths []string
-	for _, e := range Extractors(dir, browser.Profile{}) {
-		for _, src := range e.Sources {
-			if !src.Shared {
-				paths = append(paths, src.Paths...)
+	for _, extractor := range Extractors(dir, browser.Profile{}) {
+		for _, fileSpec := range extractor.FileSpecs {
+			if !fileSpec.Shared {
+				paths = append(paths, fileSpec.Paths...)
 			}
 		}
 	}
 	return paths
 }
 
-func hasAnySource(dir string, paths []string) bool {
-	for _, rel := range paths {
-		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err == nil {
+func hasAnyFile(dir string, paths []string) bool {
+	for _, relativePath := range paths {
+		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(relativePath))); err == nil {
 			return true
 		}
 	}
 	return false
 }
 
-// On macOS the caller adds the run's login keychain to the Locator.
-func KeyLocator(dir browser.UserDataDir, snap snapshot.Snapshot) (masterkey.Locator, error) {
-	p := dir.Def.Platform()
-	loc := masterkey.Locator{KeychainLabel: p.KeychainLabel, Exe: p.Exe, ExeFallbacks: p.ExeFallbacks, ABE: p.ABE}
-	path, err := snap.Path(localState.Paths[0])
+// KeyLocator leaves the run's login keychain to the caller, which adds it to the Locator on macOS.
+func KeyLocator(dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterkey.Locator, error) {
+	platform := dir.Browser.Platform()
+	locator := masterkey.Locator{
+		KeychainLabel: platform.KeychainLabel, Exe: platform.Exe, ExeFallbacks: platform.ExeFallbacks, ABE: platform.ABE,
+	}
+	path, err := dirSnapshot.Path(localState.Paths[0])
 	switch {
 	case err == nil:
-		loc.LocalState = path
+		locator.LocalState = path
 	case !errors.Is(err, fs.ErrNotExist):
-		return loc, fmt.Errorf("local state: %w", err)
+		return locator, fmt.Errorf("local state: %w", err)
 	}
-	return loc, nil
+	return locator, nil
 }
 
-// KeySources are the files KeyLocator reads from a snapshot.
-func KeySources(_ browser.UserDataDir) []browser.Source {
-	return []browser.Source{localState}
+// KeyFileSpecs are the files KeyLocator reads from a snapshot.
+func KeyFileSpecs(_ browser.UserDataDir) []browser.FileSpec {
+	return []browser.FileSpec{localState}
 }
 
-// ArchiveSources add Local State and each profile's marker, so a reader without the manifest finds every profile.
-func ArchiveSources(_ browser.UserDataDir) []browser.Source {
-	sources := []browser.Source{localState}
+// ArchiveFileSpecs add Local State and each profile's marker, so a reader without the manifest finds every profile.
+func ArchiveFileSpecs(_ browser.UserDataDir) []browser.FileSpec {
+	fileSpecs := []browser.FileSpec{localState}
 	for _, marker := range profileMarkers {
-		sources = append(sources, browser.Source{Paths: []string{marker}, Optional: true})
+		fileSpecs = append(fileSpecs, browser.FileSpec{Paths: []string{marker}, Optional: true})
 	}
-	return sources
+	return fileSpecs
 }

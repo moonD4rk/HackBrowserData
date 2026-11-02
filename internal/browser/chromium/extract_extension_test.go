@@ -54,11 +54,11 @@ func TestExtractExtensions(t *testing.T) {
 
 	// gjson.ForEach walks a map, so the order may vary.
 	ids := map[string]bool{}
-	for _, ext := range got {
-		ids[ext.ID] = true
-		assert.NotEmpty(t, ext.Name)
-		assert.NotEmpty(t, ext.Version)
-		assert.NotEmpty(t, ext.Description)
+	for _, extension := range got {
+		ids[extension.ID] = true
+		assert.NotEmpty(t, extension.Name)
+		assert.NotEmpty(t, extension.Version)
+		assert.NotEmpty(t, extension.Description)
 	}
 	assert.True(t, ids["abc123"])
 	assert.True(t, ids["def456"])

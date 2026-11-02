@@ -25,28 +25,28 @@ type runKeychain interface {
 	safari.LoginKeychain
 }
 
-type keySource func(ctx context.Context, dir browser.UserDataDir, snap snapshot.Snapshot) (masterkey.Set, error)
+type masterKeyRetriever func(ctx context.Context, dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterkey.Set, error)
 
 // Execute handles one user data dir at a time, so at most one dir's copies are on disk.
 // Its error means the run could not finish; every other failure is a Result.
-func Execute(ctx context.Context, p Plan, req Request) (Summary, error) {
-	kc := loginKeychain(req)
-	keys := dumpKeys(req.Keys)
-	if req.Keys == nil {
-		keys = machineKeys(kc)
+func Execute(ctx context.Context, plan Plan, options Options) (Summary, error) {
+	keychain := loginKeychain(options)
+	keys := dumpKeys(options.Keys)
+	if options.Keys == nil {
+		keys = machineKeys(keychain)
 	}
-	return execute(ctx, p, req, extractorsWith(kc), keys)
+	return execute(ctx, plan, options, extractorsWith(keychain), keys)
 }
 
-func execute(ctx context.Context, p Plan, req Request, extractors extractorsFunc, keys keySource) (Summary, error) {
-	w, err := export.NewWriter(req.Dir, req.Format, req.Zip)
+func execute(ctx context.Context, plan Plan, options Options, extractors extractorsFunc, keys masterKeyRetriever) (Summary, error) {
+	writer, err := export.NewWriter(options.Dir, options.Format, options.Zip)
 	if err != nil {
 		return Summary{}, err
 	}
-	s, err := runner{w: w, extractors: extractors, keys: keys, announce: true}.run(ctx, p)
-	closeErr := w.Close()
-	announceOutput(w.Output())
-	return s, errors.Join(err, closeErr)
+	summary, err := runner{writer: writer, extractors: extractors, keys: keys, announce: true}.run(ctx, plan)
+	closeErr := writer.Close()
+	announceOutput(writer.Output())
+	return summary, errors.Join(err, closeErr)
 }
 
 func announceOutput(out export.Output) {
@@ -55,8 +55,8 @@ func announceOutput(out export.Output) {
 	}
 	fmt.Fprintln(os.Stderr)
 	log.Infof("Exported to %s/", out.Dir)
-	for _, f := range out.Files {
-		log.Infof("  %-24s %d entries", f.Name, f.Count)
+	for _, file := range out.Files {
+		log.Infof("  %-24s %d entries", file.Name, file.Count)
 	}
 	if out.Zip != "" {
 		log.Infof("Compressed: %s/%s", out.Dir, out.Zip)
@@ -64,12 +64,12 @@ func announceOutput(out export.Output) {
 }
 
 // Count runs the plan with no key and the keychain locked, counting records instead of exporting them.
-func Count(ctx context.Context, p Plan, req Request) (Summary, error) {
-	return runner{w: discard{}, extractors: extractorsWith(loginKeychain(req)), keys: dumpKeys(nil)}.run(ctx, p)
+func Count(ctx context.Context, plan Plan, options Options) (Summary, error) {
+	return runner{writer: discard{}, extractors: extractorsWith(loginKeychain(options)), keys: dumpKeys(nil)}.run(ctx, plan)
 }
 
 type recordWriter interface {
-	Write(c category.Category, records []record.Record) error
+	Write(dataCategory category.Category, records []record.Record) error
 }
 
 type discard struct{}
@@ -78,19 +78,19 @@ func (discard) Write(category.Category, []record.Record) error { return nil }
 
 // runner is what every user data dir of one run shares; announce logs each dir as it starts.
 type runner struct {
-	w          recordWriter
+	writer     recordWriter
 	extractors extractorsFunc
-	keys       keySource
+	keys       masterKeyRetriever
 	announce   bool
 }
 
-func (r runner) run(ctx context.Context, p Plan) (Summary, error) {
-	results := append([]Result(nil), p.Skipped...)
-	for _, dir := range p.Dirs {
+func (r runner) run(ctx context.Context, plan Plan) (Summary, error) {
+	results := append([]Result(nil), plan.Skipped...)
+	for _, dir := range plan.Dirs {
 		if err := ctx.Err(); err != nil {
 			return Summary{Results: results}, fmt.Errorf("run stopped: %w", err)
 		}
-		dirResults, err := r.runDir(ctx, dir, p)
+		dirResults, err := r.runDir(ctx, dir, plan)
 		results = append(results, dirResults...)
 		if err != nil {
 			return Summary{Results: results}, err
@@ -99,84 +99,84 @@ func (r runner) run(ctx context.Context, p Plan) (Summary, error) {
 	return Summary{Results: results}, nil
 }
 
-func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, p Plan) ([]Result, error) {
-	extractions := extractionsOf(p, dir.ID)
+func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, plan Plan) ([]Result, error) {
+	extractions := extractionsOf(plan, dir.ID)
 	if len(extractions) == 0 {
 		return nil, nil
 	}
 	if r.announce {
-		log.Infof("Extracting %s...", dir.Def.Name)
+		log.Infof("Extracting %s...", dir.Browser.DisplayName)
 	}
 
-	d, err := snapshot.Temp()
+	snapshotDir, err := snapshot.Temp()
 	if err != nil {
 		return failAll(extractions, err), nil
 	}
-	defer closeSnapshot(d)
-	if err := d.Capture(ctx, filesOf(p, dir.ID)); err != nil {
+	defer closeSnapshot(snapshotDir)
+	if err := snapshotDir.Capture(ctx, filesOf(plan, dir.ID)); err != nil {
 		if ctx.Err() != nil {
 			return nil, err
 		}
 		return failAll(extractions, err), nil
 	}
-	snap := d.Snapshot(string(dir.ID))
+	dirSnapshot := snapshotDir.Snapshot(string(dir.ID))
 
 	var (
-		dk         *dirKeys
-		masterKeys func(context.Context) masterkey.Set
+		dirKeyRetrieval *dirKeys
+		masterKeys      func(context.Context) masterkey.Set
 	)
-	if dir.Def.Base == browser.Chromium {
-		dk = &dirKeys{retrieve: func(ctx context.Context) (masterkey.Set, error) { return r.keys(ctx, dir, snap) }}
-		masterKeys = dk.get
+	if dir.Browser.Base == browser.Chromium {
+		dirKeyRetrieval = &dirKeys{retrieve: func(ctx context.Context) (masterkey.Set, error) { return r.keys(ctx, dir, dirSnapshot) }}
+		masterKeys = dirKeyRetrieval.get
 	}
 
 	profiles := make(map[string]browser.Profile, len(dir.Profiles))
 	byProfile := make(map[string]browser.Extractors, len(dir.Profiles))
-	for _, prof := range dir.Profiles {
-		profiles[prof.Name] = prof
-		byProfile[prof.Name] = r.extractors(dir, prof)
+	for _, profile := range dir.Profiles {
+		profiles[profile.Name] = profile
+		byProfile[profile.Name] = r.extractors(dir, profile)
 	}
 
 	results := make([]Result, 0, len(extractions)+1)
-	for _, e := range extractions {
+	for _, extraction := range extractions {
 		if err := ctx.Err(); err != nil {
 			return results, fmt.Errorf("run stopped: %w", err)
 		}
-		x, ok := byProfile[e.Profile][e.Category]
-		if !ok || x.Extract == nil {
-			results = append(results, Result{Extraction: e, Outcome: OutcomeUnsupported})
+		extractor, ok := byProfile[extraction.Profile][extraction.Category]
+		if !ok || extractor.Extract == nil {
+			results = append(results, Result{Extraction: extraction, Outcome: OutcomeUnsupported})
 			continue
 		}
-		prof := profiles[e.Profile]
-		c := &collector{browser: dir.Def.Name, profile: prof.Name}
-		err := x.Extract(ctx, browser.NewProfileSnapshot(snap, prof, masterKeys), c)
+		profile := profiles[extraction.Profile]
+		recordCollector := &collector{browser: dir.Browser.DisplayName, profile: profile.Name}
+		err := extractor.Extract(ctx, browser.NewProfileSnapshot(dirSnapshot, profile, masterKeys), recordCollector)
 		// Records emitted before an extraction failed are kept, as they always were.
-		if writeErr := r.w.Write(e.Category, c.records); writeErr != nil {
+		if writeErr := r.writer.Write(extraction.Category, recordCollector.records); writeErr != nil {
 			return results, writeErr
 		}
-		results = append(results, c.result(e, err))
+		results = append(results, recordCollector.result(extraction, err))
 	}
-	if dk != nil && dk.err != nil {
-		results = append(results, dirFailure(dir.ID, fmt.Errorf("master key retrieval: %w", dk.err)))
+	if dirKeyRetrieval != nil && dirKeyRetrieval.err != nil {
+		results = append(results, dirFailure(dir.ID, fmt.Errorf("master key retrieval: %w", dirKeyRetrieval.err)))
 	}
 	return results, nil
 }
 
-func extractionsOf(p Plan, id browser.DirID) []Extraction {
+func extractionsOf(plan Plan, id browser.UserDataDirID) []Extraction {
 	var out []Extraction
-	for _, e := range p.Extractions {
-		if e.DirID == id {
-			out = append(out, e)
+	for _, extraction := range plan.Extractions {
+		if extraction.UserDataDirID == id {
+			out = append(out, extraction)
 		}
 	}
 	return out
 }
 
-func filesOf(p Plan, id browser.DirID) []snapshot.File {
+func filesOf(plan Plan, id browser.UserDataDirID) []snapshot.File {
 	var out []snapshot.File
-	for _, f := range p.Files {
-		if f.DirID == string(id) {
-			out = append(out, f)
+	for _, file := range plan.Files {
+		if file.UserDataDirID == string(id) {
+			out = append(out, file)
 		}
 	}
 	return out
@@ -184,14 +184,14 @@ func filesOf(p Plan, id browser.DirID) []snapshot.File {
 
 func failAll(extractions []Extraction, err error) []Result {
 	results := make([]Result, len(extractions))
-	for i, e := range extractions {
-		results[i] = Result{Extraction: e, Outcome: OutcomeError, Err: err}
+	for i, extraction := range extractions {
+		results[i] = Result{Extraction: extraction, Outcome: OutcomeError, Err: err}
 	}
 	return results
 }
 
-func closeSnapshot(d *snapshot.Dir) {
-	if err := d.Close(); err != nil {
+func closeSnapshot(snapshotDir *snapshot.Dir) {
+	if err := snapshotDir.Close(); err != nil {
 		log.Warnf("%v", err)
 	}
 }
@@ -203,9 +203,9 @@ type collector struct {
 	firstFail        error
 }
 
-func (c *collector) Add(r record.Record) {
-	record.Stamp(r, c.browser, c.profile)
-	c.records = append(c.records, r)
+func (c *collector) Add(row record.Record) {
+	row.SetBrowserAndProfile(c.browser, c.profile)
+	c.records = append(c.records, row)
 }
 
 func (c *collector) Fail(err error) {
@@ -216,22 +216,22 @@ func (c *collector) Fail(err error) {
 	log.Debugf("%s/%s: %v", c.browser, c.profile, err)
 }
 
-// A source gone since planning is absent; failures with no record are an error, and beside records, partial.
-func (c *collector) result(e Extraction, err error) Result {
-	r := Result{Extraction: e, Count: len(c.records), Failed: c.failed}
+// result treats a file gone since planning as absent; failures alone are an error, and failures beside records partial.
+func (c *collector) result(extraction Extraction, err error) Result {
+	result := Result{Extraction: extraction, Count: len(c.records), Failed: c.failed}
 	switch {
-	case err != nil && errors.Is(err, fs.ErrNotExist) && r.Count == 0:
-		r.Outcome = OutcomeAbsent
+	case err != nil && errors.Is(err, fs.ErrNotExist) && result.Count == 0:
+		result.Outcome = OutcomeAbsent
 	case err != nil:
-		r.Outcome, r.Err = OutcomeError, err
-	case r.Failed > 0 && r.Count == 0:
-		r.Outcome, r.Err = OutcomeError, c.firstFail
-	case r.Failed > 0:
-		r.Outcome = OutcomePartial
+		result.Outcome, result.Err = OutcomeError, err
+	case result.Failed > 0 && result.Count == 0:
+		result.Outcome, result.Err = OutcomeError, c.firstFail
+	case result.Failed > 0:
+		result.Outcome = OutcomePartial
 	default:
-		r.Outcome = OutcomeOK
+		result.Outcome = OutcomeOK
 	}
-	return r
+	return result
 }
 
 // dirKeys retrieves a dir's keys on first use, for all its profiles; Go 1.20 has no sync.OnceValues.
@@ -248,18 +248,18 @@ func (k *dirKeys) get(ctx context.Context) masterkey.Set {
 }
 
 // machineKeys asks this machine's secret stores; on macOS that includes the run's login keychain.
-func machineKeys(kc masterkey.LoginKeychain) keySource {
-	return func(ctx context.Context, dir browser.UserDataDir, snap snapshot.Snapshot) (masterkey.Set, error) {
-		loc, err := chromium.KeyLocator(dir, snap)
+func machineKeys(keychain masterkey.LoginKeychain) masterKeyRetriever {
+	return func(ctx context.Context, dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterkey.Set, error) {
+		locator, err := chromium.KeyLocator(dir, dirSnapshot)
 		if err != nil {
 			return nil, err
 		}
-		loc.Keychain = kc
-		return masterkey.RetrieveAll(ctx, loc)
+		locator.Keychain = keychain
+		return masterkey.RetrieveAll(ctx, locator)
 	}
 }
 
-func dumpKeys(keys map[browser.DirID]masterkey.Set) keySource {
+func dumpKeys(keys map[browser.UserDataDirID]masterkey.Set) masterKeyRetriever {
 	return func(_ context.Context, dir browser.UserDataDir, _ snapshot.Snapshot) (masterkey.Set, error) {
 		return keys[dir.ID], nil
 	}

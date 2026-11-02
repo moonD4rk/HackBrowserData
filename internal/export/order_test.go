@@ -12,7 +12,7 @@ import (
 
 const tiedRecords = 20
 
-func day(d int) time.Time { return time.Date(2026, 1, d, 0, 0, 0, 0, time.UTC) }
+func day(dayOfMonth int) time.Time { return time.Date(2026, 1, dayOfMonth, 0, 0, 0, 0, time.UTC) }
 
 func TestSortRecords_NewestFirst(t *testing.T) {
 	logins := []record.Record{
@@ -31,7 +31,7 @@ func TestSortRecords_NewestFirst(t *testing.T) {
 	assert.Equal(t, []string{"newer", "older"}, urlsOf(t, downloads))
 }
 
-// Firefox used to write its history least visited first; the exporter now orders history the same for every browser.
+// TestSortRecords_HistoryMostVisitedFirst orders history alike for every browser; Firefox wrote it least visited first.
 func TestSortRecords_HistoryMostVisitedFirst(t *testing.T) {
 	histories := []record.Record{
 		&record.History{URL: "once", VisitCount: 1},
@@ -64,7 +64,7 @@ func TestSortRecords_TiesKeepSourceOrder(t *testing.T) {
 	assert.Equal(t, want, bookmarks, "bookmarks without a creation time keep their tree order")
 }
 
-// Interleaved timestamps make the sort move records; an unstable sort would then reorder the ties it moves.
+// TestSortRecords_IsStable interleaves timestamps so the sort moves records, which an unstable sort would reorder.
 func TestSortRecords_IsStable(t *testing.T) {
 	logins := make([]record.Record, 0, tiedRecords)
 	var newer, older []string
@@ -100,16 +100,16 @@ func TestSortRecords_KeylessCategoriesKeepSourceOrder(t *testing.T) {
 func urlsOf(t *testing.T, records []record.Record) []string {
 	t.Helper()
 	urls := make([]string, 0, len(records))
-	for _, r := range records {
-		switch r := r.(type) {
+	for _, row := range records {
+		switch typed := row.(type) {
 		case *record.Login:
-			urls = append(urls, r.URL)
+			urls = append(urls, typed.URL)
 		case *record.Download:
-			urls = append(urls, r.URL)
+			urls = append(urls, typed.URL)
 		case *record.History:
-			urls = append(urls, r.URL)
+			urls = append(urls, typed.URL)
 		default:
-			t.Fatalf("unexpected record %T", r)
+			t.Fatalf("unexpected record %T", typed)
 		}
 	}
 	return urls

@@ -5,16 +5,16 @@
 Everything except the command entrypoint lives under `internal/`. The entrypoint stays thin — the frozen cobra command tree and a call into `app`.
 
 ```
-cmd/hack-browser-data/        main; cobra commands and flags (the frozen CLI surface); flags → app.Request
+cmd/hack-browser-data/        main; cobra commands and flags (the frozen CLI surface); flags → app.Options
 internal/
   app/                        Validate, Discover, NewPlan, Execute, Report; dispatches on browser.Base to the base packages
-  browser/                    Def, Base, Platform (Supported, Lookup); UserDataDir, DirID, Profile, DiscoverOptions;
-                              Source, Extractor, ProfileSnapshot, Collector
-    chromium/                 Chromium discovery, extractors, key input, archive sources, per-fork overrides (Yandex, Opera family)
+  browser/                    Browser, Base, Platform (Supported, Lookup); UserDataDir, UserDataDirID, Profile, DiscoverOptions;
+                              FileSpec, Extractor, ProfileSnapshot, Collector
+    chromium/                 Chromium discovery, extractors, key input, archive files, per-fork overrides (Yandex, Opera family)
     firefox/                  Firefox discovery, extractors, per-profile key derivation
     safari/                   Safari discovery and extractors
   category/                   Category: the data categories (the -c values and the output file names)
-  record/                     record types (Login, Cookie, …), the sealed Record, Stamp; field names frozen by the output contract
+  record/                     record types (Login, Cookie, …) and the Record interface; field names frozen by the output contract
   masterkey/                  Chromium key Set, Retriever, RetrieveAll, keys.json Dump; OS secret stores by build tag
   crypto/                     pure decrypt primitives over bytes (AES-CBC/GCM, 3DES, PBKDF2, ASN.1 PBE)
   snapshot/                   snapshot Dir and Snapshot, Capture, manifest, zip transport, the copier
@@ -37,7 +37,7 @@ Dependencies point downward and are listed exhaustively; anything not listed is 
 
 | Package                                                 | May import (project-internal)                                                                    |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `cmd/hack-browser-data`                                 | `app`, plus `browser` and `category` for help-text vocabulary (`-b` IDs, `-c` categories), `log` |
+| `cmd/hack-browser-data`                                 | `app`, plus `browser` and `category` for help-text vocabulary (`-b` names, `-c` categories), `log` |
 | `app`                                                   | every package below                                                                              |
 | `browser/chromium`, `browser/firefox`, `browser/safari` | `browser`, `category`, `record`, `masterkey`, `crypto`, `snapshot`, `sqlitex`, `timeconv`, `log` |
 | `export`                                                | `category`, `record`                                                                             |
@@ -53,8 +53,8 @@ Dependencies point downward and are listed exhaustively; anything not listed is 
 
 Four rules keep the graph acyclic and its seams honest:
 
-- **The base dispatch lives in `app`.** The base packages import `browser` for `Def`, `UserDataDir`, and `Extractor`, so `browser` cannot call them back; `app` switches on `Def.Base`. Init-time self-registration is ruled out by the `gochecknoinits` linter, and an explicit switch reads better on stage anyway.
-- **`snapshot` speaks strings.** A `snapshot.File` names its user data dir by ID (`DirID`, a plain string) and its path relative to that directory; it never holds a `browser.UserDataDir`, because `browser.ProfileSnapshot` holds a `snapshot.Snapshot`.
+- **The base dispatch lives in `app`.** The base packages import `browser` for `Browser`, `UserDataDir`, and `Extractor`, so `browser` cannot call them back; `app` switches on `Browser.Base`. Init-time self-registration is ruled out by the `gochecknoinits` linter, and an explicit switch reads better on stage anyway.
+- **`snapshot` speaks strings.** A `snapshot.File` names its user data dir by ID (`UserDataDirID`, a plain string) and its path relative to that directory; it never holds a `browser.UserDataDir`, because `browser.ProfileSnapshot` holds a `snapshot.Snapshot`.
 - **`crypto` takes bytes.** Primitives receive raw keys and blobs; they never see a `masterkey.Set`, because `masterkey` is the package that calls them.
 - **Interfaces live with their consumer.** `browser` declares the `Collector` its extractors use, and `app` implements it; `masterkey` and `browser/safari` each declare the one-method `LoginKeychain` they read. Constructors elsewhere return concrete types (`*snapshot.Dir`, `*export.Writer`).
 

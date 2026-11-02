@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/syndtr/goleveldb/leveldb"
 	_ "modernc.org/sqlite"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser/browsertest"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
@@ -192,15 +192,15 @@ func installFile(t *testing.T, profileDir, srcPath, dstName string) {
 func createTestDB(t *testing.T, name, schema string, inserts ...string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), name)
-	db, err := sql.Open("sqlite", path)
+	database, err := sql.Open("sqlite", path)
 	require.NoError(t, err)
-	defer db.Close()
+	defer database.Close()
 
-	_, err = db.Exec(schema)
+	_, err = database.Exec(schema)
 	require.NoError(t, err)
 
-	for _, stmt := range inserts {
-		_, err = db.Exec(stmt)
+	for _, statement := range inserts {
+		_, err = database.Exec(statement)
 		require.NoError(t, err)
 	}
 	return path
@@ -216,12 +216,11 @@ func createTestJSON(t *testing.T, name, content string) string {
 func createTestLevelDB(t *testing.T, entries map[string]string) string {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), "leveldb")
-	db, err := leveldb.OpenFile(dir, nil)
-	require.NoError(t, err)
-	for k, v := range entries {
-		require.NoError(t, db.Put([]byte(k), []byte(v), nil))
+	database := browsertest.OpenLevelDB(t, dir)
+	for key, value := range entries {
+		require.NoError(t, database.Put([]byte(key), []byte(value), nil))
 	}
-	require.NoError(t, db.Close())
+	require.NoError(t, database.Close())
 	return dir
 }
 
@@ -230,16 +229,16 @@ type testCollector struct {
 	fails   []error
 }
 
-func (c *testCollector) Add(r record.Record) { c.records = append(c.records, r) }
-func (c *testCollector) Fail(err error)      { c.fails = append(c.fails, err) }
+func (c *testCollector) Add(row record.Record) { c.records = append(c.records, row) }
+func (c *testCollector) Fail(err error)        { c.fails = append(c.fails, err) }
 
-func collected[T any](t *testing.T, c *testCollector) []T {
+func collected[T any](t *testing.T, collector *testCollector) []T {
 	t.Helper()
-	got := make([]T, 0, len(c.records))
-	for _, r := range c.records {
-		v, ok := any(r).(*T)
-		require.Truef(t, ok, "collected a %T, want *%T", r, *new(T))
-		got = append(got, *v)
+	got := make([]T, 0, len(collector.records))
+	for _, row := range collector.records {
+		value, ok := any(row).(*T)
+		require.Truef(t, ok, "collected a %T, want *%T", row, *new(T))
+		got = append(got, *value)
 	}
 	return got
 }

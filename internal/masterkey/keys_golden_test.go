@@ -19,10 +19,10 @@ import (
 
 var keysGoldenCreatedAt = time.Date(2026, time.May, 16, 8, 30, 15, 123456789, time.UTC)
 
-// Strict rejects non-canonical literals, so every key reads in keys.golden exactly as written here.
-func keysFakeKey(t *testing.T, b64 string) []byte {
+// keysFakeKey uses Strict, which rejects non-canonical literals, so keys.golden holds each key as written here.
+func keysFakeKey(t *testing.T, encodedKey string) []byte {
 	t.Helper()
-	key, err := base64.StdEncoding.Strict().DecodeString(b64)
+	key, err := base64.StdEncoding.Strict().DecodeString(encodedKey)
 	require.NoError(t, err)
 	return key
 }
@@ -38,7 +38,7 @@ func keysFreeze(t *testing.T, dump masterkey.Dump, host masterkey.Host) masterke
 	return dump
 }
 
-// Two Chromium installs, the Opera and Yandex forks, and a vault that kept its v10 key when v20 failed.
+// keysVaultsDump has two Chromium installs, the Opera and Yandex forks, and a vault that kept v10 when v20 failed.
 func keysVaultsDump(t *testing.T) masterkey.Dump {
 	t.Helper()
 	return masterkey.Dump{
@@ -98,12 +98,12 @@ func TestKeysGolden(t *testing.T) {
 		{name: "vaults", golden: "keys.golden", dump: keysVaultsDump},
 		{name: "empty", golden: "keys-empty.golden", dump: keysEmptyDump},
 	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			require.NoError(t, tt.dump(t).WriteJSON(&buf))
-			golden.Assert(t, tt.golden, buf.String())
+	for _, testCase := range tests {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			var buffer bytes.Buffer
+			require.NoError(t, testCase.dump(t).WriteJSON(&buffer))
+			golden.Assert(t, testCase.golden, buffer.String())
 		})
 	}
 }
@@ -122,21 +122,21 @@ func TestKeysRead(t *testing.T) {
 		{name: "older version", golden: "keys.golden", edit: keysSetVersion("1"), wantErr: "unsupported dump version"},
 		{name: "newer version", golden: "keys.golden", edit: keysSetVersion("3"), wantErr: "unsupported dump version"},
 	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			data, err := os.ReadFile(filepath.Join("testdata", tt.golden))
+	for _, testCase := range tests {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			data, err := os.ReadFile(filepath.Join("testdata", testCase.golden))
 			require.NoError(t, err)
-			if tt.edit != nil {
-				data = keysEditJSON(t, data, tt.edit)
+			if testCase.edit != nil {
+				data = keysEditJSON(t, data, testCase.edit)
 			}
 			got, err := masterkey.ReadJSON(bytes.NewReader(data))
-			if tt.wantErr != "" {
-				require.ErrorContains(t, err, tt.wantErr)
+			if testCase.wantErr != "" {
+				require.ErrorContains(t, err, testCase.wantErr)
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, tt.want(t), got)
+			assert.Equal(t, testCase.want(t), got)
 		})
 	}
 }
@@ -156,8 +156,8 @@ func keysAddUnknownFields(t *testing.T, doc map[string]any) {
 	vaults, ok := doc["vaults"].([]any)
 	require.True(t, ok)
 	require.NotEmpty(t, vaults)
-	for _, v := range vaults {
-		vault, ok := v.(map[string]any)
+	for _, value := range vaults {
+		vault, ok := value.(map[string]any)
 		require.True(t, ok)
 		vault["labels"] = []any{"work", "travel"}
 	}

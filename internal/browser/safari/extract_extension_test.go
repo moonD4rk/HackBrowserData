@@ -12,7 +12,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// A map rather than safariExtension, so fixtures can omit Enabled as App Extensions do.
+// testExtensionEntry is a map rather than safariExtension, so fixtures can omit Enabled as App Extensions do.
 type testExtensionEntry map[string]any
 
 func writeTestExtensionsPlist(t *testing.T, container, subdir string, entries map[string]testExtensionEntry) {
@@ -20,18 +20,18 @@ func writeTestExtensionsPlist(t *testing.T, container, subdir string, entries ma
 	dir := filepath.Join(container, "Safari", subdir)
 	require.NoError(t, os.MkdirAll(dir, 0o755))
 
-	f, err := os.Create(filepath.Join(dir, "Extensions.plist"))
+	file, err := os.Create(filepath.Join(dir, "Extensions.plist"))
 	require.NoError(t, err)
-	defer f.Close()
-	require.NoError(t, plist.NewBinaryEncoder(f).Encode(entries))
+	defer file.Close()
+	require.NoError(t, plist.NewBinaryEncoder(file).Encode(entries))
 }
 
 // extensionPlists lists the plists present under container, as the extractor finds them in its snapshot.
 func extensionPlists(container string) []string {
 	var paths []string
 	for _, sub := range []string{"AppExtensions", "WebExtensions"} {
-		if p := filepath.Join(container, "Safari", sub, "Extensions.plist"); fileExists(p) {
-			paths = append(paths, p)
+		if plistPath := filepath.Join(container, "Safari", sub, "Extensions.plist"); fileExists(plistPath) {
+			paths = append(paths, plistPath)
 		}
 	}
 	return paths

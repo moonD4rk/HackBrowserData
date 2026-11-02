@@ -9,8 +9,8 @@ import (
 
 func TestString(t *testing.T) {
 	tests := []struct {
-		c    Category
-		want string
+		dataCategory Category
+		want         string
 	}{
 		{Password, "password"},
 		{Cookie, "cookie"},
@@ -24,8 +24,8 @@ func TestString(t *testing.T) {
 		{Category(0), "unknown"},
 		{Category(999), "unknown"},
 	}
-	for _, tt := range tests {
-		assert.Equal(t, tt.want, tt.c.String())
+	for _, testCase := range tests {
+		assert.Equal(t, testCase.want, testCase.dataCategory.String())
 	}
 }
 
@@ -41,24 +41,24 @@ func TestAll_ReturnsFreshSlice(t *testing.T) {
 }
 
 func TestParse_RoundTrip(t *testing.T) {
-	for _, c := range All() {
-		got, err := Parse(c.String())
+	for _, dataCategory := range All() {
+		got, err := Parse(dataCategory.String())
 		require.NoError(t, err)
-		assert.Equal(t, c, got)
+		assert.Equal(t, dataCategory, got)
 	}
 }
 
 func TestParse_Unknown(t *testing.T) {
-	for _, s := range []string{"", "unknown", "all", "Password", " cookie"} {
-		got, err := Parse(s)
-		require.EqualError(t, err, "unknown category: \""+s+"\"")
+	for _, value := range []string{"", "unknown", "all", "Password", " cookie"} {
+		got, err := Parse(value)
+		require.EqualError(t, err, "unknown category: \""+value+"\"")
 		assert.Zero(t, got)
 	}
 }
 
 func TestZeroIsNone(t *testing.T) {
-	var c Category
-	assert.NotContains(t, All(), c)
+	var dataCategory Category
+	assert.NotContains(t, All(), dataCategory)
 }
 
 func TestNames(t *testing.T) {

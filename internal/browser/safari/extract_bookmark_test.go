@@ -15,10 +15,10 @@ import (
 func buildTestBookmarksPlist(t *testing.T, root safariBookmark) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "Bookmarks.plist")
-	f, err := os.Create(path)
+	file, err := os.Create(path)
 	require.NoError(t, err)
-	defer f.Close()
-	require.NoError(t, plist.NewBinaryEncoder(f).Encode(root))
+	defer file.Close()
+	require.NoError(t, plist.NewBinaryEncoder(file).Encode(root))
 	return path
 }
 
@@ -174,7 +174,7 @@ func TestExtractBookmarks_Empty(t *testing.T) {
 	assert.Empty(t, bookmarks)
 }
 
-// Before, each ID was the index among its siblings, so the first bookmark of every folder was 0.
+// TestExtractBookmarks_IDsAreUniqueAcrossFolders guards a fixed bug: IDs were sibling indexes, so each folder had a 0.
 func TestExtractBookmarks_IDsAreUniqueAcrossFolders(t *testing.T) {
 	leaf := func(url string) safariBookmark {
 		return safariBookmark{Type: bookmarkTypeLeaf, URLString: url, URIDictionary: uriDictionary{Title: url}}
@@ -195,9 +195,9 @@ func TestExtractBookmarks_IDsAreUniqueAcrossFolders(t *testing.T) {
 	require.NoError(t, extractBookmarks(path, &out))
 	var ids []int64
 	var urls []string
-	for _, b := range collected[record.Bookmark](t, &out) {
-		ids = append(ids, b.ID)
-		urls = append(urls, b.URL)
+	for _, bookmark := range collected[record.Bookmark](t, &out) {
+		ids = append(ids, bookmark.ID)
+		urls = append(urls, bookmark.URL)
 	}
 	assert.Equal(t, []int64{1, 2, 3, 4}, ids)
 	assert.Equal(t, []string{"https://a.test", "https://b.test", "https://c.test", "https://d.test"}, urls)

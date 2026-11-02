@@ -17,12 +17,12 @@ import (
 
 // retrieveMasterKey derives the key candidates in key4.db and returns the one that opens the logins in loginsPath.
 func retrieveMasterKey(key4Path, loginsPath string) ([]byte, error) {
-	k4, err := readKey4DB(key4Path)
+	key4, err := readKey4DB(key4Path)
 	if err != nil {
 		return nil, err
 	}
 
-	keys, err := k4.deriveKeys()
+	keys, err := key4.deriveKeys()
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func retrieveMasterKey(key4Path, loginsPath string) ([]byte, error) {
 	return nil, fmt.Errorf("derived %d key(s) but none could decrypt logins", len(keys))
 }
 
-// See https://searchfox.org/mozilla-central/source/security/nss/lib/softoken/ for key4.db's layout.
+// key4DB mirrors key4.db; see https://searchfox.org/mozilla-central/source/security/nss/lib/softoken/ for its layout.
 type key4DB struct {
 	globalSalt    []byte       // metaData.item1: salt used as PBE decryption input
 	passwordCheck []byte       // metaData.item2: encrypted marker to verify DB integrity
@@ -49,36 +49,36 @@ type privateKey struct {
 	typeTag   []byte // a102: key type identifier (must match nssKeyTypeTag)
 }
 
-// Only nssPrivate rows tagged with this a102 value hold keys; see softoken/pkcs11i.h in NSS.
+// nssKeyTypeTag is the a102 value of the nssPrivate rows that hold keys; see softoken/pkcs11i.h in NSS.
 var nssKeyTypeTag = []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 
 func readKey4DB(path string) (*key4DB, error) {
-	db, err := sql.Open("sqlite", path)
+	database, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, fmt.Errorf("open key4.db: %w", err)
 	}
-	defer db.Close()
+	defer database.Close()
 
 	var record key4DB
 
 	const metaQuery = `SELECT item1, item2 FROM metaData WHERE id = 'password'`
-	if err := db.QueryRow(metaQuery).Scan(&record.globalSalt, &record.passwordCheck); err != nil {
+	if err := database.QueryRow(metaQuery).Scan(&record.globalSalt, &record.passwordCheck); err != nil {
 		return nil, fmt.Errorf("query metaData: %w", err)
 	}
 
 	const nssQuery = `SELECT a11, a102 FROM nssPrivate`
-	rows, err := db.Query(nssQuery)
+	rows, err := database.Query(nssQuery)
 	if err != nil {
 		return nil, fmt.Errorf("query nssPrivate: %w", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var pk privateKey
-		if err := rows.Scan(&pk.encrypted, &pk.typeTag); err != nil {
+		var entry privateKey
+		if err := rows.Scan(&entry.encrypted, &entry.typeTag); err != nil {
 			return nil, fmt.Errorf("scan nssPrivate row: %w", err)
 		}
-		record.privateKeys = append(record.privateKeys, pk)
+		record.privateKeys = append(record.privateKeys, entry)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate nssPrivate: %w", err)
@@ -96,11 +96,11 @@ func (k *key4DB) deriveKeys() ([][]byte, error) {
 	}
 
 	var keys [][]byte
-	for _, pk := range k.privateKeys {
-		if !bytes.Equal(pk.typeTag, nssKeyTypeTag) {
+	for _, entry := range k.privateKeys {
+		if !bytes.Equal(entry.typeTag, nssKeyTypeTag) {
 			continue
 		}
-		key, err := k.decryptPrivateKey(pk)
+		key, err := k.decryptPrivateKey(entry)
 		if err != nil {
 			log.Debugf("decrypt nss private key: %v", err)
 			continue
@@ -125,8 +125,8 @@ func (k *key4DB) verifyPasswordCheck() error {
 	return nil
 }
 
-func (k *key4DB) decryptPrivateKey(pk privateKey) ([]byte, error) {
-	pbe, err := crypto.NewASN1PBE(pk.encrypted)
+func (k *key4DB) decryptPrivateKey(entry privateKey) ([]byte, error) {
+	pbe, err := crypto.NewASN1PBE(entry.encrypted)
 	if err != nil {
 		return nil, fmt.Errorf("parse private key: %w", err)
 	}
@@ -164,16 +164,16 @@ func validateKeyWithLogins(keys [][]byte, loginsPath string) []byte {
 	return nil
 }
 
-// Up to 5 logins are enough to tell which key opens them.
+// sampleEncryptedLogins takes up to 5 logins, enough to tell which key opens them.
 func sampleEncryptedLogins(raw []byte) []encryptedLogin {
-	arr := gjson.GetBytes(raw, "logins").Array()
+	logins := gjson.GetBytes(raw, "logins").Array()
 	var samples []encryptedLogin
-	for _, v := range arr {
-		userRaw, err := base64.StdEncoding.DecodeString(v.Get("encryptedUsername").String())
+	for _, value := range logins {
+		userRaw, err := base64.StdEncoding.DecodeString(value.Get("encryptedUsername").String())
 		if err != nil {
 			continue
 		}
-		pwdRaw, err := base64.StdEncoding.DecodeString(v.Get("encryptedPassword").String())
+		pwdRaw, err := base64.StdEncoding.DecodeString(value.Get("encryptedPassword").String())
 		if err != nil {
 			continue
 		}

@@ -14,12 +14,12 @@ import (
 )
 
 // loginKeychain builds the run's one login keychain without opening it, so a run that never decrypts never prompts.
-func loginKeychain(req Request) runKeychain {
-	path := filepath.Join(req.Home, "Library", "Keychains", "login.keychain-db")
-	if req.KeychainPassword == nil {
+func loginKeychain(options Options) runKeychain {
+	path := filepath.Join(options.Home, "Library", "Keychains", "login.keychain-db")
+	if options.KeychainPassword == nil {
 		return keychain.New(path, func(context.Context) (string, error) { return "", nil })
 	}
-	return &reportedKeychain{Keychain: keychain.New(path, keychain.PasswordFunc(req.KeychainPassword))}
+	return &reportedKeychain{Keychain: keychain.New(path, keychain.PasswordFunc(options.KeychainPassword))}
 }
 
 // reportedKeychain says once why the keychain stayed locked, since every consumer then reads metadata only, quietly.

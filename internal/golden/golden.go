@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// An env var, not a test flag, reaches every package of go test ./... and, read at test time, keys its cache.
+// updateEnv is an env var rather than a flag, so every package sees it and, read at test time, it keys the test cache.
 const updateEnv = "HBD_UPDATE_GOLDEN"
 
 const dir = "testdata"
@@ -43,26 +43,26 @@ func Bundle(t testing.TB, dir string) string {
 	entries, err := os.ReadDir(dir)
 	require.NoError(t, err)
 	names := make([]string, 0, len(entries))
-	for _, e := range entries {
-		require.Truef(t, e.Type().IsRegular(), "unexpected non-regular entry %s in %s", e.Name(), dir)
-		names = append(names, e.Name())
+	for _, entry := range entries {
+		require.Truef(t, entry.Type().IsRegular(), "unexpected non-regular entry %s in %s", entry.Name(), dir)
+		names = append(names, entry.Name())
 	}
 	return BundleFiles(t, dir, names...)
 }
 
 func BundleFiles(t testing.TB, dir string, names ...string) string {
 	t.Helper()
-	var b strings.Builder
+	var builder strings.Builder
 	for _, name := range names {
 		data, err := os.ReadFile(filepath.Join(dir, name))
 		require.NoError(t, err)
-		fmt.Fprintf(&b, "-- %s (%d bytes) --\n", name, len(data))
-		b.Write(data)
+		fmt.Fprintf(&builder, "-- %s (%d bytes) --\n", name, len(data))
+		builder.Write(data)
 		if len(data) > 0 && data[len(data)-1] != '\n' {
-			b.WriteByte('\n')
+			builder.WriteByte('\n')
 		}
 	}
-	return b.String()
+	return builder.String()
 }
 
 func DirFiles(t testing.TB, dir string) map[string]string {
@@ -70,15 +70,15 @@ func DirFiles(t testing.TB, dir string) map[string]string {
 	entries, err := os.ReadDir(dir)
 	require.NoError(t, err)
 	files := make(map[string]string, len(entries))
-	for _, e := range entries {
-		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+	for _, entry := range entries {
+		data, err := os.ReadFile(filepath.Join(dir, entry.Name()))
 		require.NoError(t, err)
-		files[e.Name()] = string(data)
+		files[entry.Name()] = string(data)
 	}
 	return files
 }
 
-// Cookie-Editor writes its own format for cookies only, so every other file must match the json output.
+// AssertJSONFallback checks every file but cookie.json against the json output: Cookie-Editor formats only cookies.
 func AssertJSONFallback(t testing.TB, cookieEditorDir, jsonDir string) {
 	t.Helper()
 	got, want := DirFiles(t, cookieEditorDir), DirFiles(t, jsonDir)
@@ -90,13 +90,13 @@ func AssertJSONFallback(t testing.TB, cookieEditorDir, jsonDir string) {
 
 func ZipListing(t testing.TB, path string) string {
 	t.Helper()
-	r, err := zip.OpenReader(path)
+	zipReader, err := zip.OpenReader(path)
 	require.NoError(t, err)
-	defer r.Close()
-	var b strings.Builder
-	for _, f := range r.File {
-		fmt.Fprintf(&b, "%s method=%d modified=%s size=%d crc32=%08x\n",
-			f.Name, f.Method, f.Modified.UTC().Format(time.RFC3339), f.UncompressedSize64, f.CRC32)
+	defer zipReader.Close()
+	var builder strings.Builder
+	for _, zipFile := range zipReader.File {
+		fmt.Fprintf(&builder, "%s method=%d modified=%s size=%d crc32=%08x\n",
+			zipFile.Name, zipFile.Method, zipFile.Modified.UTC().Format(time.RFC3339), zipFile.UncompressedSize64, zipFile.CRC32)
 	}
-	return b.String()
+	return builder.String()
 }

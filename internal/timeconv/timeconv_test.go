@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Anchor: 2024-01-15T10:30:00Z.
+// anchorUnixSeconds is 2024-01-15T10:30:00Z.
 const anchorUnixSeconds = int64(1705314600)
 
 const anchorCoreDataSeconds = anchorUnixSeconds - 978307200
@@ -93,15 +93,15 @@ func TestUnixUnits_AlwaysUTC(t *testing.T) {
 }
 
 func TestUnixUnits_SameMomentAcrossUnits(t *testing.T) {
-	us := UnixMicro(anchorUnixSeconds * 1_000_000)
-	ms := UnixMilli(anchorUnixSeconds * 1_000)
-	s := Unix(anchorUnixSeconds)
-	assert.True(t, us.Equal(ms))
-	assert.True(t, ms.Equal(s))
+	fromMicros := UnixMicro(anchorUnixSeconds * 1_000_000)
+	fromMillis := UnixMilli(anchorUnixSeconds * 1_000)
+	fromSeconds := Unix(anchorUnixSeconds)
+	assert.True(t, fromMicros.Equal(fromMillis))
+	assert.True(t, fromMillis.Equal(fromSeconds))
 }
 
 func TestUnixUnits_OutOfJSONRangeReturnsZero(t *testing.T) {
-	for _, tc := range []struct {
+	for _, testCase := range []struct {
 		name string
 		got  time.Time
 	}{
@@ -109,10 +109,10 @@ func TestUnixUnits_OutOfJSONRangeReturnsZero(t *testing.T) {
 		{"millis", UnixMilli(1 << 60)},
 		{"micros", UnixMicro(1 << 62)},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
-			b, err := tc.got.MarshalJSON()
+		t.Run(testCase.name, func(t *testing.T) {
+			encoded, err := testCase.got.MarshalJSON()
 			require.NoError(t, err)
-			assert.JSONEq(t, `"0001-01-01T00:00:00Z"`, string(b))
+			assert.JSONEq(t, `"0001-01-01T00:00:00Z"`, string(encoded))
 		})
 	}
 }

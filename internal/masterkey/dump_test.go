@@ -26,12 +26,12 @@ func TestReadJSON_RejectsMissingVersion(t *testing.T) {
 }
 
 func TestReadJSON_AcceptsCurrentVersion(t *testing.T) {
-	d := NewDump()
-	var buf bytes.Buffer
-	if err := d.WriteJSON(&buf); err != nil {
+	dump := NewDump()
+	var buffer bytes.Buffer
+	if err := dump.WriteJSON(&buffer); err != nil {
 		t.Fatalf("WriteJSON: %v", err)
 	}
-	parsed, err := ReadJSON(&buf)
+	parsed, err := ReadJSON(&buffer)
 	if err != nil {
 		t.Fatalf("ReadJSON: %v", err)
 	}
@@ -41,8 +41,8 @@ func TestReadJSON_AcceptsCurrentVersion(t *testing.T) {
 }
 
 func TestDump_VaultKindRoundTrip(t *testing.T) {
-	d := NewDump()
-	d.Vaults = append(d.Vaults, Vault{
+	dump := NewDump()
+	dump.Vaults = append(dump.Vaults, Vault{
 		Browser:     "chrome",
 		Kind:        "chromium",
 		UserDataDir: "/p",
@@ -50,11 +50,11 @@ func TestDump_VaultKindRoundTrip(t *testing.T) {
 		Keys:        Set{V10: []byte{0x01}},
 	})
 
-	var buf bytes.Buffer
-	if err := d.WriteJSON(&buf); err != nil {
+	var buffer bytes.Buffer
+	if err := dump.WriteJSON(&buffer); err != nil {
 		t.Fatalf("WriteJSON: %v", err)
 	}
-	parsed, err := ReadJSON(&buf)
+	parsed, err := ReadJSON(&buffer)
 	if err != nil {
 		t.Fatalf("ReadJSON: %v", err)
 	}
@@ -69,17 +69,17 @@ func TestDump_VaultKindRoundTrip(t *testing.T) {
 	}
 }
 
-// keys.json is a frozen format: present versions only, in key order, and {} for a vault without keys.
+// TestDump_KeysWireForm pins the frozen keys.json form: present versions only, in key order, {} for no keys.
 func TestDump_KeysWireForm(t *testing.T) {
-	d := Dump{Version: DumpVersion, Vaults: []Vault{
+	dump := Dump{Version: DumpVersion, Vaults: []Vault{
 		{Browser: "chrome", Keys: Set{V20: []byte{0x20}, V10: []byte{0x10}}},
 		{Browser: "opera", Keys: Set{}},
 	}}
-	var buf bytes.Buffer
-	if err := d.WriteJSON(&buf); err != nil {
+	var buffer bytes.Buffer
+	if err := dump.WriteJSON(&buffer); err != nil {
 		t.Fatalf("WriteJSON: %v", err)
 	}
-	out := buf.String()
+	out := buffer.String()
 	for _, want := range []string{`"keys": {` + "\n" + `        "v10": "EA==",` + "\n" + `        "v20": "IA=="`, `"keys": {}`} {
 		if !strings.Contains(out, want) {
 			t.Errorf("WriteJSON output lacks %q:\n%s", want, out)
@@ -89,11 +89,11 @@ func TestDump_KeysWireForm(t *testing.T) {
 
 func TestReadJSON_IgnoresUnknownKeyVersions(t *testing.T) {
 	input := bytes.NewBufferString(`{"version":"2","vaults":[{"browser":"chrome","keys":{"v10":"EA==","v99":"AQ=="}}]}`)
-	d, err := ReadJSON(input)
+	dump, err := ReadJSON(input)
 	if err != nil {
 		t.Fatalf("ReadJSON: %v", err)
 	}
-	if got := d.Vaults[0].Keys[V10]; !bytes.Equal(got, []byte{0x10}) {
+	if got := dump.Vaults[0].Keys[V10]; !bytes.Equal(got, []byte{0x10}) {
 		t.Errorf("v10 = %x, want 10", got)
 	}
 }

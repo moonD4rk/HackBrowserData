@@ -7,7 +7,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// Stable, so ties and keyless records keep source order: Safari's bookmarks and downloads have no timestamp.
+// sortRecords is stable, so ties and keyless records keep source order: Safari bookmarks and downloads lack a time.
 func sortRecords(records []record.Record) {
 	sort.SliceStable(records, func(i, j int) bool {
 		return keyOf(records[i]).before(keyOf(records[j]))
@@ -15,30 +15,30 @@ func sortRecords(records []record.Record) {
 }
 
 type sortKey struct {
-	visits int
-	at     time.Time
+	visits    int
+	timestamp time.Time
 }
 
-func keyOf(r record.Record) sortKey {
-	switch r := r.(type) {
+func keyOf(row record.Record) sortKey {
+	switch typed := row.(type) {
 	case *record.Login:
-		return sortKey{at: r.CreatedAt}
+		return sortKey{timestamp: typed.CreatedAt}
 	case *record.Cookie:
-		return sortKey{at: r.CreatedAt}
+		return sortKey{timestamp: typed.CreatedAt}
 	case *record.Bookmark:
-		return sortKey{at: r.CreatedAt}
+		return sortKey{timestamp: typed.CreatedAt}
 	case *record.Download:
-		return sortKey{at: r.StartTime}
+		return sortKey{timestamp: typed.StartTime}
 	case *record.History:
-		return sortKey{visits: r.VisitCount}
+		return sortKey{visits: typed.VisitCount}
 	default:
 		return sortKey{}
 	}
 }
 
-func (k sortKey) before(o sortKey) bool {
-	if k.visits != o.visits {
-		return k.visits > o.visits
+func (k sortKey) before(other sortKey) bool {
+	if k.visits != other.visits {
+		return k.visits > other.visits
 	}
-	return k.at.After(o.at)
+	return k.timestamp.After(other.timestamp)
 }

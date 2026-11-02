@@ -13,9 +13,9 @@ import (
 
 // Extraction is plain data, looked up again when it runs, so a Plan prints as it is and compares with DeepEqual.
 type Extraction struct {
-	DirID    browser.DirID
-	Profile  string            // Profile.Name; "" in a result about a whole user data dir
-	Category category.Category // zero in a result about a whole user data dir
+	UserDataDirID browser.UserDataDirID
+	Profile       string            // Profile.Name; "" in a result about a whole user data dir
+	Category      category.Category // zero in a result about a whole user data dir
 }
 
 // Plan lists extractions in output order, each file to capture once, and the requested extractions that cannot run.
@@ -28,75 +28,77 @@ type Plan struct {
 
 type extractorsFunc func(browser.UserDataDir, browser.Profile) browser.Extractors
 
-// NewPlan only stats files and reads only the extractors' sources, so it opens nothing and needs no keychain.
-func NewPlan(d Discovery, req Request) Plan {
-	return newPlan(d, req, extractorsWith(nil))
+// NewPlan only stats the files the extractors' file specs name, so it opens nothing and needs no keychain.
+func NewPlan(discovery Discovery, options Options) Plan {
+	return newPlan(discovery, options, extractorsWith(nil))
 }
 
-func newPlan(d Discovery, req Request, extractors extractorsFunc) Plan {
-	p := Plan{Dirs: d.Dirs, Skipped: append([]Result(nil), d.Failed...)}
+func newPlan(discovery Discovery, options Options, extractors extractorsFunc) Plan {
+	plan := Plan{Dirs: discovery.Dirs, Skipped: append([]Result(nil), discovery.Failed...)}
 	captured := make(map[snapshot.File]bool)
-	for _, dir := range d.Dirs {
-		for _, prof := range dir.Profiles {
-			ex := extractors(dir, prof)
-			for _, c := range req.Categories {
-				e := Extraction{DirID: dir.ID, Profile: prof.Name, Category: c}
-				x, ok := ex[c]
+	for _, dir := range discovery.Dirs {
+		for _, profile := range dir.Profiles {
+			profileExtractors := extractors(dir, profile)
+			for _, dataCategory := range options.Categories {
+				extraction := Extraction{UserDataDirID: dir.ID, Profile: profile.Name, Category: dataCategory}
+				extractor, ok := profileExtractors[dataCategory]
 				if !ok {
-					p.Skipped = append(p.Skipped, Result{Extraction: e, Outcome: OutcomeUnsupported})
+					plan.Skipped = append(plan.Skipped, Result{Extraction: extraction, Outcome: OutcomeUnsupported})
 					continue
 				}
-				files, ok, err := locate(dir, prof, x.Sources)
+				files, ok, err := locate(dir, profile, extractor.FileSpecs)
 				if err != nil {
-					p.Skipped = append(p.Skipped, Result{Extraction: e, Outcome: OutcomeError, Err: err})
+					plan.Skipped = append(plan.Skipped, Result{Extraction: extraction, Outcome: OutcomeError, Err: err})
 					continue
 				}
 				if !ok {
-					p.Skipped = append(p.Skipped, Result{Extraction: e, Outcome: OutcomeAbsent})
+					plan.Skipped = append(plan.Skipped, Result{Extraction: extraction, Outcome: OutcomeAbsent})
 					continue
 				}
-				p.Extractions = append(p.Extractions, e)
-				for _, f := range files {
-					if !captured[f] {
-						captured[f] = true
-						p.Files = append(p.Files, f)
+				plan.Extractions = append(plan.Extractions, extraction)
+				for _, file := range files {
+					if !captured[file] {
+						captured[file] = true
+						plan.Files = append(plan.Files, file)
 					}
 				}
 			}
 		}
 	}
-	return p
+	return plan
 }
 
-// An extraction needs every required source and one of the profile's own: Local State alone never makes it present.
+// locate needs every required file and one of the profile's own: Local State alone never makes an extraction present.
 // One that reads no file always runs, and a candidate that cannot be checked is an error, not absence.
-func locate(dir browser.UserDataDir, p browser.Profile, sources []browser.Source) ([]snapshot.File, bool, error) {
-	if len(sources) == 0 {
+func locate(dir browser.UserDataDir, profile browser.Profile, fileSpecs []browser.FileSpec) ([]snapshot.File, bool, error) {
+	if len(fileSpecs) == 0 {
 		return nil, true, nil
 	}
 	var files []snapshot.File
 	present := false
-	for _, src := range sources {
-		f, ok, err := firstOnDisk(dir, p, src)
+	for _, fileSpec := range fileSpecs {
+		file, ok, err := firstOnDisk(dir, profile, fileSpec)
 		switch {
 		case err != nil:
 			return nil, false, err
 		case ok:
-			files = append(files, f)
-			present = present || !src.Shared
-		case !src.Optional:
+			files = append(files, file)
+			present = present || !fileSpec.Shared
+		case !fileSpec.Optional:
 			return nil, false, nil
 		}
 	}
 	return files, present, nil
 }
 
-func firstOnDisk(dir browser.UserDataDir, p browser.Profile, src browser.Source) (snapshot.File, bool, error) {
-	for _, rel := range src.Candidates(p) {
-		info, err := os.Stat(filepath.Join(dir.Path, filepath.FromSlash(rel)))
+func firstOnDisk(dir browser.UserDataDir, profile browser.Profile, fileSpec browser.FileSpec) (snapshot.File, bool, error) {
+	for _, relativePath := range fileSpec.CandidatePaths(profile) {
+		info, err := os.Stat(filepath.Join(dir.Path, filepath.FromSlash(relativePath)))
 		switch {
-		case err == nil && info.IsDir() == src.IsDir:
-			return snapshot.File{DirID: string(dir.ID), From: dir.Path, Rel: rel, IsDir: src.IsDir}, true, nil
+		case err == nil && info.IsDir() == fileSpec.IsDir:
+			return snapshot.File{
+				UserDataDirID: string(dir.ID), UserDataDirPath: dir.Path, RelativePath: relativePath, IsDir: fileSpec.IsDir,
+			}, true, nil
 		case err != nil && !errors.Is(err, fs.ErrNotExist):
 			return snapshot.File{}, false, err
 		}

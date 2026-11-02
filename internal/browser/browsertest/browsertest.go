@@ -16,14 +16,14 @@ func fixtureWrite(t *testing.T, path, content string) {
 	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
 }
 
-func fixtureSQLite(t *testing.T, path string, stmts ...string) {
+func fixtureSQLite(t *testing.T, path string, statements ...string) {
 	t.Helper()
 	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
-	db, err := sql.Open("sqlite", path)
+	database, err := sql.Open("sqlite", path)
 	require.NoError(t, err)
-	defer db.Close()
-	for _, stmt := range stmts {
-		_, err = db.Exec(stmt)
+	defer database.Close()
+	for _, statement := range statements {
+		_, err = database.Exec(statement)
 		require.NoError(t, err)
 	}
 }

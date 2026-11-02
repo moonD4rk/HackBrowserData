@@ -12,42 +12,42 @@ const jsonIndent = "  "
 
 // jsonEncoder writes the bytes a single indented Encode of the whole slice would produce, one element at a time.
 type jsonEncoder struct {
-	w          io.Writer
+	writer     io.Writer
 	escapeHTML bool
 	value      func(record.Record) any
-	n          int
+	written    int
 }
 
-func (e *jsonEncoder) encode(r record.Record) error {
-	var v any = r
+func (e *jsonEncoder) encode(row record.Record) error {
+	var value any = row
 	if e.value != nil {
-		v = e.value(r)
+		value = e.value(row)
 	}
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetEscapeHTML(e.escapeHTML)
-	enc.SetIndent(jsonIndent, jsonIndent)
-	if err := enc.Encode(v); err != nil {
+	var buffer bytes.Buffer
+	valueEncoder := json.NewEncoder(&buffer)
+	valueEncoder.SetEscapeHTML(e.escapeHTML)
+	valueEncoder.SetIndent(jsonIndent, jsonIndent)
+	if err := valueEncoder.Encode(value); err != nil {
 		return err
 	}
 
-	sep := ",\n" + jsonIndent
-	if e.n == 0 {
-		sep = "[\n" + jsonIndent
+	separator := ",\n" + jsonIndent
+	if e.written == 0 {
+		separator = "[\n" + jsonIndent
 	}
-	e.n++
-	if _, err := io.WriteString(e.w, sep); err != nil {
+	e.written++
+	if _, err := io.WriteString(e.writer, separator); err != nil {
 		return err
 	}
-	_, err := e.w.Write(bytes.TrimSuffix(buf.Bytes(), []byte("\n")))
+	_, err := e.writer.Write(bytes.TrimSuffix(buffer.Bytes(), []byte("\n")))
 	return err
 }
 
 func (e *jsonEncoder) end() error {
 	closing := "\n]\n"
-	if e.n == 0 {
+	if e.written == 0 {
 		closing = "[]\n"
 	}
-	_, err := io.WriteString(e.w, closing)
+	_, err := io.WriteString(e.writer, closing)
 	return err
 }

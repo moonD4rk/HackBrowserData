@@ -32,15 +32,15 @@ func extractLocalStorage(path string, out browser.Collector) error {
 	return nil
 }
 
-func reverseString(s string) string {
-	b := []byte(s)
-	for i, j := 0, len(b)-1; i < j; i, j = i+1, j-1 {
-		b[i], b[j] = b[j], b[i]
+func reverseString(text string) string {
+	reversed := []byte(text)
+	for i, j := 0, len(reversed)-1; i < j; i, j = i+1, j-1 {
+		reversed[i], reversed[j] = reversed[j], reversed[i]
 	}
-	return string(b)
+	return string(reversed)
 }
 
-// Firefox reverses the host: "moc.buhtig.:https:443" is https://github.com:443.
+// parseOriginKey undoes Firefox's reversed host: "moc.buhtig.:https:443" is https://github.com:443.
 func parseOriginKey(originKey string) string {
 	parts := strings.SplitN(originKey, ":", 3)
 	if len(parts) < 2 {

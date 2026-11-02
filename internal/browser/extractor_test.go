@@ -14,11 +14,11 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-func writeSnapshotFile(t *testing.T, root, rel string) string {
+func writeSnapshotFile(t *testing.T, root, relativePath string) string {
 	t.Helper()
-	path := filepath.Join(root, filepath.FromSlash(rel))
+	path := filepath.Join(root, filepath.FromSlash(relativePath))
 	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
-	require.NoError(t, os.WriteFile(path, []byte(rel), 0o600))
+	require.NoError(t, os.WriteFile(path, []byte(relativePath), 0o600))
 	return path
 }
 
@@ -26,69 +26,69 @@ func TestProfileSnapshotPath(t *testing.T) {
 	root := t.TempDir()
 	legacyCookies := writeSnapshotFile(t, root, "chrome/Default/Cookies")
 	localState := writeSnapshotFile(t, root, "chrome/Local State")
-	snap := snapshot.Open(root).Snapshot("chrome")
-	ps := NewProfileSnapshot(snap, Profile{Name: "Default", Dir: "Default"}, nil)
+	dirSnapshot := snapshot.Open(root).Snapshot("chrome")
+	profileSnapshot := NewProfileSnapshot(dirSnapshot, Profile{Name: "Default", Dir: "Default"}, nil)
 
-	got, err := ps.Path(Source{Paths: []string{"Network/Cookies", "Cookies"}})
+	got, err := profileSnapshot.Path(FileSpec{Paths: []string{"Network/Cookies", "Cookies"}})
 	require.NoError(t, err)
 	assert.Equal(t, legacyCookies, got, "a candidate that was never captured is skipped")
 
-	got, err = ps.Path(Source{Paths: []string{"Local State"}, Shared: true})
+	got, err = profileSnapshot.Path(FileSpec{Paths: []string{"Local State"}, Shared: true})
 	require.NoError(t, err)
-	assert.Equal(t, localState, got, "a shared source resolves under the user data dir, not the profile")
+	assert.Equal(t, localState, got, "a shared file spec resolves under the user data dir, not the profile")
 
-	_, err = ps.Path(Source{Paths: []string{"History"}})
+	_, err = profileSnapshot.Path(FileSpec{Paths: []string{"History"}})
 	require.ErrorIs(t, err, fs.ErrNotExist)
 }
 
 func TestProfileSnapshotPath_FlatLayoutProfile(t *testing.T) {
 	root := t.TempDir()
 	history := writeSnapshotFile(t, root, "opera/History")
-	ps := NewProfileSnapshot(snapshot.Open(root).Snapshot("opera"), Profile{Name: "Opera Stable"}, nil)
+	profileSnapshot := NewProfileSnapshot(snapshot.Open(root).Snapshot("opera"), Profile{Name: "Opera Stable"}, nil)
 
-	got, err := ps.Path(Source{Paths: []string{"History"}})
+	got, err := profileSnapshot.Path(FileSpec{Paths: []string{"History"}})
 	require.NoError(t, err)
 	assert.Equal(t, history, got)
 }
 
-// A copy that failed is that extraction's error, not a reason to read a lower-priority candidate instead.
+// TestProfileSnapshotPath_FailedCopyIsReported makes a failed copy an error, not a reason to read a lower candidate.
 func TestProfileSnapshotPath_FailedCopyIsReported(t *testing.T) {
 	from := t.TempDir()
 	require.NoError(t, os.MkdirAll(filepath.Join(from, "Default", "Network", "Cookies"), 0o700))
 	writeSnapshotFile(t, from, "Default/Cookies")
 
-	d, err := snapshot.Temp()
+	snapshotDir, err := snapshot.Temp()
 	require.NoError(t, err)
-	defer func() { require.NoError(t, d.Close()) }()
-	require.NoError(t, d.Capture(context.Background(), []snapshot.File{
-		{DirID: "chrome", From: from, Rel: "Default/Network/Cookies"},
-		{DirID: "chrome", From: from, Rel: "Default/Cookies"},
+	defer func() { require.NoError(t, snapshotDir.Close()) }()
+	require.NoError(t, snapshotDir.Capture(context.Background(), []snapshot.File{
+		{UserDataDirID: "chrome", UserDataDirPath: from, RelativePath: "Default/Network/Cookies"},
+		{UserDataDirID: "chrome", UserDataDirPath: from, RelativePath: "Default/Cookies"},
 	}))
 
-	ps := NewProfileSnapshot(d.Snapshot("chrome"), Profile{Name: "Default", Dir: "Default"}, nil)
-	_, err = ps.Path(Source{Paths: []string{"Network/Cookies", "Cookies"}})
+	profileSnapshot := NewProfileSnapshot(snapshotDir.Snapshot("chrome"), Profile{Name: "Default", Dir: "Default"}, nil)
+	_, err = profileSnapshot.Path(FileSpec{Paths: []string{"Network/Cookies", "Cookies"}})
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, fs.ErrNotExist)
 }
 
 func TestProfileSnapshotMasterKeys(t *testing.T) {
-	snap := snapshot.Open(t.TempDir()).Snapshot("chrome")
-	assert.Nil(t, NewProfileSnapshot(snap, Profile{}, nil).MasterKeys(context.Background()))
+	dirSnapshot := snapshot.Open(t.TempDir()).Snapshot("chrome")
+	assert.Nil(t, NewProfileSnapshot(dirSnapshot, Profile{}, nil).MasterKeys(context.Background()))
 
 	calls := 0
 	want := masterkey.Set{masterkey.V10: []byte("k")}
-	ps := NewProfileSnapshot(snap, Profile{}, func(context.Context) masterkey.Set {
+	profileSnapshot := NewProfileSnapshot(dirSnapshot, Profile{}, func(context.Context) masterkey.Set {
 		calls++
 		return want
 	})
-	assert.Equal(t, want, ps.MasterKeys(context.Background()))
+	assert.Equal(t, want, profileSnapshot.MasterKeys(context.Background()))
 	assert.Equal(t, 1, calls)
 }
 
-func TestSource_Candidates(t *testing.T) {
-	p := Profile{Name: "Default", Dir: "Default"}
-	assert.Equal(t, []string{"Default/Network/Cookies", "Default/Cookies"}, Source{Paths: []string{"Network/Cookies", "Cookies"}}.Candidates(p))
-	assert.Equal(t, []string{"Local State"}, Source{Paths: []string{"Local State"}, Shared: true}.Candidates(p))
-	assert.Equal(t, []string{"History"}, Source{Paths: []string{"History"}}.Candidates(Profile{Name: "default"}),
+func TestFileSpec_CandidatePaths(t *testing.T) {
+	profile := Profile{Name: "Default", Dir: "Default"}
+	assert.Equal(t, []string{"Default/Network/Cookies", "Default/Cookies"}, FileSpec{Paths: []string{"Network/Cookies", "Cookies"}}.CandidatePaths(profile))
+	assert.Equal(t, []string{"Local State"}, FileSpec{Paths: []string{"Local State"}, Shared: true}.CandidatePaths(profile))
+	assert.Equal(t, []string{"History"}, FileSpec{Paths: []string{"History"}}.CandidatePaths(Profile{Name: "default"}),
 		"a user data dir that is itself the profile")
 }

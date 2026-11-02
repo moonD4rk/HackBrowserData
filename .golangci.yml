@@ -52,6 +52,7 @@ linters:
     - unconvert
     - unparam
     - usestdlibvars
+    - varnamelen
     - wastedassign
     - whitespace
 
@@ -159,6 +160,15 @@ linters:
         rules:
           json: snake
           csv: snake
+    varnamelen:
+      # 1 is the strictest the linter allows: it only spares a name used on the line after its declaration.
+      max-distance: 1
+      ignore-names: [i, j, ok, id, iv]
+      ignore-decls:
+        - t *testing.T
+        - b *testing.B
+        - t testing.TB
+        - tb testing.TB
     staticcheck:
       checks:
         - "all"
@@ -167,11 +177,14 @@ linters:
 
   exclusions:
     presets:
-      - comments
       - std-error-handling
       - common-false-positives
       - legacy
     rules:
+      # The Windows API and ABE packages keep their short names until they get their own pass.
+      - path: internal/(winapi|abe)/|internal/masterkey/(abe_windows|gcoredump_darwin)\.go
+        linters:
+          - varnamelen
       - path: _test\.go
         linters:
           - dupl

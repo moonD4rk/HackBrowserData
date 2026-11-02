@@ -11,25 +11,25 @@ import (
 
 const des3KeySize = 24 // 3DES uses 24-byte (192-bit) keys
 
-// The key is the global salt for privateKeyPBE and passwordCheckPBE, and the derived master key for credentialPBE.
+// ASN1PBE keys privateKeyPBE and passwordCheckPBE with the global salt, and credentialPBE with the master key.
 type ASN1PBE interface {
 	Decrypt(key []byte) ([]byte, error)
 	Encrypt(key, plaintext []byte) ([]byte, error)
 }
 
-func NewASN1PBE(b []byte) (pbe ASN1PBE, err error) {
+func NewASN1PBE(encoded []byte) (pbe ASN1PBE, err error) {
 	var (
 		nss   privateKeyPBE
 		meta  passwordCheckPBE
 		login credentialPBE
 	)
-	if _, err := asn1.Unmarshal(b, &nss); err == nil {
+	if _, err := asn1.Unmarshal(encoded, &nss); err == nil {
 		return nss, nil
 	}
-	if _, err := asn1.Unmarshal(b, &meta); err == nil {
+	if _, err := asn1.Unmarshal(encoded, &meta); err == nil {
 		return meta, nil
 	}
-	if _, err := asn1.Unmarshal(b, &login); err == nil {
+	if _, err := asn1.Unmarshal(encoded, &login); err == nil {
 		return login, nil
 	}
 	return nil, errDecodeASN1
@@ -56,24 +56,24 @@ func (n privateKeyPBE) Encrypt(globalSalt, plaintext []byte) ([]byte, error) {
 	return DES3Encrypt(key, iv, plaintext)
 }
 
-// Reference: https://searchfox.org/mozilla-central/source/security/nss/lib/softoken/lowpbe.c
+// deriveKeyAndIV follows https://searchfox.org/mozilla-central/source/security/nss/lib/softoken/lowpbe.c
 func (n privateKeyPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
 	entrySalt := n.AlgoAttr.SaltAttr.EntrySalt
-	hp := sha1.Sum(globalSalt)
-	ck := sha1.Sum(append(hp[:], entrySalt...))
+	passwordHash := sha1.Sum(globalSalt)
+	combinedHash := sha1.Sum(append(passwordHash[:], entrySalt...))
 	paddedSalt := paddingZero(entrySalt, 20)
 
-	hmac1 := hmac.New(sha1.New, ck[:])
-	hmac1.Write(paddedSalt)
+	saltHMAC := hmac.New(sha1.New, combinedHash[:])
+	saltHMAC.Write(paddedSalt)
 
-	k1 := hmac.New(sha1.New, ck[:])
-	k1.Write(append(paddedSalt, entrySalt...))
+	firstHMAC := hmac.New(sha1.New, combinedHash[:])
+	firstHMAC.Write(append(paddedSalt, entrySalt...))
 
-	k2 := hmac.New(sha1.New, ck[:])
-	k2.Write(append(hmac1.Sum(nil), entrySalt...))
+	secondHMAC := hmac.New(sha1.New, combinedHash[:])
+	secondHMAC.Write(append(saltHMAC.Sum(nil), entrySalt...))
 
-	dk := append(k1.Sum(nil), k2.Sum(nil)...)
-	return dk[:24], dk[len(dk)-8:]
+	derivedKey := append(firstHMAC.Sum(nil), secondHMAC.Sum(nil)...)
+	return derivedKey[:24], derivedKey[len(derivedKey)-8:]
 }
 
 type passwordCheckPBE struct {

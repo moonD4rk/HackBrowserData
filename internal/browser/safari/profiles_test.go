@@ -11,9 +11,9 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 )
 
-func testDef() browser.Def {
-	p := browser.Platform{UserDataDirs: []string{"Library/Safari"}}
-	return browser.Def{ID: "safari", Name: "Safari", Base: browser.Safari, Darwin: p, Linux: p, Windows: p}
+func testBrowser() browser.Browser {
+	platform := browser.Platform{UserDataDirs: []string{"Library/Safari"}}
+	return browser.Browser{Name: "safari", DisplayName: "Safari", Base: browser.Safari, Darwin: platform, Linux: platform, Windows: platform}
 }
 
 func libraryAt(t *testing.T, home string) (container string) {
@@ -24,10 +24,10 @@ func libraryAt(t *testing.T, home string) (container string) {
 
 func discoverProfiles(t *testing.T, home string) []browser.Profile {
 	t.Helper()
-	dirs, err := Discover(testDef(), browser.DiscoverOptions{Home: home})
+	dirs, err := Discover(testBrowser(), browser.DiscoverOptions{Home: home})
 	require.NoError(t, err)
 	require.Len(t, dirs, 1)
-	assert.Equal(t, browser.DirID("safari"), dirs[0].ID)
+	assert.Equal(t, browser.UserDataDirID("safari"), dirs[0].ID)
 	assert.Equal(t, filepath.Join(home, "Library"), dirs[0].Path)
 	return dirs[0].Profiles
 }
@@ -45,7 +45,7 @@ func TestDiscover_DefaultOnly(t *testing.T) {
 }
 
 func TestDiscover_MissingSafariYieldsNothing(t *testing.T) {
-	dirs, err := Discover(testDef(), browser.DiscoverOptions{Home: t.TempDir()})
+	dirs, err := Discover(testBrowser(), browser.DiscoverOptions{Home: t.TempDir()})
 	require.NoError(t, err)
 	assert.Empty(t, dirs)
 }
@@ -60,8 +60,8 @@ func TestDiscover_ProfilePathIsTheSafariDir(t *testing.T) {
 
 	home := t.TempDir()
 	libraryAt(t, home)
-	opts := browser.DiscoverOptions{Home: home, ProfilePath: filepath.Join(copied, "Library", "SafariCopy")}
-	dirs, err := Discover(testDef(), opts)
+	options := browser.DiscoverOptions{Home: home, ProfilePath: filepath.Join(copied, "Library", "SafariCopy")}
+	dirs, err := Discover(testBrowser(), options)
 	require.NoError(t, err)
 	require.Len(t, dirs, 1)
 	assert.Equal(t, filepath.Join(copied, "Library"), dirs[0].Path)
@@ -80,7 +80,7 @@ func TestDiscover_WithNamedProfile(t *testing.T) {
 	assert.Equal(t, []browser.Profile{defaultProfile, named("work", uuid)}, discoverProfiles(t, home))
 }
 
-// A '#' in the live path cuts a SQLite URI short, so the titles come through only when discovery opens its copy.
+// TestDiscover_ReadsACopyOfSafariTabs puts '#' in the live path, which cuts a SQLite URI: only the copy yields titles.
 func TestDiscover_ReadsACopyOfSafariTabs(t *testing.T) {
 	const uuid = "5604E6F5-02ED-4E40-8249-63DE7BC986C8"
 	home := filepath.Join(t.TempDir(), "user#1")
@@ -97,7 +97,7 @@ func TestDiscover_EmptyTitleFallbackToUUID(t *testing.T) {
 	assert.Equal(t, []browser.Profile{defaultProfile, named("profile-abcdef01", uuid)}, discoverProfiles(t, home))
 }
 
-// A profile directory SafariTabs.db does not mention stays hidden: a readable DB is authoritative.
+// TestDiscover_OrphanUUIDWithoutDBEntry hides a profile dir SafariTabs.db omits, as a readable DB is authoritative.
 func TestDiscover_OrphanUUIDWithoutDBEntry(t *testing.T) {
 	const dbUUID = "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE"
 	const orphanUUID = "11111111-2222-3333-4444-555555555555"
@@ -117,7 +117,7 @@ func TestDiscover_EmptyDBIsAuthoritative(t *testing.T) {
 	assert.Equal(t, []browser.Profile{defaultProfile}, discoverProfiles(t, home))
 }
 
-// Without SafariTabs.db the Profiles dir is listed; dirs without data stay, since a file's presence is Plan's question.
+// TestDiscover_MissingDBFallsBackToReadDir lists the Profiles dir, keeping dirs without data: presence is Plan's call.
 func TestDiscover_MissingDBFallsBackToReadDir(t *testing.T) {
 	const uuid = "11111111-2222-3333-4444-555555555555"
 	const empty = "4E2D8DD0-A7D2-4684-939A-898B7675C700"
@@ -161,9 +161,9 @@ func TestResolveProfileName(t *testing.T) {
 		{"with/slash", "AAAAAAAA-0000-0000-0000-000000000000", "with_slash"},
 		{"中文", "AAAAAAAA-0000-0000-0000-000000000000", "中文"},
 	}
-	for _, tt := range tests {
-		t.Run(tt.title, func(t *testing.T) {
-			assert.Equal(t, tt.want, resolveProfileName(tt.title, tt.uuid))
+	for _, testCase := range tests {
+		t.Run(testCase.title, func(t *testing.T) {
+			assert.Equal(t, testCase.want, resolveProfileName(testCase.title, testCase.uuid))
 		})
 	}
 }

@@ -14,60 +14,60 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// Source is one file or directory an extractor reads; Paths are its candidates in priority order.
-type Source struct {
+// FileSpec is one file or directory an extractor reads; Paths are its candidates in priority order.
+type FileSpec struct {
 	Paths    []string // slash-separated, relative to the profile dir, or to the user data dir when Shared
 	IsDir    bool
 	Shared   bool // belongs to the whole user data dir, such as Local State, so it is captured once per dir
 	Optional bool // the extraction still runs without it
 }
 
-// Candidates are the Paths for profile p, relative to the user data dir, in priority order.
-func (s Source) Candidates(p Profile) []string {
-	rels := make([]string, len(s.Paths))
-	for i, rel := range s.Paths {
+// CandidatePaths are the Paths for a profile, relative to the user data dir, in priority order.
+func (s FileSpec) CandidatePaths(profile Profile) []string {
+	paths := make([]string, len(s.Paths))
+	for i, relativePath := range s.Paths {
 		if !s.Shared {
-			rel = path.Join(p.Dir, rel)
+			relativePath = path.Join(profile.Dir, relativePath)
 		}
-		rels[i] = rel
+		paths[i] = relativePath
 	}
-	return rels
+	return paths
 }
 
 type Extractor struct {
-	Sources []Source
-	Extract func(ctx context.Context, ps ProfileSnapshot, out Collector) error
+	FileSpecs []FileSpec
+	Extract   func(ctx context.Context, profileSnapshot ProfileSnapshot, out Collector) error
 }
 
 type Extractors map[category.Category]Extractor
 
-// Collector stamps every record's Browser and Profile; Fail reports a bad record and the extraction goes on.
+// Collector sets every record's Browser and Profile; Fail reports a bad record and the extraction goes on.
 type Collector interface {
-	Add(r record.Record)
+	Add(row record.Record)
 	Fail(err error)
 }
 
 type ProfileSnapshot struct {
 	Profile    Profile
-	snap       snapshot.Snapshot
+	snapshot   snapshot.Snapshot
 	masterKeys func(ctx context.Context) masterkey.Set
 }
 
-// masterKeys is the user data dir's call-once retrieval, nil for the bases that keep no Chromium keys.
-func NewProfileSnapshot(snap snapshot.Snapshot, p Profile, masterKeys func(context.Context) masterkey.Set) ProfileSnapshot {
-	return ProfileSnapshot{Profile: p, snap: snap, masterKeys: masterKeys}
+// NewProfileSnapshot takes masterKeys, the dir's call-once retrieval, nil for bases that keep no Chromium keys.
+func NewProfileSnapshot(dirSnapshot snapshot.Snapshot, profile Profile, masterKeys func(context.Context) masterkey.Set) ProfileSnapshot {
+	return ProfileSnapshot{Profile: profile, snapshot: dirSnapshot, masterKeys: masterKeys}
 }
 
 // Path skips a candidate that was never captured but returns the error of one whose copy failed.
-func (ps ProfileSnapshot) Path(src Source) (string, error) {
-	for _, rel := range src.Candidates(ps.Profile) {
-		p, err := ps.snap.Path(rel)
+func (ps ProfileSnapshot) Path(fileSpec FileSpec) (string, error) {
+	for _, relativePath := range fileSpec.CandidatePaths(ps.Profile) {
+		capturedPath, err := ps.snapshot.Path(relativePath)
 		if errors.Is(err, fs.ErrNotExist) {
 			continue
 		}
-		return p, err
+		return capturedPath, err
 	}
-	return "", fmt.Errorf("%s: %w", strings.Join(src.Paths, " or "), fs.ErrNotExist)
+	return "", fmt.Errorf("%s: %w", strings.Join(fileSpec.Paths, " or "), fs.ErrNotExist)
 }
 
 // MasterKeys may block on its first call; a key version that could not be retrieved is absent from the Set.

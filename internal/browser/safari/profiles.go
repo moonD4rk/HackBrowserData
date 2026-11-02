@@ -23,10 +23,10 @@ const (
 	defaultProfileSentinel = "DefaultProfile"
 )
 
-// Path-unsafe bytes for filenames/CSV values; Unicode letters (CJK etc.) survive.
+// unsafeNameChars are path-unsafe bytes for filenames and CSV values; Unicode letters (CJK etc.) survive.
 var unsafeNameChars = regexp.MustCompile(`[/\\:*?"<>|\x00-\x1f]+`)
 
-// Canonical 8-4-4-4-12 hex UUID — format check only, no semantic parse.
+// uuidPattern only checks the canonical 8-4-4-4-12 hex form; it does not parse the UUID.
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$`)
 
 // namedProfiles reads SafariTabs.db (authoritative), with a ReadDir fallback only if the DB itself is unreadable.
@@ -38,39 +38,41 @@ func namedProfiles(library string) []browser.Profile {
 	return named
 }
 
-// A copy is read, never the live file Safari has open; (nil, err) means unreadable, any slice is authoritative.
+// readNamedProfilesFromDB reads a copy, never Safari's live file; (nil, err) means unreadable, and any slice is final.
 func readNamedProfilesFromDB(library string) ([]browser.Profile, error) {
-	d, err := snapshot.Temp()
+	snapshotDir, err := snapshot.Temp()
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
-		if err := d.Close(); err != nil {
+		if err := snapshotDir.Close(); err != nil {
 			log.Warnf("%v", err)
 		}
 	}()
-	if err := d.Capture(context.Background(), []snapshot.File{{DirID: discoverDirID, From: library, Rel: safariTabsDBRelPath}}); err != nil {
+	if err := snapshotDir.Capture(context.Background(), []snapshot.File{{
+		UserDataDirID: discoveryUserDataDirID, UserDataDirPath: library, RelativePath: safariTabsDBRelPath,
+	}}); err != nil {
 		return nil, fmt.Errorf("copy SafariTabs.db: %w", err)
 	}
-	path, err := d.Snapshot(discoverDirID).Path(safariTabsDBRelPath)
+	path, err := snapshotDir.Snapshot(discoveryUserDataDirID).Path(safariTabsDBRelPath)
 	if err != nil {
 		return nil, fmt.Errorf("copy SafariTabs.db: %w", err)
 	}
 
 	// Immutable, as on the live file before: the copied -wal is not replayed, so the profile list stays today's.
 	dsn := "file:" + path + "?mode=ro&immutable=1"
-	db, err := sql.Open("sqlite", dsn)
+	database, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open SafariTabs.db: %w", err)
 	}
-	defer db.Close()
+	defer database.Close()
 
 	// Ping forces connection; sql.Open is lazy and won't detect a missing file.
-	if err := db.Ping(); err != nil {
+	if err := database.Ping(); err != nil {
 		return nil, fmt.Errorf("ping SafariTabs.db: %w", err)
 	}
 
-	rows, err := db.Query(
+	rows, err := database.Query(
 		`SELECT external_uuid, title FROM bookmarks WHERE subtype = ? AND external_uuid != ?`,
 		safariProfileSubtype, defaultProfileSentinel,
 	)
@@ -97,7 +99,7 @@ func readNamedProfilesFromDB(library string) ([]browser.Profile, error) {
 	return out, nil
 }
 
-// Names are synthesized from UUIDs when SafariTabs.db is missing.
+// readNamedProfilesFromDir synthesizes names from UUIDs when SafariTabs.db is missing.
 func readNamedProfilesFromDir(library string) []browser.Profile {
 	entries, err := os.ReadDir(filepath.Join(library, filepath.FromSlash(namedProfilesDir)))
 	if err != nil {
@@ -105,21 +107,21 @@ func readNamedProfilesFromDir(library string) []browser.Profile {
 	}
 
 	var out []browser.Profile
-	for _, e := range entries {
-		if !e.IsDir() || !isCanonicalUUID(e.Name()) {
+	for _, entry := range entries {
+		if !entry.IsDir() || !isCanonicalUUID(entry.Name()) {
 			continue
 		}
-		out = append(out, newNamedProfile(e.Name(), ""))
+		out = append(out, newNamedProfile(entry.Name(), ""))
 	}
 	return out
 }
 
-// A named profile's Dir is its own History.db directory, so its UUID travels with it to Extractors.
+// newNamedProfile sets Dir to the profile's own History.db directory, so its UUID travels with it to Extractors.
 func newNamedProfile(upperUUID, title string) browser.Profile {
 	return browser.Profile{Name: resolveProfileName(title, upperUUID), Dir: namedProfilesDir + "/" + upperUUID}
 }
 
-func isCanonicalUUID(s string) bool { return uuidPattern.MatchString(s) }
+func isCanonicalUUID(value string) bool { return uuidPattern.MatchString(value) }
 
 func resolveProfileName(title, upperUUID string) string {
 	if name := sanitizeProfileName(title); name != "" {

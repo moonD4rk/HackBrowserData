@@ -6,13 +6,13 @@ type DiscoverOptions struct {
 	ProfilePath string // the -p value; "" when not given
 }
 
-// DirID is Def.ID, then "-2", "-3"... in Path order; its own type keeps it apart from a Def.ID, which it often equals.
-type DirID string
+// UserDataDirID is Browser.Name, then "-2", "-3"... in Path order; its own type keeps it apart from that name.
+type UserDataDirID string
 
 // UserDataDir is one browser data directory found on this machine; ID also names its snapshot and archive directory.
 type UserDataDir struct {
-	ID       DirID
-	Def      Def
+	ID       UserDataDirID
+	Browser  Browser
 	Path     string
 	Profiles []Profile
 }

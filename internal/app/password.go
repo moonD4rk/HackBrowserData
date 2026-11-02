@@ -15,14 +15,14 @@ import (
 var errNoPassword = errors.New("macOS login password not given and stdin is not a terminal")
 
 // keychainPassword is read lazily: a flag, else a no-echo prompt on a terminal, else none (metadata only).
-func keychainPassword(f Flags, stdin *os.File) (func(context.Context) (string, error), error) {
+func keychainPassword(flags Flags, stdin *os.File) (func(context.Context) (string, error), error) {
 	switch {
-	case f.KeychainPassword != "" && f.KeychainPasswordStdin:
+	case flags.KeychainPassword != "" && flags.KeychainPasswordStdin:
 		return nil, errors.New("--keychain-pw and --keychain-pw-stdin cannot be used together")
-	case f.KeychainPassword != "":
-		password := f.KeychainPassword
+	case flags.KeychainPassword != "":
+		password := flags.KeychainPassword
 		return func(context.Context) (string, error) { return password, nil }, nil
-	case f.KeychainPasswordStdin:
+	case flags.KeychainPasswordStdin:
 		return func(ctx context.Context) (string, error) {
 			return untilDone(ctx, func() (string, error) { return firstLine(stdin) })
 		}, nil
@@ -33,8 +33,8 @@ func keychainPassword(f Flags, stdin *os.File) (func(context.Context) (string, e
 	}
 }
 
-func firstLine(r io.Reader) (string, error) {
-	line, err := bufio.NewReader(r).ReadString('\n')
+func firstLine(reader io.Reader) (string, error) {
+	line, err := bufio.NewReader(reader).ReadString('\n')
 	if err != nil && !errors.Is(err, io.EOF) {
 		return "", fmt.Errorf("read the password from stdin: %w", err)
 	}
@@ -42,19 +42,19 @@ func firstLine(r io.Reader) (string, error) {
 }
 
 func prompt(ctx context.Context, stdin *os.File) (string, error) {
-	fd := int(stdin.Fd())
-	state, err := term.GetState(fd)
+	fileDescriptor := int(stdin.Fd())
+	state, err := term.GetState(fileDescriptor)
 	if err != nil {
 		return "", fmt.Errorf("read the password: %w", err)
 	}
 	fmt.Fprint(os.Stderr, "Enter macOS login password: ")
 	password, err := untilDone(ctx, func() (string, error) {
-		p, err := term.ReadPassword(fd)
-		return string(p), err
+		entered, err := term.ReadPassword(fileDescriptor)
+		return string(entered), err
 	})
 	if ctx.Err() != nil {
 		// The abandoned read never turns the echo back on, and the stop notice has already ended the line.
-		return "", errors.Join(ctx.Err(), term.Restore(fd, state))
+		return "", errors.Join(ctx.Err(), term.Restore(fileDescriptor, state))
 	}
 	fmt.Fprintln(os.Stderr)
 	if err != nil {
@@ -75,8 +75,8 @@ func untilDone(ctx context.Context, read func() (string, error)) (string, error)
 		answers <- answer{value, err}
 	}()
 	select {
-	case a := <-answers:
-		return a.value, a.err
+	case reply := <-answers:
+		return reply.value, reply.err
 	case <-ctx.Done():
 		return "", ctx.Err()
 	}

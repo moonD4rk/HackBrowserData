@@ -10,15 +10,15 @@ import (
 )
 
 func TestManifest_RoundTrip(t *testing.T) {
-	d := Open(t.TempDir())
+	snapshotDir := Open(t.TempDir())
 	want := Manifest{Version: ManifestVersion, Dirs: []ManifestDir{{
 		ID: "arc-2", Browser: "arc", Base: "chromium",
 		Profiles: []ManifestProfile{{Name: "Default", Dir: "Default"}},
 		Files:    []string{"Local State", "Default/Preferences"},
 	}}}
-	require.NoError(t, d.WriteManifest(want))
+	require.NoError(t, snapshotDir.WriteManifest(want))
 
-	got, ok, err := d.ReadManifest()
+	got, ok, err := snapshotDir.ReadManifest()
 	require.NoError(t, err)
 	assert.True(t, ok)
 	assert.Equal(t, want, got)

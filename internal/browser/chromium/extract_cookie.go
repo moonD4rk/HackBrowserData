@@ -71,7 +71,7 @@ func extractCookies(masterKeys masterkey.Set, path string, out browser.Collector
 	return nil
 }
 
-// Chrome 130+ prepends SHA256(host_key) to the value; a value whose prefix does not match is returned unchanged.
+// stripCookieHash removes the SHA256(host_key) Chrome 130+ prepends; a value without that prefix is returned as is.
 func stripCookieHash(value []byte, hostKey string) []byte {
 	if len(value) < sha256.Size {
 		return value

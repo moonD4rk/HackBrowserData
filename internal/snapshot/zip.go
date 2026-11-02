@@ -11,43 +11,43 @@ import (
 	"strings"
 )
 
-// Zip writes the snapshot directory to dst through a temp file beside it, so a failed archive leaves no partial file.
-func (d *Dir) Zip(dst string) (err error) {
-	target, existing, err := zipTarget(dst)
+// Zip writes to archivePath through a temp file beside it, so a failed archive leaves no partial file.
+func (d *Dir) Zip(archivePath string) (err error) {
+	target, existing, err := zipTarget(archivePath)
 	if err != nil {
 		return err
 	}
-	tmp, err := createBeside(target)
+	temporary, err := createBeside(target)
 	if err != nil {
 		return err
 	}
 	defer func() {
 		if err != nil {
-			os.Remove(tmp.Name())
+			os.Remove(temporary.Name())
 		}
 	}()
 
-	if err := writeZip(tmp, d.path); err != nil {
-		return errors.Join(err, tmp.Close())
+	if err := writeZip(temporary, d.path); err != nil {
+		return errors.Join(err, temporary.Close())
 	}
 	if existing != nil {
-		if err := tmp.Chmod(existing.Mode().Perm()); err != nil {
-			return errors.Join(fmt.Errorf("keep the mode of %s: %w", dst, err), tmp.Close())
+		if err := temporary.Chmod(existing.Mode().Perm()); err != nil {
+			return errors.Join(fmt.Errorf("keep the mode of %s: %w", archivePath, err), temporary.Close())
 		}
 	}
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("close zip %s: %w", tmp.Name(), err)
+	if err := temporary.Close(); err != nil {
+		return fmt.Errorf("close zip %s: %w", temporary.Name(), err)
 	}
-	if err := os.Rename(tmp.Name(), target); err != nil {
+	if err := os.Rename(temporary.Name(), target); err != nil {
 		return fmt.Errorf("move zip into place: %w", err)
 	}
 	return nil
 }
 
-// Replacing an archive through a symlinked dst keeps the link and the mode os.Create would have kept.
-func zipTarget(dst string) (string, fs.FileInfo, error) {
-	target := dst
-	if resolved, err := filepath.EvalSymlinks(dst); err == nil {
+// zipTarget follows a symlinked archivePath, so the replaced archive keeps the link and the mode os.Create would keep.
+func zipTarget(archivePath string) (string, fs.FileInfo, error) {
+	target := archivePath
+	if resolved, err := filepath.EvalSymlinks(archivePath); err == nil {
 		target = resolved
 	}
 	info, err := os.Stat(target)
@@ -55,83 +55,83 @@ func zipTarget(dst string) (string, fs.FileInfo, error) {
 		return target, nil, nil
 	}
 	if err != nil {
-		return "", nil, fmt.Errorf("create %s: %w", dst, err)
+		return "", nil, fmt.Errorf("create %s: %w", archivePath, err)
 	}
 	if info.IsDir() {
-		return "", nil, fmt.Errorf("create %s: is a directory", dst)
+		return "", nil, fmt.Errorf("create %s: is a directory", archivePath)
 	}
 	return target, info, nil
 }
 
 // createBeside keeps os.Create's umask-governed mode for a new archive, which os.CreateTemp would force to 0600.
-func createBeside(dst string) (*os.File, error) {
-	dir, base := filepath.Split(dst)
+func createBeside(target string) (*os.File, error) {
+	dir, base := filepath.Split(target)
 	for i := 0; i < 100; i++ {
 		name := filepath.Join(dir, fmt.Sprintf("%s.%d-%d.tmp", base, os.Getpid(), i))
-		f, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o666)
+		file, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o666)
 		if errors.Is(err, fs.ErrExist) {
 			continue
 		}
 		if err != nil {
-			return nil, fmt.Errorf("create %s: %w", dst, err)
+			return nil, fmt.Errorf("create %s: %w", target, err)
 		}
-		return f, nil
+		return file, nil
 	}
-	return nil, fmt.Errorf("create %s: no free temp name beside it", dst)
+	return nil, fmt.Errorf("create %s: no free temp name beside it", target)
 }
 
-func writeZip(w io.Writer, root string) error {
-	zw := zip.NewWriter(w)
-	walkErr := filepath.WalkDir(root, func(p string, e fs.DirEntry, err error) error {
+func writeZip(writer io.Writer, root string) error {
+	zipWriter := zip.NewWriter(writer)
+	walkErr := filepath.WalkDir(root, func(walkedPath string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if e.IsDir() {
+		if entry.IsDir() {
 			return nil
 		}
-		rel, err := filepath.Rel(root, p)
+		relativePath, err := filepath.Rel(root, walkedPath)
 		if err != nil {
 			return err
 		}
-		return addZipEntry(zw, p, filepath.ToSlash(rel))
+		return addZipEntry(zipWriter, walkedPath, filepath.ToSlash(relativePath))
 	})
 	if walkErr != nil {
-		return errors.Join(fmt.Errorf("zip %s: %w", root, walkErr), zw.Close())
+		return errors.Join(fmt.Errorf("zip %s: %w", root, walkErr), zipWriter.Close())
 	}
-	if err := zw.Close(); err != nil {
+	if err := zipWriter.Close(); err != nil {
 		return fmt.Errorf("close zip: %w", err)
 	}
 	return nil
 }
 
-func addZipEntry(zw *zip.Writer, path, name string) error {
-	w, err := zw.Create(name)
+func addZipEntry(zipWriter *zip.Writer, path, name string) error {
+	writer, err := zipWriter.Create(name)
 	if err != nil {
 		return err
 	}
-	src, err := os.Open(path)
+	file, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	defer src.Close()
-	_, err = io.Copy(w, src)
+	defer file.Close()
+	_, err = io.Copy(writer, file)
 	return err
 }
 
-func unzip(src, destDir string) error {
-	r, err := zip.OpenReader(src)
+func unzip(archivePath, destDir string) error {
+	zipReader, err := zip.OpenReader(archivePath)
 	if err != nil {
-		return fmt.Errorf("open zip %s: %w", src, err)
+		return fmt.Errorf("open zip %s: %w", archivePath, err)
 	}
-	defer r.Close()
+	defer zipReader.Close()
 
 	root := filepath.Clean(destDir)
-	for _, f := range r.File {
-		target := filepath.Join(root, filepath.FromSlash(f.Name))
+	for _, zipFile := range zipReader.File {
+		target := filepath.Join(root, filepath.FromSlash(zipFile.Name))
 		if target != root && !strings.HasPrefix(target, root+string(os.PathSeparator)) {
-			return fmt.Errorf("zip entry %q escapes destination", f.Name)
+			return fmt.Errorf("zip entry %q escapes destination", zipFile.Name)
 		}
-		if f.FileInfo().IsDir() {
+		if zipFile.FileInfo().IsDir() {
 			if err := os.MkdirAll(target, 0o700); err != nil {
 				return err
 			}
@@ -140,19 +140,19 @@ func unzip(src, destDir string) error {
 		if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
 			return err
 		}
-		if err := writeZipEntry(f, target); err != nil {
+		if err := writeZipEntry(zipFile, target); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func writeZipEntry(f *zip.File, target string) (err error) {
-	rc, err := f.Open()
+func writeZipEntry(zipFile *zip.File, target string) (err error) {
+	entryReader, err := zipFile.Open()
 	if err != nil {
 		return err
 	}
-	defer rc.Close()
+	defer entryReader.Close()
 
 	out, err := os.OpenFile(target, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
@@ -161,7 +161,7 @@ func writeZipEntry(f *zip.File, target string) (err error) {
 	defer func() { err = errors.Join(err, out.Close()) }()
 
 	for {
-		_, err := io.CopyN(out, rc, 1<<20)
+		_, err := io.CopyN(out, entryReader, 1<<20)
 		if errors.Is(err, io.EOF) {
 			return nil
 		}

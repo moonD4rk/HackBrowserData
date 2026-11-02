@@ -23,28 +23,28 @@ type safariDownloadEntry struct {
 	DownloadIdentifier string `plist:"DownloadEntryIdentifier"`
 }
 
-// Downloads.plist is shared across profiles: entries are kept by owner UUID, and untagged ones are the default's.
+// extractDownloads filters the shared Downloads.plist by owner UUID; untagged entries belong to the default profile.
 func extractDownloads(path, ownerUUID string, out browser.Collector) error {
-	f, err := os.Open(path)
+	file, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("open downloads: %w", err)
 	}
-	defer f.Close()
+	defer file.Close()
 
-	var dl safariDownloads
-	if err := plist.NewDecoder(f).Decode(&dl); err != nil {
+	var decoded safariDownloads
+	if err := plist.NewDecoder(file).Decode(&decoded); err != nil {
 		return fmt.Errorf("decode downloads: %w", err)
 	}
 
 	var downloads []record.Download
-	for _, d := range dl.DownloadHistory {
-		if !ownsDownload(d.ProfileUUID, ownerUUID) {
+	for _, entry := range decoded.DownloadHistory {
+		if !ownsDownload(entry.ProfileUUID, ownerUUID) {
 			continue
 		}
 		downloads = append(downloads, record.Download{
-			URL:        d.URL,
-			TargetPath: d.Path,
-			TotalBytes: d.TotalBytes,
+			URL:        entry.URL,
+			TargetPath: entry.Path,
+			TotalBytes: entry.TotalBytes,
 		})
 	}
 	emit(out, downloads)

@@ -21,7 +21,7 @@ func encryptAESGCM(t *testing.T, key, nonce, plaintext, aad []byte) []byte {
 	return aead.Seal(nil, nonce, plaintext, aad)
 }
 
-// 96 (blob) - 12 (nonce) - 16 (tag) = 68 bytes of payload before sealing.
+// testPlaintextPayloadLen is 96 (blob) - 12 (nonce) - 16 (tag) = 68 bytes of payload before sealing.
 const testPlaintextPayloadLen = yandexIntKeyBlobLen - gcmNonceSize - 16
 
 func buildLocalEncryptorBlob(t *testing.T, masterKey, dataKey []byte) []byte {

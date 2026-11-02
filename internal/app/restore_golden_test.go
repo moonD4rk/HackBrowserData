@@ -19,7 +19,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// Restore writes what dump writes: the extract golden, stamped with each browser's display name.
+// TestRestoreGolden checks that restore writes what dump writes: the extract golden, with each browser's display name.
 func TestRestoreGolden(t *testing.T) {
 	data := t.TempDir()
 	browsertest.ChromiumInstallations(t, data)
@@ -61,8 +61,8 @@ func TestRestoreGolden(t *testing.T) {
 func chromiumFixtureKeysFile(t *testing.T) string {
 	t.Helper()
 	profiles := make([]string, 0, len(browsertest.ChromiumProfiles))
-	for _, p := range browsertest.ChromiumProfiles {
-		profiles = append(profiles, p.Dir)
+	for _, fixtureProfile := range browsertest.ChromiumProfiles {
+		profiles = append(profiles, fixtureProfile.Dir)
 	}
 	dump := masterkey.Dump{
 		// A literal rather than DumpVersion: keys files written by today's dumpkeys must keep restoring.
@@ -71,44 +71,44 @@ func chromiumFixtureKeysFile(t *testing.T) string {
 		Host:      masterkey.Host{OS: "windows", Arch: "amd64"},
 		Vaults:    []masterkey.Vault{},
 	}
-	for _, inst := range browsertest.ChromiumInstalls {
+	for _, fixture := range browsertest.ChromiumInstalls {
 		dump.Vaults = append(dump.Vaults, masterkey.Vault{
-			Browser:  inst.Key,
+			Browser:  fixture.Name,
 			Kind:     "chromium",
 			Profiles: profiles,
 			Keys:     browsertest.ChromiumKeys,
 		})
 	}
 
-	var buf bytes.Buffer
-	require.NoError(t, dump.WriteJSON(&buf))
+	var buffer bytes.Buffer
+	require.NoError(t, dump.WriteJSON(&buffer))
 	path := filepath.Join(t.TempDir(), "keys.json")
-	require.NoError(t, os.WriteFile(path, buf.Bytes(), 0o600))
+	require.NoError(t, os.WriteFile(path, buffer.Bytes(), 0o600))
 	return path
 }
 
-func restoreGolden(t *testing.T, f app.RestoreFlags) string {
+func restoreGolden(t *testing.T, flags app.RestoreFlags) string {
 	t.Helper()
-	if f.Categories == "" {
-		f.Categories = "all"
+	if flags.Categories == "" {
+		flags.Categories = "all"
 	}
-	if f.Format == "" {
-		f.Format = "json"
+	if flags.Format == "" {
+		flags.Format = "json"
 	}
-	req, dump, err := app.ValidateRestore(f)
+	options, dump, err := app.ValidateRestore(flags)
 	require.NoError(t, err)
 
-	data := snapshot.Open(f.DataDir)
-	if f.DataZip != "" {
-		data, err = snapshot.Unzip(f.DataZip)
+	data := snapshot.Open(flags.DataDir)
+	if flags.DataZip != "" {
+		data, err = snapshot.Unzip(flags.DataZip)
 		require.NoError(t, err)
 	}
 	defer data.Close()
 
-	d, keys, err := app.RestoreDiscovery(data, dump, req)
+	discovery, keys, err := app.RestoreDiscovery(data, dump, options)
 	require.NoError(t, err)
-	req.Keys = keys
-	_, err = app.Execute(context.Background(), app.NewPlan(d, req), req)
+	options.Keys = keys
+	_, err = app.Execute(context.Background(), app.NewPlan(discovery, options), options)
 	require.NoError(t, err)
-	return f.Dir
+	return flags.Dir
 }

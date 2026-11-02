@@ -10,26 +10,26 @@ import (
 )
 
 func TestNew_NeitherOpensNorPrompts(t *testing.T) {
-	kc := New(filepath.Join(t.TempDir(), "login.keychain-db"), func(context.Context) (string, error) {
+	loginKeychain := New(filepath.Join(t.TempDir(), "login.keychain-db"), func(context.Context) (string, error) {
 		t.Fatal("building a keychain handle must not ask for the password")
 		return "", nil
 	})
-	assert.NoError(t, kc.Err(), "a keychain that was never used has no error")
+	assert.NoError(t, loginKeychain.Err(), "a keychain that was never used has no error")
 }
 
-// An unreadable keychain fails before any prompt, once, and every query reports the same reason.
+// TestOpenFailure_IsReportedOnceWithoutPrompting fails an unreadable keychain once, before any prompt, for every query.
 func TestOpenFailure_IsReportedOnceWithoutPrompting(t *testing.T) {
 	prompts := 0
-	kc := New(filepath.Join(t.TempDir(), "missing.keychain-db"), func(context.Context) (string, error) {
+	loginKeychain := New(filepath.Join(t.TempDir(), "missing.keychain-db"), func(context.Context) (string, error) {
 		prompts++
 		return "secret", nil
 	})
 
-	_, err := kc.GenericPassword(context.Background(), "Chrome Safe Storage")
+	_, err := loginKeychain.GenericPassword(context.Background(), "Chrome Safe Storage")
 	require.ErrorContains(t, err, "open login keychain")
-	_, err2 := kc.InternetPasswords(context.Background())
-	require.Equal(t, err, err2)
+	_, secondErr := loginKeychain.InternetPasswords(context.Background())
+	require.Equal(t, err, secondErr)
 
-	assert.Equal(t, err, kc.Err())
+	assert.Equal(t, err, loginKeychain.Err())
 	assert.Zero(t, prompts)
 }

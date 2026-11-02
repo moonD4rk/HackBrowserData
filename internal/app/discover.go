@@ -16,23 +16,23 @@ type Discovery struct {
 }
 
 // Discover applies -p only when one browser is named.
-func Discover(req Request) Discovery {
-	var d Discovery
-	for _, def := range browser.Supported() {
-		if req.Browser != allBrowsers && def.ID != req.Browser {
+func Discover(options Options) Discovery {
+	var discovery Discovery
+	for _, supportedBrowser := range browser.Supported() {
+		if options.Browser != allBrowsers && supportedBrowser.Name != options.Browser {
 			continue
 		}
-		opts := browser.DiscoverOptions{Home: req.Home}
-		if req.Browser != allBrowsers {
-			opts.ProfilePath = req.ProfilePath
+		discoverOptions := browser.DiscoverOptions{Home: options.Home}
+		if options.Browser != allBrowsers {
+			discoverOptions.ProfilePath = options.ProfilePath
 		}
-		dirs, err := discover(def, opts)
-		d.Dirs = append(d.Dirs, withData(dirs)...)
+		dirs, err := discover(supportedBrowser, discoverOptions)
+		discovery.Dirs = append(discovery.Dirs, withData(dirs)...)
 		if err != nil {
-			d.Failed = append(d.Failed, dirFailure(browser.DirID(def.ID), err))
+			discovery.Failed = append(discovery.Failed, dirFailure(browser.UserDataDirID(supportedBrowser.Name), err))
 		}
 	}
-	return d
+	return discovery
 }
 
 // withData drops profiles holding no file any category reads, such as a bare Preferences, but keeps unreadable ones.
@@ -41,9 +41,9 @@ func withData(dirs []browser.UserDataDir) []browser.UserDataDir {
 	var out []browser.UserDataDir
 	for _, dir := range dirs {
 		var profiles []browser.Profile
-		for _, p := range dir.Profiles {
-			if hasData(dir, p, extractors(dir, p)) {
-				profiles = append(profiles, p)
+		for _, profile := range dir.Profiles {
+			if hasData(dir, profile, extractors(dir, profile)) {
+				profiles = append(profiles, profile)
 			}
 		}
 		if len(profiles) > 0 {
@@ -54,42 +54,42 @@ func withData(dirs []browser.UserDataDir) []browser.UserDataDir {
 	return out
 }
 
-func hasData(dir browser.UserDataDir, p browser.Profile, ex browser.Extractors) bool {
-	for _, x := range ex {
-		if len(x.Sources) == 0 {
+func hasData(dir browser.UserDataDir, profile browser.Profile, extractors browser.Extractors) bool {
+	for _, extractor := range extractors {
+		if len(extractor.FileSpecs) == 0 {
 			continue
 		}
-		if _, ok, err := locate(dir, p, x.Sources); ok || err != nil {
+		if _, ok, err := locate(dir, profile, extractor.FileSpecs); ok || err != nil {
 			return true
 		}
 	}
 	return false
 }
 
-// The base packages import browser, so the dispatch on Base lives here rather than in browser.
-func discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserDataDir, error) {
-	switch def.Base {
+// discover dispatches on Base here, not in browser, because the base packages import browser.
+func discover(supportedBrowser browser.Browser, options browser.DiscoverOptions) ([]browser.UserDataDir, error) {
+	switch supportedBrowser.Base {
 	case browser.Chromium:
-		return chromium.Discover(def, opts)
+		return chromium.Discover(supportedBrowser, options)
 	case browser.Firefox:
-		return firefox.Discover(def, opts)
+		return firefox.Discover(supportedBrowser, options)
 	case browser.Safari:
-		return safari.Discover(def, opts)
+		return safari.Discover(supportedBrowser, options)
 	default:
-		return nil, fmt.Errorf("%s: no base package", def.ID)
+		return nil, fmt.Errorf("%s: no base package", supportedBrowser.Name)
 	}
 }
 
 // extractorsWith hands Safari the run's login keychain, which its default profile's password extractor reads.
-func extractorsWith(kc safari.LoginKeychain) extractorsFunc {
-	return func(dir browser.UserDataDir, p browser.Profile) browser.Extractors {
-		switch dir.Def.Base {
+func extractorsWith(keychain safari.LoginKeychain) extractorsFunc {
+	return func(dir browser.UserDataDir, profile browser.Profile) browser.Extractors {
+		switch dir.Browser.Base {
 		case browser.Chromium:
-			return chromium.Extractors(dir, p)
+			return chromium.Extractors(dir, profile)
 		case browser.Firefox:
-			return firefox.Extractors(dir, p)
+			return firefox.Extractors(dir, profile)
 		case browser.Safari:
-			return safari.Extractors(dir, p, kc)
+			return safari.Extractors(dir, profile, keychain)
 		default:
 			return nil
 		}

@@ -1,6 +1,6 @@
 # RFC-008: Output & Export
 
-Everything a user can see in the output — file names, formats, field names, stamp values — is frozen by the compatibility contract ([RFC-000](000-goals-and-constraints.md)). This RFC describes how the exporter reproduces it byte for byte, and the few places where v1.1.0's output was wrong and is fixed.
+Everything a user can see in the output — file names, formats, field names, browser and profile values — is frozen by the compatibility contract ([RFC-000](000-goals-and-constraints.md)). This RFC describes how the exporter reproduces it byte for byte, and the few places where v1.1.0's output was wrong and is fixed.
 
 ## Contract
 
@@ -39,9 +39,9 @@ JSON keys and CSV headers are the snake_case form of the Go field names: `Cookie
 
 The consequence is stated plainly: since the output is frozen, **the record field names are frozen too** — a rename would change a column. A field can only be renamed together with a deliberate, announced output change, and the lint makes such a change impossible to miss in review.
 
-### Source stamp
+### Browser and profile fields
 
-Every record starts with two flat source fields — `Browser` and `Profile` ([RFC-003](003-core-types.md)) — serialized as the leading `browser` and `profile` keys in JSON and the leading columns in CSV, exactly as in v1.1.0. `browser` is the display name (`Chrome`, `Microsoft Edge`); `profile` is the profile name (`Default`, `Profile 1`, a Safari profile's title), never a path. The pipeline's `Collector` sets both through `record.Stamp`, so no extractor can leave them out.
+Every record starts with two flat source fields — `Browser` and `Profile` ([RFC-003](003-core-types.md)) — serialized as the leading `browser` and `profile` keys in JSON and the leading columns in CSV, exactly as in v1.1.0. `browser` is the display name (`Chrome`, `Microsoft Edge`); `profile` is the profile name (`Default`, `Profile 1`, a Safari profile's title), never a path. The pipeline's `Collector` sets both through `SetBrowserAndProfile`, so no extractor can leave them out.
 
 ## Deterministic ordering
 

@@ -16,16 +16,16 @@ type DiscoverOptions struct {
     ProfilePath string // the -p value, already validated; "" when not given (RFC-009)
 }
 
-// DirID names one user data dir: Def.ID for the first one of a Def, then "-2", "-3"… appended for further
-// ones, in Path order. It is its own type so that it cannot be passed where a Def.ID belongs.
-type DirID string
+// UserDataDirID names one user data dir: Browser.Name for the first one of a Browser, then "-2", "-3"… appended
+// for further ones, in Path order. It is its own type so that it cannot be passed where a Browser.Name belongs.
+type UserDataDirID string
 
 // UserDataDir is one browser data directory found on this machine: Chromium's "User Data",
 // Firefox's Profiles directory, Safari's data under ~/Library.
 type UserDataDir struct {
-    ID       DirID     // "chrome", "arc", "arc-2" — also the snapshot and archive directory name
-    Def      Def       // which browser it belongs to (RFC-005)
-    Path     string    // absolute path; every Source path resolves under it
+    ID       UserDataDirID // "chrome", "arc", "arc-2" — also the snapshot and archive directory name
+    Browser  Browser       // which browser it belongs to (RFC-005)
+    Path     string        // absolute path; every FileSpec path resolves under it
     Profiles []Profile
 }
 
@@ -36,9 +36,9 @@ type Profile struct {
 }
 ```
 
-`UserDataDir` is Chromium's own term (`--user-data-dir`): the directory holding `Local State` and the profile directories, as opposed to the program installation that holds the executable. HBD uses it for every base's data root — the directory a base's sources resolve under — even where the browser has no such word: Firefox's `Profiles` directory, and Safari's `~/Library` (below). A machine can have several for one browser — Arc's two MSIX packages on Windows each have one — and `restore` works on a copied one that was never installed here, which is why the type is not called `Installation` ([RFC-004](004-naming-decisions.md)).
+`UserDataDir` is Chromium's own term (`--user-data-dir`): the directory holding `Local State` and the profile directories, as opposed to the program installation that holds the executable. HBD uses it for every base's data root — the directory a base's file specs resolve under — even where the browser has no such word: Firefox's `Profiles` directory, and Safari's `~/Library` (below). A machine can have several for one browser — Arc's two MSIX packages on Windows each have one — and `restore` works on a copied one that was never installed here, which is why the type is not called `Installation` ([RFC-004](004-naming-decisions.md)).
 
-Two IDs sit side by side and must not be confused: `dir.ID` (`arc-2`) names the directory, `dir.Def.ID` (`arc`) names the browser. The `-b` value, a `keys.json` vault's `browser` key, and the per-fork overrides use `Def.ID`; the snapshot and archive layout use the `DirID`. On a machine with one Arc the two are equal, so a mix-up would pass every test there — the separate type makes it a compile error instead.
+An ID and a name sit side by side and must not be confused: `dir.ID` (`arc-2`) names the directory, `dir.Browser.Name` (`arc`) names the browser. The `-b` value, a `keys.json` vault's `browser` key, and the per-fork overrides use `Browser.Name`; the snapshot and archive layout use the `UserDataDirID`. On a machine with one Arc the two are equal, so a mix-up would pass every test there — the separate type makes it a compile error instead.
 
 `Profile.Name` is frozen by the output contract ([RFC-000](000-goals-and-constraints.md)): for Chromium the directory's base name (`Default`, `Profile 1` — what Chromium's `Profile::GetBaseName()` returns, not the display name `Local State` keeps in `profile.info_cache`); for Firefox the directory name (`97nszz88.default-release`); for Safari, `default` or the named profile's title (deduplicated with a `-N` suffix, the UUID when untitled). It is never a path.
 
@@ -47,30 +47,30 @@ Safari has no single data directory — History lives under `~/Library/Safari`, 
 ## Extractor contract — `internal/browser`
 
 ```go
-// Source is one file or directory an extractor needs.
-type Source struct {
+// FileSpec is one file or directory an extractor needs: where to look for it, not the file itself.
+type FileSpec struct {
     Paths    []string // candidates in priority order, relative to the profile dir — or to the user data dir when Shared
     IsDir    bool     // a directory (LevelDB, Session Storage), copied whole
     Shared   bool     // belongs to the whole user data dir, not one profile: Local State
     Optional bool     // the extraction still runs without it
 }
 
-// Candidates are the Paths for profile p, relative to the user data dir, in priority order.
-func (s Source) Candidates(p Profile) []string
+// CandidatePaths are the Paths for a profile, relative to the user data dir, in priority order.
+func (s FileSpec) CandidatePaths(profile Profile) []string
 
-// Extractor declares the sources a category needs and how to parse them.
+// Extractor declares the file specs a category needs and how to parse them.
 type Extractor struct {
-    Sources []Source
-    Extract func(ctx context.Context, ps ProfileSnapshot, out Collector) error
+    FileSpecs []FileSpec
+    Extract   func(ctx context.Context, profileSnapshot ProfileSnapshot, out Collector) error
 }
 
 // Extractors maps each category a profile supports to its extractor.
 type Extractors map[category.Category]Extractor
 ```
 
-Sources are static data: a base package declares them once per category and never rewrites them per profile. `Source.Candidates` joins a profile-scoped path with the profile's `Dir` and leaves a `Shared` one as it is, for Plan and `ProfileSnapshot.Path` alike; Plan captures the union once per user data dir — so `Local State`, or the Chromium `History` file that feeds both history and downloads, is copied once however many extractions need it. Safari is the exception: a named profile's files sit under two directories named for its UUID, so `safari.Extractors` builds each profile's sources from its `Dir`, and reaches files elsewhere under `~/Library` with `..` from there.
+File specs are static data: a base package declares them once per category and never rewrites them per profile. `FileSpec.CandidatePaths` joins a profile-scoped path with the profile's `Dir` and leaves a `Shared` one as it is, for Plan and `ProfileSnapshot.Path` alike; Plan captures the union once per user data dir — so `Local State`, or the Chromium `History` file that feeds both history and downloads, is copied once however many extractions need it. Safari is the exception: a named profile's files sit under two directories named for its UUID, so `safari.Extractors` builds each profile's file specs from its `Dir`, and reaches files elsewhere under `~/Library` with `..` from there.
 
-An extraction is `absent` when a required source has no candidate on disk, or when all its sources are optional and none of the profile's own is there: a shared source such as `Local State` never makes an extraction present by itself. A candidate that cannot be checked — permission denied — makes the extraction an `error` instead, and its profile stays through discovery so the error is reported. An extractor that reads no file — Safari's passwords, which come from the login keychain — always runs. Chromium passwords are two optional sources — `Login Data` (store `local`) and `Login Data For Account` (store `account`) — which reproduces v1.1.0's output, including a profile that only ever synced passwords, without a special case.
+An extraction is `absent` when a required file spec has no candidate on disk, or when all its file specs are optional and none of the profile's own is there: a shared one such as `Local State` never makes an extraction present by itself. A candidate that cannot be checked — permission denied — makes the extraction an `error` instead, and its profile stays through discovery so the error is reported. An extractor that reads no file — Safari's passwords, which come from the login keychain — always runs. Chromium passwords are two optional file specs — `Login Data` (store `local`) and `Login Data For Account` (store `account`) — which reproduces v1.1.0's output, including a profile that only ever synced passwords, without a special case.
 
 `Extractor` / `Extractors` are **DECIDED**.
 
@@ -80,31 +80,31 @@ An extraction is `absent` when a required source has no candidate on disk, or wh
 // ProfileSnapshot is what an extractor is handed for one extraction: its profile's view of the user data dir's
 // snapshot, and the dir's keys.
 type ProfileSnapshot struct {
-    Profile    Profile // the extraction's profile; profile-scoped sources resolve under its Dir
-    snap       snapshot.Snapshot
+    Profile    Profile // the extraction's profile; profile-scoped file specs resolve under its Dir
+    snapshot   snapshot.Snapshot
     masterKeys func(ctx context.Context) masterkey.Set
 }
 
 // NewProfileSnapshot is how app hands a profile its share; tests pass a fixture Snapshot and a fake masterKeys.
-func NewProfileSnapshot(snap snapshot.Snapshot, p Profile, masterKeys func(context.Context) masterkey.Set) ProfileSnapshot
+func NewProfileSnapshot(dirSnapshot snapshot.Snapshot, profile Profile, masterKeys func(context.Context) masterkey.Set) ProfileSnapshot
 
-// Path returns the captured path of src: its first candidate present in the snapshot. A candidate that was
+// Path returns the captured path of fileSpec: its first candidate present in the snapshot. A candidate that was
 // never captured is skipped; one whose copy failed returns that copy's error.
-func (ps ProfileSnapshot) Path(src Source) (string, error)
+func (ps ProfileSnapshot) Path(fileSpec FileSpec) (string, error)
 
 // MasterKeys returns the user data dir's Chromium keys, one per version. The first call in a dir retrieves them and
 // later calls reuse the result; a version that could not be retrieved is absent from the Set.
 func (ps ProfileSnapshot) MasterKeys(ctx context.Context) masterkey.Set
 
-// Collector receives one extraction's output. It stamps Browser and Profile on every record, so no extractor can omit
+// Collector receives one extraction's output. It sets Browser and Profile on every record, so no extractor can omit
 // them.
 type Collector interface {
-    Add(r record.Record) // one parsed record
-    Fail(err error)      // one record-level problem: a secret that could not be recovered, or a row dropped as unparseable
+    Add(row record.Record) // one parsed record
+    Fail(err error)        // one record-level problem: a secret that could not be recovered, or a row dropped as unparseable
 }
 ```
 
-An extractor reads from its `Source`s and hands its records to the `Collector`. It emits records as it reads them; it does not accumulate slices. A record whose secret can't be recovered is emitted anyway with that field empty, as in v1.1.0, and reported through `Fail`, which records the problem and lets the extraction continue, like `testing.T.Error`; the extraction ends `partial`. An extractor never logs errors: it returns extraction-level errors and reports record-level ones. Base-specific context an extractor needs (Safari's profile UUID for filtering downloads and the run's login keychain, the Yandex override) is captured when the base package builds the profile's `Extractors`, not passed through the `ProfileSnapshot`.
+An extractor reads from its `FileSpecs` and hands its records to the `Collector`. It emits records as it reads them; it does not accumulate slices. A record whose secret can't be recovered is emitted anyway with that field empty, as in v1.1.0, and reported through `Fail`, which records the problem and lets the extraction continue, like `testing.T.Error`; the extraction ends `partial`. An extractor never logs errors: it returns extraction-level errors and reports record-level ones. Base-specific context an extractor needs (Safari's profile UUID for filtering downloads and the run's login keychain, the Yandex override) is captured when the base package builds the profile's `Extractors`, not passed through the `ProfileSnapshot`.
 
 `MasterKeys` takes a context because its first call may block — on a secret-store lookup, or on macOS on the login keychain's no-echo password prompt — and Ctrl-C cancels the run's context ([RFC-009](009-cli-surface.md)). It returns no error: the dir's call-once in `app` keeps the retrieval error and reports it once, as the user data dir's `error` result ([RFC-001](001-architecture-and-pipeline.md)), and a record whose key is missing is emitted with that field empty and reported through `Fail`. Every `ProfileSnapshot` of one user data dir shares that call-once; `masterKeys` is nil for Firefox and Safari, whose extractors never call it.
 
@@ -116,9 +116,9 @@ There is no separate `Secrets` handle ([RFC-004](004-naming-decisions.md)), and 
 // Extraction is one unit of work: one category of data from one profile of one user data dir. It is pure data —
 // the extractor is looked up when it runs — so a Plan prints as it is and compares with reflect.DeepEqual in tests.
 type Extraction struct {
-    DirID    browser.DirID     // which user data dir
-    Profile  string            // Profile.Name; "" in a result about a whole browser or user data dir
-    Category category.Category // zero in a result about a whole browser or user data dir
+    UserDataDirID browser.UserDataDirID // which user data dir
+    Profile       string                // Profile.Name; "" in a result about a whole browser or user data dir
+    Category      category.Category     // zero in a result about a whole browser or user data dir
 }
 
 // Discovery is what Discover found: the user data dirs, plus an error result for each browser whose data could
@@ -135,8 +135,8 @@ type Plan struct {
     Skipped     []Result              // requested but can't run: unsupported, absent, unreadable, or Discovery.Failed
 }
 
-func Discover(req Request) Discovery
-func NewPlan(d Discovery, req Request) Plan
+func Discover(options Options) Discovery
+func NewPlan(discovery Discovery, options Options) Plan
 ```
 
 `Plan` is a plain value: printable, testable, and all `list` prints. `restore` builds its `Discovery` from the snapshot directory it opens instead of from the machine ([RFC-007](007-snapshot-and-acquisition.md)).
@@ -169,14 +169,14 @@ type Summary struct {
 
 // Execute runs Capture, Extract, and Export one user data dir at a time (RFC-001). Its error means the run could
 // not finish — an output write failure; every other failure is a Result.
-func Execute(ctx context.Context, p Plan, req Request) (Summary, error)
+func Execute(ctx context.Context, plan Plan, options Options) (Summary, error)
 ```
 
-The outcome follows from the counts: `OutcomeOK` when nothing failed — zero records included, since an empty source is not absent; `OutcomePartial` when records were emitted and some failed; `OutcomeError` when the extractor returned an error, a source failed to copy, or failures were reported with no record emitted. `Summary` starts with `Plan.Skipped`, so the report covers what never ran as well as what did.
+The outcome follows from the counts: `OutcomeOK` when nothing failed — zero records included, since an empty file is not absent; `OutcomePartial` when records were emitted and some failed; `OutcomeError` when the extractor returned an error, a file failed to copy, or failures were reported with no record emitted. `Summary` starts with `Plan.Skipped`, so the report covers what never ran as well as what did.
 
 The exit status is not derived from `Summary`: it is `0` whenever the run completes and `1` when it cannot start or finish ([RFC-001](001-architecture-and-pipeline.md)). `Summary` feeds the report only.
 
-The stage functions are `Validate`, `Discover`, `NewPlan`, `Execute`, and `Report`; the values they produce are `Request`, `Discovery`, `Plan`, and `Summary`. No function shares a name with a type, which Go would reject.
+The stage functions are `Validate`, `Discover`, `NewPlan`, `Execute`, and `Report`; the values they produce are `Options`, `Discovery`, `Plan`, and `Summary`. No function shares a name with a type, which Go would reject.
 
 ## Categories — `internal/category`
 
@@ -234,16 +234,12 @@ const (
     StoreAccount Store = "account" // Login Data For Account
 )
 
-// Record is a record of any category: one row of output. It is sealed: only this package's record types implement it.
+// Record is a record of any category: one row of output. The pipeline's Collector calls SetBrowserAndProfile on each
+// record it is handed, so the two fields every record starts with are never left to an extractor.
 type Record interface {
     Category() category.Category
-    stamp(browser, profile string)
+    SetBrowserAndProfile(browser, profile string)
 }
-
-// Stamp sets the two source fields every record starts with. The pipeline's Collector calls it on each record it is
-// handed; it is exported because the sealing method stamp is not, and an unexported method can only be called from
-// its own package.
-func Stamp(r Record, browser, profile string)
 ```
 
 | Category                  | Record type             | v1.1.0 type             |
@@ -258,7 +254,7 @@ func Stamp(r Record, browser, profile string)
 | `category.LocalStorage`   | `record.LocalStorage`   | `types.StorageEntry`    |
 | `category.SessionStorage` | `record.SessionStorage` | `types.StorageEntry`    |
 
-Every record type starts with two flat source fields, `Browser string` (the display name) and `Profile string` (`Profile.Name`), followed by v1.1.0's fields with v1.1.0's names, tags, and order. `LocalStorage` and `SessionStorage` declare the same fields separately, so each is its own type with its own category. Records are used by pointer — `out.Add(&record.Cookie{…})` — because `stamp` sets the fields in place. There is no `Origin`/`Owner` umbrella type ([RFC-004](004-naming-decisions.md)).
+Every record type starts with two flat source fields, `Browser string` (the display name) and `Profile string` (`Profile.Name`), followed by v1.1.0's fields with v1.1.0's names, tags, and order. `LocalStorage` and `SessionStorage` declare the same fields separately, so each is its own type with its own category. Records are used by pointer — `out.Add(&record.Cookie{…})` — because `SetBrowserAndProfile` sets the fields in place. There is no `Origin`/`Owner` umbrella type ([RFC-004](004-naming-decisions.md)).
 
 Only the type names changed from v1.1.0. Field names are wire names — each field's snake_case form, enforced by lint — and because the output is frozen, so are they ([RFC-008](008-output-and-export.md)). `Store` is a named string type with v1.1.0's two values, which changes nothing on the wire.
 
@@ -320,10 +316,10 @@ The login keychain belongs to the user, not to a profile or a user data dir, so 
 ```go
 // File is one file or directory a plan wants captured.
 type File struct {
-    DirID string // the user data dir's ID ("chrome", "arc-2"); also the snapshot it lands in
-    From  string // absolute path of the user data dir it is copied from
-    Rel   string // slash-separated path relative to From, and to the snapshot
-    IsDir bool
+    UserDataDirID   string // the user data dir's ID ("chrome", "arc-2"); also the snapshot it lands in
+    UserDataDirPath string // absolute path of the user data dir it is copied from
+    RelativePath    string // slash-separated path relative to UserDataDirPath, and to the snapshot
+    IsDir           bool
 }
 
 // Dir is a snapshot directory: one Snapshot per user data dir.
@@ -331,11 +327,11 @@ type Dir struct{ /* unexported */ }
 
 func Temp() (*Dir, error)            // a new temporary snapshot directory, mode 0700
 func Open(path string) (*Dir, error) // an existing one, used in place (restore --data-dir)
-func Unzip(src string) (*Dir, error) // restore transport into a temporary snapshot directory; rejects entries that escape it
+func Unzip(archivePath string) (*Dir, error) // restore transport into a temporary snapshot directory; rejects entries that escape it
 
 func (d *Dir) Capture(ctx context.Context, files []File) error // copies what it can; per-file failures surface through Snapshot.Path
-func (d *Dir) Snapshot(dirID string) Snapshot
-func (d *Dir) Zip(dst string) error                            // archive: temp file beside dst, renamed into place on success
+func (d *Dir) Snapshot(userDataDirID string) Snapshot
+func (d *Dir) Zip(archivePath string) error                    // archive: temp file beside it, renamed into place on success
 func (d *Dir) Close() error                                    // removes a temporary snapshot directory; leaves an opened one in place
 
 // Snapshot is one user data dir's snapshot: the read-only view of the files captured from it.
@@ -346,7 +342,7 @@ type Snapshot struct{ /* unexported */ }
 func (s Snapshot) Path(rel string) (string, error)
 ```
 
-`Capture` returns an error only when it cannot go on — a cancelled context, an unwritable snapshot directory. A single file's failure is kept and handed back by `Snapshot.Path`, so it ends that file's extractions as `error` without stopping the rest. `snapshot` cannot import `browser` (`browser.ProfileSnapshot` holds a `snapshot.Snapshot`), so a `File` names its user data dir with a plain string, `DirID`. `Snapshot` hands out real paths because `modernc.org/sqlite` and `goleveldb` open files by path, and SQLite needs its `-wal` file beside the database. The snapshot is therefore always a directory; zip is only a transport format ([RFC-007](007-snapshot-and-acquisition.md)).
+`Capture` returns an error only when it cannot go on — a cancelled context, an unwritable snapshot directory. A single file's failure is kept and handed back by `Snapshot.Path`, so it ends that file's extractions as `error` without stopping the rest. `snapshot` cannot import `browser` (`browser.ProfileSnapshot` holds a `snapshot.Snapshot`), so a `File` names its user data dir with a plain string, `UserDataDirID`. `Snapshot` hands out real paths because `modernc.org/sqlite` and `goleveldb` open files by path, and SQLite needs its `-wal` file beside the database. The snapshot is therefore always a directory; zip is only a transport format ([RFC-007](007-snapshot-and-acquisition.md)).
 
 ## Export — `internal/export`
 

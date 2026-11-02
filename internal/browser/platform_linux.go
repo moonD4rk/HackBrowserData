@@ -2,4 +2,4 @@
 
 package browser
 
-func (d Def) Platform() Platform { return d.Linux }
+func (b Browser) Platform() Platform { return b.Linux }

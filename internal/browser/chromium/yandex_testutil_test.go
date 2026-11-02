@@ -45,13 +45,13 @@ const yandexRecordsSchema = `CREATE TABLE records (
 	private_data BLOB
 )`
 
-// A fixed nonce keeps failures reproducible by hand; Yandex itself draws a random one per row.
+// yandexTestNonce is fixed to keep failures reproducible by hand; Yandex itself draws a random one per row.
 var yandexTestNonce = bytes.Repeat([]byte{0x77}, 12)
 
-// Distinct from yandexTestNonce, so mixing the two up fails to decrypt instead of passing.
+// yandexMasterKeyBlobNonce differs from yandexTestNonce, so mixing the two up fails to decrypt instead of passing.
 var yandexMasterKeyBlobNonce = bytes.Repeat([]byte{0xAB}, 12)
 
-// Protobuf header: field 1 varint 1, field 2 length 32.
+// yandexSignatureForFixtures is a protobuf header: field 1 varint 1, field 2 length 32.
 var yandexSignatureForFixtures = []byte{0x08, 0x01, 0x12, 0x20}
 
 func yandexSealAESGCM(t *testing.T, key, nonce, plaintext, aad []byte) []byte {
@@ -63,7 +63,7 @@ func yandexSealAESGCM(t *testing.T, key, nonce, plaintext, aad []byte) []byte {
 	return aead.Seal(nil, nonce, plaintext, aad)
 }
 
-// meta.local_encryptor_data: preamble, "v10", nonce, then signature and key sealed and padded to 68 bytes.
+// buildYandexLocalEncryptorBlob lays out meta.local_encryptor_data: preamble, "v10", nonce, sealed signature and key.
 func buildYandexLocalEncryptorBlob(t *testing.T, masterKey, dataKey []byte) []byte {
 	t.Helper()
 	plaintext := append([]byte{}, yandexSignatureForFixtures...)
@@ -84,41 +84,41 @@ type yandexPassword struct {
 	DateCreated                                                               int64
 }
 
-// hasMasterPassword adds a non-empty sealed_key row, as a master-password profile has.
+// setupYandexPasswordDB adds a non-empty sealed_key row when hasMasterPassword, as a master-password profile has.
 func setupYandexPasswordDB(t *testing.T, masterKey, dataKey []byte, hasMasterPassword bool, rows ...yandexPassword) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "Ya Passman Data")
-	db, err := sql.Open("sqlite", path)
+	database, err := sql.Open("sqlite", path)
 	require.NoError(t, err)
-	defer db.Close()
+	defer database.Close()
 
 	for _, schema := range []string{yandexLoginsSchema, yandexMetaSchema, yandexActiveKeysSchema} {
-		_, err = db.Exec(schema)
+		_, err = database.Exec(schema)
 		require.NoError(t, err)
 	}
 
 	blob := buildYandexLocalEncryptorBlob(t, masterKey, dataKey)
-	_, err = db.Exec(`INSERT INTO meta (key, value) VALUES ('local_encryptor_data', ?)`, blob)
+	_, err = database.Exec(`INSERT INTO meta (key, value) VALUES ('local_encryptor_data', ?)`, blob)
 	require.NoError(t, err)
 
 	if hasMasterPassword {
-		_, err = db.Exec(`INSERT INTO active_keys (key_id, sealed_key) VALUES ('kid', 'sealed-opaque')`)
+		_, err = database.Exec(`INSERT INTO active_keys (key_id, sealed_key) VALUES ('kid', 'sealed-opaque')`)
 		require.NoError(t, err)
 	}
 
-	for _, r := range rows {
-		aad := yandexLoginAAD(r.OriginURL, r.UsernameElem, r.UsernameVal, r.PasswordElem, r.SignonRealm, nil)
-		ciphertext := yandexSealAESGCM(t, dataKey, yandexTestNonce, []byte(r.Password), aad)
+	for _, row := range rows {
+		aad := yandexLoginAAD(row.OriginURL, row.UsernameElem, row.UsernameVal, row.PasswordElem, row.SignonRealm, nil)
+		ciphertext := yandexSealAESGCM(t, dataKey, yandexTestNonce, []byte(row.Password), aad)
 		passwordBlob := append([]byte{}, yandexTestNonce...)
 		passwordBlob = append(passwordBlob, ciphertext...)
-		stmt := fmt.Sprintf(
+		statement := fmt.Sprintf(
 			`INSERT INTO logins (origin_url, action_url, username_element, username_value,
 				password_element, password_value, signon_realm, date_created)
 			 VALUES ('%s', '', '%s', '%s', '%s', x'%s', '%s', %d)`,
-			r.OriginURL, r.UsernameElem, r.UsernameVal, r.PasswordElem,
-			hex.EncodeToString(passwordBlob), r.SignonRealm, r.DateCreated,
+			row.OriginURL, row.UsernameElem, row.UsernameVal, row.PasswordElem,
+			hex.EncodeToString(passwordBlob), row.SignonRealm, row.DateCreated,
 		)
-		_, err = db.Exec(stmt)
+		_, err = database.Exec(statement)
 		require.NoError(t, err)
 	}
 	return path
@@ -133,45 +133,45 @@ type yandexCreditCard struct {
 func setupYandexCreditCardDB(t *testing.T, masterKey, dataKey []byte, rows ...yandexCreditCard) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "Ya Credit Cards")
-	db, err := sql.Open("sqlite", path)
+	database, err := sql.Open("sqlite", path)
 	require.NoError(t, err)
-	defer db.Close()
+	defer database.Close()
 
 	for _, schema := range []string{yandexRecordsSchema, yandexMetaSchema} {
-		_, err = db.Exec(schema)
+		_, err = database.Exec(schema)
 		require.NoError(t, err)
 	}
 
 	blob := buildYandexLocalEncryptorBlob(t, masterKey, dataKey)
-	_, err = db.Exec(`INSERT INTO meta (key, value) VALUES ('local_encryptor_data', ?)`, blob)
+	_, err = database.Exec(`INSERT INTO meta (key, value) VALUES ('local_encryptor_data', ?)`, blob)
 	require.NoError(t, err)
 
-	for _, r := range rows {
+	for _, row := range rows {
 		public := yandexPublicData{
-			CardHolder:      r.CardHolder,
-			CardTitle:       r.CardTitle,
-			ExpireDateYear:  r.ExpYear,
-			ExpireDateMonth: r.ExpMonth,
+			CardHolder:      row.CardHolder,
+			CardTitle:       row.CardTitle,
+			ExpireDateYear:  row.ExpYear,
+			ExpireDateMonth: row.ExpMonth,
 		}
 		publicJSON, err := json.Marshal(public)
 		require.NoError(t, err)
 
 		private := yandexPrivateData{
-			FullCardNumber: r.FullCardNumber,
-			PinCode:        r.PinCode,
-			SecretComment:  r.SecretComment,
+			FullCardNumber: row.FullCardNumber,
+			PinCode:        row.PinCode,
+			SecretComment:  row.SecretComment,
 		}
 		privateJSON, err := json.Marshal(private)
 		require.NoError(t, err)
 
-		aad := yandexCardAAD(r.GUID, nil)
+		aad := yandexCardAAD(row.GUID, nil)
 		ciphertext := yandexSealAESGCM(t, dataKey, yandexTestNonce, privateJSON, aad)
 		privateBlob := append([]byte{}, yandexTestNonce...)
 		privateBlob = append(privateBlob, ciphertext...)
 
-		_, err = db.Exec(
+		_, err = database.Exec(
 			`INSERT INTO records (guid, public_data, private_data) VALUES (?, ?, ?)`,
-			r.GUID, string(publicJSON), privateBlob,
+			row.GUID, string(publicJSON), privateBlob,
 		)
 		require.NoError(t, err)
 	}

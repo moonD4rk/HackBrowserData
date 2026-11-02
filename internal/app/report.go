@@ -6,29 +6,29 @@ import (
 	"text/tabwriter"
 )
 
-// The summary is not part of the output contract and never changes the exit status.
-func Report(w io.Writer, s Summary) error {
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "Browser\tProfile\tCategory\tResult\tRecords\tDetail")
-	for _, r := range s.Results {
+// Report prints a summary that is not part of the output contract and never changes the exit status.
+func Report(writer io.Writer, summary Summary) error {
+	table := tabwriter.NewWriter(writer, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(table, "Browser\tProfile\tCategory\tResult\tRecords\tDetail")
+	for _, result := range summary.Results {
 		profile, cat := "-", "-"
-		if r.Profile != "" {
-			profile = r.Profile
+		if result.Profile != "" {
+			profile = result.Profile
 		}
-		if r.Category != 0 {
-			cat = r.Category.String()
+		if result.Category != 0 {
+			cat = result.Category.String()
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%d\t%s\n", r.DirID, profile, cat, r.Outcome, r.Count, detail(r))
+		fmt.Fprintf(table, "%s\t%s\t%s\t%s\t%d\t%s\n", result.UserDataDirID, profile, cat, result.Outcome, result.Count, detail(result))
 	}
-	return tw.Flush()
+	return table.Flush()
 }
 
-func detail(r Result) string {
+func detail(result Result) string {
 	switch {
-	case r.Err != nil:
-		return r.Err.Error()
-	case r.Failed > 0:
-		return fmt.Sprintf("%d not recovered", r.Failed)
+	case result.Err != nil:
+		return result.Err.Error()
+	case result.Failed > 0:
+		return fmt.Sprintf("%d not recovered", result.Failed)
 	default:
 		return ""
 	}
