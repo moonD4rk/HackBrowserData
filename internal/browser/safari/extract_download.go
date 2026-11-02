@@ -47,7 +47,7 @@ func extractDownloads(path, ownerUUID string, out browser.Collector) error {
 			TotalBytes: entry.TotalBytes,
 		})
 	}
-	emit(out, downloads)
+	browser.AddAll(out, downloads)
 	return nil
 }
 

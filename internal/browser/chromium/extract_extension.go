@@ -63,7 +63,7 @@ func extractExtensionsWithKeys(path string, keys []string, out browser.Collector
 		return true
 	})
 
-	emit(out, extensions)
+	browser.AddAll(out, extensions)
 	return nil
 }
 

@@ -1,8 +1,11 @@
 package log
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
-var defaultLogger = NewLogger(nil)
+var defaultLogger = newLogger(os.Stderr)
 
 func SetVerbose() {
 	defaultLogger.SetLevel(DebugLevel)

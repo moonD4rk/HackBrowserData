@@ -251,7 +251,7 @@ A category says what kind of data is meant; a record is one row of that data. Th
 
 **Decision.** A variable, parameter, or field is named for what it holds: `for dataCategory, extractor := range defaultExtractors`, `snapshotDir, err := snapshot.Temp()`. Go's own guidance prefers short names in short scopes, but a reader of this code, human or agent, should not have to decode `c`, `e`, `ex`, or `d`, whose type is often not on the same line.
 
-- **What stays short.** The idioms every Go reader knows: `i` and `j` as indexes, `err`, `ctx`, `ok`, `t` and `tb` in tests, the terms `id` and `iv`, and one-letter method receivers, whose type is on the same line.
+- **What stays short.** The idioms every Go reader knows: `i` and `j` as indexes, `err`, `ctx`, `ok`, `t` and `tb` in tests, the terms `id` and `iv`, `db` for a database handle, `fd` for a file descriptor, `n` for a count, and one-letter method receivers, whose type is on the same line.
 - **Package names.** A variable cannot take the name of its package — `browser`, `category`, `record`, `keychain` — without shadowing it, so it takes its role: `supportedBrowser`, `dataCategory`, `row`, `loginKeychain`.
 - **Enforcement.** `varnamelen` rejects a one- or two-letter name used beyond the next line; `max-distance: 1` is the strictest it allows. The Windows API and ABE packages are excluded until they get their own pass.
 

@@ -30,6 +30,6 @@ func extractHistories(path string, out browser.Collector) error {
 	if err != nil {
 		return err
 	}
-	emit(out, histories)
+	browser.AddAll(out, histories)
 	return nil
 }

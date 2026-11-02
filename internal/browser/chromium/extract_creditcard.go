@@ -57,7 +57,7 @@ func extractCreditCards(masterKeys masterkey.Set, path string, out browser.Colle
 	if err != nil {
 		return err
 	}
-	emit(out, cards)
+	browser.AddAll(out, cards)
 	return nil
 }
 
@@ -110,6 +110,6 @@ func extractYandexCreditCards(masterKeys masterkey.Set, path string, out browser
 	if err != nil {
 		return err
 	}
-	emit(out, cards)
+	browser.AddAll(out, cards)
 	return nil
 }

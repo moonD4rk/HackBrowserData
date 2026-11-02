@@ -37,9 +37,9 @@ func TestLoggerDebug(t *testing.T) {
 		testCase.wantedPattern = fmt.Sprintf(`^\[DBG\] \w+\.go:\d+: %s\n$`, testCase.message)
 		t.Run(testCase.description, func(t *testing.T) {
 			var buffer bytes.Buffer
-			logger := NewLogger(newBase(&buffer))
-			logger.SetLevel(DebugLevel)
-			logger.Debugf("%s", message)
+			testLogger := newLogger(&buffer)
+			testLogger.SetLevel(DebugLevel)
+			testLogger.Debugf("%s", message)
 			got := buffer.String()
 			assert.Regexp(t, testCase.wantedPattern, got)
 		})
@@ -54,8 +54,8 @@ func TestLoggerInfo(t *testing.T) {
 		testCase.wantedPattern = fmt.Sprintf(`^\[INF\] %s\n$`, testCase.message)
 		t.Run(testCase.description, func(t *testing.T) {
 			var buffer bytes.Buffer
-			logger := NewLogger(newBase(&buffer))
-			logger.Infof("%s", message)
+			testLogger := newLogger(&buffer)
+			testLogger.Infof("%s", message)
 			got := buffer.String()
 			assert.Regexp(t, testCase.wantedPattern, got)
 		})
@@ -70,8 +70,8 @@ func TestLoggerWarn(t *testing.T) {
 		testCase.wantedPattern = fmt.Sprintf(`^\[WRN\] %s\n$`, testCase.message)
 		t.Run(testCase.description, func(t *testing.T) {
 			var buffer bytes.Buffer
-			logger := NewLogger(newBase(&buffer))
-			logger.Warnf("%s", message)
+			testLogger := newLogger(&buffer)
+			testLogger.Warnf("%s", message)
 			got := buffer.String()
 			assert.Regexp(t, testCase.wantedPattern, got)
 		})
@@ -112,9 +112,9 @@ func TestLoggerDebugf(t *testing.T) {
 		testCase.wantedPattern = fmt.Sprintf(`^\[DBG\] \w+\.go:\d+: %s\n$`, message)
 		t.Run(testCase.description, func(t *testing.T) {
 			var buffer bytes.Buffer
-			logger := NewLogger(newBase(&buffer))
-			logger.SetLevel(DebugLevel)
-			logger.Debugf(testCase.format, testCase.args...)
+			testLogger := newLogger(&buffer)
+			testLogger.SetLevel(DebugLevel)
+			testLogger.Debugf(testCase.format, testCase.args...)
 			got := buffer.String()
 			assert.Regexp(t, testCase.wantedPattern, got)
 		})
@@ -129,8 +129,8 @@ func TestLoggerInfof(t *testing.T) {
 		testCase.wantedPattern = fmt.Sprintf(`^\[INF\] %s\n$`, message)
 		t.Run(testCase.description, func(t *testing.T) {
 			var buffer bytes.Buffer
-			logger := NewLogger(newBase(&buffer))
-			logger.Infof(testCase.format, testCase.args...)
+			testLogger := newLogger(&buffer)
+			testLogger.Infof(testCase.format, testCase.args...)
 			got := buffer.String()
 			assert.Regexp(t, testCase.wantedPattern, got)
 		})
@@ -145,8 +145,8 @@ func TestLoggerWarnf(t *testing.T) {
 		testCase.wantedPattern = fmt.Sprintf(`^\[WRN\] %s\n$`, message)
 		t.Run(testCase.description, func(t *testing.T) {
 			var buffer bytes.Buffer
-			logger := NewLogger(newBase(&buffer))
-			logger.Warnf(testCase.format, testCase.args...)
+			testLogger := newLogger(&buffer)
+			testLogger.Warnf(testCase.format, testCase.args...)
 			got := buffer.String()
 			assert.Regexp(t, testCase.wantedPattern, got)
 		})
@@ -158,21 +158,21 @@ func TestLoggerWithLowerLevels(t *testing.T) {
 	ops := []struct {
 		name    string
 		level   Level
-		logFunc func(*Logger)
+		logFunc func(*logger)
 	}{
-		{"Debugf", DebugLevel, func(logger *Logger) { logger.Debugf("hello") }},
-		{"Infof", InfoLevel, func(logger *Logger) { logger.Infof("hello") }},
-		{"Warnf", WarnLevel, func(logger *Logger) { logger.Warnf("hello") }},
+		{"Debugf", DebugLevel, func(testLogger *logger) { testLogger.Debugf("hello") }},
+		{"Infof", InfoLevel, func(testLogger *logger) { testLogger.Infof("hello") }},
+		{"Warnf", WarnLevel, func(testLogger *logger) { testLogger.Warnf("hello") }},
 	}
 
 	for _, setLevel := range levels {
 		for _, operation := range ops {
 			var buffer bytes.Buffer
-			logger := NewLogger(newBase(&buffer))
-			logger.SetLevel(setLevel)
+			testLogger := newLogger(&buffer)
+			testLogger.SetLevel(setLevel)
 
 			expectedOutput := operation.level >= setLevel
-			operation.logFunc(logger)
+			operation.logFunc(testLogger)
 
 			output := buffer.String()
 			if expectedOutput {
@@ -186,35 +186,35 @@ func TestLoggerWithLowerLevels(t *testing.T) {
 
 func TestDefaultLevelIsInfo(t *testing.T) {
 	var buffer bytes.Buffer
-	logger := NewLogger(newBase(&buffer))
+	testLogger := newLogger(&buffer)
 
-	logger.Debugf("debug msg")
+	testLogger.Debugf("debug msg")
 	assert.Empty(t, buffer.String(), "Debug should be suppressed at default InfoLevel")
 
-	logger.Infof("info msg")
+	testLogger.Infof("info msg")
 	assert.Contains(t, buffer.String(), "info msg")
 }
 
 func TestDebugIncludesFileLine(t *testing.T) {
 	var buffer bytes.Buffer
-	logger := NewLogger(newBase(&buffer))
-	logger.SetLevel(DebugLevel)
-	logger.Debugf("test location")
+	testLogger := newLogger(&buffer)
+	testLogger.SetLevel(DebugLevel)
+	testLogger.Debugf("test location")
 	got := buffer.String()
 	assert.Regexp(t, `^\[DBG\] logger_test\.go:\d+: test location\n$`, got)
 }
 
 func TestInfoHasLabel(t *testing.T) {
 	var buffer bytes.Buffer
-	logger := NewLogger(newBase(&buffer))
-	logger.Infof("clean message")
+	testLogger := newLogger(&buffer)
+	testLogger.Infof("clean message")
 	assert.Equal(t, "[INF] clean message\n", buffer.String())
 }
 
 func TestMultilineMessageIndented(t *testing.T) {
 	var buffer bytes.Buffer
-	logger := NewLogger(newBase(&buffer))
-	logger.Warnf("line1\nline2\nline3")
+	testLogger := newLogger(&buffer)
+	testLogger.Warnf("line1\nline2\nline3")
 	got := buffer.String()
 	assert.Equal(t, "[WRN] line1\n      line2\n      line3\n", got)
 }

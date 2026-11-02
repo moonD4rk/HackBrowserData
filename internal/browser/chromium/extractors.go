@@ -109,13 +109,3 @@ func extractPasswordStores(ctx context.Context, profileSnapshot browser.ProfileS
 	}
 	return errors.Join(errs...)
 }
-
-// emit hands rows to out by pointer, because out sets each record's Browser and Profile in place.
-func emit[T any, P interface {
-	*T
-	record.Record
-}](out browser.Collector, rows []T) {
-	for i := range rows {
-		out.Add(P(&rows[i]))
-	}
-}

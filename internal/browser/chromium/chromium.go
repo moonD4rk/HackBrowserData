@@ -172,12 +172,12 @@ func KeyLocator(dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterk
 }
 
 // KeyFileSpecs are the files KeyLocator reads from a snapshot.
-func KeyFileSpecs(_ browser.UserDataDir) []browser.FileSpec {
+func KeyFileSpecs() []browser.FileSpec {
 	return []browser.FileSpec{localState}
 }
 
 // ArchiveFileSpecs add each profile's marker, by which restore rediscovers the profiles, and Local State as v1.1.0 did.
-func ArchiveFileSpecs(_ browser.UserDataDir) []browser.FileSpec {
+func ArchiveFileSpecs() []browser.FileSpec {
 	fileSpecs := []browser.FileSpec{localState}
 	for _, marker := range profileMarkers {
 		fileSpecs = append(fileSpecs, browser.FileSpec{Paths: []string{marker}, Optional: true})

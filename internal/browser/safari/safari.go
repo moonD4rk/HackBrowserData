@@ -15,7 +15,6 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
-	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 // Paths below are relative to the user data dir, ~/Library.
@@ -170,15 +169,5 @@ func extensionsFrom(library func(string) string) browser.Extractor {
 			}
 			return extractExtensions(paths, out)
 		},
-	}
-}
-
-// emit hands rows to out by pointer, because out sets each record's Browser and Profile in place.
-func emit[T any, P interface {
-	*T
-	record.Record
-}](out browser.Collector, rows []T) {
-	for i := range rows {
-		out.Add(P(&rows[i]))
 	}
 }

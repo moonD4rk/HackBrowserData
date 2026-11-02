@@ -329,5 +329,5 @@ func TestArchiveFileSpecs(t *testing.T) {
 		localState,
 		{Paths: []string{"Preferences"}, Optional: true},
 		{Paths: []string{"Preferences_02"}, Optional: true},
-	}, ArchiveFileSpecs(browser.UserDataDir{}))
+	}, ArchiveFileSpecs())
 }

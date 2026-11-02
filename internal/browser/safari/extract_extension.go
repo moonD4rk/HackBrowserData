@@ -37,7 +37,7 @@ func extractExtensions(paths []string, out browser.Collector) error {
 			Enabled: entry.enabled,
 		})
 	}
-	emit(out, extensions)
+	browser.AddAll(out, extensions)
 	return nil
 }
 

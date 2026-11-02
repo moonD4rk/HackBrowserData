@@ -47,7 +47,7 @@ func extractPasswordsWithQuery(masterKeys masterkey.Set, path string, store reco
 	if err != nil {
 		return err
 	}
-	emit(out, logins)
+	browser.AddAll(out, logins)
 	return nil
 }
 
@@ -85,6 +85,6 @@ func extractYandexPasswords(masterKeys masterkey.Set, path string, out browser.C
 	if err != nil {
 		return err
 	}
-	emit(out, logins)
+	browser.AddAll(out, logins)
 	return nil
 }

@@ -11,7 +11,6 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
-	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
 var (
@@ -160,14 +159,4 @@ func profileKey(profileSnapshot browser.ProfileSnapshot, loginsPath string) ([]b
 		return nil, err
 	}
 	return retrieveMasterKey(key4Path, loginsPath)
-}
-
-// emit hands rows to out by pointer, because out sets each record's Browser and Profile in place.
-func emit[T any, P interface {
-	*T
-	record.Record
-}](out browser.Collector, rows []T) {
-	for i := range rows {
-		out.Add(P(&rows[i]))
-	}
 }

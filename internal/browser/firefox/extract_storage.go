@@ -28,7 +28,7 @@ func extractLocalStorage(path string, out browser.Collector) error {
 	if err != nil {
 		return err
 	}
-	emit(out, entries)
+	browser.AddAll(out, entries)
 	return nil
 }
 

@@ -60,6 +60,6 @@ func extractPasswords(masterKey func() []byte, path string, out browser.Collecto
 			Store:     record.StoreLocal,
 		})
 	}
-	emit(out, logins)
+	browser.AddAll(out, logins)
 	return nil
 }

@@ -36,7 +36,7 @@ func extractBookmarks(path string, out browser.Collector) error {
 	if err != nil {
 		return err
 	}
-	emit(out, bookmarks)
+	browser.AddAll(out, bookmarks)
 	return nil
 }
 

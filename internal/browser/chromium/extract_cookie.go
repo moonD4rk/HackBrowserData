@@ -67,7 +67,7 @@ func extractCookies(masterKeys masterkey.Set, path string, out browser.Collector
 	if err != nil {
 		return err
 	}
-	emit(out, cookies)
+	browser.AddAll(out, cookies)
 	return nil
 }
 
