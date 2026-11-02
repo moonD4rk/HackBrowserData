@@ -41,7 +41,7 @@ go mod verify
 
 ## Chrome ABE Payload (Windows only)
 
-Chrome 127+ cookies (v20) decrypt via a C payload reflectively injected into `chrome.exe`. Sources in `internal/abe/native/`; design in [RFC-016](rfcs/016-chrome-abe-integration.md).
+Chrome 127+ cookies (v20) decrypt via a C payload reflectively injected into `chrome.exe`. Sources in `internal/abe/native/`.
 
 ```bash
 make payload         # build the DLL (needs zig: brew install zig)
@@ -56,13 +56,13 @@ make payload-clean   # rm internal/abe/payload/*.bin
 ## Code Conventions
 
 - **Platform code**: use build tags (`_darwin.go`, `_windows.go`, `_linux.go`)
-- **C payload**: all sources in `internal/abe/native/` are first-party (no vendored C). See RFC-016 §9.2 for why Stephen Fewer's reflective loader was rejected.
+- **C payload**: all sources in `internal/abe/native/` are first-party (no vendored C); `rfcs/003-secrets.md` says why.
 - **Error handling**: `fmt.Errorf("context: %w", err)` for wrapping, never `_ =` to ignore errors
 - **Logging**: `log.Debugf` for record-level diagnostics, `log.Infof` for user-facing progress/status, `log.Warnf` for unexpected conditions. Extract methods should return errors, not log them.
-- **Naming**: follow Go conventions and the settled names in `rfcs/004-naming-decisions.md` — `browser.Browser` not `BrowserConfig`, `Extract` not `BrowsingData`; spell names out (`extractors`, `snapshotDir`, `profile`), leaving only `i`/`j`, `err`, `ctx`, `ok`, `t`/`tb`, `id`, `iv`, `db`, `fd`, `n`, and one-letter receivers short (`varnamelen` enforces it)
+- **Naming**: follow Go conventions and the naming rules in `rfcs/001-architecture.md`; spell names out (`extractors`, `snapshotDir`, `profile`), leaving only `i`/`j`, `err`, `ctx`, `ok`, `t`/`tb`, `id`, `iv`, `db`, `fd`, `n`, and one-letter receivers short (`varnamelen` enforces it)
 - **Comments**: none by default; when one is needed, one line of at most 120 characters that says why, never what the code does (up to 3 lines only when the reason cannot fit); a comment on a declaration starts with its name (`// AssertJSONFallback checks …`)
 - **Tests**: `internal/browser/browsertest` builds real fixture files (SQLite, JSON, LevelDB, plist) into a `t.TempDir()` — never a live browser, never a database mock; goldens live in each package's `testdata/` and `HBD_UPDATE_GOLDEN=1 go test ./...` regenerates them
-- **Architecture**: see `rfcs/README.md` — design RFCs 000–011, format and technique RFCs 013–021
+- **Architecture**: see `rfcs/README.md` — eight short RFCs on the decisions behind the design; an RFC changes only when a decision does, never for a refactor
 
 ## Key Constraints
 
