@@ -13,7 +13,8 @@ import (
 // Write renames a finished temp file into place, so archivePath is never a partial zip and a failure keeps the old one.
 // Names are slash-separated paths relative to root, and each becomes the entry of that name.
 func Write(archivePath, root string, names []string) (err error) {
-	temporary, err := os.OpenFile(archivePath+".tmp", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	// CreateTemp makes a new 0600 file under an unpredictable name, so a planted file or symlink is never written through.
+	temporary, err := os.CreateTemp(filepath.Dir(archivePath), filepath.Base(archivePath)+".*.tmp")
 	if err != nil {
 		return fmt.Errorf("create %s: %w", archivePath, err)
 	}

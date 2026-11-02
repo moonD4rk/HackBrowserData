@@ -20,7 +20,7 @@ func TestWrite_ZipsOnlyTheNamedFiles(t *testing.T) {
 
 	require.NoError(t, Write(archive, root, []string{"chrome/Default/History"}))
 	assert.Equal(t, map[string]string{"chrome/Default/History": "history"}, entries(t, archive))
-	assert.NoFileExists(t, archive+".tmp")
+	assert.Equal(t, []string{"out.zip"}, filesIn(t, filepath.Dir(archive)))
 }
 
 func TestWrite_FailureKeepsAnExistingArchive(t *testing.T) {
@@ -32,7 +32,7 @@ func TestWrite_FailureKeepsAnExistingArchive(t *testing.T) {
 	got, err := os.ReadFile(archive)
 	require.NoError(t, err)
 	assert.Equal(t, "precious", string(got))
-	assert.NoFileExists(t, archive+".tmp", "no temp file may survive a failed zip")
+	assert.Equal(t, []string{"out.zip"}, filesIn(t, out), "no temp file may survive a failed zip")
 }
 
 // TestWrite_IsOwnerOnly keeps an archive as private as the browser files and records it holds.
@@ -45,6 +45,52 @@ func TestWrite_IsOwnerOnly(t *testing.T) {
 	info, err := os.Stat(archive)
 	require.NoError(t, err)
 	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+}
+
+func TestWrite_LeavesAPlantedTempFileAlone(t *testing.T) {
+	out := t.TempDir()
+	archive := filepath.Join(out, "out.zip")
+	writeFile(t, archive+".tmp", "planted")
+	require.NoError(t, os.Chmod(archive+".tmp", 0o644))
+
+	require.NoError(t, Write(archive, t.TempDir(), nil))
+	planted, err := os.ReadFile(archive + ".tmp")
+	require.NoError(t, err)
+	assert.Equal(t, "planted", string(planted))
+	assert.Equal(t, []string{"out.zip", "out.zip.tmp"}, filesIn(t, out))
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(archive)
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o600), info.Mode().Perm(), "a planted 0644 file must not set the archive's mode")
+	}
+}
+
+func TestWrite_DoesNotFollowAPlantedSymlink(t *testing.T) {
+	archive := filepath.Join(t.TempDir(), "out.zip")
+	victim := filepath.Join(t.TempDir(), "victim")
+	writeFile(t, victim, "precious")
+	if err := os.Symlink(victim, archive+".tmp"); err != nil {
+		t.Skipf("cannot create a symlink here: %v", err)
+	}
+
+	require.NoError(t, Write(archive, t.TempDir(), nil))
+	got, err := os.ReadFile(victim)
+	require.NoError(t, err)
+	assert.Equal(t, "precious", string(got))
+	info, err := os.Lstat(archive)
+	require.NoError(t, err)
+	assert.True(t, info.Mode().IsRegular(), "the archive must be a file, not the planted symlink")
+}
+
+func filesIn(t *testing.T, dir string) []string {
+	t.Helper()
+	dirEntries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	names := make([]string, 0, len(dirEntries))
+	for _, entry := range dirEntries {
+		names = append(names, entry.Name())
+	}
+	return names
 }
 
 func entries(t *testing.T, archive string) map[string]string {
