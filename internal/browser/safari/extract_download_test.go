@@ -12,20 +12,20 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-func buildTestDownloadsPlist(t *testing.T, dl safariDownloads) string {
+func buildTestDownloadsPlist(t *testing.T, downloadsPlist safariDownloads) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "Downloads.plist")
-	f, err := os.Create(path)
+	file, err := os.Create(path)
 	require.NoError(t, err)
-	defer f.Close()
-	require.NoError(t, plist.NewBinaryEncoder(f).Encode(dl))
+	defer file.Close()
+	require.NoError(t, plist.NewBinaryEncoder(file).Encode(downloadsPlist))
 	return path
 }
 
 func TestExtractDownloads_DefaultProfileOnly(t *testing.T) {
 	// Only DefaultProfile and untagged (pre-profile) entries surface for the default profile.
 	const namedUUID = "5604E6F5-02ED-4E40-8249-63DE7BC986C8"
-	dl := safariDownloads{
+	downloadsPlist := safariDownloads{
 		DownloadHistory: []safariDownloadEntry{
 			{URL: "https://a.com/a.zip", Path: "/tmp/a.zip", TotalBytes: 1024000, ProfileUUID: defaultProfileSentinel},
 			{URL: "https://b.com/b.zip", Path: "/tmp/b.zip", TotalBytes: 98765432, ProfileUUID: namedUUID},
@@ -33,7 +33,7 @@ func TestExtractDownloads_DefaultProfileOnly(t *testing.T) {
 		},
 	}
 
-	path := buildTestDownloadsPlist(t, dl)
+	path := buildTestDownloadsPlist(t, downloadsPlist)
 	var out testCollector
 	err := extractDownloads(path, defaultProfileSentinel, &out)
 	downloads := collected[record.Download](t, &out)
@@ -45,14 +45,14 @@ func TestExtractDownloads_DefaultProfileOnly(t *testing.T) {
 
 func TestExtractDownloads_NamedProfileOnly(t *testing.T) {
 	const namedUUID = "5604E6F5-02ED-4E40-8249-63DE7BC986C8"
-	dl := safariDownloads{
+	downloadsPlist := safariDownloads{
 		DownloadHistory: []safariDownloadEntry{
 			{URL: "https://a.com/a.zip", Path: "/tmp/a.zip", TotalBytes: 100, ProfileUUID: defaultProfileSentinel},
 			{URL: "https://b.com/b.zip", Path: "/tmp/b.zip", TotalBytes: 200, ProfileUUID: namedUUID},
 		},
 	}
 
-	path := buildTestDownloadsPlist(t, dl)
+	path := buildTestDownloadsPlist(t, downloadsPlist)
 	var out testCollector
 	err := extractDownloads(path, namedUUID, &out)
 	downloads := collected[record.Download](t, &out)
@@ -63,8 +63,8 @@ func TestExtractDownloads_NamedProfileOnly(t *testing.T) {
 }
 
 func TestExtractDownloads_Empty(t *testing.T) {
-	dl := safariDownloads{}
-	path := buildTestDownloadsPlist(t, dl)
+	downloadsPlist := safariDownloads{}
+	path := buildTestDownloadsPlist(t, downloadsPlist)
 
 	var out testCollector
 	err := extractDownloads(path, defaultProfileSentinel, &out)

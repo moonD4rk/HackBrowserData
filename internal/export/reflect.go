@@ -10,11 +10,11 @@ import (
 
 var timeType = reflect.TypeOf(time.Time{})
 
-func structCSVHeader(v any) []string {
-	t := reflect.Indirect(reflect.ValueOf(v)).Type()
-	headers := make([]string, 0, t.NumField())
-	for i := 0; i < t.NumField(); i++ {
-		name := tagName(t.Field(i), "csv")
+func structCSVHeader(value any) []string {
+	structType := reflect.Indirect(reflect.ValueOf(value)).Type()
+	headers := make([]string, 0, structType.NumField())
+	for i := 0; i < structType.NumField(); i++ {
+		name := tagName(structType.Field(i), "csv")
 		if name == "" {
 			continue
 		}
@@ -23,26 +23,26 @@ func structCSVHeader(v any) []string {
 	return headers
 }
 
-func structCSVRow(v any) []string {
-	val := reflect.Indirect(reflect.ValueOf(v))
-	t := val.Type()
-	row := make([]string, 0, t.NumField())
-	for i := 0; i < t.NumField(); i++ {
-		if tagName(t.Field(i), "csv") == "" {
+func structCSVRow(value any) []string {
+	structValue := reflect.Indirect(reflect.ValueOf(value))
+	structType := structValue.Type()
+	row := make([]string, 0, structType.NumField())
+	for i := 0; i < structType.NumField(); i++ {
+		if tagName(structType.Field(i), "csv") == "" {
 			continue
 		}
-		row = append(row, fieldToString(val.Field(i)))
+		row = append(row, fieldToString(structValue.Field(i)))
 	}
 	return row
 }
 
-func tagName(f reflect.StructField, key string) string {
-	tag, ok := f.Tag.Lookup(key)
+func tagName(field reflect.StructField, key string) string {
+	tag, ok := field.Tag.Lookup(key)
 	if !ok || tag == "-" {
 		return ""
 	}
-	if idx := strings.IndexByte(tag, ','); idx != -1 {
-		tag = tag[:idx]
+	if index := strings.IndexByte(tag, ','); index != -1 {
+		tag = tag[:index]
 	}
 	if tag == "" {
 		return ""
@@ -50,32 +50,32 @@ func tagName(f reflect.StructField, key string) string {
 	return tag
 }
 
-func fieldToString(v reflect.Value) string {
-	if v.Type() == timeType {
-		t, _ := v.Interface().(time.Time)
-		return formatTime(t)
+func fieldToString(value reflect.Value) string {
+	if value.Type() == timeType {
+		timestamp, _ := value.Interface().(time.Time)
+		return formatTime(timestamp)
 	}
-	switch v.Kind() {
+	switch value.Kind() {
 	case reflect.String:
-		return v.String()
+		return value.String()
 	case reflect.Bool:
-		return formatBool(v.Bool())
+		return formatBool(value.Bool())
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return strconv.FormatInt(v.Int(), 10)
+		return strconv.FormatInt(value.Int(), 10)
 	default:
-		return fmt.Sprintf("%v", v.Interface())
+		return fmt.Sprintf("%v", value.Interface())
 	}
 }
 
-func formatTime(t time.Time) string {
-	if t.IsZero() {
+func formatTime(timestamp time.Time) string {
+	if timestamp.IsZero() {
 		return ""
 	}
-	return t.Format(time.RFC3339)
+	return timestamp.Format(time.RFC3339)
 }
 
-func formatBool(b bool) string {
-	if b {
+func formatBool(value bool) string {
+	if value {
 		return "true"
 	}
 	return "false"

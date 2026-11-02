@@ -14,23 +14,23 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
-var platformOf = map[string]func(Def) Platform{
-	"darwin":  func(d Def) Platform { return d.Darwin },
-	"linux":   func(d Def) Platform { return d.Linux },
-	"windows": func(d Def) Platform { return d.Windows },
+var platformOf = map[string]func(Browser) Platform{
+	"darwin":  func(browser Browser) Platform { return browser.Darwin },
+	"linux":   func(browser Browser) Platform { return browser.Linux },
+	"windows": func(browser Browser) Platform { return browser.Windows },
 }
 
-func idsOn(platform func(Def) Platform) []string {
-	var ids []string
-	for _, d := range defs {
-		if len(platform(d).UserDataDirs) > 0 {
-			ids = append(ids, d.ID)
+func namesOn(platform func(Browser) Platform) []string {
+	var names []string
+	for _, browser := range browsers {
+		if len(platform(browser).UserDataDirs) > 0 {
+			names = append(names, browser.Name)
 		}
 	}
-	return ids
+	return names
 }
 
-// Discovery order is output order: reordering the table reorders the records in every output file.
+// TestTableOrderPerOS pins discovery order, which is output order: reordering the table reorders every output file.
 func TestTableOrderPerOS(t *testing.T) {
 	want := map[string][]string{
 		"darwin": {
@@ -44,22 +44,22 @@ func TestTableOrderPerOS(t *testing.T) {
 		},
 	}
 	for goos, platform := range platformOf {
-		assert.Equal(t, want[goos], idsOn(platform), goos)
+		assert.Equal(t, want[goos], namesOn(platform), goos)
 	}
 }
 
 func TestSupported_ListsThisOSRowsInTableOrder(t *testing.T) {
-	var ids []string
-	for _, d := range Supported() {
-		ids = append(ids, d.ID)
+	var names []string
+	for _, browser := range Supported() {
+		names = append(names, browser.Name)
 	}
-	assert.Equal(t, idsOn(Def.Platform), ids)
+	assert.Equal(t, namesOn(Browser.Platform), names)
 }
 
 func TestLookup_FindsEveryRowWhateverTheOS(t *testing.T) {
-	for _, want := range defs {
-		got, ok := Lookup(want.ID)
-		require.True(t, ok, want.ID)
+	for _, want := range browsers {
+		got, ok := Lookup(want.Name)
+		require.True(t, ok, want.Name)
 		assert.Equal(t, want, got)
 	}
 	_, ok := Lookup("netscape")
@@ -68,38 +68,38 @@ func TestLookup_FindsEveryRowWhateverTheOS(t *testing.T) {
 
 func TestTableRows(t *testing.T) {
 	seen := make(map[string]bool)
-	for _, d := range defs {
-		assert.NotEmpty(t, d.ID)
-		assert.Falsef(t, seen[d.ID], "duplicate ID %q", d.ID)
-		seen[d.ID] = true
-		assert.NotEmpty(t, d.Name, d.ID)
-		assert.Contains(t, []Base{Chromium, Firefox, Safari}, d.Base, d.ID)
+	for _, browser := range browsers {
+		assert.NotEmpty(t, browser.Name)
+		assert.Falsef(t, seen[browser.Name], "duplicate name %q", browser.Name)
+		seen[browser.Name] = true
+		assert.NotEmpty(t, browser.DisplayName, browser.Name)
+		assert.Contains(t, []Base{Chromium, Firefox, Safari}, browser.Base, browser.Name)
 
 		for goos, platform := range platformOf {
-			for _, dir := range platform(d).UserDataDirs {
+			for _, dir := range platform(browser).UserDataDirs {
 				assert.Truef(t, dir != "" && !path.IsAbs(dir) && !strings.Contains(dir, `\`),
-					"%s %s: user data dir %q must be slash-separated and relative to the home dir", d.ID, goos, dir)
+					"%s %s: user data dir %q must be slash-separated and relative to the home dir", browser.Name, goos, dir)
 			}
 		}
 
-		w := d.Windows
-		if w.ABE == masterkey.ABENone {
-			assert.Emptyf(t, w.Exe, "%s: an executable is only used by ABE", d.ID)
-			assert.Emptyf(t, w.ExeFallbacks, "%s: executable fallbacks are only used by ABE", d.ID)
+		windows := browser.Windows
+		if windows.ABE == masterkey.ABENone {
+			assert.Emptyf(t, windows.Exe, "%s: an executable is only used by ABE", browser.Name)
+			assert.Emptyf(t, windows.ExeFallbacks, "%s: executable fallbacks are only used by ABE", browser.Name)
 			continue
 		}
-		assert.Equal(t, Chromium, d.Base, d.ID)
-		assert.NotEmpty(t, w.Exe, d.ID)
-		for _, fallback := range w.ExeFallbacks {
-			assert.Truef(t, strings.HasSuffix(strings.ToLower(fallback), `\`+strings.ToLower(w.Exe)),
-				"%s: fallback %q does not name %s", d.ID, fallback, w.Exe)
+		assert.Equal(t, Chromium, browser.Base, browser.Name)
+		assert.NotEmpty(t, windows.Exe, browser.Name)
+		for _, fallback := range windows.ExeFallbacks {
+			assert.Truef(t, strings.HasSuffix(strings.ToLower(fallback), `\`+strings.ToLower(windows.Exe)),
+				"%s: fallback %q does not name %s", browser.Name, fallback, windows.Exe)
 		}
 	}
 }
 
-// The payload finds a browser by its executable, so every Go ABE row needs a C row; the C table may list more.
+// TestABERowsMatchPayloadTable needs a C row for every Go ABE row, since the payload finds a browser by its executable.
 func TestABERowsMatchPayloadTable(t *testing.T) {
-	src, err := os.ReadFile("../abe/native/com_iid.c")
+	comIIDTable, err := os.ReadFile("../abe/native/com_iid.c")
 	require.NoError(t, err)
 
 	kinds := map[string]masterkey.ABEKind{
@@ -108,30 +108,30 @@ func TestABERowsMatchPayloadTable(t *testing.T) {
 		"BROWSER_AVAST":       masterkey.ABEAvast,
 	}
 	payload := make(map[string]masterkey.ABEKind)
-	for _, m := range regexp.MustCompile(`"([^"]+\.exe)",\s*(BROWSER_\w+)`).FindAllStringSubmatch(string(src), -1) {
-		kind, ok := kinds[m[2]]
-		require.Truef(t, ok, "unknown payload browser kind %s", m[2])
-		exe := strings.ToLower(m[1])
-		if _, dup := payload[exe]; !dup {
+	for _, match := range regexp.MustCompile(`"([^"]+\.exe)",\s*(BROWSER_\w+)`).FindAllStringSubmatch(string(comIIDTable), -1) {
+		kind, ok := kinds[match[2]]
+		require.Truef(t, ok, "unknown payload browser kind %s", match[2])
+		exe := strings.ToLower(match[1])
+		if _, duplicate := payload[exe]; !duplicate {
 			payload[exe] = kind
 		}
 	}
 	require.NotEmpty(t, payload, "no rows parsed from com_iid.c")
 
-	for _, d := range defs {
-		w := d.Windows
-		if w.ABE == masterkey.ABENone {
+	for _, browser := range browsers {
+		platform := browser.Windows
+		if platform.ABE == masterkey.ABENone {
 			continue
 		}
-		kind, ok := payload[strings.ToLower(w.Exe)]
-		if assert.Truef(t, ok, "%s: com_iid.c has no row for %s", d.ID, w.Exe) {
-			assert.Equalf(t, w.ABE, kind, "%s: com_iid.c dispatches %s as another ABE kind", d.ID, w.Exe)
+		kind, ok := payload[strings.ToLower(platform.Exe)]
+		if assert.Truef(t, ok, "%s: com_iid.c has no row for %s", browser.Name, platform.Exe) {
+			assert.Equalf(t, platform.ABE, kind, "%s: com_iid.c dispatches %s as another ABE kind", browser.Name, platform.Exe)
 		}
 	}
 }
 
-func TestIDs_AreSupportedSorted(t *testing.T) {
-	ids := IDs()
-	assert.True(t, sort.StringsAreSorted(ids), "the -b help has always listed them sorted")
-	assert.ElementsMatch(t, idsOn(Def.Platform), ids)
+func TestNames_AreSupportedSorted(t *testing.T) {
+	names := Names()
+	assert.True(t, sort.StringsAreSorted(names), "the -b help has always listed them sorted")
+	assert.ElementsMatch(t, namesOn(Browser.Platform), names)
 }

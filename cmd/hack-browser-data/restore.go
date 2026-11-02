@@ -13,56 +13,56 @@ import (
 )
 
 func restoreCmd() *cobra.Command {
-	var f app.RestoreFlags
+	var flags app.RestoreFlags
 
-	cmd := &cobra.Command{
+	command := &cobra.Command{
 		Use:   "restore",
 		Short: "Decrypt copied profile data using exported master keys",
 		Example: `  hack-browser-data restore --keys keys.json --data-zip data.zip
   hack-browser-data restore --keys keys.json --data-dir ./data -b chrome -c cookie
   hack-browser-data restore --keys keys.json --data-dir ./chrome-userdata -b chrome
   ssh origin "hack-browser-data dumpkeys" | hack-browser-data restore --keys - --data-zip data.zip`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return runRestore(cmd.Context(), cmd.ErrOrStderr(), f)
+		RunE: func(command *cobra.Command, args []string) error {
+			return runRestore(command.Context(), command.ErrOrStderr(), flags)
 		},
 	}
 
-	cmd.Flags().StringVar(&f.Keys, "keys", "", "keys file from dumpkeys (use - for stdin)")
-	cmd.Flags().StringVar(&f.DataDir, "data-dir", "", "copied profile data dir (archive layout, or one browser's User Data with -b)")
-	cmd.Flags().StringVar(&f.DataZip, "data-zip", "", "zip produced by the archive command (alternative to --data-dir)")
-	cmd.Flags().StringVarP(&f.Browser, "browser", "b", "", "restore only this browser (optional; must match a vault in --keys)")
-	cmd.Flags().StringVarP(&f.Categories, "category", "c", "all", "data categories (comma-separated): all|"+categoryNames())
-	cmd.Flags().StringVarP(&f.Format, "format", "f", "json", "output format: csv|json|cookie-editor")
-	cmd.Flags().StringVarP(&f.Dir, "dir", "d", "results", "output directory")
-	cmd.Flags().BoolVar(&f.Zip, "zip", false, "compress output to zip")
+	command.Flags().StringVar(&flags.Keys, "keys", "", "keys file from dumpkeys (use - for stdin)")
+	command.Flags().StringVar(&flags.DataDir, "data-dir", "", "copied profile data dir (archive layout, or one browser's User Data with -b)")
+	command.Flags().StringVar(&flags.DataZip, "data-zip", "", "zip produced by the archive command (alternative to --data-dir)")
+	command.Flags().StringVarP(&flags.Browser, "browser", "b", "", "restore only this browser (optional; must match a vault in --keys)")
+	command.Flags().StringVarP(&flags.Categories, "category", "c", "all", "data categories (comma-separated): all|"+categoryNames())
+	command.Flags().StringVarP(&flags.Format, "format", "f", "json", "output format: csv|json|cookie-editor")
+	command.Flags().StringVarP(&flags.Dir, "dir", "d", "results", "output directory")
+	command.Flags().BoolVar(&flags.Zip, "zip", false, "compress output to zip")
 
-	_ = cmd.MarkFlagRequired("keys")
-	cmd.MarkFlagsMutuallyExclusive("data-dir", "data-zip")
+	_ = command.MarkFlagRequired("keys")
+	command.MarkFlagsMutuallyExclusive("data-dir", "data-zip")
 
-	return cmd
+	return command
 }
 
-func runRestore(ctx context.Context, stderr io.Writer, f app.RestoreFlags) error {
-	req, dump, err := app.ValidateRestore(f)
+func runRestore(ctx context.Context, stderr io.Writer, flags app.RestoreFlags) error {
+	options, dump, err := app.ValidateRestore(flags)
 	if err != nil {
 		return err
 	}
-	data, err := openRestoreData(f.DataDir, f.DataZip)
+	data, err := openRestoreData(flags.DataDir, flags.DataZip)
 	if err != nil {
 		return err
 	}
 	defer closeRestoreData(data)
 
-	d, keys, err := app.RestoreDiscovery(data, dump, req)
+	discovery, keys, err := app.RestoreDiscovery(data, dump, options)
 	if err != nil {
 		return err
 	}
-	if len(d.Dirs) == 0 {
+	if len(discovery.Dirs) == 0 {
 		log.Warnf("no browsers to restore from the supplied keys and data")
 		return nil
 	}
-	req.Keys = keys
-	summary, err := app.Execute(ctx, app.NewPlan(d, req), req)
+	options.Keys = keys
+	summary, err := app.Execute(ctx, app.NewPlan(discovery, options), options)
 	if ctx.Err() == nil {
 		report(stderr, summary)
 	}
@@ -73,15 +73,15 @@ func openRestoreData(dataDir, dataZip string) (*snapshot.Dir, error) {
 	if dataDir != "" {
 		return snapshot.Open(dataDir), nil
 	}
-	d, err := snapshot.Unzip(dataZip)
+	snapshotDir, err := snapshot.Unzip(dataZip)
 	if err != nil {
 		return nil, fmt.Errorf("extract %s: %w", dataZip, err)
 	}
-	return d, nil
+	return snapshotDir, nil
 }
 
-func closeRestoreData(d *snapshot.Dir) {
-	if err := d.Close(); err != nil {
+func closeRestoreData(snapshotDir *snapshot.Dir) {
+	if err := snapshotDir.Close(); err != nil {
 		log.Warnf("restore: %v", err)
 	}
 }

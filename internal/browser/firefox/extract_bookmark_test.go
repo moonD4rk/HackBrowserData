@@ -39,7 +39,7 @@ func TestExtractBookmarks(t *testing.T) {
 	assert.False(t, got[1].CreatedAt.IsZero())
 }
 
-// Before, every bookmark came out with folder "url", an empty type, and id 0.
+// TestExtractBookmarks_FolderTypeAndIDFromTheTree guards a fixed bug: bookmarks had folder "url", no type, and id 0.
 func TestExtractBookmarks_FolderTypeAndIDFromTheTree(t *testing.T) {
 	path := createTestDB(t, "places.sqlite", []string{mozPlacesSchema, mozBookmarksSchema},
 		insertMozPlace(1, "https://go.dev", "Go", 0, 0),
@@ -56,8 +56,8 @@ func TestExtractBookmarks_FolderTypeAndIDFromTheTree(t *testing.T) {
 	var out testCollector
 	require.NoError(t, extractBookmarks(path, &out))
 	byID := map[int64]record.Bookmark{}
-	for _, b := range collected[record.Bookmark](t, &out) {
-		byID[b.ID] = b
+	for _, bookmark := range collected[record.Bookmark](t, &out) {
+		byID[bookmark.ID] = bookmark
 	}
 	require.Len(t, byID, 2, "folders and separators are not bookmarks")
 	want := record.Bookmark{ID: 7, Name: "Go", Type: "url", URL: "https://go.dev", Folder: "toolbar", CreatedAt: byID[7].CreatedAt}

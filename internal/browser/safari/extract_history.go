@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	// Each item joins its latest visit, so title and visit_time come from the same history_visits row.
+	// safariHistoryQuery joins each item's latest visit, so title and visit_time come from the same history_visits row.
 	safariHistoryQuery = `SELECT hi.url, COALESCE(hv.title, ''), hi.visit_count,
 		COALESCE(hv.visit_time, 0)
 		FROM history_items hi

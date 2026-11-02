@@ -13,14 +13,14 @@ func TestEachRow(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "test.db")
 
-	db, err := sql.Open("sqlite", dbPath)
+	database, err := sql.Open("sqlite", dbPath)
 	require.NoError(t, err)
 
-	_, err = db.Exec("CREATE TABLE items (id INTEGER, name TEXT)")
+	_, err = database.Exec("CREATE TABLE items (id INTEGER, name TEXT)")
 	require.NoError(t, err)
-	_, err = db.Exec("INSERT INTO items VALUES (1, 'alpha'), (2, 'beta'), (3, 'gamma')")
+	_, err = database.Exec("INSERT INTO items VALUES (1, 'alpha'), (2, 'beta'), (3, 'gamma')")
 	require.NoError(t, err)
-	require.NoError(t, db.Close())
+	require.NoError(t, database.Close())
 
 	var names []string
 	err = eachRow(dbPath, false, "SELECT name FROM items ORDER BY id", func(rows *sql.Rows) error {
@@ -40,21 +40,21 @@ func TestEachRow_JournalOff(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "test.db")
 
-	db, err := sql.Open("sqlite", dbPath)
+	database, err := sql.Open("sqlite", dbPath)
 	require.NoError(t, err)
-	_, err = db.Exec("CREATE TABLE t (v TEXT)")
+	_, err = database.Exec("CREATE TABLE t (v TEXT)")
 	require.NoError(t, err)
-	_, err = db.Exec("INSERT INTO t VALUES ('ok')")
+	_, err = database.Exec("INSERT INTO t VALUES ('ok')")
 	require.NoError(t, err)
-	require.NoError(t, db.Close())
+	require.NoError(t, database.Close())
 
 	var values []string
 	err = eachRow(dbPath, true, "SELECT v FROM t", func(rows *sql.Rows) error {
-		var v string
-		if err := rows.Scan(&v); err != nil {
+		var value string
+		if err := rows.Scan(&value); err != nil {
 			return err
 		}
-		values = append(values, v)
+		values = append(values, value)
 		return nil
 	})
 	require.NoError(t, err)
@@ -72,11 +72,11 @@ func TestEachRow_BadQuery(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "test.db")
 
-	db, err := sql.Open("sqlite", dbPath)
+	database, err := sql.Open("sqlite", dbPath)
 	require.NoError(t, err)
-	_, err = db.Exec("CREATE TABLE t (v TEXT)")
+	_, err = database.Exec("CREATE TABLE t (v TEXT)")
 	require.NoError(t, err)
-	require.NoError(t, db.Close())
+	require.NoError(t, database.Close())
 
 	err = eachRow(dbPath, false, "SELECT nonexistent FROM t", func(rows *sql.Rows) error {
 		return nil
@@ -128,31 +128,31 @@ func TestCountRows(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			var dbPath string
-			if tt.schema != "" {
+			if testCase.schema != "" {
 				dbPath = filepath.Join(t.TempDir(), "test.db")
-				db, err := sql.Open("sqlite", dbPath)
+				database, err := sql.Open("sqlite", dbPath)
 				require.NoError(t, err)
-				_, err = db.Exec(tt.schema)
+				_, err = database.Exec(testCase.schema)
 				require.NoError(t, err)
-				if tt.inserts != "" {
-					_, err = db.Exec(tt.inserts)
+				if testCase.inserts != "" {
+					_, err = database.Exec(testCase.inserts)
 					require.NoError(t, err)
 				}
-				require.NoError(t, db.Close())
+				require.NoError(t, database.Close())
 			} else {
 				dbPath = "/nonexistent/path.db"
 			}
 
-			count, err := CountRows(dbPath, tt.journalOff, tt.query)
-			if tt.wantErr {
+			count, err := CountRows(dbPath, testCase.journalOff, testCase.query)
+			if testCase.wantErr {
 				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, tt.wantCount, count)
+			assert.Equal(t, testCase.wantCount, count)
 		})
 	}
 }
@@ -161,13 +161,13 @@ func TestQueryRows(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "test.db")
 
-	db, err := sql.Open("sqlite", dbPath)
+	database, err := sql.Open("sqlite", dbPath)
 	require.NoError(t, err)
-	_, err = db.Exec("CREATE TABLE users (name TEXT, age INTEGER)")
+	_, err = database.Exec("CREATE TABLE users (name TEXT, age INTEGER)")
 	require.NoError(t, err)
-	_, err = db.Exec("INSERT INTO users VALUES ('alice', 30), ('bob', 25)")
+	_, err = database.Exec("INSERT INTO users VALUES ('alice', 30), ('bob', 25)")
 	require.NoError(t, err)
-	require.NoError(t, db.Close())
+	require.NoError(t, database.Close())
 
 	type user struct {
 		Name string
@@ -176,9 +176,9 @@ func TestQueryRows(t *testing.T) {
 
 	users, err := QueryRows(dbPath, false, "SELECT name, age FROM users ORDER BY name",
 		func(rows *sql.Rows) (user, error) {
-			var u user
-			err := rows.Scan(&u.Name, &u.Age)
-			return u, err
+			var found user
+			err := rows.Scan(&found.Name, &found.Age)
+			return found, err
 		})
 
 	require.NoError(t, err)
@@ -189,19 +189,19 @@ func TestQueryRows_Empty(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "test.db")
 
-	db, err := sql.Open("sqlite", dbPath)
+	database, err := sql.Open("sqlite", dbPath)
 	require.NoError(t, err)
-	_, err = db.Exec("CREATE TABLE empty (v TEXT)")
+	_, err = database.Exec("CREATE TABLE empty (v TEXT)")
 	require.NoError(t, err)
-	require.NoError(t, db.Close())
+	require.NoError(t, database.Close())
 
 	results, err := QueryRows(dbPath, false, "SELECT v FROM empty",
 		func(rows *sql.Rows) (string, error) {
-			var v string
-			if err := rows.Scan(&v); err != nil {
+			var value string
+			if err := rows.Scan(&value); err != nil {
 				return "", err
 			}
-			return v, nil
+			return value, nil
 		})
 
 	require.NoError(t, err)

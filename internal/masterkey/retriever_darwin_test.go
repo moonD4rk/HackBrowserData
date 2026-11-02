@@ -56,7 +56,9 @@ func (k *fakeKeychain) GenericPassword(_ context.Context, account string) ([]byt
 
 func TestKeychainRetriever(t *testing.T) {
 	ctx := context.Background()
-	loc := func(kc LoginKeychain) Locator { return Locator{KeychainLabel: "Chrome", Keychain: kc} }
+	locatorFor := func(loginKeychain LoginKeychain) Locator {
+		return Locator{KeychainLabel: "Chrome", Keychain: loginKeychain}
+	}
 
 	t.Run("no keychain steps aside", func(t *testing.T) {
 		_, err := keychainRetriever{}.Retrieve(ctx, Locator{KeychainLabel: "Chrome"})
@@ -64,21 +66,21 @@ func TestKeychainRetriever(t *testing.T) {
 	})
 
 	t.Run("locked keychain steps aside", func(t *testing.T) {
-		kc := &fakeKeychain{err: fmt.Errorf("%w: wrong password", keychain.ErrLocked)}
-		_, err := keychainRetriever{}.Retrieve(ctx, loc(kc))
+		loginKeychain := &fakeKeychain{err: fmt.Errorf("%w: wrong password", keychain.ErrLocked)}
+		_, err := keychainRetriever{}.Retrieve(ctx, locatorFor(loginKeychain))
 		require.ErrorIs(t, err, ErrNotApplicable)
 	})
 
 	t.Run("secret derives the v10 key", func(t *testing.T) {
-		kc := &fakeKeychain{secrets: map[string][]byte{"Chrome": []byte("mock-secret")}}
-		key, err := keychainRetriever{}.Retrieve(ctx, loc(kc))
+		loginKeychain := &fakeKeychain{secrets: map[string][]byte{"Chrome": []byte("mock-secret")}}
+		key, err := keychainRetriever{}.Retrieve(ctx, locatorFor(loginKeychain))
 		require.NoError(t, err)
 		assert.Equal(t, darwinParams.deriveKey([]byte("mock-secret")), key)
-		assert.Equal(t, []string{"Chrome"}, kc.asked)
+		assert.Equal(t, []string{"Chrome"}, loginKeychain.asked)
 	})
 
 	t.Run("missing label is an error", func(t *testing.T) {
-		_, err := keychainRetriever{}.Retrieve(ctx, loc(&fakeKeychain{secrets: map[string][]byte{}}))
+		_, err := keychainRetriever{}.Retrieve(ctx, locatorFor(&fakeKeychain{secrets: map[string][]byte{}}))
 		require.Error(t, err)
 		assert.NotErrorIs(t, err, ErrNotApplicable)
 	})
@@ -89,7 +91,7 @@ func TestPlatformRetrievers_Darwin(t *testing.T) {
 	assert.IsType(t, &gcoredumpRetriever{}, platformRetrievers[0])
 	assert.IsType(t, keychainRetriever{}, platformRetrievers[1])
 	assert.IsType(t, &securityRetriever{}, platformRetrievers[2])
-	for _, r := range platformRetrievers {
-		assert.Equal(t, V10, r.Version())
+	for _, retriever := range platformRetrievers {
+		assert.Equal(t, V10, retriever.Version())
 	}
 }

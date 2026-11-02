@@ -18,46 +18,46 @@ func TestFlagSurface(t *testing.T) {
 
 func flagSurface(root *cobra.Command) string {
 	var lines []string
-	for _, cmd := range sortedCommands(root) {
-		cmd.InitDefaultHelpFlag()
-		path := cmd.CommandPath()
-		for _, f := range sortedFlags(cmd.LocalFlags()) {
+	for _, command := range sortedCommands(root) {
+		command.InitDefaultHelpFlag()
+		path := command.CommandPath()
+		for _, flag := range sortedFlags(command.LocalFlags()) {
 			marker := ""
-			if cmd.PersistentFlags().Lookup(f.Name) == f {
+			if command.PersistentFlags().Lookup(flag.Name) == flag {
 				marker = "persistent"
 			}
-			lines = append(lines, flagLine(path, f, marker))
+			lines = append(lines, flagLine(path, flag, marker))
 		}
-		for _, f := range sortedFlags(cmd.InheritedFlags()) {
-			lines = append(lines, flagLine(path, f, "inherited"))
+		for _, flag := range sortedFlags(command.InheritedFlags()) {
+			lines = append(lines, flagLine(path, flag, "inherited"))
 		}
 	}
 	return strings.Join(lines, "\n") + "\n"
 }
 
 func sortedCommands(root *cobra.Command) []*cobra.Command {
-	cmds := []*cobra.Command{root}
-	for i := 0; i < len(cmds); i++ {
-		cmds = append(cmds, cmds[i].Commands()...)
+	commands := []*cobra.Command{root}
+	for i := 0; i < len(commands); i++ {
+		commands = append(commands, commands[i].Commands()...)
 	}
-	sort.Slice(cmds, func(i, j int) bool { return cmds[i].CommandPath() < cmds[j].CommandPath() })
-	return cmds
+	sort.Slice(commands, func(i, j int) bool { return commands[i].CommandPath() < commands[j].CommandPath() })
+	return commands
 }
 
-func sortedFlags(fs *pflag.FlagSet) []*pflag.Flag {
+func sortedFlags(flagSet *pflag.FlagSet) []*pflag.Flag {
 	var flags []*pflag.Flag
-	fs.VisitAll(func(f *pflag.Flag) { flags = append(flags, f) })
+	flagSet.VisitAll(func(flag *pflag.Flag) { flags = append(flags, flag) })
 	sort.Slice(flags, func(i, j int) bool { return flags[i].Name < flags[j].Name })
 	return flags
 }
 
-func flagLine(path string, f *pflag.Flag, marker string) string {
+func flagLine(path string, flag *pflag.Flag, marker string) string {
 	// Usage text is excluded: its wording may still be clarified, while name, shorthand, type and default are frozen.
-	fields := []string{path, "--" + f.Name}
-	if f.Shorthand != "" {
-		fields = append(fields, "-"+f.Shorthand)
+	fields := []string{path, "--" + flag.Name}
+	if flag.Shorthand != "" {
+		fields = append(fields, "-"+flag.Shorthand)
 	}
-	fields = append(fields, f.Value.Type(), strconv.Quote(f.DefValue))
+	fields = append(fields, flag.Value.Type(), strconv.Quote(flag.DefValue))
 	if marker != "" {
 		fields = append(fields, marker)
 	}

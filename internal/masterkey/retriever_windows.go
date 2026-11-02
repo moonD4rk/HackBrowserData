@@ -13,15 +13,15 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/winapi"
 )
 
-// Both run: a profile upgraded past Chrome 127 holds v10 and v20 values side by side.
+// platformRetrievers run both: a profile upgraded past Chrome 127 holds v10 and v20 values side by side.
 var platformRetrievers = []Retriever{dpapiRetriever{}, abeRetriever{}}
 
 type dpapiRetriever struct{}
 
 func (dpapiRetriever) Version() Version { return V10 }
 
-func (dpapiRetriever) Retrieve(_ context.Context, loc Locator) ([]byte, error) {
-	data, err := os.ReadFile(loc.LocalState)
+func (dpapiRetriever) Retrieve(_ context.Context, locator Locator) ([]byte, error) {
+	data, err := os.ReadFile(locator.LocalState)
 	if err != nil {
 		return nil, fmt.Errorf("read Local State: %w", err)
 	}

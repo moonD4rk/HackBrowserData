@@ -12,28 +12,28 @@ import (
 )
 
 var (
-	localState          = browser.Source{Paths: []string{"Local State"}, Shared: true, Optional: true}
-	loginData           = browser.Source{Paths: []string{"Login Data"}, Optional: true}
-	loginDataForAccount = browser.Source{Paths: []string{"Login Data For Account"}, Optional: true}
+	localState          = browser.FileSpec{Paths: []string{"Local State"}, Shared: true, Optional: true}
+	loginData           = browser.FileSpec{Paths: []string{"Login Data"}, Optional: true}
+	loginDataForAccount = browser.FileSpec{Paths: []string{"Login Data For Account"}, Optional: true}
 )
 
 var defaultExtractors = browser.Extractors{
-	category.Password:       {Sources: []browser.Source{loginData, loginDataForAccount, localState}, Extract: extractPasswordStores},
-	category.Cookie:         encrypted(file("Network/Cookies", "Cookies"), extractCookies),
-	category.Bookmark:       plain(file("Bookmarks"), extractBookmarks),
-	category.History:        plain(file("History"), extractHistories),
-	category.Download:       plain(file("History"), extractDownloads),
-	category.CreditCard:     encrypted(file("Web Data"), extractCreditCards),
-	category.Extension:      plain(file("Secure Preferences"), extractExtensions),
-	category.LocalStorage:   plain(directory("Local Storage/leveldb"), extractLocalStorage),
-	category.SessionStorage: plain(directory("Session Storage"), extractSessionStorage),
+	category.Password:       {FileSpecs: []browser.FileSpec{loginData, loginDataForAccount, localState}, Extract: extractPasswordStores},
+	category.Cookie:         newDecryptingExtractor(newFileSpec("Network/Cookies", "Cookies"), extractCookies),
+	category.Bookmark:       newPlainExtractor(newFileSpec("Bookmarks"), extractBookmarks),
+	category.History:        newPlainExtractor(newFileSpec("History"), extractHistories),
+	category.Download:       newPlainExtractor(newFileSpec("History"), extractDownloads),
+	category.CreditCard:     newDecryptingExtractor(newFileSpec("Web Data"), extractCreditCards),
+	category.Extension:      newPlainExtractor(newFileSpec("Secure Preferences"), extractExtensions),
+	category.LocalStorage:   newPlainExtractor(newDirectorySpec("Local Storage/leveldb"), extractLocalStorage),
+	category.SessionStorage: newPlainExtractor(newDirectorySpec("Session Storage"), extractSessionStorage),
 }
 
-// overrides is keyed by Def.ID, never DirID, which differs for a second user data dir of one browser.
+// overrides is keyed by Browser.Name, never UserDataDirID, which differs for a second user data dir of one browser.
 var overrides = map[string]browser.Extractors{
 	"yandex": {
-		category.Password:   encrypted(file("Ya Passman Data"), extractYandexPasswords),
-		category.CreditCard: encrypted(file("Ya Credit Cards"), extractYandexCreditCards),
+		category.Password:   newDecryptingExtractor(newFileSpec("Ya Passman Data"), extractYandexPasswords),
+		category.CreditCard: newDecryptingExtractor(newFileSpec("Ya Credit Cards"), extractYandexCreditCards),
 	},
 	"opera":    operaExtractors,
 	"opera-gx": operaExtractors,
@@ -41,42 +41,44 @@ var overrides = map[string]browser.Extractors{
 }
 
 var operaExtractors = browser.Extractors{
-	category.Extension: plain(file("Secure Preferences"), extractOperaExtensions),
+	category.Extension: newPlainExtractor(newFileSpec("Secure Preferences"), extractOperaExtensions),
 }
 
 func Extractors(dir browser.UserDataDir, _ browser.Profile) browser.Extractors {
-	ex := make(browser.Extractors, len(defaultExtractors))
-	for c, e := range defaultExtractors {
-		ex[c] = e
+	extractors := make(browser.Extractors, len(defaultExtractors))
+	for dataCategory, extractor := range defaultExtractors {
+		extractors[dataCategory] = extractor
 	}
-	for c, e := range overrides[dir.Def.ID] {
-		ex[c] = e
+	for dataCategory, extractor := range overrides[dir.Browser.Name] {
+		extractors[dataCategory] = extractor
 	}
-	return ex
+	return extractors
 }
 
-func file(paths ...string) browser.Source  { return browser.Source{Paths: paths} }
-func directory(path string) browser.Source { return browser.Source{Paths: []string{path}, IsDir: true} }
+func newFileSpec(paths ...string) browser.FileSpec { return browser.FileSpec{Paths: paths} }
+func newDirectorySpec(path string) browser.FileSpec {
+	return browser.FileSpec{Paths: []string{path}, IsDir: true}
+}
 
-// encrypted lists Local State beside src, so the keys that decrypt src can be retrieved from the snapshot.
-func encrypted(src browser.Source, parse func(masterkey.Set, string, browser.Collector) error) browser.Extractor {
+// newDecryptingExtractor lists Local State beside fileSpec, so the keys that decrypt it are in the snapshot.
+func newDecryptingExtractor(fileSpec browser.FileSpec, parse func(masterkey.Set, string, browser.Collector) error) browser.Extractor {
 	return browser.Extractor{
-		Sources: []browser.Source{src, localState},
-		Extract: func(ctx context.Context, ps browser.ProfileSnapshot, out browser.Collector) error {
-			path, err := ps.Path(src)
+		FileSpecs: []browser.FileSpec{fileSpec, localState},
+		Extract: func(ctx context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
+			path, err := profileSnapshot.Path(fileSpec)
 			if err != nil {
 				return err
 			}
-			return parse(ps.MasterKeys(ctx), path, out)
+			return parse(profileSnapshot.MasterKeys(ctx), path, out)
 		},
 	}
 }
 
-func plain(src browser.Source, parse func(string, browser.Collector) error) browser.Extractor {
+func newPlainExtractor(fileSpec browser.FileSpec, parse func(string, browser.Collector) error) browser.Extractor {
 	return browser.Extractor{
-		Sources: []browser.Source{src},
-		Extract: func(_ context.Context, ps browser.ProfileSnapshot, out browser.Collector) error {
-			path, err := ps.Path(src)
+		FileSpecs: []browser.FileSpec{fileSpec},
+		Extract: func(_ context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
+			path, err := profileSnapshot.Path(fileSpec)
 			if err != nil {
 				return err
 			}
@@ -85,30 +87,30 @@ func plain(src browser.Source, parse func(string, browser.Collector) error) brow
 	}
 }
 
-// A profile that only synced passwords has just the account store, and one store failing keeps the other's logins.
-func extractPasswordStores(ctx context.Context, ps browser.ProfileSnapshot, out browser.Collector) error {
+// extractPasswordStores reads both stores: a synced-only profile has one, and one failing keeps the other's logins.
+func extractPasswordStores(ctx context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
 	stores := []struct {
-		src   browser.Source
-		store record.Store
+		fileSpec browser.FileSpec
+		store    record.Store
 	}{
 		{loginData, record.StoreLocal},
 		{loginDataForAccount, record.StoreAccount},
 	}
 	var errs []error
-	for _, s := range stores {
-		path, err := ps.Path(s.src)
+	for _, loginStore := range stores {
+		path, err := profileSnapshot.Path(loginStore.fileSpec)
 		if errors.Is(err, fs.ErrNotExist) {
 			continue
 		}
 		if err == nil {
-			err = extractPasswords(ps.MasterKeys(ctx), path, s.store, out)
+			err = extractPasswords(profileSnapshot.MasterKeys(ctx), path, loginStore.store, out)
 		}
 		errs = append(errs, err)
 	}
 	return errors.Join(errs...)
 }
 
-// emit hands rows to out by pointer, because out stamps each record in place.
+// emit hands rows to out by pointer, because out sets each record's Browser and Profile in place.
 func emit[T any, P interface {
 	*T
 	record.Record

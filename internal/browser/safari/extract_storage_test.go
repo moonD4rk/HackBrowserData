@@ -16,13 +16,13 @@ import (
 
 func TestReadOriginBlock_FirstParty(t *testing.T) {
 	data := encodeOriginFile("https://example.com", "https://example.com")
-	top, pos, err := readOriginBlock(data, 0)
+	top, position, err := readOriginBlock(data, 0)
 	require.NoError(t, err)
 	assert.Equal(t, "https", top.scheme)
 	assert.Equal(t, "example.com", top.host)
 	assert.Equal(t, uint16(0), top.port, "port 0 ⇒ scheme default")
 
-	frame, _, err := readOriginBlock(data, pos)
+	frame, _, err := readOriginBlock(data, position)
 	require.NoError(t, err)
 	assert.Equal(t, "https://example.com", formatOriginURL(frame))
 }
@@ -42,10 +42,10 @@ func TestReadOriginBlock_Latin1HighByte(t *testing.T) {
 		0x04, 0x00, 0x00, 0x00, 0x01, 'c', 'a', 'f', 0xe9, // host "café" (Latin-1)
 		0x00, // port default
 	}
-	ep, _, err := readOriginBlock(data, 0)
+	endpoint, _, err := readOriginBlock(data, 0)
 	require.NoError(t, err)
-	assert.Equal(t, "http", ep.scheme)
-	assert.Equal(t, "café", ep.host)
+	assert.Equal(t, "http", endpoint.scheme)
+	assert.Equal(t, "café", endpoint.host)
 }
 
 func TestDecodeLatin1(t *testing.T) {
@@ -67,10 +67,10 @@ func TestReadOriginFile_FramePreferred(t *testing.T) {
 
 func TestReadOriginFile_FallbackToTop(t *testing.T) {
 	// Only the top-frame block is written; the extractor falls back to it.
-	var buf []byte
-	buf = appendOriginBlock(buf, "https://example.com")
+	var data []byte
+	data = appendOriginBlock(data, "https://example.com")
 	originPath := filepath.Join(t.TempDir(), "origin")
-	require.NoError(t, os.WriteFile(originPath, buf, 0o644))
+	require.NoError(t, os.WriteFile(originPath, data, 0o644))
 
 	got, err := readOriginFile(originPath)
 	require.NoError(t, err)
@@ -144,8 +144,8 @@ func TestExtractLocalStorage_MultiOrigin(t *testing.T) {
 	require.Len(t, entries, 3)
 
 	byURL := make(map[string][]string)
-	for _, e := range entries {
-		byURL[e.URL] = append(byURL[e.URL], e.Key+"="+e.Value)
+	for _, entry := range entries {
+		byURL[entry.URL] = append(byURL[entry.URL], entry.Key+"="+entry.Value)
 	}
 	assert.ElementsMatch(t, []string{"theme=dark", "lang=en"}, byURL["https://github.com"])
 	assert.ElementsMatch(t, []string{"session=xyz"}, byURL["https://example.com:8443"])
@@ -165,8 +165,8 @@ func TestExtractLocalStorage_CJKAndEmoji(t *testing.T) {
 	require.Len(t, entries, 2)
 
 	values := make(map[string]string)
-	for _, e := range entries {
-		values[e.Key] = e.Value
+	for _, entry := range entries {
+		values[entry.Key] = entry.Value
 	}
 	assert.Equal(t, "张三", values["名字"])
 	assert.Equal(t, "hello 世界 🌍", values["status"])

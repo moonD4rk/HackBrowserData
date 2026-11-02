@@ -18,20 +18,20 @@ func extractCookies(path string, out browser.Collector) error {
 
 	var cookies []record.Cookie
 	for _, page := range pages {
-		for _, c := range page.Cookies {
-			hasExpire := !c.Expires.IsZero()
+		for _, cookie := range page.Cookies {
+			hasExpire := !cookie.Expires.IsZero()
 			// binarycookies returns local times; UTC keeps the JSON in line with Chromium's and Firefox's cookies.
 			cookies = append(cookies, record.Cookie{
-				Host:         string(c.Domain),
-				Path:         string(c.Path),
-				Name:         string(c.Name),
-				Value:        string(c.Value),
-				IsSecure:     c.Secure,
-				IsHTTPOnly:   c.HTTPOnly,
+				Host:         string(cookie.Domain),
+				Path:         string(cookie.Path),
+				Name:         string(cookie.Name),
+				Value:        string(cookie.Value),
+				IsSecure:     cookie.Secure,
+				IsHTTPOnly:   cookie.HTTPOnly,
 				HasExpire:    hasExpire,
 				IsPersistent: hasExpire,
-				ExpireAt:     c.Expires.UTC(),
-				CreatedAt:    c.Creation.UTC(),
+				ExpireAt:     cookie.Expires.UTC(),
+				CreatedAt:    cookie.Creation.UTC(),
 			})
 		}
 	}
@@ -40,13 +40,13 @@ func extractCookies(path string, out browser.Collector) error {
 }
 
 func decodeBinaryCookies(path string) ([]binarycookies.Page, error) {
-	f, err := os.Open(path)
+	file, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("open cookies file: %w", err)
 	}
-	defer f.Close()
+	defer file.Close()
 
-	jar := binarycookies.New(f)
+	jar := binarycookies.New(file)
 	pages, err := jar.Decode()
 	if err != nil {
 		return nil, fmt.Errorf("decode cookies: %w", err)

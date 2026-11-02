@@ -20,39 +20,39 @@ func TestZipUnzip_RoundTrip(t *testing.T) {
 		"chrome/Default/Network/Cookies": []byte("cookie-bytes"),
 		"sub/big.bin":                    bytes.Repeat([]byte("A"), 3<<20), // exercises the chunked copy loop
 	}
-	src := t.TempDir()
-	for rel, data := range files {
-		writeFile(t, filepath.Join(src, filepath.FromSlash(rel)), data)
+	snapshotRoot := t.TempDir()
+	for relativePath, data := range files {
+		writeFile(t, filepath.Join(snapshotRoot, filepath.FromSlash(relativePath)), data)
 	}
 
 	archive := filepath.Join(t.TempDir(), "out.zip")
-	require.NoError(t, Open(src).Zip(archive))
+	require.NoError(t, Open(snapshotRoot).Zip(archive))
 
-	zr, err := zip.OpenReader(archive)
+	zipReader, err := zip.OpenReader(archive)
 	require.NoError(t, err)
-	for _, f := range zr.File {
-		assert.NotContains(t, f.Name, `\`, "zip entry names are forward-slash")
+	for _, zipFile := range zipReader.File {
+		assert.NotContains(t, zipFile.Name, `\`, "zip entry names are forward-slash")
 	}
-	require.NoError(t, zr.Close())
+	require.NoError(t, zipReader.Close())
 
-	d, err := Unzip(archive)
+	snapshotDir, err := Unzip(archive)
 	require.NoError(t, err)
-	for rel, want := range files {
-		got, err := os.ReadFile(filepath.Join(d.Path(), filepath.FromSlash(rel)))
-		require.NoError(t, err, rel)
-		assert.True(t, bytes.Equal(want, got), "%s: got %d bytes, want %d", rel, len(got), len(want))
+	for relativePath, want := range files {
+		got, err := os.ReadFile(filepath.Join(snapshotDir.Path(), filepath.FromSlash(relativePath)))
+		require.NoError(t, err, relativePath)
+		assert.True(t, bytes.Equal(want, got), "%s: got %d bytes, want %d", relativePath, len(got), len(want))
 	}
-	require.NoError(t, d.Close())
-	assert.NoDirExists(t, d.Path())
+	require.NoError(t, snapshotDir.Close())
+	assert.NoDirExists(t, snapshotDir.Path())
 }
 
 func TestUnzip_RejectsZipSlipAndCleansUp(t *testing.T) {
-	tmp := privateTempRoot(t)
+	tempRoot := privateTempRoot(t)
 	archive := zipWith(t, "../escape.txt")
 
 	_, err := Unzip(archive)
 	require.Error(t, err)
-	entries, err := os.ReadDir(tmp)
+	entries, err := os.ReadDir(tempRoot)
 	require.NoError(t, err)
 	assert.Empty(t, entries, "a rejected archive leaves neither the escaped file nor the snapshot directory behind")
 }
@@ -90,7 +90,7 @@ func TestZip_FailureKeepsAnExistingArchive(t *testing.T) {
 
 func TestZip_IntoADirectoryFailsBeforeWriting(t *testing.T) {
 	out := t.TempDir()
-	require.Error(t, Open(snapshotSource(t)).Zip(out))
+	require.Error(t, Open(snapshotFixture(t)).Zip(out))
 	entries, err := os.ReadDir(out)
 	require.NoError(t, err)
 	assert.Empty(t, entries)
@@ -100,7 +100,7 @@ func TestZip_ModeMatchesOSCreateAndSurvivesReplacement(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("POSIX permission bits")
 	}
-	src := snapshotSource(t)
+	snapshotRoot := snapshotFixture(t)
 	out := t.TempDir()
 	probe, err := os.Create(filepath.Join(out, "probe"))
 	require.NoError(t, err)
@@ -109,7 +109,7 @@ func TestZip_ModeMatchesOSCreateAndSurvivesReplacement(t *testing.T) {
 	require.NoError(t, err)
 
 	fresh := filepath.Join(out, "fresh.zip")
-	require.NoError(t, Open(src).Zip(fresh))
+	require.NoError(t, Open(snapshotRoot).Zip(fresh))
 	got, err := os.Stat(fresh)
 	require.NoError(t, err)
 	assert.Equal(t, want.Mode().Perm(), got.Mode().Perm(), "a new archive gets the mode os.Create gives a file")
@@ -117,7 +117,7 @@ func TestZip_ModeMatchesOSCreateAndSurvivesReplacement(t *testing.T) {
 	private := filepath.Join(out, "private.zip")
 	writeFile(t, private, []byte("old"))
 	require.NoError(t, os.Chmod(private, 0o600))
-	require.NoError(t, Open(src).Zip(private))
+	require.NoError(t, Open(snapshotRoot).Zip(private))
 	got, err = os.Stat(private)
 	require.NoError(t, err)
 	assert.Equal(t, fs.FileMode(0o600), got.Mode().Perm(), "a replaced archive keeps its mode")
@@ -133,37 +133,37 @@ func TestZip_WritesThroughASymlinkedArchive(t *testing.T) {
 	link := filepath.Join(out, "link.zip")
 	require.NoError(t, os.Symlink("real.zip", link))
 
-	require.NoError(t, Open(snapshotSource(t)).Zip(link))
+	require.NoError(t, Open(snapshotFixture(t)).Zip(link))
 	info, err := os.Lstat(link)
 	require.NoError(t, err)
 	assert.NotZero(t, info.Mode()&fs.ModeSymlink, "the link stays a link")
-	zr, err := zip.OpenReader(target)
+	zipReader, err := zip.OpenReader(target)
 	require.NoError(t, err)
-	defer zr.Close()
-	assert.Len(t, zr.File, 1, "the archive lands in the link's target")
+	defer zipReader.Close()
+	assert.Len(t, zipReader.File, 1, "the archive lands in the link's target")
 }
 
-func snapshotSource(t *testing.T) string {
+func snapshotFixture(t *testing.T) string {
 	t.Helper()
-	src := t.TempDir()
-	writeFile(t, filepath.Join(src, "chrome", "Local State"), []byte("{}"))
-	return src
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "chrome", "Local State"), []byte("{}"))
+	return root
 }
 
 func zipWith(t *testing.T, names ...string) string {
 	t.Helper()
 	archive := filepath.Join(t.TempDir(), "test.zip")
-	f, err := os.Create(archive)
+	file, err := os.Create(archive)
 	require.NoError(t, err)
-	zw := zip.NewWriter(f)
+	zipWriter := zip.NewWriter(file)
 	for _, name := range names {
-		w, err := zw.Create(name)
+		writer, err := zipWriter.Create(name)
 		require.NoError(t, err)
-		_, err = w.Write([]byte(name))
+		_, err = writer.Write([]byte(name))
 		require.NoError(t, err)
 	}
-	require.NoError(t, zw.Close())
-	require.NoError(t, f.Close())
+	require.NoError(t, zipWriter.Close())
+	require.NoError(t, file.Close())
 	return archive
 }
 
@@ -171,20 +171,20 @@ func TestZip_ReplacesAnExistingArchive(t *testing.T) {
 	archive := filepath.Join(t.TempDir(), "browser-data.zip")
 	writeFile(t, archive, []byte("stale"))
 
-	require.NoError(t, Open(snapshotSource(t)).Zip(archive))
-	zr, err := zip.OpenReader(archive)
+	require.NoError(t, Open(snapshotFixture(t)).Zip(archive))
+	zipReader, err := zip.OpenReader(archive)
 	require.NoError(t, err)
-	defer zr.Close()
-	require.Len(t, zr.File, 1)
-	assert.Equal(t, "chrome/Local State", zr.File[0].Name)
+	defer zipReader.Close()
+	require.Len(t, zipReader.File, 1)
+	assert.Equal(t, "chrome/Local State", zipReader.File[0].Name)
 }
 
 // privateTempRoot points os.TempDir at a fresh directory, so a test can see everything Temp leaves behind.
 func privateTempRoot(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	for _, env := range []string{"TMPDIR", "TMP", "TEMP"} {
-		t.Setenv(env, dir)
+	for _, variable := range []string{"TMPDIR", "TMP", "TEMP"} {
+		t.Setenv(variable, dir)
 	}
 	return dir
 }

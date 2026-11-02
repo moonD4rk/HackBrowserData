@@ -22,7 +22,7 @@ func rootCmd() *cobra.Command {
 browsers, Firefox, and Safari on Windows, macOS, and Linux.
 
 GitHub: https://github.com/moonD4rk/HackBrowserData`,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		PersistentPreRun: func(command *cobra.Command, args []string) {
 			if verbose {
 				log.SetVerbose()
 			}
@@ -37,33 +37,33 @@ GitHub: https://github.com/moonD4rk/HackBrowserData`,
 	root.AddCommand(dump, dumpKeysCmd(), archiveCmd(), restoreCmd(), listCmd(), versionCmd())
 
 	// Without a subcommand the root runs dump, as v1.1.0 did, so it carries dump's flags too.
-	root.RunE = func(cmd *cobra.Command, args []string) error {
-		dump.SetContext(cmd.Context())
+	root.RunE = func(command *cobra.Command, args []string) error {
+		dump.SetContext(command.Context())
 		return dump.RunE(dump, args)
 	}
-	dump.Flags().VisitAll(func(f *pflag.Flag) {
-		if root.Flags().Lookup(f.Name) == nil {
-			root.Flags().AddFlag(f)
+	dump.Flags().VisitAll(func(flag *pflag.Flag) {
+		if root.Flags().Lookup(flag.Name) == nil {
+			root.Flags().AddFlag(flag)
 		}
 	})
 
-	for _, c := range root.Commands() {
-		quietWhenStopped(c)
+	for _, command := range root.Commands() {
+		quietWhenStopped(command)
 	}
 	quietWhenStopped(root)
 	return root
 }
 
 // quietWhenStopped keeps a stopped run's error and usage off the screen; main then ends the process by the signal.
-func quietWhenStopped(c *cobra.Command) {
-	run := c.RunE
+func quietWhenStopped(command *cobra.Command) {
+	run := command.RunE
 	if run == nil {
 		return
 	}
-	c.RunE = func(cmd *cobra.Command, args []string) error {
-		err := run(cmd, args)
-		if err != nil && cmd.Context().Err() != nil {
-			cmd.SilenceErrors, cmd.SilenceUsage = true, true
+	command.RunE = func(invoked *cobra.Command, args []string) error {
+		err := run(invoked, args)
+		if err != nil && invoked.Context().Err() != nil {
+			invoked.SilenceErrors, invoked.SilenceUsage = true, true
 		}
 		return err
 	}
@@ -72,33 +72,33 @@ func quietWhenStopped(c *cobra.Command) {
 // stopSignals end the process by default; each first cancels the run, so its temporary copies are removed.
 var stopSignals = []os.Signal{os.Interrupt, syscall.SIGTERM, syscall.SIGHUP}
 
-type stopError struct{ sig os.Signal }
+type stopError struct{ received os.Signal }
 
-func (e stopError) Error() string { return "stopped by " + e.sig.String() }
+func (e stopError) Error() string { return "stopped by " + e.received.String() }
 
 func main() {
 	configureDoubleClickMode()
 	ctx, cancel := context.WithCancelCause(context.Background())
 	signals := make(chan os.Signal, 1)
-	for _, sig := range stopSignals {
-		if !signal.Ignored(sig) { // nohup and background jobs keep ignoring what they ignore today
-			signal.Notify(signals, sig)
+	for _, received := range stopSignals {
+		if !signal.Ignored(received) { // nohup and background jobs keep ignoring what they ignore today
+			signal.Notify(signals, received)
 		}
 	}
 	go func() {
-		sig := <-signals
+		received := <-signals
 		signal.Stop(signals) // a second signal ends the process at once
-		if sig == os.Interrupt {
+		if received == os.Interrupt {
 			log.Warnf("Interrupted; cleaning up (press Ctrl-C again to quit at once)")
 		} else {
 			log.Warnf("Stopping; cleaning up")
 		}
-		cancel(stopError{sig})
+		cancel(stopError{received})
 	}()
 	err := rootCmd().ExecuteContext(ctx)
 	var stop stopError
 	if errors.As(context.Cause(ctx), &stop) {
-		exitBy(stop.sig)
+		exitBy(stop.received)
 	}
 	if err != nil {
 		os.Exit(1)

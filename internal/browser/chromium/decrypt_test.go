@@ -38,17 +38,17 @@ func TestDecryptValue_V10(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := decryptValue(masterkey.Set{masterkey.V10: tt.key}, v10Ciphertext)
-			if tt.wantErrMsg != "" {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got, err := decryptValue(masterkey.Set{masterkey.V10: testCase.key}, v10Ciphertext)
+			if testCase.wantErrMsg != "" {
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.wantErrMsg)
+				assert.Contains(t, err.Error(), testCase.wantErrMsg)
 				assert.Nil(t, got)
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
+			assert.Equal(t, testCase.want, got)
 		})
 	}
 }
@@ -66,39 +66,39 @@ func TestDecryptValue_V11(t *testing.T) {
 	assert.Equal(t, plaintext, got)
 }
 
-// Linux analog of #578: v10 and v11 values in one profile must each route to their own key.
+// TestDecryptValue_V10_V11_SlotSeparation is #578 on Linux: v10 and v11 values each route to their own key.
 func TestDecryptValue_V10_V11_SlotSeparation(t *testing.T) {
-	k10 := bytes.Repeat([]byte{0x10}, 16) // V10 slot key (peanuts-derived kV10Key)
-	k11 := bytes.Repeat([]byte{0x11}, 16) // V11 slot key (keyring-derived kV11Key)
+	v10Key := bytes.Repeat([]byte{0x10}, 16) // V10 slot key (peanuts-derived kV10Key)
+	v11Key := bytes.Repeat([]byte{0x11}, 16) // V11 slot key (keyring-derived kV11Key)
 
 	iv := bytes.Repeat([]byte{0x20}, 16) // matches crypto.chromiumCBCIV on darwin/linux
 	v10plain := []byte("password-from-v10-era")
 	v11plain := []byte("password-from-v11-era")
 
-	v10Enc, err := crypto.AESCBCEncrypt(k10, iv, v10plain)
+	v10Enc, err := crypto.AESCBCEncrypt(v10Key, iv, v10plain)
 	require.NoError(t, err)
 	v10Ciphertext := append([]byte("v10"), v10Enc...)
 
-	v11Enc, err := crypto.AESCBCEncrypt(k11, iv, v11plain)
+	v11Enc, err := crypto.AESCBCEncrypt(v11Key, iv, v11plain)
 	require.NoError(t, err)
 	v11Ciphertext := append([]byte("v11"), v11Enc...)
 
-	mk := masterkey.Set{masterkey.V10: k10, masterkey.V11: k11}
+	masterKeys := masterkey.Set{masterkey.V10: v10Key, masterkey.V11: v11Key}
 
 	t.Run("v10 ciphertext decrypts via V10 slot", func(t *testing.T) {
-		got, err := decryptValue(mk, v10Ciphertext)
+		got, err := decryptValue(masterKeys, v10Ciphertext)
 		require.NoError(t, err)
 		assert.Equal(t, v10plain, got)
 	})
 
 	t.Run("v11 ciphertext decrypts via V11 slot", func(t *testing.T) {
-		got, err := decryptValue(mk, v11Ciphertext)
+		got, err := decryptValue(masterKeys, v11Ciphertext)
 		require.NoError(t, err)
 		assert.Equal(t, v11plain, got)
 	})
 
 	t.Run("swapped keys fail both directions", func(t *testing.T) {
-		swapped := masterkey.Set{masterkey.V10: k11, masterkey.V11: k10}
+		swapped := masterkey.Set{masterkey.V10: v11Key, masterkey.V11: v10Key}
 		_, err := decryptValue(swapped, v10Ciphertext)
 		require.Error(t, err, "v10 with V11's key must fail")
 		_, err = decryptValue(swapped, v11Ciphertext)

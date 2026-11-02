@@ -9,37 +9,37 @@ import (
 
 func archiveCmd() *cobra.Command {
 	var (
-		f          app.Flags
+		flags      app.Flags
 		outputPath string
 	)
 
-	cmd := &cobra.Command{
+	command := &cobra.Command{
 		Use:   "archive",
 		Short: "Pack decryption-relevant profile files into a zip for cross-host restore",
 		Example: `  hack-browser-data archive
   hack-browser-data archive -b chrome -c cookie -o chrome-cookies.zip`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			req, err := app.ValidateArchive(f)
+		RunE: func(command *cobra.Command, args []string) error {
+			options, err := app.ValidateArchive(flags)
 			if err != nil {
 				return err
 			}
-			d := app.Discover(req)
-			if len(d.Dirs) == 0 {
+			discovery := app.Discover(options)
+			if len(discovery.Dirs) == 0 {
 				log.Warnf("no browsers found")
 				return nil
 			}
-			n, err := app.Archive(cmd.Context(), d, req, outputPath)
+			fileCount, err := app.Archive(command.Context(), discovery, options, outputPath)
 			if err != nil {
 				return err
 			}
-			log.Infof("Archived %d entries to %s", n, outputPath)
+			log.Infof("Archived %d entries to %s", fileCount, outputPath)
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVarP(&f.Browser, "browser", "b", "all", "target browser: all|"+browserNames())
-	cmd.Flags().StringVarP(&f.Categories, "category", "c", "all", "data categories (comma-separated): all|"+categoryNames())
-	cmd.Flags().StringVarP(&outputPath, "output", "o", "browser-data.zip", "output archive of decryption-relevant browser files")
+	command.Flags().StringVarP(&flags.Browser, "browser", "b", "all", "target browser: all|"+browserNames())
+	command.Flags().StringVarP(&flags.Categories, "category", "c", "all", "data categories (comma-separated): all|"+categoryNames())
+	command.Flags().StringVarP(&outputPath, "output", "o", "browser-data.zip", "output archive of decryption-relevant browser files")
 
-	return cmd
+	return command
 }

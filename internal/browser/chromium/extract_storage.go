@@ -34,28 +34,28 @@ func extractLocalStorage(path string, out browser.Collector) error {
 	if _, err := os.Stat(path); err != nil {
 		return fmt.Errorf("leveldb path %q: %w", path, err)
 	}
-	db, err := leveldb.OpenFile(path, readOnly)
+	database, err := leveldb.OpenFile(path, readOnly)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer database.Close()
 
 	var entries []record.LocalStorage
-	iter := db.NewIterator(nil, nil)
-	defer iter.Release()
+	cursor := database.NewIterator(nil, nil)
+	defer cursor.Release()
 
-	for iter.Next() {
-		entry, ok := parseLocalStorageEntry(iter.Key(), iter.Value())
+	for cursor.Next() {
+		entry, ok := parseLocalStorageEntry(cursor.Key(), cursor.Value())
 		if !ok {
 			continue
 		}
 		entries = append(entries, entry)
 	}
 	emit(out, entries)
-	return iter.Error()
+	return cursor.Error()
 }
 
-// VERSION and unknown keys are dropped; META entries are kept with IsMeta set.
+// parseLocalStorageEntry drops VERSION and unknown keys and keeps META entries with IsMeta set.
 func parseLocalStorageEntry(key, value []byte) (record.LocalStorage, bool) {
 	switch {
 	case bytes.Equal(key, []byte(localStorageVersionKey)):
@@ -99,41 +99,41 @@ func parseLocalStorageDataEntry(key, value []byte) record.LocalStorage {
 	return entry
 }
 
-// The first byte selects the encoding: 0x01 is Latin-1, 0x00 is UTF-16 LE.
-func decodeChromiumString(b []byte) (string, error) {
-	if len(b) == 0 {
+// decodeChromiumString switches on the first byte: 0x01 is Latin-1, 0x00 is UTF-16 LE.
+func decodeChromiumString(encoded []byte) (string, error) {
+	if len(encoded) == 0 {
 		return "", fmt.Errorf("empty chromium string")
 	}
-	switch b[0] {
+	switch encoded[0] {
 	case chromiumStringLatin1Format:
-		return decodeLatin1(b[1:]), nil
+		return decodeLatin1(encoded[1:]), nil
 	case chromiumStringUTF16Format:
-		return decodeUTF16LE(b[1:])
+		return decodeUTF16LE(encoded[1:])
 	default:
-		return "", fmt.Errorf("unknown chromium string format 0x%02x", b[0])
+		return "", fmt.Errorf("unknown chromium string format 0x%02x", encoded[0])
 	}
 }
 
-func decodeLatin1(b []byte) string {
-	runes := make([]rune, len(b))
-	for i, c := range b {
-		runes[i] = rune(c)
+func decodeLatin1(encoded []byte) string {
+	runes := make([]rune, len(encoded))
+	for i, char := range encoded {
+		runes[i] = rune(char)
 	}
 	return string(runes)
 }
 
-func decodeUTF16LE(b []byte) (string, error) {
-	if len(b) == 0 {
+func decodeUTF16LE(encoded []byte) (string, error) {
+	if len(encoded) == 0 {
 		return "", nil
 	}
-	if len(b)%2 != 0 {
-		return "", fmt.Errorf("invalid UTF-16 byte length %d", len(b))
+	if len(encoded)%2 != 0 {
+		return "", fmt.Errorf("invalid UTF-16 byte length %d", len(encoded))
 	}
-	u16s := make([]uint16, len(b)/2)
-	for i := range u16s {
-		u16s[i] = binary.LittleEndian.Uint16(b[i*2:])
+	units := make([]uint16, len(encoded)/2)
+	for i := range units {
+		units[i] = binary.LittleEndian.Uint16(encoded[i*2:])
 	}
-	return string(utf16.Decode(u16s)), nil
+	return string(utf16.Decode(units)), nil
 }
 
 func decodeLocalStorageValue(value []byte) string {
@@ -150,21 +150,21 @@ func decodeLocalStorageValue(value []byte) string {
 	return decoded
 }
 
-// Keys are namespace-<guid>-<origin> -> map_id and map-<map_id>-<key> -> UTF-16 LE value; the rest is metadata.
+// extractSessionStorage joins namespace-<guid>-<origin> -> map_id with map-<map_id>-<key> -> UTF-16 LE value.
 func extractSessionStorage(path string, out browser.Collector) error {
 	if _, err := os.Stat(path); err != nil {
 		return fmt.Errorf("leveldb path %q: %w", path, err)
 	}
-	db, err := leveldb.OpenFile(path, readOnly)
+	database, err := leveldb.OpenFile(path, readOnly)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer database.Close()
 
 	originByMapID := make(map[string]string)
-	iter := db.NewIterator(nil, nil)
-	for iter.Next() {
-		key := string(iter.Key())
+	namespaceCursor := database.NewIterator(nil, nil)
+	for namespaceCursor.Next() {
+		key := string(namespaceCursor.Key())
 		if !strings.HasPrefix(key, "namespace-") {
 			continue
 		}
@@ -173,38 +173,38 @@ func extractSessionStorage(path string, out browser.Collector) error {
 		if origin == "" {
 			continue
 		}
-		mapID := string(iter.Value())
+		mapID := string(namespaceCursor.Value())
 		originByMapID[mapID] = origin
 	}
-	iter.Release()
-	if err := iter.Error(); err != nil {
+	namespaceCursor.Release()
+	if err := namespaceCursor.Error(); err != nil {
 		return fmt.Errorf("read namespace entries: %w", err)
 	}
 
 	var entries []record.SessionStorage
-	iter2 := db.NewIterator(nil, nil)
-	defer iter2.Release()
+	mapCursor := database.NewIterator(nil, nil)
+	defer mapCursor.Release()
 
 	mapPrefix := []byte("map-")
-	for iter2.Next() {
-		key := iter2.Key()
+	for mapCursor.Next() {
+		key := mapCursor.Key()
 		if !bytes.HasPrefix(key, mapPrefix) {
 			continue
 		}
 		rest := key[len(mapPrefix):] // "<map_id>-<key_name>"
-		sep := bytes.IndexByte(rest, '-')
-		if sep < 0 {
+		separatorIndex := bytes.IndexByte(rest, '-')
+		if separatorIndex < 0 {
 			continue
 		}
-		mapID := string(rest[:sep])
-		keyName := string(rest[sep+1:])
+		mapID := string(rest[:separatorIndex])
+		keyName := string(rest[separatorIndex+1:])
 
 		origin := originByMapID[mapID]
 		if origin == "" {
 			origin = mapID // fallback to map_id if namespace not found
 		}
 
-		value := decodeSessionStorageValue(iter2.Value())
+		value := decodeSessionStorageValue(mapCursor.Value())
 		entries = append(entries, record.SessionStorage{
 			URL:   origin,
 			Key:   keyName,
@@ -212,20 +212,20 @@ func extractSessionStorage(path string, out browser.Collector) error {
 		})
 	}
 	emit(out, entries)
-	return iter2.Error()
+	return mapCursor.Error()
 }
 
 func extractNamespaceOrigin(key string) string {
 	for _, prefix := range []string{"-https://", "-http://", "-chrome://"} {
-		idx := strings.Index(key, prefix)
-		if idx >= 0 {
-			return key[idx+1:]
+		index := strings.Index(key, prefix)
+		if index >= 0 {
+			return key[index+1:]
 		}
 	}
 	return ""
 }
 
-// Values are raw UTF-16 LE, without localStorage's format byte.
+// decodeSessionStorageValue reads raw UTF-16 LE, which has no localStorage format byte.
 func decodeSessionStorageValue(value []byte) string {
 	if len(value) == 0 {
 		return ""

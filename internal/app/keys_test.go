@@ -13,9 +13,9 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-func dirOf(t *testing.T, id browser.DirID, defID string) browser.UserDataDir {
+func dirOf(t *testing.T, userDataDirID browser.UserDataDirID, browserName string) browser.UserDataDir {
 	t.Helper()
-	dir := browser.UserDataDir{ID: id, Def: lookup(t, defID), Path: t.TempDir()}
+	dir := browser.UserDataDir{ID: userDataDirID, Browser: lookup(t, browserName), Path: t.TempDir()}
 	dir.Profiles = []browser.Profile{{Name: "Default", Dir: "Default"}}
 	return dir
 }
@@ -26,10 +26,10 @@ func TestDumpKeys(t *testing.T) {
 	arc2, opera, vivaldi, brave := dirOf(t, "arc-2", "arc"), dirOf(t, "opera", "opera"), dirOf(t, "vivaldi", "vivaldi"), dirOf(t, "brave", "brave")
 	firefox := dirOf(t, "firefox", "firefox")
 
-	keys := func(_ context.Context, dir browser.UserDataDir, snap snapshot.Snapshot) (masterkey.Set, error) {
+	keys := func(_ context.Context, dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterkey.Set, error) {
 		switch dir.ID {
 		case "chrome":
-			_, err := snap.Path("Local State")
+			_, err := dirSnapshot.Path("Local State")
 			require.NoError(t, err, "key retrieval reads the captured Local State")
 		case "vivaldi":
 			return nil, errors.New("v10 failed")
@@ -40,8 +40,8 @@ func TestDumpKeys(t *testing.T) {
 		}
 		return masterkey.Set{masterkey.V10: []byte(dir.ID)}, nil
 	}
-	d := Discovery{Dirs: []browser.UserDataDir{chrome, firefox, arc2, opera, vivaldi, brave}}
-	dump, err := dumpKeysWith(context.Background(), d, keys)
+	discovery := Discovery{Dirs: []browser.UserDataDir{chrome, firefox, arc2, opera, vivaldi, brave}}
+	dump, err := dumpKeysWith(context.Background(), discovery, keys)
 	require.NoError(t, err)
 
 	assert.Equal(t, []masterkey.Vault{
@@ -70,7 +70,7 @@ func TestDumpKeys_StoppedRunReturnsNoDump(t *testing.T) {
 	chrome, brave := chromeDir(t, "chrome", "Default"), dirOf(t, "brave", "brave")
 	touch(t, chrome.Path, "Local State")
 	keys := func(_ context.Context, dir browser.UserDataDir, _ snapshot.Snapshot) (masterkey.Set, error) {
-		require.Equal(t, browser.DirID("chrome"), dir.ID, "keys were retrieved after the stop")
+		require.Equal(t, browser.UserDataDirID("chrome"), dir.ID, "keys were retrieved after the stop")
 		cancel()
 		return masterkey.Set{masterkey.V10: []byte("chrome")}, nil
 	}

@@ -29,14 +29,14 @@ const (
 )
 
 func extractBookmarks(path string, out browser.Collector) error {
-	f, err := os.Open(path)
+	file, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("open bookmarks: %w", err)
 	}
-	defer f.Close()
+	defer file.Close()
 
 	var root safariBookmark
-	if err := plist.NewDecoder(f).Decode(&root); err != nil {
+	if err := plist.NewDecoder(file).Decode(&root); err != nil {
 		return fmt.Errorf("decode bookmarks: %w", err)
 	}
 
@@ -46,7 +46,7 @@ func extractBookmarks(path string, out browser.Collector) error {
 	return nil
 }
 
-// A leaf's ID is its position among all leaves, from 1: the plist stores no number, and per-folder indexes repeat.
+// walkBookmarks numbers leaves from 1 across all folders: the plist stores no number, and per-folder indexes repeat.
 func walkBookmarks(nodes []safariBookmark, folder string, out *[]record.Bookmark) {
 	for _, node := range nodes {
 		switch node.Type {

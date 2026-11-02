@@ -11,7 +11,7 @@ import (
 )
 
 func browserNames() string {
-	return strings.Join(browser.IDs(), "|")
+	return strings.Join(browser.Names(), "|")
 }
 
 func categoryNames() string {
@@ -19,8 +19,8 @@ func categoryNames() string {
 }
 
 // report prints the run's summary; it is not part of the output, so failing to print it never fails the run.
-func report(w io.Writer, s app.Summary) {
-	if err := app.Report(w, s); err != nil {
+func report(writer io.Writer, summary app.Summary) {
+	if err := app.Report(writer, summary); err != nil {
 		log.Warnf("print summary: %v", err)
 	}
 }

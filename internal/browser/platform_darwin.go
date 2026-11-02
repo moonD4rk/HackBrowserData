@@ -2,4 +2,4 @@
 
 package browser
 
-func (d Def) Platform() Platform { return d.Darwin }
+func (b Browser) Platform() Platform { return b.Darwin }

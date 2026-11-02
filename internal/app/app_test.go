@@ -18,28 +18,28 @@ import (
 )
 
 func TestValidate(t *testing.T) {
-	req, err := Validate(Flags{Browser: " Chrome ", Categories: "cookie, password,cookie", Format: "csv", Dir: "out", KeychainPassword: "pw"})
+	options, err := Validate(Flags{Browser: " Chrome ", Categories: "cookie, password,cookie", Format: "csv", Dir: "out", KeychainPassword: "pw"})
 	require.NoError(t, err)
-	assert.Equal(t, "chrome", req.Browser)
-	assert.Equal(t, []category.Category{category.Cookie, category.Password}, req.Categories, "a repeated category runs once")
-	assert.Equal(t, export.CSV, req.Format)
-	assert.Equal(t, "out", req.Dir)
-	assert.NotEmpty(t, req.Home)
-	password, err := req.KeychainPassword(context.Background())
+	assert.Equal(t, "chrome", options.Browser)
+	assert.Equal(t, []category.Category{category.Cookie, category.Password}, options.Categories, "a repeated category runs once")
+	assert.Equal(t, export.CSV, options.Format)
+	assert.Equal(t, "out", options.Dir)
+	assert.NotEmpty(t, options.Home)
+	password, err := options.KeychainPassword(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, "pw", password)
 
-	req, err = Validate(Flags{Categories: "all", Format: "json"})
+	options, err = Validate(Flags{Categories: "all", Format: "json"})
 	require.NoError(t, err)
-	assert.Equal(t, "all", req.Browser)
-	assert.Equal(t, category.All(), req.Categories)
+	assert.Equal(t, "all", options.Browser)
+	assert.Equal(t, category.All(), options.Categories)
 }
 
 func TestValidate_RejectsBadInput(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "file")
 	require.NoError(t, os.WriteFile(file, nil, 0o600))
 	missing := filepath.Join(t.TempDir(), "missing")
-	for name, f := range map[string]Flags{
+	for name, flags := range map[string]Flags{
 		"unknown category":     {Categories: "cookie,bogus", Format: "json"},
 		"no category":          {Categories: " , ", Format: "json"},
 		"unknown format":       {Categories: "all", Format: "xml"},
@@ -51,18 +51,18 @@ func TestValidate_RejectsBadInput(t *testing.T) {
 		"-p is a file":         {Browser: "chrome", Categories: "all", Format: "json", ProfilePath: file},
 		"two password inputs":  {Categories: "all", Format: "json", KeychainPassword: "pw", KeychainPasswordStdin: true},
 	} {
-		_, err := Validate(f)
+		_, err := Validate(flags)
 		assert.Error(t, err, name)
 	}
 }
 
 func otherOSBrowser(t *testing.T) string {
 	t.Helper()
-	for _, id := range []string{"sogou", "safari"} {
-		def, ok := browser.Lookup(id)
-		require.True(t, ok, id)
-		if len(def.Platform().UserDataDirs) == 0 {
-			return id
+	for _, name := range []string{"sogou", "safari"} {
+		namedBrowser, ok := browser.Lookup(name)
+		require.True(t, ok, name)
+		if len(namedBrowser.Platform().UserDataDirs) == 0 {
+			return name
 		}
 	}
 	t.Fatal("every candidate is supported here")
@@ -71,9 +71,9 @@ func otherOSBrowser(t *testing.T) string {
 
 func TestValidate_CreatesNoOutputDir(t *testing.T) {
 	root := t.TempDir()
-	req, err := Validate(Flags{Categories: "all", Format: "json", Dir: filepath.Join(root, "a", "b")})
+	options, err := Validate(Flags{Categories: "all", Format: "json", Dir: filepath.Join(root, "a", "b")})
 	require.NoError(t, err)
-	assert.Equal(t, filepath.Join(root, "a", "b"), req.Dir)
+	assert.Equal(t, filepath.Join(root, "a", "b"), options.Dir)
 	_, err = os.Stat(filepath.Join(root, "a"))
 	assert.ErrorIs(t, err, fs.ErrNotExist)
 }
@@ -90,11 +90,11 @@ func TestValidate_RejectsAnOutputDirThatCannotBeCreated(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// -p without a named browser was always ignored; it is still not checked, only reported.
+// TestValidate_IgnoresProfilePathForAllBrowsers keeps -p without a named browser ignored, as before; it is reported.
 func TestValidate_IgnoresProfilePathForAllBrowsers(t *testing.T) {
-	req, err := Validate(Flags{Browser: "all", Categories: "all", Format: "json", ProfilePath: filepath.Join(t.TempDir(), "missing")})
+	options, err := Validate(Flags{Browser: "all", Categories: "all", Format: "json", ProfilePath: filepath.Join(t.TempDir(), "missing")})
 	require.NoError(t, err)
-	assert.Empty(t, req.ProfilePath)
+	assert.Empty(t, options.ProfilePath)
 }
 
 func TestValidate_KeychainPasswordInputs(t *testing.T) {
@@ -110,21 +110,21 @@ func TestValidate_KeychainPasswordInputs(t *testing.T) {
 		{name: "stdin without newline", flags: Flags{KeychainPasswordStdin: true}, stdin: "from-stdin", want: "from-stdin"},
 		{name: "none off a terminal", flags: Flags{}, stdin: "from-stdin\n", err: errNoPassword},
 	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			r, w, err := os.Pipe()
+	for _, testCase := range tests {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			pipeReader, pipeWriter, err := os.Pipe()
 			require.NoError(t, err)
-			defer r.Close()
-			_, err = w.WriteString(tt.stdin)
-			require.NoError(t, errors.Join(err, w.Close()))
+			defer pipeReader.Close()
+			_, err = pipeWriter.WriteString(testCase.stdin)
+			require.NoError(t, errors.Join(err, pipeWriter.Close()))
 
-			tt.flags.Categories, tt.flags.Format = "all", "json"
-			req, err := validate(tt.flags, r)
+			testCase.flags.Categories, testCase.flags.Format = "all", "json"
+			options, err := validate(testCase.flags, pipeReader)
 			require.NoError(t, err)
-			got, err := req.KeychainPassword(context.Background())
-			require.ErrorIs(t, err, tt.err)
-			assert.Equal(t, tt.want, got)
+			got, err := options.KeychainPassword(context.Background())
+			require.ErrorIs(t, err, testCase.err)
+			assert.Equal(t, testCase.want, got)
 		})
 	}
 }

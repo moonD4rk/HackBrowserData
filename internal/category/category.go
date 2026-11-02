@@ -2,7 +2,7 @@ package category
 
 import "fmt"
 
-// Numbering starts at 1, so the zero Category means "none".
+// Category numbering starts at 1, so the zero Category means "none".
 type Category int
 
 const (
@@ -17,7 +17,7 @@ const (
 	SessionStorage
 )
 
-// String's values are the -c values and the output file names, so they cannot change.
+// String gives the -c values and the output file names, so its values cannot change.
 func (c Category) String() string {
 	switch c {
 	case Password:
@@ -50,17 +50,17 @@ func All() []Category {
 func Names() []string {
 	all := All()
 	names := make([]string, len(all))
-	for i, c := range all {
-		names[i] = c.String()
+	for i, dataCategory := range all {
+		names[i] = dataCategory.String()
 	}
 	return names
 }
 
-func Parse(s string) (Category, error) {
-	for _, c := range All() {
-		if c.String() == s {
-			return c, nil
+func Parse(value string) (Category, error) {
+	for _, dataCategory := range All() {
+		if dataCategory.String() == value {
+			return dataCategory, nil
 		}
 	}
-	return 0, fmt.Errorf("unknown category: %q", s)
+	return 0, fmt.Errorf("unknown category: %q", value)
 }

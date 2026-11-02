@@ -18,10 +18,10 @@ func TestListGolden(t *testing.T) {
 	home := t.TempDir()
 	setHome(t, home)
 	var paths []string
-	for _, inst := range browsertest.ChromiumInstalls {
-		dir := userDataDirOf(t, home, inst.Key)
-		browsertest.ChromiumUserData(t, dir, inst.Key)
-		paths = append(paths, dir, "<"+inst.Key+">")
+	for _, fixture := range browsertest.ChromiumInstalls {
+		dir := userDataDirOf(t, home, fixture.Name)
+		browsertest.ChromiumUserData(t, dir, fixture.Name)
+		paths = append(paths, dir, "<"+fixture.Name+">")
 	}
 	dir := userDataDirOf(t, home, "firefox")
 	browsertest.FirefoxUserData(t, dir)
@@ -40,25 +40,25 @@ func TestListGoldenSafari(t *testing.T) {
 	assertListGoldens(t, "list-safari", strings.NewReplacer(library, "<library>"))
 }
 
-// The goldens hold the fixture's paths as placeholders, so one golden serves every OS.
+// assertListGoldens compares with the fixture's paths as placeholders, so one golden serves every OS.
 func assertListGoldens(t *testing.T, prefix string, paths *strings.Replacer) {
 	t.Helper()
 	for _, detail := range []bool{false, true} {
 		var out bytes.Buffer
-		cmd := listCmd()
-		cmd.SetOut(&out)
+		command := listCmd()
+		command.SetOut(&out)
 		name, args := prefix+".golden", []string{}
 		if detail {
 			name, args = prefix+"-detail.golden", []string{"--detail"}
 		}
-		runCmd(t, cmd, args...)
+		runCmd(t, command, args...)
 		golden.Assert(t, name, paths.Replace(out.String()))
 	}
 }
 
-func userDataDirOf(t *testing.T, home, id string) string {
+func userDataDirOf(t *testing.T, home, browserName string) string {
 	t.Helper()
-	def, ok := browser.Lookup(id)
-	require.True(t, ok, id)
-	return filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0]))
+	namedBrowser, ok := browser.Lookup(browserName)
+	require.True(t, ok, browserName)
+	return filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirs[0]))
 }

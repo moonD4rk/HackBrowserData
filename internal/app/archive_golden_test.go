@@ -20,7 +20,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 )
 
-const archiveLayoutKey = "chrome"
+const archiveLayoutBrowser = "chrome"
 
 var archiveLayoutProfileFiles = []string{
 	"Preferences",
@@ -54,34 +54,34 @@ func archiveLayoutUserData(t *testing.T, root string) {
 	t.Helper()
 	files := append([]string{}, archiveLayoutExtraFiles...)
 	for _, profile := range []string{"Default", "Profile 1"} {
-		for _, rel := range archiveLayoutProfileFiles {
-			files = append(files, profile+"/"+rel)
+		for _, relativePath := range archiveLayoutProfileFiles {
+			files = append(files, profile+"/"+relativePath)
 		}
 	}
-	for _, rel := range files {
-		abs := filepath.Join(root, filepath.FromSlash(rel))
-		require.NoError(t, os.MkdirAll(filepath.Dir(abs), 0o755))
-		require.NoError(t, os.WriteFile(abs, []byte(rel), 0o600))
+	for _, relativePath := range files {
+		absolutePath := filepath.Join(root, filepath.FromSlash(relativePath))
+		require.NoError(t, os.MkdirAll(filepath.Dir(absolutePath), 0o755))
+		require.NoError(t, os.WriteFile(absolutePath, []byte(relativePath), 0o600))
 	}
 }
 
 func archiveLayoutEntryNames(t *testing.T, zipPath string) []string {
 	t.Helper()
-	r, err := zip.OpenReader(zipPath)
+	zipReader, err := zip.OpenReader(zipPath)
 	require.NoError(t, err)
-	defer r.Close()
-	names := make([]string, 0, len(r.File))
-	for _, f := range r.File {
-		names = append(names, f.Name)
+	defer zipReader.Close()
+	names := make([]string, 0, len(zipReader.File))
+	for _, zipFile := range zipReader.File {
+		names = append(names, zipFile.Name)
 	}
 	return names
 }
 
 func TestArchiveGolden(t *testing.T) {
 	home := t.TempDir()
-	def, ok := browser.Lookup(archiveLayoutKey)
+	namedBrowser, ok := browser.Lookup(archiveLayoutBrowser)
 	require.True(t, ok)
-	archiveLayoutUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])))
+	archiveLayoutUserData(t, filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirs[0])))
 
 	tests := []struct {
 		name       string
@@ -91,18 +91,18 @@ func TestArchiveGolden(t *testing.T) {
 		{name: "all", golden: "archive-all.golden", categories: "all"},
 		{name: "cookie", golden: "archive-cookie.golden", categories: "cookie"},
 	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			req, err := app.ValidateArchive(app.Flags{Browser: archiveLayoutKey, Categories: tt.categories})
+	for _, testCase := range tests {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			options, err := app.ValidateArchive(app.Flags{Browser: archiveLayoutBrowser, Categories: testCase.categories})
 			require.NoError(t, err)
-			req.Home = home
+			options.Home = home
 			out := filepath.Join(t.TempDir(), "browser-data.zip")
-			n, err := app.Archive(context.Background(), app.Discover(req), req, out)
+			fileCount, err := app.Archive(context.Background(), app.Discover(options), options, out)
 			require.NoError(t, err)
-			golden.Assert(t, tt.golden, fmt.Sprintf("entries=%d\n", n)+golden.ZipListing(t, out))
+			golden.Assert(t, testCase.golden, fmt.Sprintf("entries=%d\n", fileCount)+golden.ZipListing(t, out))
 
-			prefix := archiveLayoutKey + "/"
+			prefix := archiveLayoutBrowser + "/"
 			names := archiveLayoutEntryNames(t, out)
 			assert.Contains(t, names, "manifest.json")
 			for _, name := range names {
@@ -121,19 +121,19 @@ func TestArchiveGolden(t *testing.T) {
 	}
 }
 
-// archive on one host and restore on another, through the pipeline, write what dump writes.
+// TestArchiveRestoreRoundTrip archives on one host and restores on another, which must write what dump writes.
 func TestArchiveRestoreRoundTrip(t *testing.T) {
 	home := t.TempDir()
-	for _, inst := range browsertest.ChromiumInstalls {
-		def, ok := browser.Lookup(inst.Key)
-		require.True(t, ok, inst.Key)
-		browsertest.ChromiumUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])), inst.Key)
+	for _, fixture := range browsertest.ChromiumInstalls {
+		namedBrowser, ok := browser.Lookup(fixture.Name)
+		require.True(t, ok, fixture.Name)
+		browsertest.ChromiumUserData(t, filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirs[0])), fixture.Name)
 	}
-	req, err := app.ValidateArchive(app.Flags{Browser: "all", Categories: "all"})
+	options, err := app.ValidateArchive(app.Flags{Browser: "all", Categories: "all"})
 	require.NoError(t, err)
-	req.Home = home
+	options.Home = home
 	archive := filepath.Join(t.TempDir(), "data.zip")
-	_, err = app.Archive(context.Background(), app.Discover(req), req, archive)
+	_, err = app.Archive(context.Background(), app.Discover(options), options, archive)
 	require.NoError(t, err)
 	require.Contains(t, archiveLayoutEntryNames(t, archive), "manifest.json")
 

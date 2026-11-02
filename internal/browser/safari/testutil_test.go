@@ -66,16 +66,16 @@ func insertHistoryVisit(id, historyItem int, visitTime float64, title string) st
 func createTestDB(t *testing.T, name string, schemas []string, inserts ...string) string { //nolint:unparam // name will vary when future data types are added
 	t.Helper()
 	path := filepath.Join(t.TempDir(), name)
-	db, err := sql.Open("sqlite", path)
+	database, err := sql.Open("sqlite", path)
 	require.NoError(t, err)
-	defer db.Close()
+	defer database.Close()
 
 	for _, schema := range schemas {
-		_, err = db.Exec(schema)
+		_, err = database.Exec(schema)
 		require.NoError(t, err)
 	}
-	for _, stmt := range inserts {
-		_, err = db.Exec(stmt)
+	for _, statement := range inserts {
+		_, err = database.Exec(statement)
 		require.NoError(t, err)
 	}
 	return path
@@ -86,16 +86,16 @@ type tabRow struct {
 	title string
 }
 
-// Every row gets subtype=2, the profile record the production query selects.
+// writeSafariTabsDB gives every row subtype=2, the profile record the production query selects.
 func writeSafariTabsDB(t *testing.T, path string, rows []tabRow) {
 	t.Helper()
 	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
 
-	db, err := sql.Open("sqlite", path)
+	database, err := sql.Open("sqlite", path)
 	require.NoError(t, err)
-	defer db.Close()
+	defer database.Close()
 
-	_, err = db.Exec(`CREATE TABLE bookmarks (
+	_, err = database.Exec(`CREATE TABLE bookmarks (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		external_uuid TEXT,
 		title TEXT,
@@ -103,18 +103,18 @@ func writeSafariTabsDB(t *testing.T, path string, rows []tabRow) {
 	)`)
 	require.NoError(t, err)
 
-	for _, r := range rows {
-		_, err = db.Exec(`INSERT INTO bookmarks (external_uuid, title, subtype) VALUES (?, ?, 2)`, r.uuid, r.title)
+	for _, row := range rows {
+		_, err = database.Exec(`INSERT INTO bookmarks (external_uuid, title, subtype) VALUES (?, ?, 2)`, row.uuid, row.title)
 		require.NoError(t, err)
 	}
 }
 
-// Value is written as UTF-16 LE, as WebKit stores it.
+// testLocalStorageItem holds a Value written as UTF-16 LE, as WebKit stores it.
 type testLocalStorageItem struct {
 	Key, Value string
 }
 
-// Every origin is written first-party, with top == frame.
+// buildTestLocalStorageDir writes every origin first-party, with top == frame.
 func buildTestLocalStorageDir(t *testing.T, origins map[string][]testLocalStorageItem) string {
 	t.Helper()
 	root := filepath.Join(t.TempDir(), "Origins")
@@ -141,97 +141,97 @@ func writeTestOriginStore(t *testing.T, root, topHash, frameHash, topOrigin, fra
 	))
 
 	dbPath := filepath.Join(frameDir, webkitLocalStorageSubdir, webkitLocalStorageDB)
-	db, err := sql.Open("sqlite", dbPath)
+	database, err := sql.Open("sqlite", dbPath)
 	require.NoError(t, err)
-	_, err = db.Exec(`CREATE TABLE ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB NOT NULL ON CONFLICT FAIL)`)
+	_, err = database.Exec(`CREATE TABLE ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB NOT NULL ON CONFLICT FAIL)`)
 	require.NoError(t, err)
 	for _, item := range items {
-		_, err = db.Exec(
+		_, err = database.Exec(
 			`INSERT INTO ItemTable (key, value) VALUES (?, ?)`,
 			item.Key, encodeUTF16LE(item.Value),
 		)
 		require.NoError(t, err)
 	}
-	require.NoError(t, db.Close())
+	require.NoError(t, database.Close())
 }
 
-// WebKit's SecurityOrigin layout: per block a scheme record, a host record, and a port marker; top, then frame.
+// encodeOriginFile follows WebKit's SecurityOrigin layout: per block a scheme, a host, and a port; top, then frame.
 func encodeOriginFile(topOrigin, frameOrigin string) []byte {
-	var buf []byte
-	buf = appendOriginBlock(buf, topOrigin)
-	buf = appendOriginBlock(buf, frameOrigin)
-	return buf
+	var encoded []byte
+	encoded = appendOriginBlock(encoded, topOrigin)
+	encoded = appendOriginBlock(encoded, frameOrigin)
+	return encoded
 }
 
-func appendOriginBlock(buf []byte, originURL string) []byte {
+func appendOriginBlock(encoded []byte, originURL string) []byte {
 	scheme, host, port := splitTestOriginURL(originURL)
-	buf = appendOriginRecord(buf, scheme)
-	buf = appendOriginRecord(buf, host)
+	encoded = appendOriginRecord(encoded, scheme)
+	encoded = appendOriginRecord(encoded, host)
 	if port == 0 {
-		buf = append(buf, originPortDefaultMarker)
-		return buf
+		encoded = append(encoded, originPortDefaultMarker)
+		return encoded
 	}
-	buf = append(buf, originPortExplicitFlag)
+	encoded = append(encoded, originPortExplicitFlag)
 	portBytes := make([]byte, 2)
 	binary.LittleEndian.PutUint16(portBytes, port)
-	return append(buf, portBytes...)
+	return append(encoded, portBytes...)
 }
 
-func appendOriginRecord(buf []byte, s string) []byte {
+func appendOriginRecord(encoded []byte, text string) []byte {
 	lenBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(lenBytes, uint32(len(s)))
-	buf = append(buf, lenBytes...)
-	buf = append(buf, originEncASCII)
-	return append(buf, []byte(s)...)
+	binary.LittleEndian.PutUint32(lenBytes, uint32(len(text)))
+	encoded = append(encoded, lenBytes...)
+	encoded = append(encoded, originEncASCII)
+	return append(encoded, []byte(text)...)
 }
 
-// Port 0 means the URL had no explicit port.
-func splitTestOriginURL(u string) (scheme, host string, port uint16) {
-	idx := strings.Index(u, "://")
-	if idx < 0 {
-		return "", u, 0
+// splitTestOriginURL returns port 0 when the URL had no explicit port.
+func splitTestOriginURL(originURL string) (scheme, host string, port uint16) {
+	index := strings.Index(originURL, "://")
+	if index < 0 {
+		return "", originURL, 0
 	}
-	scheme = u[:idx]
-	rest := u[idx+3:]
+	scheme = originURL[:index]
+	rest := originURL[index+3:]
 	if colon := strings.LastIndex(rest, ":"); colon >= 0 {
-		if p, err := strconv.ParseUint(rest[colon+1:], 10, 16); err == nil {
-			return scheme, rest[:colon], uint16(p)
+		if parsedPort, err := strconv.ParseUint(rest[colon+1:], 10, 16); err == nil {
+			return scheme, rest[:colon], uint16(parsedPort)
 		}
 	}
 	return scheme, rest, 0
 }
 
-// addNullKey inserts a NULL-key row first, to exercise the reader's skip of NULL keys.
+// writeLocalStorageDB inserts a NULL-key row first when addNullKey is set, to exercise the reader's skip of NULL keys.
 func writeLocalStorageDB(t *testing.T, path string, items []testLocalStorageItem, addNullKey bool) {
 	t.Helper()
-	db, err := sql.Open("sqlite", path)
+	database, err := sql.Open("sqlite", path)
 	require.NoError(t, err)
-	_, err = db.Exec(`CREATE TABLE ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB NOT NULL ON CONFLICT FAIL)`)
+	_, err = database.Exec(`CREATE TABLE ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB NOT NULL ON CONFLICT FAIL)`)
 	require.NoError(t, err)
 	if addNullKey {
-		_, err = db.Exec(
+		_, err = database.Exec(
 			`INSERT INTO ItemTable (key, value) VALUES (NULL, ?)`,
 			encodeUTF16LE("null-key-sentinel"),
 		)
 		require.NoError(t, err)
 	}
 	for _, item := range items {
-		_, err = db.Exec(
+		_, err = database.Exec(
 			`INSERT INTO ItemTable (key, value) VALUES (?, ?)`,
 			item.Key, encodeUTF16LE(item.Value),
 		)
 		require.NoError(t, err)
 	}
-	require.NoError(t, db.Close())
+	require.NoError(t, database.Close())
 }
 
-func encodeUTF16LE(s string) []byte {
-	u16 := utf16.Encode([]rune(s))
-	buf := make([]byte, 2*len(u16))
-	for i, r := range u16 {
-		binary.LittleEndian.PutUint16(buf[i*2:], r)
+func encodeUTF16LE(text string) []byte {
+	units := utf16.Encode([]rune(text))
+	encoded := make([]byte, 2*len(units))
+	for i, unit := range units {
+		binary.LittleEndian.PutUint16(encoded[i*2:], unit)
 	}
-	return buf
+	return encoded
 }
 
 func mkFile(t *testing.T, parts ...string) {
@@ -246,16 +246,16 @@ type testCollector struct {
 	fails   []error
 }
 
-func (c *testCollector) Add(r record.Record) { c.records = append(c.records, r) }
-func (c *testCollector) Fail(err error)      { c.fails = append(c.fails, err) }
+func (c *testCollector) Add(row record.Record) { c.records = append(c.records, row) }
+func (c *testCollector) Fail(err error)        { c.fails = append(c.fails, err) }
 
-func collected[T any](t *testing.T, c *testCollector) []T {
+func collected[T any](t *testing.T, collector *testCollector) []T {
 	t.Helper()
-	got := make([]T, 0, len(c.records))
-	for _, r := range c.records {
-		v, ok := any(r).(*T)
-		require.Truef(t, ok, "collected a %T, want *%T", r, *new(T))
-		got = append(got, *v)
+	got := make([]T, 0, len(collector.records))
+	for _, row := range collector.records {
+		value, ok := any(row).(*T)
+		require.Truef(t, ok, "collected a %T, want *%T", row, *new(T))
+		got = append(got, *value)
 	}
 	return got
 }

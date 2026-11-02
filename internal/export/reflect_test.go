@@ -25,18 +25,18 @@ var allRecordTypes = []record.Record{
 	&record.SessionStorage{},
 }
 
-// A field without a csv tag would be silently left out of the CSV output.
+// TestAllRecordFieldsHaveCSVTag catches a field without a csv tag, which would be silently left out of the CSV output.
 func TestAllRecordFieldsHaveCSVTag(t *testing.T) {
-	for _, r := range allRecordTypes {
-		et := reflect.TypeOf(r).Elem()
-		t.Run(et.Name(), func(t *testing.T) {
-			for i := 0; i < et.NumField(); i++ {
-				f := et.Field(i)
-				if !f.IsExported() {
+	for _, row := range allRecordTypes {
+		recordType := reflect.TypeOf(row).Elem()
+		t.Run(recordType.Name(), func(t *testing.T) {
+			for i := 0; i < recordType.NumField(); i++ {
+				field := recordType.Field(i)
+				if !field.IsExported() {
 					continue
 				}
-				_, ok := f.Tag.Lookup("csv")
-				assert.True(t, ok, "field %s.%s missing csv tag", et.Name(), f.Name)
+				_, ok := field.Tag.Lookup("csv")
+				assert.True(t, ok, "field %s.%s missing csv tag", recordType.Name(), field.Name)
 			}
 		})
 	}
@@ -67,9 +67,9 @@ func TestStructCSVHeader(t *testing.T) {
 			"browser", "profile", "name", "id", "description", "version", "homepage_url", "enabled",
 		}},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expect, structCSVHeader(tt.record))
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			assert.Equal(t, testCase.expect, structCSVHeader(testCase.record))
 		})
 	}
 }
@@ -118,9 +118,9 @@ func TestStructCSVRow(t *testing.T) {
 			[]string{"", "", "https://a.com", "", "", "", ""},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expect, structCSVRow(tt.record))
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			assert.Equal(t, testCase.expect, structCSVRow(testCase.record))
 		})
 	}
 }

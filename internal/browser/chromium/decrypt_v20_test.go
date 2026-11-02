@@ -10,7 +10,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
-// v20's format is the same on every OS, so CI on Linux and macOS guards its routing too.
+// TestDecryptValue_V20 runs on every OS, since v20's format is the same everywhere, so all CI guards its routing.
 func TestDecryptValue_V20(t *testing.T) {
 	plaintext := []byte("v20_test_value")
 	nonce := []byte("v20_nonce_12") // 12-byte AES-GCM nonce
@@ -32,17 +32,17 @@ func TestDecryptValue_V20_ShortCiphertext(t *testing.T) {
 	require.Error(t, err)
 }
 
-// A v10 value sealed with a 32-byte key, as on Windows, decrypts on any host: the cross-OS guarantee.
+// TestDecryptValue_V10_CrossHostGCM decrypts a v10 value sealed with a 32-byte key, as on Windows, on any host.
 func TestDecryptValue_V10_CrossHostGCM(t *testing.T) {
-	key32 := []byte("0123456789abcdef0123456789abcdef") // 32 bytes
+	aesKey := []byte("0123456789abcdef0123456789abcdef") // 32 bytes
 	plaintext := []byte("v10_cross_host")
 	nonce := []byte("v10_nonce_12") // 12-byte AES-GCM nonce
 
-	gcm, err := crypto.AESGCMEncrypt(key32, nonce, plaintext)
+	gcm, err := crypto.AESGCMEncrypt(aesKey, nonce, plaintext)
 	require.NoError(t, err)
 	ciphertext := append([]byte("v10"), append(nonce, gcm...)...)
 
-	got, err := decryptValue(masterkey.Set{masterkey.V10: key32}, ciphertext)
+	got, err := decryptValue(masterkey.Set{masterkey.V10: aesKey}, ciphertext)
 	require.NoError(t, err)
 	assert.Equal(t, plaintext, got)
 }

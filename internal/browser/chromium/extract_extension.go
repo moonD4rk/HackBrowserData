@@ -20,7 +20,7 @@ func extractExtensions(path string, out browser.Collector) error {
 	return extractExtensionsWithKeys(path, defaultExtensionKeys, out)
 }
 
-// Browser variants keep extension settings under other JSON paths, such as Opera's extensions.opsettings.
+// extractExtensionsWithKeys takes the JSON paths, because variants such as Opera keep extension settings elsewhere.
 func extractExtensionsWithKeys(path string, keys []string, out browser.Collector) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -39,15 +39,15 @@ func extractExtensionsWithKeys(path string, keys []string, out browser.Collector
 	}
 
 	var extensions []record.Extension
-	settings.ForEach(func(id, ext gjson.Result) bool {
+	settings.ForEach(func(id, extension gjson.Result) bool {
 		// Skip system/component extensions
 		// https://source.chromium.org/chromium/chromium/src/+/main:extensions/common/mojom/manifest.mojom
-		location := ext.Get("location").Int()
+		location := extension.Get("location").Int()
 		if location == 5 || location == 10 {
 			return true
 		}
 
-		manifest := ext.Get("manifest")
+		manifest := extension.Get("manifest")
 		if !manifest.Exists() {
 			return true
 		}
@@ -58,7 +58,7 @@ func extractExtensionsWithKeys(path string, keys []string, out browser.Collector
 			Description: manifest.Get("description").String(),
 			Version:     manifest.Get("version").String(),
 			HomepageURL: manifest.Get("homepage_url").String(),
-			Enabled:     isExtensionEnabled(ext),
+			Enabled:     isExtensionEnabled(extension),
 		})
 		return true
 	})
@@ -67,13 +67,13 @@ func extractExtensionsWithKeys(path string, keys []string, out browser.Collector
 	return nil
 }
 
-// Modern Chrome sets disable_reasons (empty means enabled); older Chrome sets state, where 1 means enabled.
-func isExtensionEnabled(ext gjson.Result) bool {
-	reasons := ext.Get("disable_reasons")
+// isExtensionEnabled reads disable_reasons (empty means enabled), or in older Chrome state (1 means enabled).
+func isExtensionEnabled(extension gjson.Result) bool {
+	reasons := extension.Get("disable_reasons")
 	if reasons.Exists() {
 		return reasons.IsArray() && len(reasons.Array()) == 0
 	}
-	return ext.Get("state").Int() == 1
+	return extension.Get("state").Int() == 1
 }
 
 func extractOperaExtensions(path string, out browser.Collector) error {

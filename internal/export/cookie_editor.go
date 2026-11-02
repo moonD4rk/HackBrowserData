@@ -8,33 +8,33 @@ import (
 
 var sameSiteNone = "no_restriction"
 
-func cookieEditorValue(r record.Record) any {
-	c, ok := r.(*record.Cookie)
+func cookieEditorValue(row record.Record) any {
+	cookie, ok := row.(*record.Cookie)
 	if !ok {
-		return r
+		return row
 	}
 	var expDate float64
-	if !c.ExpireAt.IsZero() {
-		expDate = float64(c.ExpireAt.Unix())
+	if !cookie.ExpireAt.IsZero() {
+		expDate = float64(cookie.ExpireAt.Unix())
 	}
-	sameSite := &c.SameSite
-	switch c.SameSite {
+	sameSite := &cookie.SameSite
+	switch cookie.SameSite {
 	case "none":
 		sameSite = &sameSiteNone
 	case "", "unspecified":
 		sameSite = nil
 	}
 	return cookieEditorEntry{
-		Domain:         c.Host,
+		Domain:         cookie.Host,
 		ExpirationDate: expDate,
-		HTTPOnly:       c.IsHTTPOnly,
-		Name:           c.Name,
-		Path:           c.Path,
-		Secure:         c.IsSecure,
-		Value:          c.Value,
+		HTTPOnly:       cookie.IsHTTPOnly,
+		Name:           cookie.Name,
+		Path:           cookie.Path,
+		Secure:         cookie.IsSecure,
+		Value:          cookie.Value,
 		SameSite:       sameSite,
 		Session:        expDate == 0.,
-		HostOnly:       !strings.HasPrefix(c.Host, "."),
+		HostOnly:       !strings.HasPrefix(cookie.Host, "."),
 	}
 }
 

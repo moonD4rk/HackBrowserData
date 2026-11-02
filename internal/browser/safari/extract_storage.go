@@ -47,23 +47,23 @@ func extractLocalStorage(root string, out browser.Collector) error {
 	}
 
 	var entries []record.LocalStorage
-	for _, od := range dirs {
-		origin, err := readOriginFile(filepath.Join(od, webkitOriginFile))
+	for _, originDir := range dirs {
+		origin, err := readOriginFile(filepath.Join(originDir, webkitOriginFile))
 		if err != nil {
-			log.Debugf("safari localstorage: origin %s: %v", od, err)
+			log.Debugf("safari localstorage: origin %s: %v", originDir, err)
 			continue
 		}
-		dbPath := filepath.Join(od, webkitLocalStorageSubdir, webkitLocalStorageDB)
+		dbPath := filepath.Join(originDir, webkitLocalStorageSubdir, webkitLocalStorageDB)
 		items, err := readLocalStorageFile(dbPath)
 		if err != nil {
 			log.Debugf("safari localstorage: db %s: %v", dbPath, err)
 			continue
 		}
-		for _, it := range items {
+		for _, item := range items {
 			entries = append(entries, record.LocalStorage{
 				URL:   origin,
-				Key:   it.key,
-				Value: it.value,
+				Key:   item.key,
+				Value: item.value,
 			})
 		}
 	}
@@ -71,7 +71,7 @@ func extractLocalStorage(root string, out browser.Collector) error {
 	return nil
 }
 
-// Only dirs holding both an origin file and a localstorage.sqlite3 count; the salt sibling and the rest are skipped.
+// findOriginDataDirs counts only dirs with both an origin file and a localstorage.sqlite3; the salt sibling is skipped.
 func findOriginDataDirs(root string) ([]string, error) {
 	topEntries, err := os.ReadDir(root)
 	if err != nil {
@@ -105,25 +105,25 @@ func findOriginDataDirs(root string) ([]string, error) {
 	return out, nil
 }
 
-// Port 0 is the scheme's default and is left out of the URL.
+// originEndpoint leaves port 0, the scheme's default, out of the URL.
 type originEndpoint struct {
 	scheme string
 	host   string
 	port   uint16
 }
 
-// The file holds the top-frame block, then the frame block; without a readable frame the top frame is reported.
+// readOriginFile reads the top-frame block, then the frame block; without a readable frame the top frame is reported.
 func readOriginFile(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("read origin file %s: %w", path, err)
 	}
-	top, pos, terr := readOriginBlock(data, 0)
-	if terr != nil {
-		return "", fmt.Errorf("parse top-frame origin: %w", terr)
+	top, position, topErr := readOriginBlock(data, 0)
+	if topErr != nil {
+		return "", fmt.Errorf("parse top-frame origin: %w", topErr)
 	}
-	frame, _, ferr := readOriginBlock(data, pos)
-	if ferr != nil {
+	frame, _, frameErr := readOriginBlock(data, position)
+	if frameErr != nil {
 		frame = top
 	}
 	if frame.scheme == "" || frame.host == "" {
@@ -132,72 +132,72 @@ func readOriginFile(path string) (string, error) {
 	return formatOriginURL(frame), nil
 }
 
-func readOriginBlock(data []byte, pos int) (originEndpoint, int, error) {
-	var ep originEndpoint
+func readOriginBlock(data []byte, position int) (originEndpoint, int, error) {
+	var endpoint originEndpoint
 	var err error
-	ep.scheme, pos, err = readOriginString(data, pos)
+	endpoint.scheme, position, err = readOriginString(data, position)
 	if err != nil {
-		return ep, pos, err
+		return endpoint, position, err
 	}
-	ep.host, pos, err = readOriginString(data, pos)
+	endpoint.host, position, err = readOriginString(data, position)
 	if err != nil {
-		return ep, pos, err
+		return endpoint, position, err
 	}
-	if pos >= len(data) {
-		return ep, pos, fmt.Errorf("unexpected EOF before port marker")
+	if position >= len(data) {
+		return endpoint, position, fmt.Errorf("unexpected EOF before port marker")
 	}
-	marker := data[pos]
-	pos++
+	marker := data[position]
+	position++
 	switch marker {
 	case originPortDefaultMarker:
-		ep.port = 0
+		endpoint.port = 0
 	case originPortExplicitFlag:
-		if pos+2 > len(data) {
-			return ep, pos, fmt.Errorf("truncated port value at offset %d", pos)
+		if position+2 > len(data) {
+			return endpoint, position, fmt.Errorf("truncated port value at offset %d", position)
 		}
-		ep.port = binary.LittleEndian.Uint16(data[pos : pos+2])
-		pos += 2
+		endpoint.port = binary.LittleEndian.Uint16(data[position : position+2])
+		position += 2
 	default:
-		return ep, pos, fmt.Errorf("unexpected port marker 0x%02x at offset %d", marker, pos-1)
+		return endpoint, position, fmt.Errorf("unexpected port marker 0x%02x at offset %d", marker, position-1)
 	}
-	return ep, pos, nil
+	return endpoint, position, nil
 }
 
 // readOriginString consumes one length-prefixed record (uint32_le length + encoding byte + data).
-func readOriginString(data []byte, pos int) (string, int, error) {
-	if pos+5 > len(data) {
-		return "", pos, fmt.Errorf("truncated string record at offset %d", pos)
+func readOriginString(data []byte, position int) (string, int, error) {
+	if position+5 > len(data) {
+		return "", position, fmt.Errorf("truncated string record at offset %d", position)
 	}
-	length := int(binary.LittleEndian.Uint32(data[pos : pos+4]))
-	enc := data[pos+4]
-	pos += 5
-	if length < 0 || pos+length > len(data) {
-		return "", pos, fmt.Errorf("string record overruns buffer: length %d at offset %d", length, pos-5)
+	length := int(binary.LittleEndian.Uint32(data[position : position+4]))
+	encoding := data[position+4]
+	position += 5
+	if length < 0 || position+length > len(data) {
+		return "", position, fmt.Errorf("string record overruns buffer: length %d at offset %d", length, position-5)
 	}
-	chunk := data[pos : pos+length]
-	pos += length
-	switch enc {
+	chunk := data[position : position+length]
+	position += length
+	switch encoding {
 	case originEncASCII:
-		return decodeLatin1(chunk), pos, nil
+		return decodeLatin1(chunk), position, nil
 	case originEncUTF16:
-		return decodeUTF16LE(chunk), pos, nil
+		return decodeUTF16LE(chunk), position, nil
 	default:
-		return decodeLatin1(chunk), pos, nil
+		return decodeLatin1(chunk), position, nil
 	}
 }
 
-func decodeLatin1(b []byte) string {
-	runes := make([]rune, len(b))
-	for i, c := range b {
-		runes[i] = rune(c)
+func decodeLatin1(encoded []byte) string {
+	runes := make([]rune, len(encoded))
+	for i, char := range encoded {
+		runes[i] = rune(char)
 	}
 	return string(runes)
 }
 
-func formatOriginURL(ep originEndpoint) string {
-	url := ep.scheme + "://" + ep.host
-	if ep.port != 0 {
-		url += fmt.Sprintf(":%d", ep.port)
+func formatOriginURL(endpoint originEndpoint) string {
+	url := endpoint.scheme + "://" + endpoint.host
+	if endpoint.port != 0 {
+		url += fmt.Sprintf(":%d", endpoint.port)
 	}
 	return url
 }
@@ -211,16 +211,16 @@ func readLocalStorageFile(path string) ([]localStorageItem, error) {
 	// mode=ro without immutable lets SQLite replay the copied -wal, so entries Safari has not checkpointed appear.
 	// ORDER BY key, rowid keeps exports stable across runs and SQLite versions.
 	dsn := "file:" + path + "?mode=ro"
-	db, err := sql.Open("sqlite", dsn)
+	database, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open %s: %w", path, err)
 	}
-	defer db.Close()
-	if err := db.Ping(); err != nil {
+	defer database.Close()
+	if err := database.Ping(); err != nil {
 		return nil, fmt.Errorf("ping %s: %w", path, err)
 	}
 
-	rows, err := db.Query(`SELECT key, value FROM ItemTable ORDER BY key, rowid`)
+	rows, err := database.Query(`SELECT key, value FROM ItemTable ORDER BY key, rowid`)
 	if err != nil {
 		return nil, fmt.Errorf("query ItemTable: %w", err)
 	}
@@ -247,28 +247,28 @@ func readLocalStorageFile(path string) ([]localStorageItem, error) {
 	return items, rows.Err()
 }
 
-// Values at or above the cap become a size marker to bound the output, as in chromium/extract_storage.go.
-func decodeLocalStorageValue(b []byte) string {
-	if len(b) >= maxLocalStorageValueLength {
+// decodeLocalStorageValue turns values at or above the cap into a size marker to bound the output, as Chromium's does.
+func decodeLocalStorageValue(encoded []byte) string {
+	if len(encoded) >= maxLocalStorageValueLength {
 		return fmt.Sprintf(
 			"value is too long, length is %d, supported max length is %d",
-			len(b), maxLocalStorageValueLength,
+			len(encoded), maxLocalStorageValueLength,
 		)
 	}
-	return decodeUTF16LE(b)
+	return decodeUTF16LE(encoded)
 }
 
-// An odd-length value comes back as is, so a stray byte does not drop the row.
-func decodeUTF16LE(b []byte) string {
-	if len(b) == 0 {
+// decodeUTF16LE returns an odd-length value as is, so a stray byte does not drop the row.
+func decodeUTF16LE(encoded []byte) string {
+	if len(encoded) == 0 {
 		return ""
 	}
-	if len(b)%2 != 0 {
-		return string(b)
+	if len(encoded)%2 != 0 {
+		return string(encoded)
 	}
-	u16 := make([]uint16, len(b)/2)
-	for i := range u16 {
-		u16[i] = binary.LittleEndian.Uint16(b[i*2:])
+	units := make([]uint16, len(encoded)/2)
+	for i := range units {
+		units[i] = binary.LittleEndian.Uint16(encoded[i*2:])
 	}
-	return string(utf16.Decode(u16))
+	return string(utf16.Decode(units))
 }

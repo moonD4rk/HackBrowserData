@@ -8,30 +8,30 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// Excel reads a CSV file as UTF-8 only when it starts with a BOM.
+// utf8BOM starts every CSV file, because Excel reads one as UTF-8 only when it starts with a BOM.
 var utf8BOM = []byte{0xEF, 0xBB, 0xBF}
 
 type csvEncoder struct {
-	w      io.Writer
+	writer io.Writer
 	rows   *csv.Writer
 	header bool
 }
 
-func newCSVEncoder(w io.Writer) *csvEncoder {
-	return &csvEncoder{w: w, rows: csv.NewWriter(w)}
+func newCSVEncoder(writer io.Writer) *csvEncoder {
+	return &csvEncoder{writer: writer, rows: csv.NewWriter(writer)}
 }
 
-func (e *csvEncoder) encode(r record.Record) error {
+func (e *csvEncoder) encode(row record.Record) error {
 	if !e.header {
-		if _, err := e.w.Write(utf8BOM); err != nil {
+		if _, err := e.writer.Write(utf8BOM); err != nil {
 			return fmt.Errorf("write BOM: %w", err)
 		}
-		if err := e.rows.Write(structCSVHeader(r)); err != nil {
+		if err := e.rows.Write(structCSVHeader(row)); err != nil {
 			return err
 		}
 		e.header = true
 	}
-	return e.rows.Write(structCSVRow(r))
+	return e.rows.Write(structCSVRow(row))
 }
 
 func (e *csvEncoder) end() error {

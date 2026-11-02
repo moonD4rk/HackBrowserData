@@ -8,7 +8,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// The zero Format is JSON, the -f default.
+// Format defaults to JSON at its zero value, as -f does.
 type Format int
 
 const (
@@ -17,8 +17,8 @@ const (
 	CookieEditor
 )
 
-func ParseFormat(s string) (Format, error) {
-	switch s {
+func ParseFormat(value string) (Format, error) {
+	switch value {
 	case "json":
 		return JSON, nil
 	case "csv":
@@ -26,7 +26,7 @@ func ParseFormat(s string) (Format, error) {
 	case "cookie-editor":
 		return CookieEditor, nil
 	default:
-		return 0, fmt.Errorf("unsupported format: %s", s)
+		return 0, fmt.Errorf("unsupported format: %s", value)
 	}
 }
 
@@ -39,17 +39,17 @@ func (f Format) ext() string {
 
 // encoder writes one category's file; it frames the document itself so that every Write can append to it.
 type encoder interface {
-	encode(r record.Record) error
+	encode(row record.Record) error
 	end() error
 }
 
-func newEncoder(w io.Writer, f Format, c category.Category) encoder {
+func newEncoder(writer io.Writer, format Format, dataCategory category.Category) encoder {
 	switch {
-	case f == CSV:
-		return newCSVEncoder(w)
-	case f == CookieEditor && c == category.Cookie:
-		return &jsonEncoder{w: w, value: cookieEditorValue}
+	case format == CSV:
+		return newCSVEncoder(writer)
+	case format == CookieEditor && dataCategory == category.Cookie:
+		return &jsonEncoder{writer: writer, value: cookieEditorValue}
 	default:
-		return &jsonEncoder{w: w, escapeHTML: true}
+		return &jsonEncoder{writer: writer, escapeHTML: true}
 	}
 }

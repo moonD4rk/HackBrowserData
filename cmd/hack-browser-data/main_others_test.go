@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func assertEndedByInterrupt(t *testing.T, ps *os.ProcessState) {
+func assertEndedByInterrupt(t *testing.T, state *os.ProcessState) {
 	t.Helper()
-	status, ok := ps.Sys().(syscall.WaitStatus)
+	status, ok := state.Sys().(syscall.WaitStatus)
 	require.True(t, ok)
 	assert.True(t, status.Signaled(), "ended by the signal, not by an exit code")
 	assert.Equal(t, syscall.SIGINT, status.Signal())

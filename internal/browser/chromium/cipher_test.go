@@ -26,9 +26,9 @@ func TestDetectVersion(t *testing.T) {
 		{"nil input", nil, cipherDPAPI},
 		{"unknown prefix", []byte("xyz_data"), cipherDPAPI},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, detectVersion(tt.ciphertext))
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			assert.Equal(t, testCase.want, detectVersion(testCase.ciphertext))
 		})
 	}
 }
@@ -55,16 +55,16 @@ func TestDecryptGCM_CrossPlatform(t *testing.T) {
 
 func TestDecryptCBC_CrossPlatform(t *testing.T) {
 	plaintext := []byte("posix_v10_value")
-	enc, err := crypto.AESCBCEncrypt(cbcKey, chromiumCBCIV, plaintext)
+	encrypted, err := crypto.AESCBCEncrypt(cbcKey, chromiumCBCIV, plaintext)
 	require.NoError(t, err)
 
-	ciphertext := append([]byte("v10"), enc...)
+	ciphertext := append([]byte("v10"), encrypted...)
 	got, err := decryptCBC(cbcKey, ciphertext)
 	require.NoError(t, err)
 	assert.Equal(t, plaintext, got)
 }
 
-// Pins the derived kEmptyKey to the reference bytes in Chromium's os_crypt_linux.cc.
+// TestKEmptyKey_MatchesChromium pins the derived kEmptyKey to the reference bytes in Chromium's os_crypt_linux.cc.
 func TestKEmptyKey_MatchesChromium(t *testing.T) {
 	want := []byte{
 		0xd0, 0xd0, 0xec, 0x9c, 0x7d, 0x77, 0xd4, 0x3a,

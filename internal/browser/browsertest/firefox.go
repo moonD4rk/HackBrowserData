@@ -14,7 +14,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/crypto"
 )
 
-// home's logins open only with its second key candidate and work's with its only one, so the golden covers both paths.
+// firefoxFixtureProfiles cover both key paths: home opens with its second key candidate, work with its only one.
 var firefoxFixtureProfiles = []struct {
 	dir        string
 	label      string
@@ -48,8 +48,8 @@ func FirefoxUserData(t *testing.T, profilesDir string) {
 	t.Helper()
 	fixtureWrite(t, filepath.Join(profilesDir, "profiles.ini"), "[General]\nStartWithLastProfile=1\n")
 	fixtureWrite(t, filepath.Join(profilesDir, "Crash Reports", "InstallTime20240101000000"), "1704067200")
-	for _, p := range firefoxFixtureProfiles {
-		firefoxFixtureProfile(t, filepath.Join(profilesDir, p.dir), p.label+".firefox.test", p.start, p.globalSalt, p.keys)
+	for _, fixtureProfile := range firefoxFixtureProfiles {
+		firefoxFixtureProfile(t, filepath.Join(profilesDir, fixtureProfile.dir), fixtureProfile.label+".firefox.test", fixtureProfile.start, fixtureProfile.globalSalt, fixtureProfile.keys)
 	}
 }
 
@@ -61,17 +61,17 @@ func firefoxFixtureProfile(t *testing.T, dir, site string, start time.Time, glob
 	link := func(host, path string) string { return "https://" + host + "." + site + path }
 	day := 24 * time.Hour
 
-	key4 := []string{
+	key4Statements := []string{
 		firefoxFixtureMetaDataSchema,
 		firefoxFixtureNSSPrivateSchema,
 		fmt.Sprintf(`INSERT INTO metaData (id, item1, item2) VALUES ('password', x'%x', x'%x')`,
 			globalSalt, firefoxFixturePBES2Seal(t, globalSalt, site+"/password-check", []byte("password-check"))),
 	}
 	for i, key := range keys {
-		key4 = append(key4, fmt.Sprintf(`INSERT INTO nssPrivate (id, a11, a102) VALUES (%d, x'%x', x'%x')`,
+		key4Statements = append(key4Statements, fmt.Sprintf(`INSERT INTO nssPrivate (id, a11, a102) VALUES (%d, x'%x', x'%x')`,
 			i+1, firefoxFixturePBES2Seal(t, globalSalt, fmt.Sprintf("%s/key-%d", site, i), key), firefoxFixtureKeyID))
 	}
-	fixtureSQLite(t, filepath.Join(dir, "key4.db"), key4...)
+	fixtureSQLite(t, filepath.Join(dir, "key4.db"), key4Statements...)
 
 	loginKey := keys[len(keys)-1]
 	seal := func(field, plaintext string) string {
@@ -135,7 +135,7 @@ func firefoxFixtureProfile(t *testing.T, dir, site string, start time.Time, glob
 	)
 }
 
-// The template goes through the decoder's own parser and Encrypt, so only the ASN.1 layout is spelled out here.
+// firefoxFixtureSeal goes through the decoder's own parser and Encrypt, so only the ASN.1 layout is spelled out here.
 func firefoxFixtureSeal(t *testing.T, marshal func() ([]byte, error), ciphertext *[]byte, key, plaintext []byte) []byte {
 	t.Helper()
 	template, err := marshal()
@@ -209,12 +209,12 @@ func firefoxFixtureLoginSeal(t *testing.T, key []byte, seed, plaintext string) s
 	return base64.StdEncoding.EncodeToString(sealed)
 }
 
-func firefoxFixtureBytes(seed string, n int) []byte {
+func firefoxFixtureBytes(seed string, length int) []byte {
 	sum := sha256.Sum256([]byte(seed))
-	return sum[:n]
+	return sum[:length]
 }
 
-// webappsstore2 stores the host reversed, so a domain and its subdomains share a key prefix.
+// firefoxFixtureOriginKey reverses the host, as webappsstore2 does, so a domain and its subdomains share a key prefix.
 func firefoxFixtureOriginKey(scheme, host string, port int) string {
 	reversed := []byte(host)
 	for i, j := 0, len(reversed)-1; i < j; i, j = i+1, j-1 {
@@ -223,11 +223,11 @@ func firefoxFixtureOriginKey(scheme, host string, port int) string {
 	return fmt.Sprintf("%s.:%s:%d", reversed, scheme, port)
 }
 
-func firefoxFixtureText(s string) string {
-	if s == "" {
+func firefoxFixtureText(text string) string {
+	if text == "" {
 		return "NULL"
 	}
-	return "'" + s + "'"
+	return "'" + text + "'"
 }
 
 func firefoxFixtureInsertCookie(name, value, host, path string, expiry, creationTime int64, secure, httpOnly, sameSite int) string {
@@ -251,10 +251,10 @@ func firefoxFixtureInsertPlace(id int, url, title string, visitCount int, lastVi
 	)
 }
 
-func firefoxFixtureInsertBookmark(id, bookmarkType, fk, parent, position int, title, guid string, dateAdded int64) string {
+func firefoxFixtureInsertBookmark(id, bookmarkType, foreignKey, parent, position int, title, guid string, dateAdded int64) string {
 	fkValue := "NULL"
-	if fk != 0 {
-		fkValue = fmt.Sprint(fk)
+	if foreignKey != 0 {
+		fkValue = fmt.Sprint(foreignKey)
 	}
 	return fmt.Sprintf(
 		`INSERT INTO moz_bookmarks (id, type, fk, parent, position, title, dateAdded, lastModified, guid)

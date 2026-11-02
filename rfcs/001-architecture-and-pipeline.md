@@ -6,7 +6,7 @@ A run is a one-way pipeline of seven stages. Each stage takes the previous stage
 
 ```
             ┌───────────┐
-  argv ───▶ │ Validate  │  flags → app.Request; no browser files touched, nothing created
+  argv ───▶ │ Validate  │  flags → app.Options; no browser files touched, nothing created
             └─────┬─────┘
                   ▼
             ┌───────────┐
@@ -40,23 +40,23 @@ A run is a one-way pipeline of seven stages. Each stage takes the previous stage
 
 ### 1. Validate
 
-Turns parsed flags into a typed `app.Request`: which categories, which browser, the `-p` override, output directory, format, `--zip`, and how the keychain password is supplied. Rejects bad input here — an unknown format, category, or browser ID, or an output directory that cannot be created, fails now with exit status `1` (v1.1.0's status, except for an unknown browser ID, which there found nothing and exited `0`; [RFC-009](009-cli-surface.md)), **before** any browser is discovered and **before** any keychain prompt. v1.1.0 checked `-c` and `-f` only after discovery and the prompt; validating first designs that ordering bug out.
+Turns parsed flags into a typed `app.Options`: which categories, which browser, the `-p` override, output directory, format, `--zip`, and how the keychain password is supplied. Rejects bad input here — an unknown format, category, or browser ID, or an output directory that cannot be created, fails now with exit status `1` (v1.1.0's status, except for an unknown browser ID, which there found nothing and exited `0`; [RFC-009](009-cli-surface.md)), **before** any browser is discovered and **before** any keychain prompt. v1.1.0 checked `-c` and `-f` only after discovery and the prompt; validating first designs that ordering bug out.
 
 Validate touches no browser files and creates nothing: the output-directory check only confirms that `-d` is a directory or that its nearest existing ancestor is a writable directory. For `restore`, reading `--keys` is part of Validate, because `-b` there is checked against the dump's vaults ([RFC-009](009-cli-surface.md)). `-p` combined with `-b all` is ignored, as in v1.1.0, but with a warning rather than silently.
 
-**In:** parsed flags. **Out:** a validated `app.Request`. **Owner:** `cmd/hack-browser-data` (flag wiring) + `app.Validate` (rules).
+**In:** parsed flags. **Out:** a validated `app.Options`. **Owner:** `cmd/hack-browser-data` (flag wiring) + `app.Validate` (rules).
 
 ### 2. Discover
 
 Enumerates which supported browsers are present and which profiles each one has, on this OS. Produces `browser.UserDataDir` values — one per data directory found, so two Arc packages are two user data dirs — each holding its `Profile` list. Discovery is read-only metadata work: it stats files and directories; it does not open databases or touch secrets. The one exception is Safari, which lists its named profiles only inside `SafariTabs.db`: its Discover captures that single file into a temporary snapshot and reads the copy, never the live database ([RFC-005](005-browser-definitions.md)). A user data dir that exists but cannot be read is not dropped: it comes back as an `error` result for that browser ([RFC-005](005-browser-definitions.md)).
 
-**In:** `app.Request` + `browser.Supported()`, this OS's rows. **Out:** an `app.Discovery` — the user data dirs found, plus the failures. **Owner:** `app.Discover`, which dispatches on `Def.Base` to `internal/browser/{chromium,firefox,safari}`.
+**In:** `app.Options` + `browser.Supported()`, this OS's rows. **Out:** an `app.Discovery` — the user data dirs found, plus the failures. **Owner:** `app.Discover`, which dispatches on `Browser.Base` to `internal/browser/{chromium,firefox,safari}`.
 
 ### 3. Plan
 
 The cross product. For each user data dir, each profile, and each requested category, the profile's `Extractors` say whether the category is supported and which source files it needs. Plan turns that into a flat list of `Extraction`s, a `Skipped` list with a reason for every requested pair that can't run (`unsupported` by this browser, `absent` on disk, `error` when a file cannot be checked) plus Discover's failures, and the union of files to capture, deduplicated by user data dir and path — so a file two categories share (Chromium `History` feeds both history and downloads) is copied once (v1.1.0 copied it twice). Plan only stats files; it opens nothing. A `Plan` is plain data, with no functions inside, so `list` prints it and tests compare it.
 
-**In:** an `app.Discovery` + `app.Request`. **Out:** `app.Plan{Dirs, Files, Extractions, Skipped}`. **Owner:** `app.NewPlan`.
+**In:** an `app.Discovery` + `app.Options`. **Out:** `app.Plan{Dirs, Files, Extractions, Skipped}`. **Owner:** `app.NewPlan`.
 
 ### 4–6. Capture, Extract, Export — once per user data dir
 
@@ -80,7 +80,7 @@ A record whose secret can't be recovered is still emitted with that field empty 
 
 Appends each extraction's records, as it finishes, to the frozen output files and formats ([RFC-008](008-output-and-export.md)): one file per non-empty category, field names frozen, rows in a deterministic order defined once per category.
 
-**In:** records + `app.Request`. **Out:** files on disk (and the `--zip` archive). **Owner:** `internal/export`.
+**In:** records + `app.Options`. **Out:** files on disk (and the `--zip` archive). **Owner:** `internal/export`.
 
 ### 7. Report
 

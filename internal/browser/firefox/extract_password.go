@@ -36,18 +36,18 @@ func extractPasswords(masterKey func() []byte, path string, out browser.Collecto
 	}
 
 	var logins []record.Login
-	for _, v := range gjson.GetBytes(data, "logins").Array() {
-		url := v.Get("formSubmitURL").String()
+	for _, value := range gjson.GetBytes(data, "logins").Array() {
+		url := value.Get("formSubmitURL").String()
 		if url == "" {
-			url = v.Get("hostname").String()
+			url = value.Get("hostname").String()
 		}
 
 		key := masterKey()
-		user, err := decryptPBE(v.Get("encryptedUsername").String(), key)
+		user, err := decryptPBE(value.Get("encryptedUsername").String(), key)
 		if err != nil {
 			out.Fail(fmt.Errorf("decrypt username for %s: %w", url, err))
 		}
-		pwd, err := decryptPBE(v.Get("encryptedPassword").String(), key)
+		password, err := decryptPBE(value.Get("encryptedPassword").String(), key)
 		if err != nil {
 			out.Fail(fmt.Errorf("decrypt password for %s: %w", url, err))
 		}
@@ -55,8 +55,8 @@ func extractPasswords(masterKey func() []byte, path string, out browser.Collecto
 		logins = append(logins, record.Login{
 			URL:       url,
 			Username:  string(user),
-			Password:  string(pwd),
-			CreatedAt: timeconv.UnixMilli(v.Get("timeCreated").Int()),
+			Password:  string(password),
+			CreatedAt: timeconv.UnixMilli(value.Get("timeCreated").Int()),
 			Store:     record.StoreLocal,
 		})
 	}

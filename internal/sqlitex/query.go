@@ -11,26 +11,26 @@ func CountRows(dbPath string, journalOff bool, query string) (int, error) {
 	if _, err := os.Stat(dbPath); err != nil {
 		return 0, fmt.Errorf("database file: %w", err)
 	}
-	db, err := sql.Open("sqlite", dbPath)
+	database, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return 0, err
 	}
-	defer db.Close()
+	defer database.Close()
 
 	if journalOff {
-		if _, err := db.Exec("PRAGMA journal_mode=off"); err != nil {
+		if _, err := database.Exec("PRAGMA journal_mode=off"); err != nil {
 			return 0, err
 		}
 	}
 
 	var count int
-	if err := db.QueryRow(query).Scan(&count); err != nil {
+	if err := database.QueryRow(query).Scan(&count); err != nil {
 		return 0, fmt.Errorf("count rows: %w", err)
 	}
 	return count, nil
 }
 
-// Rows that fail to scan are skipped and logged at debug level.
+// QueryRows skips rows that fail to scan and logs them at debug level.
 func QueryRows[T any](dbPath string, journalOff bool, query string, scanRow func(*sql.Rows) (T, error)) ([]T, error) {
 	var items []T
 	err := eachRow(dbPath, journalOff, query, func(rows *sql.Rows) error {

@@ -11,25 +11,25 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
-// journalOff is for Firefox databases; the file is checked first so sql.Open never creates an empty one.
+// eachRow takes journalOff for Firefox databases; the file is checked first so sql.Open never creates an empty one.
 // A row whose scanFn returns an error is skipped and logged at debug level.
 func eachRow(dbPath string, journalOff bool, query string, scanFn func(*sql.Rows) error) error {
 	if _, err := os.Stat(dbPath); err != nil {
 		return fmt.Errorf("database file: %w", err)
 	}
-	db, err := sql.Open("sqlite", dbPath)
+	database, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer database.Close()
 
 	if journalOff {
-		if _, err := db.Exec("PRAGMA journal_mode=off"); err != nil {
+		if _, err := database.Exec("PRAGMA journal_mode=off"); err != nil {
 			return err
 		}
 	}
 
-	rows, err := db.Query(query)
+	rows, err := database.Query(query)
 	if err != nil {
 		return err
 	}

@@ -15,31 +15,31 @@ import (
 )
 
 var (
-	loginsJSON = browser.Source{Paths: []string{"logins.json"}}
-	keyStore   = browser.Source{Paths: []string{"key4.db"}, Optional: true}
-	placesDB   = browser.Source{Paths: []string{"places.sqlite"}}
+	loginsJSON = browser.FileSpec{Paths: []string{"logins.json"}}
+	keyStore   = browser.FileSpec{Paths: []string{"key4.db"}, Optional: true}
+	placesDB   = browser.FileSpec{Paths: []string{"places.sqlite"}}
 )
 
-// Firefox keeps no credit cards or session storage that HBD reads, so those categories have no extractor.
-var extractors = browser.Extractors{
-	category.Password:     {Sources: []browser.Source{loginsJSON, keyStore}, Extract: extractLogins},
-	category.Cookie:       plain(file("cookies.sqlite"), extractCookies),
-	category.Bookmark:     plain(placesDB, extractBookmarks),
-	category.History:      plain(placesDB, extractHistories),
-	category.Download:     plain(placesDB, extractDownloads),
-	category.Extension:    plain(file("extensions.json"), extractExtensions),
-	category.LocalStorage: plain(file("webappsstore.sqlite"), extractLocalStorage),
+// defaultExtractors has no credit card or session storage extractor, because Firefox keeps none that HBD reads.
+var defaultExtractors = browser.Extractors{
+	category.Password:     {FileSpecs: []browser.FileSpec{loginsJSON, keyStore}, Extract: extractLogins},
+	category.Cookie:       newPlainExtractor(newFileSpec("cookies.sqlite"), extractCookies),
+	category.Bookmark:     newPlainExtractor(placesDB, extractBookmarks),
+	category.History:      newPlainExtractor(placesDB, extractHistories),
+	category.Download:     newPlainExtractor(placesDB, extractDownloads),
+	category.Extension:    newPlainExtractor(newFileSpec("extensions.json"), extractExtensions),
+	category.LocalStorage: newPlainExtractor(newFileSpec("webappsstore.sqlite"), extractLocalStorage),
 }
 
-// -p names one profile: its parent is the Profiles directory, and only that profile is selected.
-func Discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserDataDir, error) {
-	if opts.ProfilePath != "" {
-		return profileAt(def, opts.ProfilePath), nil
+// Discover takes -p as one profile: its parent is the Profiles directory, and only that profile is selected.
+func Discover(firefoxBrowser browser.Browser, options browser.DiscoverOptions) ([]browser.UserDataDir, error) {
+	if options.ProfilePath != "" {
+		return profileAt(firefoxBrowser, options.ProfilePath), nil
 	}
 	var errs []error
 	var dirs []browser.UserDataDir
-	for i, path := range userDataDirPaths(def, opts) {
-		dir := browser.UserDataDir{ID: dirID(def, i), Def: def, Path: path}
+	for i, path := range userDataDirPaths(firefoxBrowser, options) {
+		dir := browser.UserDataDir{ID: firefoxBrowser.UserDataDirID(i), Browser: firefoxBrowser, Path: path}
 		profiles, err := discoverProfiles(dir)
 		if errors.Is(err, fs.ErrNotExist) {
 			continue
@@ -54,58 +54,51 @@ func Discover(def browser.Def, opts browser.DiscoverOptions) ([]browser.UserData
 	return dirs, errors.Join(errs...)
 }
 
-func profileAt(def browser.Def, path string) []browser.UserDataDir {
+func profileAt(firefoxBrowser browser.Browser, path string) []browser.UserDataDir {
 	clean := filepath.Clean(path)
 	if !hasDataFile(clean) {
 		return nil
 	}
 	name := filepath.Base(clean)
 	return []browser.UserDataDir{{
-		ID:       dirID(def, 0),
-		Def:      def,
+		ID:       firefoxBrowser.UserDataDirID(0),
+		Browser:  firefoxBrowser,
 		Path:     filepath.Dir(clean),
 		Profiles: []browser.Profile{{Name: name, Dir: name}},
 	}}
 }
 
-func userDataDirPaths(def browser.Def, opts browser.DiscoverOptions) []string {
-	paths := make([]string, 0, len(def.Platform().UserDataDirs))
-	for _, rel := range def.Platform().UserDataDirs {
-		paths = append(paths, filepath.Join(opts.Home, filepath.FromSlash(rel)))
+func userDataDirPaths(firefoxBrowser browser.Browser, options browser.DiscoverOptions) []string {
+	paths := make([]string, 0, len(firefoxBrowser.Platform().UserDataDirs))
+	for _, relativePath := range firefoxBrowser.Platform().UserDataDirs {
+		paths = append(paths, filepath.Join(options.Home, filepath.FromSlash(relativePath)))
 	}
 	return paths
 }
 
-func dirID(def browser.Def, i int) browser.DirID {
-	if i == 0 {
-		return browser.DirID(def.ID)
-	}
-	return browser.DirID(fmt.Sprintf("%s-%d", def.ID, i+1))
-}
-
-// Profile directories have random names, so any subdirectory holding a source counts; key4.db alone does not.
+// discoverProfiles counts any subdirectory with a file an extractor reads, as names are random; key4.db does not.
 func discoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
 	entries, err := os.ReadDir(dir.Path)
 	if err != nil {
 		return nil, err
 	}
 	var profiles []browser.Profile
-	for _, e := range entries {
-		if e.IsDir() && hasDataFile(filepath.Join(dir.Path, e.Name())) {
-			profiles = append(profiles, browser.Profile{Name: e.Name(), Dir: e.Name()})
+	for _, entry := range entries {
+		if entry.IsDir() && hasDataFile(filepath.Join(dir.Path, entry.Name())) {
+			profiles = append(profiles, browser.Profile{Name: entry.Name(), Dir: entry.Name()})
 		}
 	}
 	return profiles, nil
 }
 
 func hasDataFile(dir string) bool {
-	for _, e := range extractors {
-		for _, src := range e.Sources {
-			if src.Optional {
+	for _, extractor := range defaultExtractors {
+		for _, fileSpec := range extractor.FileSpecs {
+			if fileSpec.Optional {
 				continue
 			}
-			for _, rel := range src.Paths {
-				if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err == nil {
+			for _, relativePath := range fileSpec.Paths {
+				if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(relativePath))); err == nil {
 					return true
 				}
 			}
@@ -115,20 +108,20 @@ func hasDataFile(dir string) bool {
 }
 
 func Extractors(_ browser.UserDataDir, _ browser.Profile) browser.Extractors {
-	ex := make(browser.Extractors, len(extractors))
-	for c, e := range extractors {
-		ex[c] = e
+	extractors := make(browser.Extractors, len(defaultExtractors))
+	for dataCategory, extractor := range defaultExtractors {
+		extractors[dataCategory] = extractor
 	}
-	return ex
+	return extractors
 }
 
-func file(path string) browser.Source { return browser.Source{Paths: []string{path}} }
+func newFileSpec(path string) browser.FileSpec { return browser.FileSpec{Paths: []string{path}} }
 
-func plain(src browser.Source, parse func(string, browser.Collector) error) browser.Extractor {
+func newPlainExtractor(fileSpec browser.FileSpec, parse func(string, browser.Collector) error) browser.Extractor {
 	return browser.Extractor{
-		Sources: []browser.Source{src},
-		Extract: func(_ context.Context, ps browser.ProfileSnapshot, out browser.Collector) error {
-			path, err := ps.Path(src)
+		FileSpecs: []browser.FileSpec{fileSpec},
+		Extract: func(_ context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
+			path, err := profileSnapshot.Path(fileSpec)
 			if err != nil {
 				return err
 			}
@@ -137,9 +130,9 @@ func plain(src browser.Source, parse func(string, browser.Collector) error) brow
 	}
 }
 
-// The key is derived only once a login needs it; without one the logins export with empty secrets.
-func extractLogins(_ context.Context, ps browser.ProfileSnapshot, out browser.Collector) error {
-	path, err := ps.Path(loginsJSON)
+// extractLogins derives the key only once a login needs it; without one the logins export with empty secrets.
+func extractLogins(_ context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
+	path, err := profileSnapshot.Path(loginsJSON)
 	if err != nil {
 		return err
 	}
@@ -150,26 +143,26 @@ func extractLogins(_ context.Context, ps browser.ProfileSnapshot, out browser.Co
 	masterKey := func() []byte {
 		if !derived {
 			derived = true
-			k, keyErr := profileKey(ps, path)
+			retrieved, keyErr := profileKey(profileSnapshot, path)
 			if keyErr != nil {
 				out.Fail(fmt.Errorf("master key: %w", keyErr))
 			}
-			key = k
+			key = retrieved
 		}
 		return key
 	}
 	return extractPasswords(masterKey, path, out)
 }
 
-func profileKey(ps browser.ProfileSnapshot, loginsPath string) ([]byte, error) {
-	key4Path, err := ps.Path(keyStore)
+func profileKey(profileSnapshot browser.ProfileSnapshot, loginsPath string) ([]byte, error) {
+	key4Path, err := profileSnapshot.Path(keyStore)
 	if err != nil {
 		return nil, err
 	}
 	return retrieveMasterKey(key4Path, loginsPath)
 }
 
-// emit hands rows to out by pointer, because out stamps each record in place.
+// emit hands rows to out by pointer, because out sets each record's Browser and Profile in place.
 func emit[T any, P interface {
 	*T
 	record.Record

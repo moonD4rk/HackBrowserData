@@ -24,8 +24,8 @@ import (
 var testTime = time.Date(2026, 1, 15, 10, 30, 0, 0, time.UTC)
 
 type extraction struct {
-	c       category.Category
-	records []record.Record
+	dataCategory category.Category
+	records      []record.Record
 }
 
 func chromeExtractions() []extraction {
@@ -61,37 +61,37 @@ func firefoxExtractions() []extraction {
 	}
 }
 
-func writeAll(t *testing.T, dir string, f Format, extractions ...extraction) {
+func writeAll(t *testing.T, dir string, format Format, extractions ...extraction) {
 	t.Helper()
-	w, err := NewWriter(dir, f, false)
+	writer, err := NewWriter(dir, format, false)
 	require.NoError(t, err)
-	for _, e := range extractions {
-		require.NoError(t, w.Write(e.c, e.records))
+	for _, batch := range extractions {
+		require.NoError(t, writer.Write(batch.dataCategory, batch.records))
 	}
-	require.NoError(t, w.Close())
+	require.NoError(t, writer.Close())
 }
 
 func TestParseFormat(t *testing.T) {
 	tests := []struct {
-		in   string
-		want Format
+		input string
+		want  Format
 	}{
 		{"json", JSON},
 		{"csv", CSV},
 		{"cookie-editor", CookieEditor},
 	}
-	for _, tt := range tests {
-		got, err := ParseFormat(tt.in)
+	for _, testCase := range tests {
+		got, err := ParseFormat(testCase.input)
 		require.NoError(t, err)
-		assert.Equal(t, tt.want, got)
+		assert.Equal(t, testCase.want, got)
 	}
 	_, err := ParseFormat("unknown")
 	require.EqualError(t, err, "unsupported format: unknown")
 }
 
 func TestFormat_ZeroIsJSON(t *testing.T) {
-	var f Format
-	assert.Equal(t, JSON, f)
+	var format Format
+	assert.Equal(t, JSON, format)
 }
 
 func TestNewWriter_CreatesDir(t *testing.T) {
@@ -291,10 +291,10 @@ func TestWrite_AppendsExtractionsInWriteOrder(t *testing.T) {
 
 func TestWrite_RejectsRecordOfAnotherCategory(t *testing.T) {
 	dir := t.TempDir()
-	w, err := NewWriter(dir, JSON, false)
+	writer, err := NewWriter(dir, JSON, false)
 	require.NoError(t, err)
-	require.EqualError(t, w.Write(category.Cookie, []record.Record{&record.Login{}}), "*record.Login is not a cookie record")
-	require.NoError(t, w.Close())
+	require.EqualError(t, writer.Write(category.Cookie, []record.Record{&record.Login{}}), "*record.Login is not a cookie record")
+	require.NoError(t, writer.Close())
 
 	entries, err := os.ReadDir(dir)
 	require.NoError(t, err)
@@ -303,13 +303,13 @@ func TestWrite_RejectsRecordOfAnotherCategory(t *testing.T) {
 
 func TestClose_AfterFailedWriteKeepsEarlierFiles(t *testing.T) {
 	dir := t.TempDir()
-	w, err := NewWriter(dir, JSON, false)
+	writer, err := NewWriter(dir, JSON, false)
 	require.NoError(t, err)
-	require.NoError(t, w.Write(category.Password, []record.Record{&record.Login{URL: "https://kept.example"}}))
+	require.NoError(t, writer.Write(category.Password, []record.Record{&record.Login{URL: "https://kept.example"}}))
 
 	beyondJSON := time.Date(10000, 1, 1, 0, 0, 0, 0, time.UTC)
-	require.Error(t, w.Write(category.Cookie, []record.Record{&record.Cookie{Host: "bad.example", ExpireAt: beyondJSON}}))
-	require.NoError(t, w.Close())
+	require.Error(t, writer.Write(category.Cookie, []record.Record{&record.Cookie{Host: "bad.example", ExpireAt: beyondJSON}}))
+	require.NoError(t, writer.Close())
 
 	var logins []record.Login
 	readJSON(t, filepath.Join(dir, "password.json"), &logins)
@@ -319,20 +319,20 @@ func TestClose_AfterFailedWriteKeepsEarlierFiles(t *testing.T) {
 	var cookies []record.Cookie
 	readJSON(t, filepath.Join(dir, "cookie.json"), &cookies)
 	assert.Empty(t, cookies)
-	assert.Zero(t, w.Output(), "a failed run lists nothing")
+	assert.Zero(t, writer.Output(), "a failed run lists nothing")
 }
 
 func TestClose_OutputListsTheFilesInCategoryOrder(t *testing.T) {
 	dir := t.TempDir()
-	w, err := NewWriter(dir, JSON, false)
+	writer, err := NewWriter(dir, JSON, false)
 	require.NoError(t, err)
-	require.NoError(t, w.Write(category.History, []record.Record{&record.History{URL: "https://a.example"}}))
-	require.NoError(t, w.Write(category.Password, []record.Record{
+	require.NoError(t, writer.Write(category.History, []record.Record{&record.History{URL: "https://a.example"}}))
+	require.NoError(t, writer.Write(category.Password, []record.Record{
 		&record.Login{URL: "https://b.example"}, &record.Login{URL: "https://c.example"},
 	}))
-	require.NoError(t, w.Close())
+	require.NoError(t, writer.Close())
 
-	assert.Equal(t, Output{Dir: dir, Files: []File{{Name: "password.json", Count: 2}, {Name: "history.json", Count: 1}}}, w.Output())
+	assert.Equal(t, Output{Dir: dir, Files: []File{{Name: "password.json", Count: 2}, {Name: "history.json", Count: 1}}}, writer.Output())
 }
 
 func TestClose_ZipReplacesTheFilesWithOneArchive(t *testing.T) {
@@ -346,7 +346,7 @@ func TestClose_ZipReplacesTheFilesWithOneArchive(t *testing.T) {
 	assert.Equal(t, dirFiles(t, loose), zipFiles(t, filepath.Join(dir, "results.zip")))
 }
 
-// The output is the files this run wrote; anything else in the directory is not the writer's to pack or delete.
+// TestClose_ZipLeavesOtherFilesAlone packs only this run's files; the rest of the directory is not the writer's.
 func TestClose_ZipLeavesOtherFilesAlone(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "results")
 	require.NoError(t, os.MkdirAll(dir, 0o755))
@@ -368,15 +368,15 @@ func TestClose_ZipFailureKeepsTheFiles(t *testing.T) {
 
 func TestClose_ZipOutputNamesTheArchive(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "results")
-	w, err := NewWriter(dir, CSV, true)
+	writer, err := NewWriter(dir, CSV, true)
 	require.NoError(t, err)
-	require.NoError(t, w.Write(category.Password, []record.Record{&record.Login{URL: "https://a.example"}}))
-	require.NoError(t, w.Close())
+	require.NoError(t, writer.Write(category.Password, []record.Record{&record.Login{URL: "https://a.example"}}))
+	require.NoError(t, writer.Close())
 
-	assert.Equal(t, Output{Dir: dir, Files: []File{{Name: "password.csv", Count: 1}}, Zip: "results.zip"}, w.Output())
+	assert.Equal(t, Output{Dir: dir, Files: []File{{Name: "password.csv", Count: 1}}, Zip: "results.zip"}, writer.Output())
 }
 
-// The zip holds the same records as the category files, so it gets their owner-only mode.
+// TestClose_ZipIsOwnerOnly gives the zip the category files' owner-only mode, since it holds the same records.
 func TestClose_ZipIsOwnerOnly(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Windows has no mode bits to check")
@@ -396,16 +396,16 @@ func TestClose_ZipWithNothingWrittenFails(t *testing.T) {
 }
 
 func zipAll(dir string, extractions ...extraction) error {
-	w, err := NewWriter(dir, CSV, true)
+	writer, err := NewWriter(dir, CSV, true)
 	if err != nil {
 		return err
 	}
-	for _, e := range extractions {
-		if err := w.Write(e.c, e.records); err != nil {
-			return errors.Join(err, w.Close())
+	for _, batch := range extractions {
+		if err := writer.Write(batch.dataCategory, batch.records); err != nil {
+			return errors.Join(err, writer.Close())
 		}
 	}
-	return w.Close()
+	return writer.Close()
 }
 
 func dirNames(t *testing.T, dir string) []string {
@@ -413,8 +413,8 @@ func dirNames(t *testing.T, dir string) []string {
 	entries, err := os.ReadDir(dir)
 	require.NoError(t, err)
 	names := make([]string, 0, len(entries))
-	for _, e := range entries {
-		names = append(names, e.Name())
+	for _, entry := range entries {
+		names = append(names, entry.Name())
 	}
 	return names
 }
@@ -432,16 +432,16 @@ func dirFiles(t *testing.T, dir string) map[string]string {
 
 func zipFiles(t *testing.T, path string) map[string]string {
 	t.Helper()
-	r, err := zip.OpenReader(path)
+	zipReader, err := zip.OpenReader(path)
 	require.NoError(t, err)
-	defer r.Close()
-	files := make(map[string]string, len(r.File))
-	for _, f := range r.File {
-		rc, err := f.Open()
+	defer zipReader.Close()
+	files := make(map[string]string, len(zipReader.File))
+	for _, zipFile := range zipReader.File {
+		entryReader, err := zipFile.Open()
 		require.NoError(t, err)
-		data, err := io.ReadAll(rc)
-		require.NoError(t, errors.Join(err, rc.Close()))
-		files[f.Name] = string(data)
+		data, err := io.ReadAll(entryReader)
+		require.NoError(t, errors.Join(err, entryReader.Close()))
+		files[zipFile.Name] = string(data)
 	}
 	return files
 }
@@ -460,9 +460,9 @@ func readCSV(t *testing.T, path string) [][]string {
 	return records
 }
 
-func readJSON(t *testing.T, path string, v any) {
+func readJSON(t *testing.T, path string, value any) {
 	t.Helper()
 	raw, err := os.ReadFile(path)
 	require.NoError(t, err)
-	require.NoError(t, json.Unmarshal(raw, v))
+	require.NoError(t, json.Unmarshal(raw, value))
 }

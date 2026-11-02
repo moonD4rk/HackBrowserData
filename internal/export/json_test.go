@@ -11,25 +11,25 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-func encodeOnce(t *testing.T, v any, escapeHTML bool) string {
+func encodeOnce(t *testing.T, value any, escapeHTML bool) string {
 	t.Helper()
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetIndent("", jsonIndent)
-	enc.SetEscapeHTML(escapeHTML)
-	require.NoError(t, enc.Encode(v))
-	return buf.String()
+	var buffer bytes.Buffer
+	referenceEncoder := json.NewEncoder(&buffer)
+	referenceEncoder.SetIndent("", jsonIndent)
+	referenceEncoder.SetEscapeHTML(escapeHTML)
+	require.NoError(t, referenceEncoder.Encode(value))
+	return buffer.String()
 }
 
-func encodeFramed(t *testing.T, e *jsonEncoder, records []record.Record) string {
+func encodeFramed(t *testing.T, framedEncoder *jsonEncoder, records []record.Record) string {
 	t.Helper()
-	var buf bytes.Buffer
-	e.w = &buf
-	for _, r := range records {
-		require.NoError(t, e.encode(r))
+	var buffer bytes.Buffer
+	framedEncoder.writer = &buffer
+	for _, row := range records {
+		require.NoError(t, framedEncoder.encode(row))
 	}
-	require.NoError(t, e.end())
-	return buf.String()
+	require.NoError(t, framedEncoder.end())
+	return buffer.String()
 }
 
 func TestJSONEncoder_MatchesOneEncodeOfTheSlice(t *testing.T) {
@@ -49,8 +49,8 @@ func TestJSONEncoder_MatchesOneEncodeOfTheSlice(t *testing.T) {
 
 	t.Run("cookie-editor does not", func(t *testing.T) {
 		entries := make([]any, 0, len(cookies))
-		for _, c := range cookies {
-			entries = append(entries, cookieEditorValue(c))
+		for _, cookie := range cookies {
+			entries = append(entries, cookieEditorValue(cookie))
 		}
 		got := encodeFramed(t, &jsonEncoder{value: cookieEditorValue}, cookies)
 		assert.Equal(t, encodeOnce(t, entries, false), got)

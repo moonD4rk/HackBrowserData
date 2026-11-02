@@ -63,16 +63,16 @@ func TestDecodeChromiumString(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := decodeChromiumString(tt.input)
-			if tt.wantErr != "" {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got, err := decodeChromiumString(testCase.input)
+			if testCase.wantErr != "" {
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.wantErr)
+				assert.Contains(t, err.Error(), testCase.wantErr)
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
+			assert.Equal(t, testCase.want, got)
 		})
 	}
 }
@@ -140,17 +140,17 @@ func TestParseLocalStorageEntry(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			entry, parsed := parseLocalStorageEntry(tt.key, tt.value)
-			assert.Equal(t, tt.wantParsed, parsed)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			entry, parsed := parseLocalStorageEntry(testCase.key, testCase.value)
+			assert.Equal(t, testCase.wantParsed, parsed)
 			if !parsed {
 				return
 			}
-			assert.Equal(t, tt.wantMeta, entry.IsMeta)
-			assert.Equal(t, tt.wantURL, entry.URL)
-			assert.Equal(t, tt.wantKey, entry.Key)
-			assert.Equal(t, tt.wantValue, entry.Value)
+			assert.Equal(t, testCase.wantMeta, entry.IsMeta)
+			assert.Equal(t, testCase.wantURL, entry.URL)
+			assert.Equal(t, testCase.wantKey, entry.Key)
+			assert.Equal(t, testCase.wantValue, entry.Value)
 		})
 	}
 }
@@ -189,14 +189,14 @@ func TestExtractLocalStorage(t *testing.T) {
 
 	metaCount := 0
 	byKey := map[string]string{}
-	for _, e := range got {
-		assert.Equal(t, "https://example.com", e.URL)
-		if e.IsMeta {
+	for _, entry := range got {
+		assert.Equal(t, "https://example.com", entry.URL)
+		if entry.IsMeta {
 			metaCount++
-			assert.Contains(t, e.Value, "meta data, value bytes is")
+			assert.Contains(t, entry.Value, "meta data, value bytes is")
 			continue
 		}
-		byKey[e.Key] = e.Value
+		byKey[entry.Key] = entry.Value
 	}
 	assert.Equal(t, 2, metaCount)
 	assert.Equal(t, "abc123", byKey["token"])
@@ -220,7 +220,7 @@ func TestExtractSessionStorage(t *testing.T) {
 	assert.Equal(t, "abc123", byKey["https://example.com//token"])
 }
 
-// Opening the copy read-write replays its journal into new files; on Windows that write can fail and lose the profile.
+// TestExtractStorage_LeavesTheCopyUnchanged opens read-only, since a journal replay can fail on Windows and lose data.
 func TestExtractStorage_LeavesTheCopyUnchanged(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -230,12 +230,12 @@ func TestExtractStorage_LeavesTheCopyUnchanged(t *testing.T) {
 		{name: "localstorage", setup: setupLocalStorageLevelDB, extract: extractLocalStorage},
 		{name: "sessionstorage", setup: setupSessionStorageLevelDB, extract: extractSessionStorage},
 	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			dir := tt.setup(t)
+	for _, testCase := range tests {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			dir := testCase.setup(t)
 			before := levelDBFiles(t, dir)
-			require.NoError(t, tt.extract(dir, &testCollector{}))
+			require.NoError(t, testCase.extract(dir, &testCollector{}))
 			assert.Equal(t, before, levelDBFiles(t, dir))
 		})
 	}
@@ -246,36 +246,36 @@ func levelDBFiles(t *testing.T, dir string) map[string]string {
 	entries, err := os.ReadDir(dir)
 	require.NoError(t, err)
 	files := make(map[string]string, len(entries))
-	for _, e := range entries {
-		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+	for _, entry := range entries {
+		data, err := os.ReadFile(filepath.Join(dir, entry.Name()))
 		require.NoError(t, err)
-		files[e.Name()] = string(data)
+		files[entry.Name()] = string(data)
 	}
 	return files
 }
 
-func testEncodeLatin1(s string) []byte {
-	return append([]byte{chromiumStringLatin1Format}, []byte(s)...)
+func testEncodeLatin1(text string) []byte {
+	return append([]byte{chromiumStringLatin1Format}, []byte(text)...)
 }
 
-func testEncodeUTF16(s string) []byte {
-	encoded := utf16.Encode([]rune(s))
+func testEncodeUTF16(text string) []byte {
+	encoded := utf16.Encode([]rune(text))
 	result := make([]byte, 1, 1+len(encoded)*2)
 	result[0] = chromiumStringUTF16Format
-	for _, r := range encoded {
+	for _, unit := range encoded {
 		var raw [2]byte
-		binary.LittleEndian.PutUint16(raw[:], r)
+		binary.LittleEndian.PutUint16(raw[:], unit)
 		result = append(result, raw[:]...)
 	}
 	return result
 }
 
-func testEncodeUTF16Raw(s string) []byte {
-	encoded := utf16.Encode([]rune(s))
+func testEncodeUTF16Raw(text string) []byte {
+	encoded := utf16.Encode([]rune(text))
 	result := make([]byte, 0, len(encoded)*2)
-	for _, r := range encoded {
+	for _, unit := range encoded {
 		var raw [2]byte
-		binary.LittleEndian.PutUint16(raw[:], r)
+		binary.LittleEndian.PutUint16(raw[:], unit)
 		result = append(result, raw[:]...)
 	}
 	return result

@@ -38,12 +38,12 @@ The external interface is frozen at v1.1.0: every item below behaves exactly as 
 | Output files      | one `<category>.<ext>` per non-empty category (`password.csv`, `cookie.json`, …); `--zip` packs them into `<dir>/<basename(dir)>.zip` |
 | Formats           | `csv` (UTF-8 BOM), `json` (two-space indent, v1.1.0's HTML escaping), `cookie-editor`                                                 |
 | Fields            | snake_case keys and columns, `browser` and `profile` first, then v1.1.0's fields in v1.1.0's order                                    |
-| Stamp values      | `browser` = the display name (`Chrome`, `Microsoft Edge`); `profile` = v1.1.0's profile name ([RFC-003](003-core-types.md))           |
+| Browser, profile  | `browser` = the display name (`Chrome`, `Microsoft Edge`); `profile` = v1.1.0's profile name ([RFC-003](003-core-types.md))           |
 | `keys.json`       | dump version `"2"`, v1.1.0's schema, readable by v1.1.0                                                                               |
 | Archive           | zip layout `<browser-key>/<User Data layout>`, readable by v1.1.0 `restore`                                                           |
 | Exit status       | `0` when the run completes (including partial results and "no browsers found"); `1` when it cannot start or finish                    |
 
-Not part of the contract: log lines and the human-readable summary on stderr, and row order where v1.1.0's order is unspecified or wrong. Output differs from v1.1.0 only for listed bug fixes where v1.1.0's output was wrong — Firefox history order, Firefox bookmark fields, Safari bookmark IDs, Firefox logins from a profile whose key cannot be recovered, Yandex logins and cards whose data key cannot be recovered, the `browser` value `restore` stamps, CocCoc cookies on a Windows machine that also has Yandex, and the `--zip` archive's file mode ([RFC-008](008-output-and-export.md)); each is called out where it is fixed.
+Not part of the contract: log lines and the human-readable summary on stderr, and row order where v1.1.0's order is unspecified or wrong. Output differs from v1.1.0 only for listed bug fixes where v1.1.0's output was wrong — Firefox history order, Firefox bookmark fields, Safari bookmark IDs, Firefox logins from a profile whose key cannot be recovered, Yandex logins and cards whose data key cannot be recovered, the `browser` value `restore` sets, CocCoc cookies on a Windows machine that also has Yandex, and the `--zip` archive's file mode ([RFC-008](008-output-and-export.md)); each is called out where it is fixed.
 
 ## Hard constraints
 

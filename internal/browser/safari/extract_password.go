@@ -9,23 +9,23 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-func extractPasswords(ctx context.Context, kc LoginKeychain, out browser.Collector) error {
-	passwords, err := kc.InternetPasswords(ctx)
+func extractPasswords(ctx context.Context, loginKeychain LoginKeychain, out browser.Collector) error {
+	passwords, err := loginKeychain.InternetPasswords(ctx)
 	if err != nil {
 		return err
 	}
 
 	var logins []record.Login
-	for _, p := range passwords {
-		url := buildURL(p.Protocol, p.Server, p.Port, p.Path)
-		if url == "" || p.Account == "" {
+	for _, internetPassword := range passwords {
+		url := buildURL(internetPassword.Protocol, internetPassword.Server, internetPassword.Port, internetPassword.Path)
+		if url == "" || internetPassword.Account == "" {
 			continue
 		}
 		logins = append(logins, record.Login{
 			URL:       url,
-			Username:  p.Account,
-			Password:  p.PlainPassword,
-			CreatedAt: p.Created.UTC(),
+			Username:  internetPassword.Account,
+			Password:  internetPassword.PlainPassword,
+			CreatedAt: internetPassword.Created.UTC(),
 			Store:     record.StoreLocal,
 		})
 	}

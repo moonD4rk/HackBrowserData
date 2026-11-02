@@ -53,10 +53,10 @@ func TestExtractExtensions(t *testing.T) {
 	require.Len(t, got, 2) // system addon filtered out
 
 	ids := map[string]bool{}
-	for _, ext := range got {
-		ids[ext.ID] = true
-		assert.NotEmpty(t, ext.Name)
-		assert.NotEmpty(t, ext.Version)
+	for _, extension := range got {
+		ids[extension.ID] = true
+		assert.NotEmpty(t, extension.Name)
+		assert.NotEmpty(t, extension.Version)
 	}
 	assert.True(t, ids["ublock@gorhill.org"])
 	assert.True(t, ids["bitwarden@bitwarden.com"])

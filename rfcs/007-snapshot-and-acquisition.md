@@ -12,9 +12,9 @@ No parser ever reads a live browser profile. Capture copies the files a plan nee
 
 ```go
 type File struct {
-    DirID string // the user data dir's ID; also the snapshot it lands in
-    From  string // absolute path of the user data dir it is copied from
-    Rel   string // slash-separated path relative to From, and to the snapshot
+    UserDataDirID   string // the user data dir's ID; also the snapshot it lands in
+    UserDataDirPath string // absolute path of the user data dir it is copied from
+    RelativePath    string // slash-separated path relative to UserDataDirPath, and to the snapshot
     IsDir bool
 }
 
@@ -25,7 +25,7 @@ func Open(path string) (*Dir, error) // an existing one, used in place
 func Unzip(src string) (*Dir, error) // into a temporary snapshot directory
 
 func (d *Dir) Capture(ctx context.Context, files []File) error
-func (d *Dir) Snapshot(dirID string) Snapshot // one user data dir's snapshot
+func (d *Dir) Snapshot(userDataDirID string) Snapshot // one user data dir's snapshot
 func (d *Dir) Zip(dst string) error           // archive transport
 func (d *Dir) Close() error
 
@@ -46,15 +46,15 @@ Because it holds those copies, a temporary snapshot directory is created with mo
 
 ## Layout and user data dir identity
 
-A snapshot directory is `<dir>/<user-data-dir-id>/<path relative to the user data dir>`: one subdirectory, one snapshot, per user data dir. For the first user data dir of a browser the ID is its `Def.ID`, so the layout is exactly v1.1.0's archive layout (`<browser-key>/<User Data layout>`) and v1.1.0's `restore` reads new archives unchanged. A second one of the same browser — the second of Arc's two MSIX packages on Windows — gets `arc-2/`, where v1.1.0's archive keyed every file by browser key alone and silently dropped it.
+A snapshot directory is `<dir>/<user-data-dir-id>/<path relative to the user data dir>`: one subdirectory, one snapshot, per user data dir. For the first user data dir of a browser the ID is its `Browser.Name`, so the layout is exactly v1.1.0's archive layout (`<browser-key>/<User Data layout>`) and v1.1.0's `restore` reads new archives unchanged. A second one of the same browser — the second of Arc's two MSIX packages on Windows — gets `arc-2/`, where v1.1.0's archive keyed every file by browser key alone and silently dropped it.
 
-An archive captures what v1.1.0's did — `Local State` and each profile's `Preferences` marker (both named by the Chromium base, [RFC-005](005-browser-definitions.md)), the requested categories' sources, and the account-synced `Login Data For Account` — so a reader without the manifest can still find every profile.
+An archive captures what v1.1.0's did — `Local State` and each profile's `Preferences` marker (both named by the Chromium base, [RFC-005](005-browser-definitions.md)), the requested categories' files, and the account-synced `Login Data For Account` — so a reader without the manifest can still find every profile.
 
-`keys.json` joins to the archive by the vault's `browser` key, as in v1.1.0. A vault for a second user data dir carries an extra optional `id` field (`"arc-2"`) — the `DirID` on the wire, per the wire-name rule; readers that don't know the field, including v1.1.0, ignore it and restore the first one. The dump version stays `"2"`.
+`keys.json` joins to the archive by the vault's `browser` key, as in v1.1.0. A vault for a second user data dir carries an extra optional `id` field (`"arc-2"`) — the `UserDataDirID` on the wire, per the wire-name rule; readers that don't know the field, including v1.1.0, ignore it and restore the first one. The dump version stays `"2"`.
 
 ## Manifest
 
-A new snapshot directory carries `manifest.json` at its root: a schema version, and per user data dir its ID, `Def.ID`, `Base`, profiles, and captured paths. `restore` uses it, when present, to rebuild user data dirs and profiles without re-discovering anything — that is its `Discovery` ([RFC-003](003-core-types.md)) — and then runs Extract → Export → Report exactly as a live run would. Restore trusts no manifest path that would leave its own directory of the archive. Archives without a manifest — every archive v1.1.0 made — still restore through the keys.json vaults plus the directory layout. v1.1.0 ignores the extra file.
+A new snapshot directory carries `manifest.json` at its root: a schema version, and per user data dir its ID, `Browser.Name`, `Base`, profiles, and captured paths. `restore` uses it, when present, to rebuild user data dirs and profiles without re-discovering anything — that is its `Discovery` ([RFC-003](003-core-types.md)) — and then runs Extract → Export → Report exactly as a live run would. Restore trusts no manifest path that would leave its own directory of the archive. Archives without a manifest — every archive v1.1.0 made — still restore through the keys.json vaults plus the directory layout. v1.1.0 ignores the extra file.
 
 ## Copy semantics
 

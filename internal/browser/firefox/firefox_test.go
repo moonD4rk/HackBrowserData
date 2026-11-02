@@ -18,9 +18,9 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-func testDef(userDataDirs ...string) browser.Def {
-	p := browser.Platform{UserDataDirs: userDataDirs}
-	return browser.Def{ID: "firefox", Name: "Firefox", Base: browser.Firefox, Darwin: p, Linux: p, Windows: p}
+func testBrowser(userDataDirs ...string) browser.Browser {
+	platform := browser.Platform{UserDataDirs: userDataDirs}
+	return browser.Browser{Name: "firefox", DisplayName: "Firefox", Base: browser.Firefox, Darwin: platform, Linux: platform, Windows: platform}
 }
 
 func touch(t *testing.T, parts ...string) {
@@ -33,10 +33,10 @@ func touch(t *testing.T, parts ...string) {
 func snapshotOf(t *testing.T, files map[string]string) snapshot.Snapshot {
 	t.Helper()
 	root := t.TempDir()
-	for rel, src := range files {
-		dir := filepath.Join(root, "firefox", filepath.Dir(filepath.FromSlash(rel)))
+	for relativePath, fixturePath := range files {
+		dir := filepath.Join(root, "firefox", filepath.Dir(filepath.FromSlash(relativePath)))
 		require.NoError(t, os.MkdirAll(dir, 0o700))
-		installFile(t, dir, src, filepath.Base(rel))
+		installFile(t, dir, fixturePath, filepath.Base(relativePath))
 	}
 	return snapshot.Open(root).Snapshot("firefox")
 }
@@ -49,10 +49,10 @@ func TestDiscover_ProfilesAreDirsWithDataFiles(t *testing.T) {
 	touch(t, home, "Profiles", "Crash Reports", "InstallTime20240101000000")
 	touch(t, home, "Profiles", "profiles.ini")
 
-	dirs, err := Discover(testDef("Profiles"), browser.DiscoverOptions{Home: home})
+	dirs, err := Discover(testBrowser("Profiles"), browser.DiscoverOptions{Home: home})
 	require.NoError(t, err)
 	require.Len(t, dirs, 1)
-	assert.Equal(t, browser.DirID("firefox"), dirs[0].ID)
+	assert.Equal(t, browser.UserDataDirID("firefox"), dirs[0].ID)
 	assert.Equal(t, filepath.Join(home, "Profiles"), dirs[0].Path)
 	assert.Equal(t, []browser.Profile{
 		{Name: "abcd1234.default-release", Dir: "abcd1234.default-release"},
@@ -61,12 +61,12 @@ func TestDiscover_ProfilesAreDirsWithDataFiles(t *testing.T) {
 }
 
 func TestDiscover_MissingUserDataDirYieldsNothing(t *testing.T) {
-	dirs, err := Discover(testDef("Profiles"), browser.DiscoverOptions{Home: t.TempDir()})
+	dirs, err := Discover(testBrowser("Profiles"), browser.DiscoverOptions{Home: t.TempDir()})
 	require.NoError(t, err)
 	assert.Empty(t, dirs)
 }
 
-// A user data dir that exists but cannot be read must not look like a browser that is not installed.
+// TestDiscover_UnreadableUserDataDirIsAnError keeps an unreadable dir from looking like a browser not installed.
 func TestDiscover_UnreadableUserDataDirIsAnError(t *testing.T) {
 	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
 		t.Skip("directory permissions do not deny reads here")
@@ -77,19 +77,19 @@ func TestDiscover_UnreadableUserDataDirIsAnError(t *testing.T) {
 	require.NoError(t, os.Chmod(profiles, 0o000))
 	defer func() { require.NoError(t, os.Chmod(profiles, 0o700)) }()
 
-	dirs, err := Discover(testDef("Profiles"), browser.DiscoverOptions{Home: home})
+	dirs, err := Discover(testBrowser("Profiles"), browser.DiscoverOptions{Home: home})
 	require.Error(t, err)
 	assert.Empty(t, dirs)
 }
 
-// Before, -p searched its parent and exported every profile beside the one it named.
+// TestDiscover_ProfilePathSelectsOnlyThatProfile guards a fixed bug: -p exported every profile beside its own.
 func TestDiscover_ProfilePathSelectsOnlyThatProfile(t *testing.T) {
 	custom := t.TempDir()
 	touch(t, custom, "abcd1234.default-release", "places.sqlite")
 	touch(t, custom, "wxyz5678.work", "places.sqlite")
 
-	opts := browser.DiscoverOptions{Home: t.TempDir(), ProfilePath: filepath.Join(custom, "abcd1234.default-release")}
-	dirs, err := Discover(testDef("Profiles"), opts)
+	options := browser.DiscoverOptions{Home: t.TempDir(), ProfilePath: filepath.Join(custom, "abcd1234.default-release")}
+	dirs, err := Discover(testBrowser("Profiles"), options)
 	require.NoError(t, err)
 	require.Len(t, dirs, 1)
 	assert.Equal(t, custom, dirs[0].Path)
@@ -100,37 +100,37 @@ func TestDiscover_ProfilePathWithoutDataFindsNothing(t *testing.T) {
 	custom := t.TempDir()
 	touch(t, custom, "abcd1234.default-release", "key4.db")
 
-	opts := browser.DiscoverOptions{Home: t.TempDir(), ProfilePath: filepath.Join(custom, "abcd1234.default-release")}
-	dirs, err := Discover(testDef("Profiles"), opts)
+	options := browser.DiscoverOptions{Home: t.TempDir(), ProfilePath: filepath.Join(custom, "abcd1234.default-release")}
+	dirs, err := Discover(testBrowser("Profiles"), options)
 	require.NoError(t, err)
 	assert.Empty(t, dirs)
 }
 
 func TestExtractors_CoverFirefoxCategories(t *testing.T) {
-	ex := Extractors(browser.UserDataDir{Def: testDef()}, browser.Profile{})
-	for _, c := range category.All() {
-		e, ok := ex[c]
-		if c == category.CreditCard || c == category.SessionStorage {
-			assert.Falsef(t, ok, "Firefox has no %s extractor", c)
+	extractors := Extractors(browser.UserDataDir{Browser: testBrowser()}, browser.Profile{})
+	for _, dataCategory := range category.All() {
+		extractor, ok := extractors[dataCategory]
+		if dataCategory == category.CreditCard || dataCategory == category.SessionStorage {
+			assert.Falsef(t, ok, "Firefox has no %s extractor", dataCategory)
 			continue
 		}
-		if assert.Truef(t, ok, "no extractor for %s", c) {
-			assert.NotNil(t, e.Extract, c)
-			assert.NotEmpty(t, e.Sources, c)
+		if assert.Truef(t, ok, "no extractor for %s", dataCategory) {
+			assert.NotNil(t, extractor.Extract, dataCategory)
+			assert.NotEmpty(t, extractor.FileSpecs, dataCategory)
 		}
 	}
 }
 
-// Without key4.db the logins export with empty secrets; before, a legacy-cipher login without a key panicked.
+// TestExtractLogins_WithoutKeyStore exports empty secrets without key4.db; a legacy-cipher login once panicked.
 func TestExtractLogins_WithoutKeyStore(t *testing.T) {
-	enc := loginPBEBase64(t)
+	encodedLogin := loginPBEBase64(t)
 	logins := createTestJSON(t, "logins.json", fmt.Sprintf(`{"logins": [{"hostname": "https://a.test",
-		"encryptedUsername": %q, "encryptedPassword": %q, "timeCreated": 1700000000000}]}`, enc, enc))
-	ps := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{"p/logins.json": logins}),
+		"encryptedUsername": %q, "encryptedPassword": %q, "timeCreated": 1700000000000}]}`, encodedLogin, encodedLogin))
+	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{"p/logins.json": logins}),
 		browser.Profile{Name: "p", Dir: "p"}, nil)
 
 	var out testCollector
-	require.NoError(t, extractLogins(context.Background(), ps, &out))
+	require.NoError(t, extractLogins(context.Background(), profileSnapshot, &out))
 	got := collected[record.Login](t, &out)
 	require.Len(t, got, 1)
 	assert.Equal(t, "https://a.test", got[0].URL)
@@ -140,34 +140,34 @@ func TestExtractLogins_WithoutKeyStore(t *testing.T) {
 	assert.ErrorIs(t, out.fails[0], fs.ErrNotExist)
 }
 
-// A profile with no saved logins never needs its key, so an unreadable key4.db is no problem there.
+// TestExtractLogins_NoLoginsNeverReadsTheKey leaves key4.db unread without logins, so an unreadable one is harmless.
 func TestExtractLogins_NoLoginsNeverReadsTheKey(t *testing.T) {
-	ps := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{
+	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{
 		"p/logins.json": createTestJSON(t, "logins.json", `{"logins": []}`),
 		"p/key4.db":     createTestJSON(t, "key4.db", "not a database"),
 	}), browser.Profile{Name: "p", Dir: "p"}, nil)
 
 	var out testCollector
-	require.NoError(t, extractLogins(context.Background(), ps, &out))
+	require.NoError(t, extractLogins(context.Background(), profileSnapshot, &out))
 	assert.Empty(t, out.records)
 	assert.Empty(t, out.fails)
 }
 
-// One snapshot serves every profile of a user data dir; each profile must read its own files from it.
+// TestExtractors_EachProfileReadsItsOwnFiles reads one snapshot shared by every profile; each must get its own files.
 func TestExtractors_EachProfileReadsItsOwnFiles(t *testing.T) {
-	snap := snapshotOf(t, map[string]string{
+	dirSnapshot := snapshotOf(t, map[string]string{
 		"a.default/places.sqlite": createTestDB(t, "places.sqlite", []string{mozPlacesSchema},
 			insertMozPlace(1, "https://home.example", "Home", 1, 1700000000000000)),
 		"b.work/places.sqlite": createTestDB(t, "places.sqlite", []string{mozPlacesSchema},
 			insertMozPlace(1, "https://work.example", "Work", 1, 1700000000000000)),
 	})
-	dir := browser.UserDataDir{Def: testDef()}
+	dir := browser.UserDataDir{Browser: testBrowser()}
 	want := map[string]string{"a.default": "Home", "b.work": "Work"}
-	for _, p := range []browser.Profile{{Name: "a.default", Dir: "a.default"}, {Name: "b.work", Dir: "b.work"}} {
+	for _, profile := range []browser.Profile{{Name: "a.default", Dir: "a.default"}, {Name: "b.work", Dir: "b.work"}} {
 		var out testCollector
-		require.NoError(t, Extractors(dir, p)[category.History].Extract(context.Background(), browser.NewProfileSnapshot(snap, p, nil), &out))
+		require.NoError(t, Extractors(dir, profile)[category.History].Extract(context.Background(), browser.NewProfileSnapshot(dirSnapshot, profile, nil), &out))
 		got := collected[record.History](t, &out)
-		require.Len(t, got, 1, p.Name)
-		assert.Equal(t, want[p.Name], got[0].Title, p.Name)
+		require.Len(t, got, 1, profile.Name)
+		assert.Equal(t, want[profile.Name], got[0].Title, profile.Name)
 	}
 }

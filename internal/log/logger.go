@@ -24,25 +24,25 @@ type Logger struct {
 	minLevel Level
 }
 
-func (l *Logger) canLogAt(v Level) bool {
-	return v >= Level(atomic.LoadInt32((*int32)(&l.minLevel)))
+func (l *Logger) canLogAt(level Level) bool {
+	return level >= Level(atomic.LoadInt32((*int32)(&l.minLevel)))
 }
 
-func (l *Logger) SetLevel(v Level) {
-	if v < DebugLevel || v > WarnLevel {
+func (l *Logger) SetLevel(level Level) {
+	if level < DebugLevel || level > WarnLevel {
 		panic("log: invalid log level")
 	}
-	atomic.StoreInt32((*int32)(&l.minLevel), int32(v))
+	atomic.StoreInt32((*int32)(&l.minLevel), int32(level))
 }
 
-// Frames between runtime.Caller and the caller: base.Log, logMsg, and the exported Debugf/Infof/Warnf.
+// baseCallerSkip skips the frames between runtime.Caller and the caller: base.Log, logMsg, and Debugf/Infof/Warnf.
 const baseCallerSkip = 3
 
-func (l *Logger) logMsg(lvl Level, msg string) {
-	if !l.canLogAt(lvl) {
+func (l *Logger) logMsg(level Level, message string) {
+	if !l.canLogAt(level) {
 		return
 	}
-	l.base.Log(baseCallerSkip, lvl, msg)
+	l.base.Log(baseCallerSkip, level, message)
 }
 
 func (l *Logger) Debugf(format string, args ...any) {
@@ -62,8 +62,8 @@ type Base interface {
 }
 
 type baseLogger struct {
-	out io.Writer
-	mu  sync.Mutex
+	out   io.Writer
+	mutex sync.Mutex
 }
 
 func newBase(out io.Writer) *baseLogger {
@@ -73,32 +73,32 @@ func newBase(out io.Writer) *baseLogger {
 // continuation lines a message's later lines up under its first, past the "[DBG] " label.
 const continuation = "      "
 
-func (l *baseLogger) Log(callerSkip int, lvl Level, msg string) {
-	msg = strings.TrimRight(msg, "\n")
-	if strings.Contains(msg, "\n") {
-		msg = strings.ReplaceAll(msg, "\n", "\n"+continuation)
+func (l *baseLogger) Log(callerSkip int, level Level, message string) {
+	message = strings.TrimRight(message, "\n")
+	if strings.Contains(message, "\n") {
+		message = strings.ReplaceAll(message, "\n", "\n"+continuation)
 	}
 
-	label := l.formatLabel(lvl)
+	label := l.formatLabel(level)
 	var line string
-	if lvl == DebugLevel {
-		_, file, num, ok := runtime.Caller(callerSkip)
+	if level == DebugLevel {
+		_, file, lineNumber, ok := runtime.Caller(callerSkip)
 		if ok {
 			file = filepath.Base(file)
 		} else {
 			file = "???"
-			num = 0
+			lineNumber = 0
 		}
-		line = fmt.Sprintf("%s %s:%d: %s\n", label, file, num, msg)
+		line = fmt.Sprintf("%s %s:%d: %s\n", label, file, lineNumber, message)
 	} else {
-		line = fmt.Sprintf("%s %s\n", label, msg)
+		line = fmt.Sprintf("%s %s\n", label, message)
 	}
 
-	l.mu.Lock()
+	l.mutex.Lock()
 	_, _ = io.WriteString(l.out, line)
-	l.mu.Unlock()
+	l.mutex.Unlock()
 }
 
-func (l *baseLogger) formatLabel(lvl Level) string {
-	return "[" + lvl.String() + "]"
+func (l *baseLogger) formatLabel(level Level) string {
+	return "[" + level.String() + "]"
 }

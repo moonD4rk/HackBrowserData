@@ -36,49 +36,49 @@ type File struct {
 }
 
 type categoryFile struct {
-	name  string
-	file  *os.File
-	buf   *bufio.Writer
-	enc   encoder
-	count int
+	name     string
+	file     *os.File
+	buffered *bufio.Writer
+	encoder  encoder
+	count    int
 }
 
 // NewWriter creates dir. With compress, Close packs the files it wrote into <dir>/<base of dir>.zip.
-func NewWriter(dir string, f Format, compress bool) (*Writer, error) {
+func NewWriter(dir string, format Format, compress bool) (*Writer, error) {
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, fmt.Errorf("create output dir: %w", err)
 	}
-	return &Writer{dir: dir, format: f, compress: compress, files: make(map[category.Category]*categoryFile)}, nil
+	return &Writer{dir: dir, format: format, compress: compress, files: make(map[category.Category]*categoryFile)}, nil
 }
 
 // Write reorders records in place.
-func (w *Writer) Write(c category.Category, records []record.Record) error {
-	if err := w.write(c, records); err != nil {
+func (w *Writer) Write(dataCategory category.Category, records []record.Record) error {
+	if err := w.write(dataCategory, records); err != nil {
 		w.failed = true
 		return err
 	}
 	return nil
 }
 
-func (w *Writer) write(c category.Category, records []record.Record) error {
+func (w *Writer) write(dataCategory category.Category, records []record.Record) error {
 	if len(records) == 0 {
 		return nil
 	}
-	for _, r := range records {
-		if r.Category() != c {
-			return fmt.Errorf("%T is not a %s record", r, c)
+	for _, row := range records {
+		if row.Category() != dataCategory {
+			return fmt.Errorf("%T is not a %s record", row, dataCategory)
 		}
 	}
-	cf, err := w.open(c)
+	file, err := w.open(dataCategory)
 	if err != nil {
 		return err
 	}
 	sortRecords(records)
-	for _, r := range records {
-		if err := cf.enc.encode(r); err != nil {
-			return fmt.Errorf("write %s: %w", cf.name, err)
+	for _, row := range records {
+		if err := file.encoder.encode(row); err != nil {
+			return fmt.Errorf("write %s: %w", file.name, err)
 		}
-		cf.count++
+		file.count++
 	}
 	return nil
 }
@@ -89,10 +89,10 @@ func (w *Writer) Close() error {
 		errs  []error
 		files []File
 	)
-	for _, c := range category.All() {
-		if cf, ok := w.files[c]; ok {
-			errs = append(errs, cf.close())
-			files = append(files, File{Name: cf.name, Count: cf.count})
+	for _, dataCategory := range category.All() {
+		if file, ok := w.files[dataCategory]; ok {
+			errs = append(errs, file.close())
+			files = append(files, File{Name: file.name, Count: file.count})
 		}
 	}
 	if err := errors.Join(errs...); err != nil {
@@ -121,8 +121,8 @@ func (w *Writer) Output() Output {
 // pack removes the loose files only after the zip is in place, so a failure leaves every one of them where it was.
 func (w *Writer) pack() error {
 	names := make([]string, 0, len(w.files))
-	for _, cf := range w.files {
-		names = append(names, cf.name)
+	for _, file := range w.files {
+		names = append(names, file.name)
 	}
 	sort.Strings(names)
 	zipName := filepath.Base(w.dir) + ".zip"
@@ -138,68 +138,68 @@ func (w *Writer) pack() error {
 	return nil
 }
 
-// writeZip renames a finished temp file into place, so dst is never a partial zip.
-func writeZip(dst, dir string, names []string) (err error) {
-	tmp, err := os.OpenFile(dst+".tmp", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+// writeZip renames a finished temp file into place, so archivePath is never a partial zip.
+func writeZip(archivePath, dir string, names []string) (err error) {
+	temporary, err := os.OpenFile(archivePath+".tmp", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
-		return fmt.Errorf("create %s: %w", dst, err)
+		return fmt.Errorf("create %s: %w", archivePath, err)
 	}
 	defer func() {
 		if err != nil {
-			err = errors.Join(err, os.Remove(tmp.Name()))
+			err = errors.Join(err, os.Remove(temporary.Name()))
 		}
 	}()
-	zw := zip.NewWriter(tmp)
+	zipWriter := zip.NewWriter(temporary)
 	for _, name := range names {
-		if err := addZipFile(zw, filepath.Join(dir, name), name); err != nil {
-			return errors.Join(fmt.Errorf("add %s: %w", name, err), zw.Close(), tmp.Close())
+		if err := addZipFile(zipWriter, filepath.Join(dir, name), name); err != nil {
+			return errors.Join(fmt.Errorf("add %s: %w", name, err), zipWriter.Close(), temporary.Close())
 		}
 	}
-	if err := zw.Close(); err != nil {
-		return errors.Join(fmt.Errorf("finish %s: %w", dst, err), tmp.Close())
+	if err := zipWriter.Close(); err != nil {
+		return errors.Join(fmt.Errorf("finish %s: %w", archivePath, err), temporary.Close())
 	}
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("finish %s: %w", dst, err)
+	if err := temporary.Close(); err != nil {
+		return fmt.Errorf("finish %s: %w", archivePath, err)
 	}
-	if err := os.Rename(tmp.Name(), dst); err != nil {
+	if err := os.Rename(temporary.Name(), archivePath); err != nil {
 		return fmt.Errorf("move zip into place: %w", err)
 	}
 	return nil
 }
 
-func addZipFile(zw *zip.Writer, path, name string) error {
-	src, err := os.Open(path)
+func addZipFile(zipWriter *zip.Writer, path, name string) error {
+	file, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	defer src.Close()
-	dst, err := zw.Create(name)
+	defer file.Close()
+	entryWriter, err := zipWriter.Create(name)
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(dst, src)
+	_, err = io.Copy(entryWriter, file)
 	return err
 }
 
-func (w *Writer) open(c category.Category) (*categoryFile, error) {
-	if cf, ok := w.files[c]; ok {
-		return cf, nil
+func (w *Writer) open(dataCategory category.Category) (*categoryFile, error) {
+	if existing, ok := w.files[dataCategory]; ok {
+		return existing, nil
 	}
-	name := c.String() + "." + w.format.ext()
-	f, err := os.OpenFile(filepath.Join(w.dir, name), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+	name := dataCategory.String() + "." + w.format.ext()
+	file, err := os.OpenFile(filepath.Join(w.dir, name), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("create %s: %w", name, err)
 	}
-	buf := bufio.NewWriter(f)
-	cf := &categoryFile{name: name, file: f, buf: buf, enc: newEncoder(buf, w.format, c)}
-	w.files[c] = cf
-	return cf, nil
+	buffered := bufio.NewWriter(file)
+	opened := &categoryFile{name: name, file: file, buffered: buffered, encoder: newEncoder(buffered, w.format, dataCategory)}
+	w.files[dataCategory] = opened
+	return opened, nil
 }
 
 func (cf *categoryFile) close() error {
-	err := cf.enc.end()
+	err := cf.encoder.end()
 	if err == nil {
-		err = cf.buf.Flush()
+		err = cf.buffered.Flush()
 	}
 	if err = errors.Join(err, cf.file.Close()); err != nil {
 		return fmt.Errorf("write %s: %w", cf.name, err)

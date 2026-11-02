@@ -73,24 +73,24 @@ var (
 )
 
 func TestNewASN1PBE(t *testing.T) {
-	for _, tc := range privateKeyPBETestCases {
-		nssRaw, err := hex.DecodeString(tc.RawHexPBE)
+	for _, testCase := range privateKeyPBETestCases {
+		nssRaw, err := hex.DecodeString(testCase.RawHexPBE)
 		require.NoError(t, err)
 		pbe, err := NewASN1PBE(nssRaw)
 		require.NoError(t, err)
 		privateKeyPBETC, ok := pbe.(privateKeyPBE)
 		assert.True(t, ok)
-		assert.Equal(t, privateKeyPBETC.Encrypted, tc.Encrypted)
-		assert.Equal(t, privateKeyPBETC.AlgoAttr.SaltAttr.EntrySalt, tc.GlobalSalt)
+		assert.Equal(t, privateKeyPBETC.Encrypted, testCase.Encrypted)
+		assert.Equal(t, privateKeyPBETC.AlgoAttr.SaltAttr.EntrySalt, testCase.GlobalSalt)
 		assert.Equal(t, 20, privateKeyPBETC.AlgoAttr.SaltAttr.KeyLen)
-		assert.Equal(t, privateKeyPBETC.AlgoAttr.ObjectIdentifier, tc.ObjectIdentifier)
+		assert.Equal(t, privateKeyPBETC.AlgoAttr.ObjectIdentifier, testCase.ObjectIdentifier)
 	}
 }
 
 func TestPrivateKeyPBE_Encrypt(t *testing.T) {
-	for _, tc := range privateKeyPBETestCases {
+	for _, testCase := range privateKeyPBETestCases {
 		privateKeyPBETC := privateKeyPBE{
-			Encrypted: tc.Encrypted,
+			Encrypted: testCase.Encrypted,
 			AlgoAttr: struct {
 				asn1.ObjectIdentifier
 				SaltAttr struct {
@@ -98,17 +98,17 @@ func TestPrivateKeyPBE_Encrypt(t *testing.T) {
 					KeyLen    int
 				}
 			}{
-				ObjectIdentifier: tc.ObjectIdentifier,
+				ObjectIdentifier: testCase.ObjectIdentifier,
 				SaltAttr: struct {
 					EntrySalt []byte
 					KeyLen    int
 				}{
-					EntrySalt: tc.GlobalSalt,
+					EntrySalt: testCase.GlobalSalt,
 					KeyLen:    20,
 				},
 			},
 		}
-		encrypted, err := privateKeyPBETC.Encrypt(tc.GlobalSalt, tc.Plaintext)
+		encrypted, err := privateKeyPBETC.Encrypt(testCase.GlobalSalt, testCase.Plaintext)
 		require.NoError(t, err)
 		assert.NotEmpty(t, encrypted)
 		assert.Equal(t, privateKeyPBETC.Encrypted, encrypted)
@@ -116,9 +116,9 @@ func TestPrivateKeyPBE_Encrypt(t *testing.T) {
 }
 
 func TestPrivateKeyPBE_Decrypt(t *testing.T) {
-	for _, tc := range privateKeyPBETestCases {
+	for _, testCase := range privateKeyPBETestCases {
 		privateKeyPBETC := privateKeyPBE{
-			Encrypted: tc.Encrypted,
+			Encrypted: testCase.Encrypted,
 			AlgoAttr: struct {
 				asn1.ObjectIdentifier
 				SaltAttr struct {
@@ -126,17 +126,17 @@ func TestPrivateKeyPBE_Decrypt(t *testing.T) {
 					KeyLen    int
 				}
 			}{
-				ObjectIdentifier: tc.ObjectIdentifier,
+				ObjectIdentifier: testCase.ObjectIdentifier,
 				SaltAttr: struct {
 					EntrySalt []byte
 					KeyLen    int
 				}{
-					EntrySalt: tc.GlobalSalt,
+					EntrySalt: testCase.GlobalSalt,
 					KeyLen:    20,
 				},
 			},
 		}
-		decrypted, err := privateKeyPBETC.Decrypt(tc.GlobalSalt)
+		decrypted, err := privateKeyPBETC.Decrypt(testCase.GlobalSalt)
 		require.NoError(t, err)
 		assert.NotEmpty(t, decrypted)
 		assert.Equal(t, pbePlaintext, decrypted)
@@ -144,24 +144,24 @@ func TestPrivateKeyPBE_Decrypt(t *testing.T) {
 }
 
 func TestNewASN1PBE_PasswordCheckPBE(t *testing.T) {
-	for _, tc := range passwordCheckPBETestCases {
-		metaRaw, err := hex.DecodeString(tc.RawHexPBE)
+	for _, testCase := range passwordCheckPBETestCases {
+		metaRaw, err := hex.DecodeString(testCase.RawHexPBE)
 		require.NoError(t, err)
 		pbe, err := NewASN1PBE(metaRaw)
 		require.NoError(t, err)
 		passwordCheckPBETC, ok := pbe.(passwordCheckPBE)
 		assert.True(t, ok)
-		assert.Equal(t, passwordCheckPBETC.Encrypted, tc.Encrypted)
-		assert.Equal(t, passwordCheckPBETC.AlgoAttr.KDFParams.IVData.IV, tc.IV)
+		assert.Equal(t, passwordCheckPBETC.Encrypted, testCase.Encrypted)
+		assert.Equal(t, passwordCheckPBETC.AlgoAttr.KDFParams.IVData.IV, testCase.IV)
 		assert.Equal(t, passwordCheckPBETC.AlgoAttr.KDFParams.IVData.ObjectIdentifier, objWithSHA256AndAES)
 	}
 }
 
 func TestPasswordCheckPBE_Encrypt(t *testing.T) {
-	for _, tc := range passwordCheckPBETestCases {
+	for _, testCase := range passwordCheckPBETestCases {
 		passwordCheckPBETC := passwordCheckPBE{
 			AlgoAttr: algoAttr{
-				ObjectIdentifier: tc.ObjectIdentifier,
+				ObjectIdentifier: testCase.ObjectIdentifier,
 				KDFParams: struct {
 					PBKDF2 struct {
 						asn1.ObjectIdentifier
@@ -173,27 +173,27 @@ func TestPasswordCheckPBE_Encrypt(t *testing.T) {
 						asn1.ObjectIdentifier
 						SaltAttr saltAttr
 					}{
-						ObjectIdentifier: tc.ObjectIdentifier,
+						ObjectIdentifier: testCase.ObjectIdentifier,
 						SaltAttr: saltAttr{
-							EntrySalt:      tc.GlobalSalt,
+							EntrySalt:      testCase.GlobalSalt,
 							IterationCount: 1,
 							KeySize:        32,
 							Algorithm: struct {
 								asn1.ObjectIdentifier
 							}{
-								ObjectIdentifier: tc.ObjectIdentifier,
+								ObjectIdentifier: testCase.ObjectIdentifier,
 							},
 						},
 					},
 					IVData: ivAttr{
-						ObjectIdentifier: tc.ObjectIdentifier,
-						IV:               tc.IV,
+						ObjectIdentifier: testCase.ObjectIdentifier,
+						IV:               testCase.IV,
 					},
 				},
 			},
-			Encrypted: tc.Encrypted,
+			Encrypted: testCase.Encrypted,
 		}
-		encrypted, err := passwordCheckPBETC.Encrypt(tc.GlobalSalt, tc.Plaintext)
+		encrypted, err := passwordCheckPBETC.Encrypt(testCase.GlobalSalt, testCase.Plaintext)
 		require.NoError(t, err)
 		assert.NotEmpty(t, encrypted)
 		assert.Equal(t, passwordCheckPBETC.Encrypted, encrypted)
@@ -201,10 +201,10 @@ func TestPasswordCheckPBE_Encrypt(t *testing.T) {
 }
 
 func TestPasswordCheckPBE_Decrypt(t *testing.T) {
-	for _, tc := range passwordCheckPBETestCases {
+	for _, testCase := range passwordCheckPBETestCases {
 		passwordCheckPBETC := passwordCheckPBE{
 			AlgoAttr: algoAttr{
-				ObjectIdentifier: tc.ObjectIdentifier,
+				ObjectIdentifier: testCase.ObjectIdentifier,
 				KDFParams: struct {
 					PBKDF2 struct {
 						asn1.ObjectIdentifier
@@ -216,27 +216,27 @@ func TestPasswordCheckPBE_Decrypt(t *testing.T) {
 						asn1.ObjectIdentifier
 						SaltAttr saltAttr
 					}{
-						ObjectIdentifier: tc.ObjectIdentifier,
+						ObjectIdentifier: testCase.ObjectIdentifier,
 						SaltAttr: saltAttr{
-							EntrySalt:      tc.GlobalSalt,
+							EntrySalt:      testCase.GlobalSalt,
 							IterationCount: 1,
 							KeySize:        32,
 							Algorithm: struct {
 								asn1.ObjectIdentifier
 							}{
-								ObjectIdentifier: tc.ObjectIdentifier,
+								ObjectIdentifier: testCase.ObjectIdentifier,
 							},
 						},
 					},
 					IVData: ivAttr{
-						ObjectIdentifier: tc.ObjectIdentifier,
-						IV:               tc.IV,
+						ObjectIdentifier: testCase.ObjectIdentifier,
+						IV:               testCase.IV,
 					},
 				},
 			},
-			Encrypted: tc.Encrypted,
+			Encrypted: testCase.Encrypted,
 		}
-		decrypted, err := passwordCheckPBETC.Decrypt(tc.GlobalSalt)
+		decrypted, err := passwordCheckPBETC.Decrypt(testCase.GlobalSalt)
 		require.NoError(t, err)
 		assert.NotEmpty(t, decrypted)
 		assert.Equal(t, pbePlaintext, decrypted)
@@ -244,33 +244,33 @@ func TestPasswordCheckPBE_Decrypt(t *testing.T) {
 }
 
 func TestNewASN1PBE_CredentialPBE(t *testing.T) {
-	for _, tc := range credentialPBETestCases {
-		loginRaw, err := hex.DecodeString(tc.RawHexPBE)
+	for _, testCase := range credentialPBETestCases {
+		loginRaw, err := hex.DecodeString(testCase.RawHexPBE)
 		require.NoError(t, err)
 		pbe, err := NewASN1PBE(loginRaw)
 		require.NoError(t, err)
 		credentialPBETC, ok := pbe.(credentialPBE)
 		assert.True(t, ok)
-		assert.Equal(t, credentialPBETC.Encrypted, tc.Encrypted)
-		assert.Equal(t, credentialPBETC.Algo.IV, tc.IV)
+		assert.Equal(t, credentialPBETC.Encrypted, testCase.Encrypted)
+		assert.Equal(t, credentialPBETC.Algo.IV, testCase.IV)
 		assert.Equal(t, credentialPBETC.Algo.ObjectIdentifier, objWithMD5AndDESCBC)
 	}
 }
 
 func TestCredentialPBE_Encrypt(t *testing.T) {
-	for _, tc := range credentialPBETestCases {
+	for _, testCase := range credentialPBETestCases {
 		credentialPBETC := credentialPBE{
 			KeyCheck: pbeKeyCheck,
 			Algo: struct {
 				asn1.ObjectIdentifier
 				IV []byte
 			}{
-				ObjectIdentifier: tc.ObjectIdentifier,
-				IV:               tc.IV,
+				ObjectIdentifier: testCase.ObjectIdentifier,
+				IV:               testCase.IV,
 			},
-			Encrypted: tc.Encrypted,
+			Encrypted: testCase.Encrypted,
 		}
-		encrypted, err := credentialPBETC.Encrypt(tc.GlobalSalt, plainText)
+		encrypted, err := credentialPBETC.Encrypt(testCase.GlobalSalt, plainText)
 		require.NoError(t, err)
 		assert.NotEmpty(t, encrypted)
 		assert.Equal(t, credentialPBETC.Encrypted, encrypted)
@@ -278,19 +278,19 @@ func TestCredentialPBE_Encrypt(t *testing.T) {
 }
 
 func TestCredentialPBE_Decrypt(t *testing.T) {
-	for _, tc := range credentialPBETestCases {
+	for _, testCase := range credentialPBETestCases {
 		credentialPBETC := credentialPBE{
 			KeyCheck: pbeKeyCheck,
 			Algo: struct {
 				asn1.ObjectIdentifier
 				IV []byte
 			}{
-				ObjectIdentifier: tc.ObjectIdentifier,
-				IV:               tc.IV,
+				ObjectIdentifier: testCase.ObjectIdentifier,
+				IV:               testCase.IV,
 			},
-			Encrypted: tc.Encrypted,
+			Encrypted: testCase.Encrypted,
 		}
-		decrypted, err := credentialPBETC.Decrypt(tc.GlobalSalt)
+		decrypted, err := credentialPBETC.Decrypt(testCase.GlobalSalt)
 		require.NoError(t, err)
 		assert.NotEmpty(t, decrypted)
 		assert.Equal(t, pbePlaintext, decrypted)
@@ -348,7 +348,7 @@ func TestCredentialPBE_UnsupportedIVLength(t *testing.T) {
 	require.ErrorIs(t, err, errUnsupportedIVLen)
 }
 
-// A profile whose key could not be derived passes a nil key, which must fail instead of panicking.
+// TestCredentialPBE_ShortKey passes the nil key of a profile whose key could not be derived; it must fail, not panic.
 func TestCredentialPBE_ShortKey(t *testing.T) {
 	raw, err := hex.DecodeString(credentialPBETestCases[0].RawHexPBE)
 	require.NoError(t, err)

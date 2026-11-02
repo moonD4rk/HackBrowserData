@@ -26,7 +26,7 @@ const (
 	exportURLWithHTMLCharsEscaped = `https://shop.example.com/cart?item=42\u0026qty=\u003c3\u003e`
 )
 
-type exportStamp struct {
+type profileExport struct {
 	browser string
 	profile string
 	data    *exportData
@@ -51,58 +51,58 @@ type exportURLForm struct {
 
 func TestExportGolden(t *testing.T) {
 	formats := []struct {
-		format       string
-		ext          string
-		urlForms     []exportURLForm
-		jsonFallback bool
+		format        string
+		fileExtension string
+		urlForms      []exportURLForm
+		jsonFallback  bool
 	}{
 		{
-			format:   "csv",
-			ext:      "csv",
-			urlForms: []exportURLForm{{file: "cookie.csv"}, {file: "history.csv"}},
+			format:        "csv",
+			fileExtension: "csv",
+			urlForms:      []exportURLForm{{file: "cookie.csv"}, {file: "history.csv"}},
 		},
 		{
-			format:   "json",
-			ext:      "json",
-			urlForms: []exportURLForm{{file: "cookie.json", escaped: true}, {file: "history.json", escaped: true}},
+			format:        "json",
+			fileExtension: "json",
+			urlForms:      []exportURLForm{{file: "cookie.json", escaped: true}, {file: "history.json", escaped: true}},
 		},
 		{
-			format:       "cookie-editor",
-			ext:          "json",
-			urlForms:     []exportURLForm{{file: "cookie.json"}, {file: "history.json", escaped: true}},
-			jsonFallback: true,
+			format:        "cookie-editor",
+			fileExtension: "json",
+			urlForms:      []exportURLForm{{file: "cookie.json"}, {file: "history.json", escaped: true}},
+			jsonFallback:  true,
 		},
 	}
-	for _, tc := range formats {
-		tc := tc
-		t.Run(tc.format, func(t *testing.T) {
+	for _, testCase := range formats {
+		testCase := testCase
+		t.Run(testCase.format, func(t *testing.T) {
 			dir := filepath.Join(t.TempDir(), "results")
-			exportWrite(t, dir, tc.format, false, exportStamps())
+			exportWrite(t, dir, testCase.format, false, profileExports())
 			got := golden.Bundle(t, dir)
-			if tc.jsonFallback {
+			if testCase.jsonFallback {
 				jsonDir := filepath.Join(t.TempDir(), "results")
-				exportWrite(t, jsonDir, "json", false, exportStamps())
+				exportWrite(t, jsonDir, "json", false, profileExports())
 				golden.AssertJSONFallback(t, dir, jsonDir)
 				got = golden.BundleFiles(t, dir, "cookie.json")
 			}
-			golden.Assert(t, "export-"+tc.format+".golden", got)
-			assert.Equal(t, exportCategoryFiles(tc.ext, category.All()...), exportDirFiles(t, dir))
+			golden.Assert(t, "export-"+testCase.format+".golden", got)
+			assert.Equal(t, exportCategoryFiles(testCase.fileExtension, category.All()...), exportDirFiles(t, dir))
 			exportAssertFileContract(t, dir)
-			for _, form := range tc.urlForms {
+			for _, form := range testCase.urlForms {
 				exportAssertURLForm(t, dir, form)
 			}
 
 			sparse := filepath.Join(t.TempDir(), "sparse")
-			exportWrite(t, sparse, tc.format, false, exportSparseStamps())
-			assert.Equal(t, exportCategoryFiles(tc.ext, category.Password, category.LocalStorage), exportDirFiles(t, sparse))
+			exportWrite(t, sparse, testCase.format, false, sparseProfileExports())
+			assert.Equal(t, exportCategoryFiles(testCase.fileExtension, category.Password, category.LocalStorage), exportDirFiles(t, sparse))
 		})
 	}
 
 	t.Run("zip", func(t *testing.T) {
 		loose := filepath.Join(t.TempDir(), "results")
-		exportWrite(t, loose, "csv", false, exportStamps())
+		exportWrite(t, loose, "csv", false, profileExports())
 		dir := filepath.Join(t.TempDir(), "results")
-		exportWrite(t, dir, "csv", true, exportStamps())
+		exportWrite(t, dir, "csv", true, profileExports())
 
 		assert.Equal(t, []string{"results.zip"}, exportDirFiles(t, dir))
 		archive := filepath.Join(dir, "results.zip")
@@ -111,22 +111,22 @@ func TestExportGolden(t *testing.T) {
 	})
 }
 
-func exportWrite(t *testing.T, dir, format string, compress bool, stamps []exportStamp) {
+func exportWrite(t *testing.T, dir, format string, compress bool, exports []profileExport) {
 	t.Helper()
-	f, err := export.ParseFormat(format)
+	parsedFormat, err := export.ParseFormat(format)
 	require.NoError(t, err)
-	w, err := export.NewWriter(dir, f, compress)
+	writer, err := export.NewWriter(dir, parsedFormat, compress)
 	require.NoError(t, err)
-	for _, s := range stamps {
-		require.NoError(t, writeStamp(w, s))
+	for _, batch := range exports {
+		require.NoError(t, writeProfileExport(writer, batch))
 	}
-	require.NoError(t, w.Close())
+	require.NoError(t, writer.Close())
 }
 
-func exportCategoryFiles(ext string, categories ...category.Category) []string {
+func exportCategoryFiles(fileExtension string, categories ...category.Category) []string {
 	names := make([]string, 0, len(categories))
-	for _, c := range categories {
-		names = append(names, c.String()+"."+ext)
+	for _, dataCategory := range categories {
+		names = append(names, dataCategory.String()+"."+fileExtension)
 	}
 	sort.Strings(names)
 	return names
@@ -137,8 +137,8 @@ func exportDirFiles(t *testing.T, dir string) []string {
 	entries, err := os.ReadDir(dir)
 	require.NoError(t, err)
 	names := make([]string, 0, len(entries))
-	for _, e := range entries {
-		names = append(names, e.Name())
+	for _, entry := range entries {
+		names = append(names, entry.Name())
 	}
 	return names
 }
@@ -152,22 +152,22 @@ func exportReadFile(t *testing.T, dir, name string) string {
 
 func exportReadZip(t *testing.T, path string) map[string]string {
 	t.Helper()
-	r, err := zip.OpenReader(path)
+	zipReader, err := zip.OpenReader(path)
 	require.NoError(t, err)
-	defer r.Close()
-	entries := make(map[string]string, len(r.File))
-	for _, f := range r.File {
-		entries[f.Name] = exportReadZipEntry(t, f)
+	defer zipReader.Close()
+	entries := make(map[string]string, len(zipReader.File))
+	for _, zipFile := range zipReader.File {
+		entries[zipFile.Name] = exportReadZipEntry(t, zipFile)
 	}
 	return entries
 }
 
-func exportReadZipEntry(t *testing.T, f *zip.File) string {
+func exportReadZipEntry(t *testing.T, zipFile *zip.File) string {
 	t.Helper()
-	rc, err := f.Open()
+	entryReader, err := zipFile.Open()
 	require.NoError(t, err)
-	defer rc.Close()
-	data, err := io.ReadAll(rc)
+	defer entryReader.Close()
+	data, err := io.ReadAll(entryReader)
 	require.NoError(t, err)
 	return string(data)
 }
@@ -203,9 +203,9 @@ func exportAssertURLForm(t *testing.T, dir string, form exportURLForm) {
 	assert.NotContainsf(t, content, absent, "%s", form.file)
 }
 
-// Entries are listed in extractor sort order with unique sort keys, so re-sorting a profile cannot change a golden.
-func exportStamps() []exportStamp {
-	return []exportStamp{
+// profileExports lists entries in sort order with unique sort keys, so re-sorting a profile cannot change a golden.
+func profileExports() []profileExport {
+	return []profileExport{
 		{browser: "Chrome", profile: "Default", data: &exportData{
 			Passwords: []record.Login{
 				{
@@ -378,8 +378,8 @@ func exportStamps() []exportStamp {
 	}
 }
 
-func exportSparseStamps() []exportStamp {
-	return []exportStamp{
+func sparseProfileExports() []profileExport {
+	return []profileExport{
 		{browser: "Chrome", profile: "Default", data: &exportData{
 			Passwords: []record.Login{{URL: "https://example.com/", Username: "alice", Store: record.StoreLocal}},
 			Cookies:   []record.Cookie{},
@@ -392,42 +392,42 @@ func exportSparseStamps() []exportStamp {
 	}
 }
 
-func writeStamp(w *export.Writer, s exportStamp) error {
-	if s.data == nil {
+func writeProfileExport(writer *export.Writer, batch profileExport) error {
+	if batch.data == nil {
 		return nil
 	}
-	for _, c := range category.All() {
-		records := profileRecords(s.data, c)
-		for _, rec := range records {
-			record.Stamp(rec, s.browser, s.profile)
+	for _, dataCategory := range category.All() {
+		records := profileRecords(batch.data, dataCategory)
+		for _, row := range records {
+			row.SetBrowserAndProfile(batch.browser, batch.profile)
 		}
-		if err := w.Write(c, records); err != nil {
+		if err := writer.Write(dataCategory, records); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func profileRecords(d *exportData, c category.Category) []record.Record {
-	switch c {
+func profileRecords(data *exportData, dataCategory category.Category) []record.Record {
+	switch dataCategory {
 	case category.Password:
-		return recordsOf(d.Passwords)
+		return recordsOf(data.Passwords)
 	case category.Cookie:
-		return recordsOf(d.Cookies)
+		return recordsOf(data.Cookies)
 	case category.Bookmark:
-		return recordsOf(d.Bookmarks)
+		return recordsOf(data.Bookmarks)
 	case category.History:
-		return recordsOf(d.Histories)
+		return recordsOf(data.Histories)
 	case category.Download:
-		return recordsOf(d.Downloads)
+		return recordsOf(data.Downloads)
 	case category.CreditCard:
-		return recordsOf(d.CreditCards)
+		return recordsOf(data.CreditCards)
 	case category.Extension:
-		return recordsOf(d.Extensions)
+		return recordsOf(data.Extensions)
 	case category.LocalStorage:
-		return recordsOf(d.LocalStorage)
+		return recordsOf(data.LocalStorage)
 	case category.SessionStorage:
-		return recordsOf(d.SessionStorage)
+		return recordsOf(data.SessionStorage)
 	default:
 		return nil
 	}

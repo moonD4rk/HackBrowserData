@@ -22,16 +22,16 @@ type fakeRetriever struct {
 
 func (r *fakeRetriever) Version() Version { return r.version }
 
-func (r *fakeRetriever) Retrieve(_ context.Context, loc Locator) ([]byte, error) {
+func (r *fakeRetriever) Retrieve(_ context.Context, locator Locator) ([]byte, error) {
 	r.calls++
-	r.gotLoc = loc
+	r.gotLoc = locator
 	return r.key, r.err
 }
 
 var (
-	k10 = bytes.Repeat([]byte{0x10}, 32)
-	k11 = bytes.Repeat([]byte{0x11}, 32)
-	k20 = bytes.Repeat([]byte{0x20}, 32)
+	v10Key = bytes.Repeat([]byte{0x10}, 32)
+	v11Key = bytes.Repeat([]byte{0x11}, 32)
+	v20Key = bytes.Repeat([]byte{0x20}, 32)
 )
 
 func TestRetrieveAll_OneKeyPerVersion(t *testing.T) {
@@ -42,18 +42,18 @@ func TestRetrieveAll_OneKeyPerVersion(t *testing.T) {
 	}{
 		{
 			name:       "Windows shape: v10 and v20",
-			retrievers: []*fakeRetriever{{version: V10, key: k10}, {version: V20, key: k20}},
-			want:       Set{V10: k10, V20: k20},
+			retrievers: []*fakeRetriever{{version: V10, key: v10Key}, {version: V20, key: v20Key}},
+			want:       Set{V10: v10Key, V20: v20Key},
 		},
 		{
 			name:       "Linux shape: v10 and v11",
-			retrievers: []*fakeRetriever{{version: V10, key: k10}, {version: V11, key: k11}},
-			want:       Set{V10: k10, V11: k11},
+			retrievers: []*fakeRetriever{{version: V10, key: v10Key}, {version: V11, key: v11Key}},
+			want:       Set{V10: v10Key, V11: v11Key},
 		},
 		{
 			name:       "macOS shape: v10 only",
-			retrievers: []*fakeRetriever{{version: V10, key: k10}},
-			want:       Set{V10: k10},
+			retrievers: []*fakeRetriever{{version: V10, key: v10Key}},
+			want:       Set{V10: v10Key},
 		},
 		{
 			name:       "no retrievers",
@@ -61,35 +61,35 @@ func TestRetrieveAll_OneKeyPerVersion(t *testing.T) {
 			want:       Set{},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := retrieveAll(context.Background(), Locator{}, asRetrievers(tt.retrievers))
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got, err := retrieveAll(context.Background(), Locator{}, asRetrievers(testCase.retrievers))
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
+			assert.Equal(t, testCase.want, got)
 		})
 	}
 }
 
 func TestRetrieveAll_FirstKeyWinsAndStopsTheVersion(t *testing.T) {
 	failing := &fakeRetriever{version: V10, err: errors.New("needs root")}
-	winner := &fakeRetriever{version: V10, key: k10}
+	winner := &fakeRetriever{version: V10, key: v10Key}
 	later := &fakeRetriever{version: V10, key: bytes.Repeat([]byte{0xFF}, 16)}
 
 	got, err := retrieveAll(context.Background(), Locator{}, []Retriever{failing, winner, later})
 	require.NoError(t, err, "a strategy that failed before a later one succeeded is not an error")
-	assert.Equal(t, Set{V10: k10}, got)
+	assert.Equal(t, Set{V10: v10Key}, got)
 	assert.Equal(t, []int{1, 1, 0}, []int{failing.calls, winner.calls, later.calls})
 }
 
 func TestRetrieveAll_VersionsAreIndependent(t *testing.T) {
-	v20 := &fakeRetriever{version: V20, err: errors.New("abe: inject failed")}
+	v20Retriever := &fakeRetriever{version: V20, err: errors.New("abe: inject failed")}
 	got, err := retrieveAll(context.Background(), Locator{}, []Retriever{
-		&fakeRetriever{version: V10, key: k10},
-		v20,
+		&fakeRetriever{version: V10, key: v10Key},
+		v20Retriever,
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "v20: abe: inject failed")
-	assert.Equal(t, Set{V10: k10}, got, "a v20 failure keeps the v10 key")
+	assert.Equal(t, Set{V10: v10Key}, got, "a v20 failure keeps the v10 key")
 }
 
 func TestRetrieveAll_ErrorOnlyWhenEveryRetrieverFails(t *testing.T) {
@@ -115,17 +115,17 @@ func TestRetrieveAll_NotApplicableIsSilent(t *testing.T) {
 }
 
 func TestRetrieveAll_PassesTheLocator(t *testing.T) {
-	r := &fakeRetriever{version: V10, key: k10}
-	loc := Locator{LocalState: "/tmp/Local State", KeychainLabel: "Chrome", Exe: "chrome.exe", ABE: ABEChromeBase}
-	_, err := retrieveAll(context.Background(), loc, []Retriever{r})
+	retriever := &fakeRetriever{version: V10, key: v10Key}
+	locator := Locator{LocalState: "/tmp/Local State", KeychainLabel: "Chrome", Exe: "chrome.exe", ABE: ABEChromeBase}
+	_, err := retrieveAll(context.Background(), locator, []Retriever{retriever})
 	require.NoError(t, err)
-	assert.Equal(t, loc, r.gotLoc)
+	assert.Equal(t, locator, retriever.gotLoc)
 }
 
 func asRetrievers(fakes []*fakeRetriever) []Retriever {
-	rs := make([]Retriever, 0, len(fakes))
-	for _, f := range fakes {
-		rs = append(rs, f)
+	retrievers := make([]Retriever, 0, len(fakes))
+	for _, fake := range fakes {
+		retrievers = append(retrievers, fake)
 	}
-	return rs
+	return retrievers
 }

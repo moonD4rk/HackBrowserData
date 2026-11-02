@@ -71,7 +71,7 @@ func AESGCMDecrypt(key, nonce, ciphertext []byte) ([]byte, error) {
 	return aead.Open(nil, nonce, ciphertext, nil)
 }
 
-// blob is [12-byte nonce][ciphertext + 16-byte tag], as Yandex stores it.
+// AESGCMDecryptBlob takes [12-byte nonce][ciphertext + 16-byte tag], as Yandex stores it.
 func AESGCMDecryptBlob(key, blob, aad []byte) ([]byte, error) {
 	if len(blob) < gcmNonceSize {
 		return nil, errShortCiphertext
@@ -93,67 +93,67 @@ func cbcEncrypt(block cipher.Block, iv, plaintext []byte) ([]byte, error) {
 	}
 
 	padded := pkcs5Padding(plaintext, block.BlockSize())
-	dst := make([]byte, len(padded))
-	cipher.NewCBCEncrypter(block, iv).CryptBlocks(dst, padded)
-	return dst, nil
+	encrypted := make([]byte, len(padded))
+	cipher.NewCBCEncrypter(block, iv).CryptBlocks(encrypted, padded)
+	return encrypted, nil
 }
 
 func cbcDecrypt(block cipher.Block, iv, ciphertext []byte) ([]byte, error) {
-	bs := block.BlockSize()
-	if len(iv) != bs {
+	blockSize := block.BlockSize()
+	if len(iv) != blockSize {
 		return nil, errInvalidIVLength
 	}
-	if len(ciphertext) < bs {
+	if len(ciphertext) < blockSize {
 		return nil, errShortCiphertext
 	}
-	if len(ciphertext)%bs != 0 {
+	if len(ciphertext)%blockSize != 0 {
 		return nil, errInvalidBlockSize
 	}
 
-	dst := make([]byte, len(ciphertext))
-	cipher.NewCBCDecrypter(block, iv).CryptBlocks(dst, ciphertext)
+	decrypted := make([]byte, len(ciphertext))
+	cipher.NewCBCDecrypter(block, iv).CryptBlocks(decrypted, ciphertext)
 
-	dst, err := pkcs5UnPadding(dst, bs)
+	decrypted, err := pkcs5UnPadding(decrypted, blockSize)
 	if err != nil {
 		return nil, fmt.Errorf("decrypt: %w", err)
 	}
-	return dst, nil
+	return decrypted, nil
 }
 
-// paddingZero returns src unchanged if already long enough; otherwise a zero-padded new slice.
-func paddingZero(src []byte, length int) []byte {
-	if len(src) >= length {
-		return src
+// paddingZero returns data unchanged if already long enough; otherwise a zero-padded new slice.
+func paddingZero(data []byte, length int) []byte {
+	if len(data) >= length {
+		return data
 	}
-	dst := make([]byte, length)
-	copy(dst, src)
-	return dst
+	padded := make([]byte, length)
+	copy(padded, data)
+	return padded
 }
 
-// pkcs5Padding always returns a new slice and never modifies src.
-func pkcs5Padding(src []byte, blockSize int) []byte {
-	n := blockSize - (len(src) % blockSize)
-	dst := make([]byte, len(src)+n)
-	copy(dst, src)
-	for i := len(src); i < len(dst); i++ {
-		dst[i] = byte(n)
+// pkcs5Padding always returns a new slice and never modifies data.
+func pkcs5Padding(data []byte, blockSize int) []byte {
+	paddingLength := blockSize - (len(data) % blockSize)
+	padded := make([]byte, len(data)+paddingLength)
+	copy(padded, data)
+	for i := len(data); i < len(padded); i++ {
+		padded[i] = byte(paddingLength)
 	}
-	return dst
+	return padded
 }
 
-func pkcs5UnPadding(src []byte, blockSize int) ([]byte, error) {
-	length := len(src)
+func pkcs5UnPadding(data []byte, blockSize int) ([]byte, error) {
+	length := len(data)
 	if length == 0 {
 		return nil, errInvalidPadding
 	}
-	padding := int(src[length-1])
+	padding := int(data[length-1])
 	if padding < 1 || padding > blockSize || padding > length {
 		return nil, errInvalidPadding
 	}
-	for _, b := range src[length-padding:] {
-		if int(b) != padding {
+	for _, paddingByte := range data[length-padding:] {
+		if int(paddingByte) != padding {
 			return nil, errInvalidPadding
 		}
 	}
-	return src[:length-padding], nil
+	return data[:length-padding], nil
 }

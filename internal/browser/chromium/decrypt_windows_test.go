@@ -35,12 +35,12 @@ func encryptWithDPAPI(plaintext []byte) ([]byte, error) {
 		pbData *byte
 	}
 
-	r, _, err := protectDataProc.Call(
+	returned, _, err := protectDataProc.Call(
 		uintptr(unsafe.Pointer(&inBlob)),
 		0, 0, 0, 0, 0,
 		uintptr(unsafe.Pointer(&outBlob)),
 	)
-	if r == 0 {
+	if returned == 0 {
 		return nil, fmt.Errorf("CryptProtectData failed: %w", err)
 	}
 	defer localFreeProc.Call(uintptr(unsafe.Pointer(outBlob.pbData)))
@@ -53,17 +53,17 @@ func encryptWithDPAPI(plaintext []byte) ([]byte, error) {
 
 func TestDecryptValue_V10_Windows(t *testing.T) {
 	// Windows v10 keys are 32 bytes, which routes them to GCM.
-	key32 := []byte("0123456789abcdef0123456789abcdef")
+	aesKey := []byte("0123456789abcdef0123456789abcdef")
 	plaintext := []byte("test_secret_value")
 	nonce := []byte("123456789012") // 12-byte nonce
 
-	gcmEncrypted, err := crypto.AESGCMEncrypt(key32, nonce, plaintext)
+	gcmEncrypted, err := crypto.AESGCMEncrypt(aesKey, nonce, plaintext)
 	require.NoError(t, err)
 
 	// v10 format on Windows: "v10" + nonce(12) + encrypted
 	ciphertext := append([]byte("v10"), append(nonce, gcmEncrypted...)...)
 
-	got, err := decryptValue(masterkey.Set{masterkey.V10: key32}, ciphertext)
+	got, err := decryptValue(masterkey.Set{masterkey.V10: aesKey}, ciphertext)
 	require.NoError(t, err)
 	assert.Equal(t, plaintext, got)
 }

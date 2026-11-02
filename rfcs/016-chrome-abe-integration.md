@@ -295,7 +295,7 @@ Three steps.
 2. **Mine IIDs from TypeLib** — the interface IIDs live in the TypeLib resource of `<InstallDir>\Application\<version>\elevation_service.exe`. PowerShell + `ITypeLib.GetTypeInfo` enumerates them. Map `IElevator<Vendor>` → v1 IID, `IElevator2<Vendor>` → v2 IID (absent for older vendors).
 3. **Determine vtable slot** — count `IElevator` methods in the TypeLib. Chrome-family has 3 methods (slot 5). Edge prepends 3 placeholders (slot 8). Avast extends the interface further (slot 13).
 
-Edit `internal/abe/native/com_iid.c` (add the C-side entry: exe, kind, CLSID, IIDs) and `internal/browser/table.go` (on the browser's `Def` row, set the `Windows` platform's `Exe`, `ExeFallbacks`, and `ABE` to the matching `masterkey.ABEKind`), then `make payload-clean && make build-windows` and redeploy. `TestABERowsMatchPayloadTable` fails at `go test` time if a Go `ABE` row has no `com_iid.c` row with the same exe and kind.
+Edit `internal/abe/native/com_iid.c` (add the C-side entry: exe, kind, CLSID, IIDs) and `internal/browser/table.go` (on the browser's row, set the `Windows` platform's `Exe`, `ExeFallbacks`, and `ABE` to the matching `masterkey.ABEKind`), then `make payload-clean && make build-windows` and redeploy. `TestABERowsMatchPayloadTable` fails at `go test` time if a Go `ABE` row has no `com_iid.c` row with the same exe and kind.
 
 ## 12. Known issues & future work
 

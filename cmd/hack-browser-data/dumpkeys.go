@@ -13,21 +13,21 @@ import (
 
 func dumpKeysCmd() *cobra.Command {
 	var (
-		f          app.Flags
+		flags      app.Flags
 		outputPath string
 	)
 
-	cmd := &cobra.Command{
+	command := &cobra.Command{
 		Use:   "dumpkeys",
 		Short: "Export Chromium master keys as JSON for cross-host decryption",
 		Example: `  hack-browser-data dumpkeys -o keys.json
   hack-browser-data dumpkeys -b chrome`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			req, err := app.ValidateKeys(f)
+		RunE: func(command *cobra.Command, args []string) error {
+			options, err := app.ValidateKeys(flags)
 			if err != nil {
 				return err
 			}
-			dump, err := app.DumpKeys(cmd.Context(), app.Discover(req), req)
+			dump, err := app.DumpKeys(command.Context(), app.Discover(options), options)
 			if err != nil {
 				return err
 			}
@@ -44,9 +44,9 @@ func dumpKeysCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&f.Browser, "browser", "b", "all", "target browser: all|"+browserNames())
-	cmd.Flags().StringVarP(&outputPath, "output", "o", "", "output file (default: stdout)")
-	keychainPasswordFlags(cmd, &f)
+	command.Flags().StringVarP(&flags.Browser, "browser", "b", "all", "target browser: all|"+browserNames())
+	command.Flags().StringVarP(&outputPath, "output", "o", "", "output file (default: stdout)")
+	keychainPasswordFlags(command, &flags)
 
-	return cmd
+	return command
 }

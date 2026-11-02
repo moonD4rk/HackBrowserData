@@ -11,9 +11,9 @@ import (
 )
 
 func dumpCmd() *cobra.Command {
-	var f app.Flags
+	var flags app.Flags
 
-	cmd := &cobra.Command{
+	command := &cobra.Command{
 		Use:   "dump",
 		Short: "Extract and decrypt browser data (default command)",
 		Example: `  hack-browser-data dump
@@ -21,42 +21,43 @@ func dumpCmd() *cobra.Command {
   hack-browser-data dump -b chrome -f json -d output
   hack-browser-data dump -f cookie-editor
   hack-browser-data dump --zip`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return runDump(cmd.Context(), cmd.ErrOrStderr(), f)
+		RunE: func(command *cobra.Command, args []string) error {
+			return runDump(command.Context(), command.ErrOrStderr(), flags)
 		},
 	}
 
-	cmd.Flags().StringVarP(&f.Browser, "browser", "b", "all", "target browser: all|"+browserNames())
-	cmd.Flags().StringVarP(&f.Categories, "category", "c", "all", "data categories (comma-separated): all|"+categoryNames())
-	cmd.Flags().StringVarP(&f.Format, "format", "f", "json", "output format: csv|json|cookie-editor")
-	cmd.Flags().StringVarP(&f.Dir, "dir", "d", "results", "output directory")
-	cmd.Flags().StringVarP(&f.ProfilePath, "profile-path", "p", "", "custom profile dir path, get with chrome://version")
-	keychainPasswordFlags(cmd, &f)
-	cmd.Flags().BoolVar(&f.Zip, "zip", false, "compress output to zip")
+	command.Flags().StringVarP(&flags.Browser, "browser", "b", "all", "target browser: all|"+browserNames())
+	command.Flags().StringVarP(&flags.Categories, "category", "c", "all", "data categories (comma-separated): all|"+categoryNames())
+	command.Flags().StringVarP(&flags.Format, "format", "f", "json", "output format: csv|json|cookie-editor")
+	command.Flags().StringVarP(&flags.Dir, "dir", "d", "results", "output directory")
+	command.Flags().StringVarP(&flags.ProfilePath, "profile-path", "p", "", "custom profile dir path, get with chrome://version")
+	keychainPasswordFlags(command, &flags)
+	command.Flags().BoolVar(&flags.Zip, "zip", false, "compress output to zip")
 
-	return cmd
+	return command
 }
 
-func keychainPasswordFlags(cmd *cobra.Command, f *app.Flags) {
-	cmd.Flags().StringVar(&f.KeychainPassword, "keychain-pw", "", "macOS keychain password (visible in ps and shell history)")
-	cmd.Flags().BoolVar(&f.KeychainPasswordStdin, "keychain-pw-stdin", false, "read the macOS keychain password from the first line of stdin")
-	cmd.MarkFlagsMutuallyExclusive("keychain-pw", "keychain-pw-stdin")
+func keychainPasswordFlags(command *cobra.Command, flags *app.Flags) {
+	command.Flags().StringVar(&flags.KeychainPassword, "keychain-pw", "", "macOS keychain password (visible in ps and shell history)")
+	command.Flags().BoolVar(&flags.KeychainPasswordStdin, "keychain-pw-stdin", false,
+		"read the macOS keychain password from the first line of stdin")
+	command.MarkFlagsMutuallyExclusive("keychain-pw", "keychain-pw-stdin")
 }
 
-func runDump(ctx context.Context, stderr io.Writer, f app.Flags) error {
-	req, err := app.Validate(f)
+func runDump(ctx context.Context, stderr io.Writer, flags app.Flags) error {
+	options, err := app.Validate(flags)
 	if err != nil {
 		return err
 	}
-	d := app.Discover(req)
-	if len(d.Dirs) == 0 {
-		if len(d.Failed) > 0 {
-			report(stderr, app.Summary{Results: d.Failed})
+	discovery := app.Discover(options)
+	if len(discovery.Dirs) == 0 {
+		if len(discovery.Failed) > 0 {
+			report(stderr, app.Summary{Results: discovery.Failed})
 		}
 		log.Warnf("no browsers found")
 		return nil
 	}
-	summary, err := app.Execute(ctx, app.NewPlan(d, req), req)
+	summary, err := app.Execute(ctx, app.NewPlan(discovery, options), options)
 	if ctx.Err() == nil {
 		report(stderr, summary)
 	}

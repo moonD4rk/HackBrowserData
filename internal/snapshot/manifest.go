@@ -32,8 +32,8 @@ type ManifestProfile struct {
 	Dir  string `json:"dir"`
 }
 
-func (d *Dir) WriteManifest(m Manifest) error {
-	data, err := json.MarshalIndent(m, "", "  ")
+func (d *Dir) WriteManifest(manifest Manifest) error {
+	data, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encode manifest: %w", err)
 	}
@@ -52,12 +52,12 @@ func (d *Dir) ReadManifest() (Manifest, bool, error) {
 	if err != nil {
 		return Manifest{}, false, fmt.Errorf("read manifest: %w", err)
 	}
-	var m Manifest
-	if err := json.Unmarshal(data, &m); err != nil {
+	var manifest Manifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
 		return Manifest{}, false, fmt.Errorf("decode manifest: %w", err)
 	}
-	if m.Version != ManifestVersion {
-		return Manifest{}, false, fmt.Errorf("unsupported manifest version %d (this build reads %d)", m.Version, ManifestVersion)
+	if manifest.Version != ManifestVersion {
+		return Manifest{}, false, fmt.Errorf("unsupported manifest version %d (this build reads %d)", manifest.Version, ManifestVersion)
 	}
-	return m, true, nil
+	return manifest, true, nil
 }

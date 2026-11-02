@@ -25,11 +25,11 @@ var (
 )
 
 func decryptYandexIntermediateKey(masterKey, blob []byte) ([]byte, error) {
-	idx := bytes.Index(blob, localEncryptorPrefix)
-	if idx < 0 {
+	index := bytes.Index(blob, localEncryptorPrefix)
+	if index < 0 {
 		return nil, errYandexMarkerNotFound
 	}
-	payload := blob[idx+len(localEncryptorPrefix):]
+	payload := blob[index+len(localEncryptorPrefix):]
 	if len(payload) < yandexIntKeyBlobLen {
 		return nil, errYandexBlobShort
 	}

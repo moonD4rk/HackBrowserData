@@ -16,16 +16,16 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
-// The fixtures' keys are handed in, since no secret store holds them.
+// TestExtractGolden hands in the fixtures' keys, since no secret store holds them.
 func TestExtractGolden(t *testing.T) {
 	home := t.TempDir()
-	keys := make(map[browser.DirID]masterkey.Set)
-	for _, inst := range browsertest.ChromiumInstalls {
-		def, ok := browser.Lookup(inst.Key)
-		require.True(t, ok, inst.Key)
-		require.Equal(t, inst.Name, def.Name, "records are stamped with the table's display name")
-		browsertest.ChromiumUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])), inst.Key)
-		keys[browser.DirID(inst.Key)] = browsertest.ChromiumKeys
+	keys := make(map[browser.UserDataDirID]masterkey.Set)
+	for _, fixture := range browsertest.ChromiumInstalls {
+		namedBrowser, ok := browser.Lookup(fixture.Name)
+		require.True(t, ok, fixture.Name)
+		require.Equal(t, fixture.DisplayName, namedBrowser.DisplayName, "records carry the table's display name")
+		browsertest.ChromiumUserData(t, filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirs[0])), fixture.Name)
+		keys[browser.UserDataDirID(fixture.Name)] = browsertest.ChromiumKeys
 	}
 
 	assertExtractGoldens(t, "extract", func(t *testing.T, format string) string {
@@ -35,9 +35,9 @@ func TestExtractGolden(t *testing.T) {
 
 func TestExtractGoldenFirefox(t *testing.T) {
 	home := t.TempDir()
-	def, ok := browser.Lookup("firefox")
+	firefoxBrowser, ok := browser.Lookup("firefox")
 	require.True(t, ok)
-	browsertest.FirefoxUserData(t, filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0])))
+	browsertest.FirefoxUserData(t, filepath.Join(home, filepath.FromSlash(firefoxBrowser.Platform().UserDataDirs[0])))
 
 	assertExtractGoldens(t, "extract-firefox", func(t *testing.T, format string) string {
 		return extractGoldenRun(t, home, nil, format)
@@ -56,15 +56,15 @@ func TestExtractGoldenSafari(t *testing.T) {
 	})
 }
 
-func extractGoldenRun(t *testing.T, home string, keys map[browser.DirID]masterkey.Set, format string) string {
+func extractGoldenRun(t *testing.T, home string, keys map[browser.UserDataDirID]masterkey.Set, format string) string {
 	t.Helper()
 	out := t.TempDir()
-	req, err := app.Validate(app.Flags{Browser: "all", Categories: "all", Format: format, Dir: out})
+	options, err := app.Validate(app.Flags{Browser: "all", Categories: "all", Format: format, Dir: out})
 	require.NoError(t, err)
-	req.Home, req.Keys = home, keys
+	options.Home, options.Keys = home, keys
 
-	plan := app.NewPlan(app.Discover(req), req)
-	_, err = app.Execute(context.Background(), plan, req)
+	plan := app.NewPlan(app.Discover(options), options)
+	_, err = app.Execute(context.Background(), plan, options)
 	require.NoError(t, err)
 	return out
 }
@@ -80,16 +80,16 @@ var extractGoldenFormats = []struct {
 
 func assertExtractGoldens(t *testing.T, prefix string, run func(t *testing.T, format string) string) {
 	t.Helper()
-	for _, tt := range extractGoldenFormats {
-		tt := tt
-		t.Run(tt.format, func(t *testing.T) {
-			out := run(t, tt.format)
+	for _, testCase := range extractGoldenFormats {
+		testCase := testCase
+		t.Run(testCase.format, func(t *testing.T) {
+			out := run(t, testCase.format)
 			got := golden.Bundle(t, out)
-			if tt.jsonFallback {
+			if testCase.jsonFallback {
 				golden.AssertJSONFallback(t, out, run(t, "json"))
 				got = golden.BundleFiles(t, out, "cookie.json")
 			}
-			golden.Assert(t, prefix+"-"+tt.format+".golden", got)
+			golden.Assert(t, prefix+"-"+testCase.format+".golden", got)
 		})
 	}
 }

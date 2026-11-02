@@ -2,16 +2,17 @@
 package browser
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
-// Def is one browser HBD knows. ID is the -b value and the keys.json vault key; Name is stamped on every record.
-type Def struct {
-	ID   string
-	Name string
-	Base Base
+// Browser is one browser HBD knows. Name is the -b value and the keys.json vault key; DisplayName goes on every record.
+type Browser struct {
+	Name        string
+	DisplayName string
+	Base        Base
 
 	Darwin  Platform
 	Linux   Platform
@@ -41,7 +42,7 @@ func (b Base) String() string {
 	}
 }
 
-// A Platform without UserDataDirs means the browser is not supported on that OS.
+// Platform is one OS's half of a Browser; one without UserDataDirs means the browser is not supported there.
 type Platform struct {
 	UserDataDirs  []string // slash-separated, relative to the home directory; globs allowed
 	KeychainLabel string   // macOS Keychain account / Linux Secret Service label; "" = none
@@ -51,33 +52,41 @@ type Platform struct {
 }
 
 // Supported returns the browsers of the running OS, in table order.
-func Supported() []Def {
-	var out []Def
-	for _, d := range defs {
-		if len(d.Platform().UserDataDirs) > 0 {
-			out = append(out, d)
+func Supported() []Browser {
+	var out []Browser
+	for _, browser := range browsers {
+		if len(browser.Platform().UserDataDirs) > 0 {
+			out = append(out, browser)
 		}
 	}
 	return out
 }
 
-// IDs are this OS's browser IDs, sorted as the -b help has always listed them.
-func IDs() []string {
-	defs := Supported()
-	ids := make([]string, len(defs))
-	for i, d := range defs {
-		ids[i] = d.ID
+// Names are this OS's browser names, sorted as the -b help has always listed them.
+func Names() []string {
+	supported := Supported()
+	names := make([]string, len(supported))
+	for i, browser := range supported {
+		names[i] = browser.Name
 	}
-	sort.Strings(ids)
-	return ids
+	sort.Strings(names)
+	return names
 }
 
-// Lookup finds a browser by ID in the whole table, whatever the running OS, so restore resolves another host's vaults.
-func Lookup(id string) (Def, bool) {
-	for _, d := range defs {
-		if d.ID == id {
-			return d, true
+// UserDataDirID numbers by path order among a browser's user data dirs, so IDs stay the same from run to run.
+func (b Browser) UserDataDirID(index int) UserDataDirID {
+	if index == 0 {
+		return UserDataDirID(b.Name)
+	}
+	return UserDataDirID(fmt.Sprintf("%s-%d", b.Name, index+1))
+}
+
+// Lookup finds a browser by name in the whole table, whatever the OS, so restore resolves another host's vaults.
+func Lookup(name string) (Browser, bool) {
+	for _, browser := range browsers {
+		if browser.Name == name {
+			return browser, true
 		}
 	}
-	return Def{}, false
+	return Browser{}, false
 }

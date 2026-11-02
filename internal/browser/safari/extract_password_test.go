@@ -82,10 +82,10 @@ func TestBuildURL(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := buildURL(tt.protocol, tt.server, tt.port, tt.path)
-			assert.Equal(t, tt.want, got)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := buildURL(testCase.protocol, testCase.server, testCase.port, testCase.path)
+			assert.Equal(t, testCase.want, got)
 		})
 	}
 }

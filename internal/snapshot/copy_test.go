@@ -11,21 +11,21 @@ import (
 )
 
 func TestCopy_SkipsEveryEntryEndingInLock(t *testing.T) {
-	src := t.TempDir()
+	from := t.TempDir()
 	for _, name := range []string{"LOCK", "db.lock", "Block", "LOCKED", "000003.log"} {
-		writeFile(t, filepath.Join(src, name), []byte(name))
+		writeFile(t, filepath.Join(from, name), []byte(name))
 	}
-	writeFile(t, filepath.Join(src, "unlock", "inner"), []byte("inner"))
+	writeFile(t, filepath.Join(from, "unlock", "inner"), []byte("inner"))
 
-	dst := filepath.Join(t.TempDir(), "leveldb")
-	require.NoError(t, Copy(src, dst, true))
+	into := filepath.Join(t.TempDir(), "leveldb")
+	require.NoError(t, Copy(from, into, true))
 
 	for _, skipped := range []string{"LOCK", "db.lock", "Block"} {
-		assert.NoFileExists(t, filepath.Join(dst, skipped))
+		assert.NoFileExists(t, filepath.Join(into, skipped))
 	}
-	assert.NoDirExists(t, filepath.Join(dst, "unlock"), "a directory whose name ends in lock is skipped whole")
-	assert.FileExists(t, filepath.Join(dst, "LOCKED"))
-	assert.FileExists(t, filepath.Join(dst, "000003.log"))
+	assert.NoDirExists(t, filepath.Join(into, "unlock"), "a directory whose name ends in lock is skipped whole")
+	assert.FileExists(t, filepath.Join(into, "LOCKED"))
+	assert.FileExists(t, filepath.Join(into, "000003.log"))
 }
 
 func TestCopy_MissingSourceFails(t *testing.T) {
@@ -35,40 +35,40 @@ func TestCopy_MissingSourceFails(t *testing.T) {
 }
 
 func TestCopy_FileWithoutSidecarsCopiesOnlyTheFile(t *testing.T) {
-	src := filepath.Join(t.TempDir(), "History")
-	writeFile(t, src, []byte("history"))
+	from := filepath.Join(t.TempDir(), "History")
+	writeFile(t, from, []byte("history"))
 
-	dst := filepath.Join(t.TempDir(), "History")
-	require.NoError(t, Copy(src, dst, false))
+	into := filepath.Join(t.TempDir(), "History")
+	require.NoError(t, Copy(from, into, false))
 
-	got, err := os.ReadFile(dst)
+	got, err := os.ReadFile(into)
 	require.NoError(t, err)
 	assert.Equal(t, "history", string(got))
-	assert.NoFileExists(t, dst+"-wal")
-	assert.NoFileExists(t, dst+"-shm")
+	assert.NoFileExists(t, into+"-wal")
+	assert.NoFileExists(t, into+"-shm")
 }
 
 func TestCopy_SymlinkInADirectoryStaysALink(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("creating symlinks needs extra privileges on Windows")
 	}
-	src := t.TempDir()
-	writeFile(t, filepath.Join(src, "target"), []byte("target"))
-	require.NoError(t, os.Symlink("target", filepath.Join(src, "link")))
+	from := t.TempDir()
+	writeFile(t, filepath.Join(from, "target"), []byte("target"))
+	require.NoError(t, os.Symlink("target", filepath.Join(from, "link")))
 
-	dst := filepath.Join(t.TempDir(), "copy")
-	require.NoError(t, Copy(src, dst, true))
+	into := filepath.Join(t.TempDir(), "copy")
+	require.NoError(t, Copy(from, into, true))
 
-	got, err := os.Readlink(filepath.Join(dst, "link"))
+	got, err := os.Readlink(filepath.Join(into, "link"))
 	require.NoError(t, err)
 	assert.Equal(t, "target", got)
 }
 
-// A directory removed between its parent's listing and its own copy is copied as empty instead of failing the tree.
+// TestCopyChildren_VanishedDirectoryCopiesAsEmpty copies a directory removed mid-copy as empty, not failing the tree.
 func TestCopyChildren_VanishedDirectoryCopiesAsEmpty(t *testing.T) {
-	dst := filepath.Join(t.TempDir(), "Origins")
-	require.NoError(t, copyChildren(filepath.Join(t.TempDir(), "gone"), dst))
-	entries, err := os.ReadDir(dst)
+	into := filepath.Join(t.TempDir(), "Origins")
+	require.NoError(t, copyChildren(filepath.Join(t.TempDir(), "gone"), into))
+	entries, err := os.ReadDir(into)
 	require.NoError(t, err)
 	assert.Empty(t, entries)
 }

@@ -17,9 +17,9 @@ func versionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
 		Short: "Print version information",
-		Run: func(cmd *cobra.Command, _ []string) {
+		Run: func(command *cobra.Command, _ []string) {
 			resolveVersionFromBuildInfo()
-			fmt.Fprintf(cmd.OutOrStdout(), "hack-browser-data %s\n  commit: %s\n  built:  %s\n",
+			fmt.Fprintf(command.OutOrStdout(), "hack-browser-data %s\n  commit: %s\n  built:  %s\n",
 				version, commit, buildDate)
 		},
 	}
@@ -36,17 +36,17 @@ func resolveVersionFromBuildInfo() {
 	if info.Main.Version != "" && info.Main.Version != "(devel)" {
 		version = info.Main.Version
 	}
-	for _, s := range info.Settings {
-		switch s.Key {
+	for _, setting := range info.Settings {
+		switch setting.Key {
 		case "vcs.revision":
-			if len(s.Value) > 8 {
-				commit = s.Value[:8]
-			} else if s.Value != "" {
-				commit = s.Value
+			if len(setting.Value) > 8 {
+				commit = setting.Value[:8]
+			} else if setting.Value != "" {
+				commit = setting.Value
 			}
 		case "vcs.time":
-			if s.Value != "" {
-				buildDate = s.Value
+			if setting.Value != "" {
+				buildDate = setting.Value
 			}
 		}
 	}

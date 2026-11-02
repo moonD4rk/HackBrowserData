@@ -30,40 +30,40 @@ type RestoreFlags struct {
 
 // ValidateRestore checks restore's flags and reads its keys before any data is opened. A restore's browsers are the
 // dump's vaults, not this OS's table, so -b is checked against them.
-func ValidateRestore(f RestoreFlags) (Request, masterkey.Dump, error) {
-	if f.Keys == "" {
-		return Request{}, masterkey.Dump{}, errors.New("requires --keys <file> (or - for stdin)")
+func ValidateRestore(flags RestoreFlags) (Options, masterkey.Dump, error) {
+	if flags.Keys == "" {
+		return Options{}, masterkey.Dump{}, errors.New("requires --keys <file> (or - for stdin)")
 	}
-	if (f.DataDir == "") == (f.DataZip == "") {
-		return Request{}, masterkey.Dump{}, errors.New("exactly one of --data-dir or --data-zip is required")
+	if (flags.DataDir == "") == (flags.DataZip == "") {
+		return Options{}, masterkey.Dump{}, errors.New("exactly one of --data-dir or --data-zip is required")
 	}
-	categories, err := parseCategories(f.Categories)
+	categories, err := parseCategories(flags.Categories)
 	if err != nil {
-		return Request{}, masterkey.Dump{}, err
+		return Options{}, masterkey.Dump{}, err
 	}
-	format, err := export.ParseFormat(f.Format)
+	format, err := export.ParseFormat(flags.Format)
 	if err != nil {
-		return Request{}, masterkey.Dump{}, err
+		return Options{}, masterkey.Dump{}, err
 	}
-	if err := checkOutputDir(f.Dir); err != nil {
-		return Request{}, masterkey.Dump{}, err
+	if err := checkOutputDir(flags.Dir); err != nil {
+		return Options{}, masterkey.Dump{}, err
 	}
-	if err := checkRestoreData(f.DataDir, f.DataZip); err != nil {
-		return Request{}, masterkey.Dump{}, err
+	if err := checkRestoreData(flags.DataDir, flags.DataZip); err != nil {
+		return Options{}, masterkey.Dump{}, err
 	}
-	dump, err := readKeys(f.Keys)
+	dump, err := readKeys(flags.Keys)
 	if err != nil {
-		return Request{}, masterkey.Dump{}, err
+		return Options{}, masterkey.Dump{}, err
 	}
-	filter := strings.ToLower(strings.TrimSpace(f.Browser))
+	filter := strings.ToLower(strings.TrimSpace(flags.Browser))
 	if filter == "" {
 		filter = allBrowsers
 	}
 	if filter != allBrowsers && len(vaultsOf(dump, filter)) == 0 {
-		return Request{}, masterkey.Dump{}, fmt.Errorf("no vault for browser %q in keys (have: %s)", filter, vaultKeys(dump.Vaults))
+		return Options{}, masterkey.Dump{}, fmt.Errorf("no vault for browser %q in keys (have: %s)", filter, vaultKeys(dump.Vaults))
 	}
-	req := Request{Browser: filter, Categories: categories, Format: format, Dir: f.Dir, Zip: f.Zip}
-	return req, dump, nil
+	options := Options{Browser: filter, Categories: categories, Format: format, Dir: flags.Dir, Zip: flags.Zip}
+	return options, dump, nil
 }
 
 func checkRestoreData(dataDir, dataZip string) error {
@@ -80,16 +80,16 @@ func checkRestoreData(dataDir, dataZip string) error {
 }
 
 func readKeys(path string) (masterkey.Dump, error) {
-	var r io.Reader = os.Stdin
+	var reader io.Reader = os.Stdin
 	if path != "-" {
-		f, err := os.Open(path)
+		file, err := os.Open(path)
 		if err != nil {
 			return masterkey.Dump{}, fmt.Errorf("open keys file %q: %w", path, err)
 		}
-		defer f.Close()
-		r = f
+		defer file.Close()
+		reader = file
 	}
-	dump, err := masterkey.ReadJSON(r)
+	dump, err := masterkey.ReadJSON(reader)
 	if err != nil {
 		return masterkey.Dump{}, fmt.Errorf("read keys file %q: %w", path, err)
 	}
@@ -98,78 +98,84 @@ func readKeys(path string) (masterkey.Dump, error) {
 
 // RestoreDiscovery rebuilds the user data dirs in data, and their keys from dump: from the manifest when data has one,
 // else by today's rules, where the vaults' keys name subdirectories or data is one browser's User Data.
-func RestoreDiscovery(data *snapshot.Dir, dump masterkey.Dump, req Request) (Discovery, map[browser.DirID]masterkey.Set, error) {
-	vaults := vaultsOf(dump, req.Browser)
-	m, ok, err := data.ReadManifest()
+func RestoreDiscovery(
+	data *snapshot.Dir, dump masterkey.Dump, options Options,
+) (Discovery, map[browser.UserDataDirID]masterkey.Set, error) {
+	vaults := vaultsOf(dump, options.Browser)
+	manifest, ok, err := data.ReadManifest()
 	if err != nil {
 		return Discovery{}, nil, err
 	}
 	if ok {
-		d, keys := fromManifest(data.Path(), m, vaults, req.Browser)
-		return d, keys, nil
+		discovery, keys := fromManifest(data.Path(), manifest, vaults, options.Browser)
+		return discovery, keys, nil
 	}
 	return fromLayout(data.Path(), vaults)
 }
 
-func fromManifest(root string, m snapshot.Manifest, vaults []masterkey.Vault, filter string) (Discovery, map[browser.DirID]masterkey.Set) {
-	var d Discovery
-	keys := make(map[browser.DirID]masterkey.Set)
-	for _, md := range m.Dirs {
-		if filter != allBrowsers && md.Browser != filter {
+func fromManifest(
+	root string, manifest snapshot.Manifest, vaults []masterkey.Vault, filter string,
+) (Discovery, map[browser.UserDataDirID]masterkey.Set) {
+	var discovery Discovery
+	keys := make(map[browser.UserDataDirID]masterkey.Set)
+	for _, manifestEntry := range manifest.Dirs {
+		if filter != allBrowsers && manifestEntry.Browser != filter {
 			continue
 		}
-		v, ok := vaultOf(vaults, md)
+		vault, ok := vaultOf(vaults, manifestEntry)
 		if !ok {
-			log.Warnf("restore: %s has no keys, skipping", md.ID)
+			log.Warnf("restore: %s has no keys, skipping", manifestEntry.ID)
 			continue
 		}
-		dir, err := manifestDir(root, md, v)
+		dir, err := manifestDir(root, manifestEntry, vault)
 		if err != nil {
-			log.Warnf("restore: %s: %v", md.ID, err)
+			log.Warnf("restore: %s: %v", manifestEntry.ID, err)
 			continue
 		}
-		d.Dirs = append(d.Dirs, dir)
-		keys[dir.ID] = v.Keys
+		discovery.Dirs = append(discovery.Dirs, dir)
+		keys[dir.ID] = vault.Keys
 	}
-	return d, keys
+	return discovery, keys
 }
 
-// vaultOf finds md's keys: the vault carrying its ID, or for a browser's first dir the vault of that browser.
-func vaultOf(vaults []masterkey.Vault, md snapshot.ManifestDir) (masterkey.Vault, bool) {
-	for _, v := range vaults {
-		if vaultDirID(v) == browser.DirID(md.ID) {
-			return v, true
+// vaultOf finds an entry's keys: the vault carrying its ID, or for a browser's first dir the vault of that browser.
+func vaultOf(vaults []masterkey.Vault, manifestEntry snapshot.ManifestDir) (masterkey.Vault, bool) {
+	for _, vault := range vaults {
+		if vaultUserDataDirID(vault) == browser.UserDataDirID(manifestEntry.ID) {
+			return vault, true
 		}
 	}
 	return masterkey.Vault{}, false
 }
 
 // manifestDir trusts no path in the manifest that would leave its own directory of the archive.
-func manifestDir(root string, md snapshot.ManifestDir, v masterkey.Vault) (browser.UserDataDir, error) {
-	if md.Base != browser.Chromium.String() {
-		return browser.UserDataDir{}, fmt.Errorf("base %q is not restorable", md.Base)
+func manifestDir(root string, manifestEntry snapshot.ManifestDir, vault masterkey.Vault) (browser.UserDataDir, error) {
+	if manifestEntry.Base != browser.Chromium.String() {
+		return browser.UserDataDir{}, fmt.Errorf("base %q is not restorable", manifestEntry.Base)
 	}
-	if !isPathElement(md.ID) {
-		return browser.UserDataDir{}, fmt.Errorf("id %q is not a directory name", md.ID)
+	if !isPathElement(manifestEntry.ID) {
+		return browser.UserDataDir{}, fmt.Errorf("id %q is not a directory name", manifestEntry.ID)
 	}
-	def, err := vaultDef(v)
+	restoredBrowser, err := vaultBrowser(vault)
 	if err != nil {
 		return browser.UserDataDir{}, err
 	}
-	dir := browser.UserDataDir{ID: browser.DirID(md.ID), Def: def, Path: filepath.Join(root, md.ID)}
-	for _, p := range md.Profiles {
-		if p.Dir != "" && !filepath.IsLocal(filepath.FromSlash(p.Dir)) {
-			return browser.UserDataDir{}, fmt.Errorf("profile dir %q is outside the archive", p.Dir)
+	dir := browser.UserDataDir{
+		ID: browser.UserDataDirID(manifestEntry.ID), Browser: restoredBrowser, Path: filepath.Join(root, manifestEntry.ID),
+	}
+	for _, manifestProfile := range manifestEntry.Profiles {
+		if manifestProfile.Dir != "" && !filepath.IsLocal(filepath.FromSlash(manifestProfile.Dir)) {
+			return browser.UserDataDir{}, fmt.Errorf("profile dir %q is outside the archive", manifestProfile.Dir)
 		}
-		dir.Profiles = append(dir.Profiles, browser.Profile{Name: p.Name, Dir: p.Dir})
+		dir.Profiles = append(dir.Profiles, browser.Profile{Name: manifestProfile.Name, Dir: manifestProfile.Dir})
 	}
 	return dir, nil
 }
 
-func fromLayout(root string, vaults []masterkey.Vault) (Discovery, map[browser.DirID]masterkey.Set, error) {
+func fromLayout(root string, vaults []masterkey.Vault) (Discovery, map[browser.UserDataDirID]masterkey.Set, error) {
 	archived := false
-	for _, v := range vaults {
-		if dirExists(filepath.Join(root, string(vaultDirID(v)))) {
+	for _, vault := range vaults {
+		if dirExists(filepath.Join(root, string(vaultUserDataDirID(vault)))) {
 			archived = true
 			break
 		}
@@ -179,11 +185,11 @@ func fromLayout(root string, vaults []masterkey.Vault) (Discovery, map[browser.D
 			"point it at the archive root, or use -b <browser> for one browser's User Data (have: %s)",
 			root, len(vaults), vaultKeys(vaults))
 	}
-	var d Discovery
-	keys := make(map[browser.DirID]masterkey.Set)
-	for _, v := range vaults {
-		id := vaultDirID(v)
-		if _, dup := keys[id]; dup {
+	var discovery Discovery
+	keys := make(map[browser.UserDataDirID]masterkey.Set)
+	for _, vault := range vaults {
+		id := vaultUserDataDirID(vault)
+		if _, duplicate := keys[id]; duplicate {
 			log.Warnf("restore: keys hold %s twice, restoring the first", id)
 			continue
 		}
@@ -191,27 +197,27 @@ func fromLayout(root string, vaults []masterkey.Vault) (Discovery, map[browser.D
 		if archived {
 			path = filepath.Join(root, string(id))
 			if !dirExists(path) {
-				log.Warnf("restore: %s has no data under %s, skipping", v.Browser, path)
+				log.Warnf("restore: %s has no data under %s, skipping", vault.Browser, path)
 				continue
 			}
 		}
-		dir, err := layoutDir(v, id, path)
+		dir, err := layoutDir(vault, id, path)
 		if err != nil {
-			log.Warnf("restore: %s: %v", v.Browser, err)
+			log.Warnf("restore: %s: %v", vault.Browser, err)
 			continue
 		}
-		d.Dirs = append(d.Dirs, dir)
-		keys[id] = v.Keys
+		discovery.Dirs = append(discovery.Dirs, dir)
+		keys[id] = vault.Keys
 	}
-	return d, keys, nil
+	return discovery, keys, nil
 }
 
-func layoutDir(v masterkey.Vault, id browser.DirID, path string) (browser.UserDataDir, error) {
-	def, err := vaultDef(v)
+func layoutDir(vault masterkey.Vault, id browser.UserDataDirID, path string) (browser.UserDataDir, error) {
+	restoredBrowser, err := vaultBrowser(vault)
 	if err != nil {
 		return browser.UserDataDir{}, err
 	}
-	dir, err := chromium.DiscoverAt(def, id, path)
+	dir, err := chromium.DiscoverAt(restoredBrowser, id, path)
 	if err != nil {
 		return browser.UserDataDir{}, fmt.Errorf("read %s: %w", path, err)
 	}
@@ -222,33 +228,33 @@ func layoutDir(v masterkey.Vault, id browser.DirID, path string) (browser.UserDa
 	return found[0], nil
 }
 
-// vaultDef finds a vault's browser in the whole table, so a fork this OS lacks still restores. A key this build does
-// not know restores as it always did: the vault's kind picks the on-disk format, and the key is stamped as the browser.
-func vaultDef(v masterkey.Vault) (browser.Def, error) {
-	key := strings.ToLower(v.Browser)
-	if def, ok := browser.Lookup(key); ok && def.Base == browser.Chromium {
-		return def, nil
+// vaultBrowser searches the whole table, so a fork this OS lacks still restores. A browser this build does not know
+// restores as it always did: the vault's kind picks the on-disk format, and its name stands in as the browser.
+func vaultBrowser(vault masterkey.Vault) (browser.Browser, error) {
+	name := strings.ToLower(vault.Browser)
+	if namedBrowser, ok := browser.Lookup(name); ok && namedBrowser.Base == browser.Chromium {
+		return namedBrowser, nil
 	}
-	id, err := chromium.FormatID(v.Kind, key)
+	formatName, err := chromium.FormatName(vault.Kind, name)
 	if err != nil {
-		return browser.Def{}, err
+		return browser.Browser{}, err
 	}
-	return browser.Def{ID: id, Name: v.Browser, Base: browser.Chromium}, nil
+	return browser.Browser{Name: formatName, DisplayName: vault.Browser, Base: browser.Chromium}, nil
 }
 
-// vaultDirID is the vault's directory in an archive: its ID for a second user data dir, else its browser key.
-func vaultDirID(v masterkey.Vault) browser.DirID {
-	if v.ID != "" {
-		return browser.DirID(v.ID)
+// vaultUserDataDirID is the vault's directory in an archive: its ID for a second user data dir, else its browser name.
+func vaultUserDataDirID(vault masterkey.Vault) browser.UserDataDirID {
+	if vault.ID != "" {
+		return browser.UserDataDirID(vault.ID)
 	}
-	return browser.DirID(strings.ToLower(v.Browser))
+	return browser.UserDataDirID(strings.ToLower(vault.Browser))
 }
 
 func vaultsOf(dump masterkey.Dump, filter string) []masterkey.Vault {
 	var out []masterkey.Vault
-	for _, v := range dump.Vaults {
-		if filter == allBrowsers || strings.EqualFold(v.Browser, filter) {
-			out = append(out, v)
+	for _, vault := range dump.Vaults {
+		if filter == allBrowsers || strings.EqualFold(vault.Browser, filter) {
+			out = append(out, vault)
 		}
 	}
 	return out
@@ -256,8 +262,8 @@ func vaultsOf(dump masterkey.Dump, filter string) []masterkey.Vault {
 
 func vaultKeys(vaults []masterkey.Vault) string {
 	keys := make([]string, 0, len(vaults))
-	for _, v := range vaults {
-		keys = append(keys, strings.ToLower(v.Browser))
+	for _, vault := range vaults {
+		keys = append(keys, strings.ToLower(vault.Browser))
 	}
 	return strings.Join(keys, ", ")
 }

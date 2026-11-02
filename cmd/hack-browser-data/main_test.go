@@ -19,29 +19,29 @@ func TestStoppedRunPrintsNoErrorOrUsage(t *testing.T) {
 	setHome(t, home)
 	browsertest.ChromiumUserData(t, userDataDirOf(t, home, "chrome"), "chrome")
 
-	for _, tc := range []struct {
+	for _, testCase := range []struct {
 		name, browser string
 		stop          bool
 	}{
 		{name: "stopped", browser: "chrome", stop: true},
 		{name: "failed", browser: "nosuch"},
 	} {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			if tc.stop {
+			if testCase.stop {
 				cancel()
 			}
 			var screen bytes.Buffer
 			root := rootCmd()
 			root.SetOut(&screen)
 			root.SetErr(&screen)
-			root.SetArgs([]string{"-b", tc.browser, "-d", filepath.Join(t.TempDir(), "results")})
+			root.SetArgs([]string{"-b", testCase.browser, "-d", filepath.Join(t.TempDir(), "results")})
 
 			err := root.ExecuteContext(ctx)
 			require.Error(t, err)
-			if tc.stop {
+			if testCase.stop {
 				require.ErrorIs(t, err, context.Canceled)
 				assert.Empty(t, screen.String())
 			} else {
@@ -56,9 +56,9 @@ func TestExitByEndsTheProcessAsTheSignalWould(t *testing.T) {
 		exitBy(os.Interrupt)
 		return
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=^TestExitByEndsTheProcessAsTheSignalWould$")
-	cmd.Env = append(os.Environ(), "HBD_TEST_EXIT_BY=1")
+	command := exec.Command(os.Args[0], "-test.run=^TestExitByEndsTheProcessAsTheSignalWould$")
+	command.Env = append(os.Environ(), "HBD_TEST_EXIT_BY=1")
 	var exitErr *exec.ExitError
-	require.ErrorAs(t, cmd.Run(), &exitErr)
+	require.ErrorAs(t, command.Run(), &exitErr)
 	assertEndedByInterrupt(t, exitErr.ProcessState)
 }

@@ -19,16 +19,16 @@ func TestReadKey4DB(t *testing.T) {
 		`INSERT INTO nssPrivate (a11, a102) VALUES (x'feedface', x'12345678')`,
 	)
 
-	k4, err := readKey4DB(path)
+	key4, err := readKey4DB(path)
 	require.NoError(t, err)
 
-	assert.Equal(t, []byte{0xaa, 0xbb, 0xcc, 0xdd}, k4.globalSalt)
-	assert.Equal(t, []byte{0x11, 0x22, 0x33, 0x44}, k4.passwordCheck)
-	require.Len(t, k4.privateKeys, 2)
+	assert.Equal(t, []byte{0xaa, 0xbb, 0xcc, 0xdd}, key4.globalSalt)
+	assert.Equal(t, []byte{0x11, 0x22, 0x33, 0x44}, key4.passwordCheck)
+	require.Len(t, key4.privateKeys, 2)
 	// Don't assume row order — check that both entries exist
 	encryptedBlobs := map[string]bool{}
-	for _, pk := range k4.privateKeys {
-		encryptedBlobs[fmt.Sprintf("%x", pk.encrypted)] = true
+	for _, entry := range key4.privateKeys {
+		encryptedBlobs[fmt.Sprintf("%x", entry.encrypted)] = true
 	}
 	assert.True(t, encryptedBlobs["deadbeef"])
 	assert.True(t, encryptedBlobs["feedface"])

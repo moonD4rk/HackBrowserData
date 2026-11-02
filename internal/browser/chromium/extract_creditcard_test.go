@@ -74,23 +74,23 @@ func TestExtractYandexCreditCards(t *testing.T) {
 	require.Len(t, got, 2)
 
 	byGUID := map[string]int{}
-	for i, c := range got {
-		byGUID[c.GUID] = i
+	for i, card := range got {
+		byGUID[card.GUID] = i
 	}
 
-	c1 := got[byGUID["card-1"]]
-	assert.Equal(t, "Alice Smith", c1.Name)
-	assert.Equal(t, "Personal Visa", c1.NickName)
-	assert.Equal(t, "2030", c1.ExpYear)
-	assert.Equal(t, "06", c1.ExpMonth)
-	assert.Equal(t, "4111111111111111", c1.Number)
-	assert.Equal(t, "123", c1.CVC)
-	assert.Equal(t, "main card", c1.Comment)
+	firstCard := got[byGUID["card-1"]]
+	assert.Equal(t, "Alice Smith", firstCard.Name)
+	assert.Equal(t, "Personal Visa", firstCard.NickName)
+	assert.Equal(t, "2030", firstCard.ExpYear)
+	assert.Equal(t, "06", firstCard.ExpMonth)
+	assert.Equal(t, "4111111111111111", firstCard.Number)
+	assert.Equal(t, "123", firstCard.CVC)
+	assert.Equal(t, "main card", firstCard.Comment)
 
-	c2 := got[byGUID["card-2"]]
-	assert.Equal(t, "5555555555554444", c2.Number)
-	assert.Equal(t, "456", c2.CVC)
-	assert.Empty(t, c2.Comment)
+	secondCard := got[byGUID["card-2"]]
+	assert.Equal(t, "5555555555554444", secondCard.Number)
+	assert.Equal(t, "456", secondCard.CVC)
+	assert.Empty(t, secondCard.Comment)
 }
 
 func TestExtractYandexCreditCards_WrongMasterKey(t *testing.T) {

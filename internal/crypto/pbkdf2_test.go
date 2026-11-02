@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Test vectors from RFC 6070 (PKCS #5 PBKDF2 with HMAC-SHA1).
+// TestPBKDF2Key_RFC6070 uses the test vectors from RFC 6070 (PKCS #5 PBKDF2 with HMAC-SHA1).
 // https://www.rfc-editor.org/rfc/rfc6070
 func TestPBKDF2Key_RFC6070(t *testing.T) {
 	tests := []struct {
@@ -52,10 +52,10 @@ func TestPBKDF2Key_RFC6070(t *testing.T) {
 			want:       "3d2eec4fe41c849b80c8d83662c0e44a8b291a964cf2f07038",
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := PBKDF2Key([]byte(tt.password), []byte(tt.salt), tt.iterations, tt.keyLen, sha1.New)
-			assert.Equal(t, tt.want, hex.EncodeToString(got))
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := PBKDF2Key([]byte(testCase.password), []byte(testCase.salt), testCase.iterations, testCase.keyLen, sha1.New)
+			assert.Equal(t, testCase.want, hex.EncodeToString(got))
 		})
 	}
 }

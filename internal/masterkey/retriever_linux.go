@@ -11,7 +11,7 @@ import (
 	keyring "github.com/ppacher/go-dbus-keyring"
 )
 
-// https://source.chromium.org/chromium/chromium/src/+/main:components/os_crypt/os_crypt_linux.cc
+// linuxParams follow https://source.chromium.org/chromium/chromium/src/+/main:components/os_crypt/os_crypt_linux.cc
 var linuxParams = pbkdf2Params{
 	salt:       []byte("saltysalt"),
 	iterations: 1,
@@ -19,38 +19,38 @@ var linuxParams = pbkdf2Params{
 	hashFunc:   sha1.New,
 }
 
-// A profile holds both v10 and v11 values when its host moved between headless and keyring sessions.
+// platformRetrievers run both: a profile holds v10 and v11 values once its host moved between headless and keyring.
 var platformRetrievers = []Retriever{posixRetriever{}, dbusRetriever{}}
 
 type dbusRetriever struct{}
 
 func (dbusRetriever) Version() Version { return V11 }
 
-func (dbusRetriever) Retrieve(_ context.Context, loc Locator) ([]byte, error) {
-	storage := loc.KeychainLabel
-	conn, err := dbus.SessionBus()
+func (dbusRetriever) Retrieve(_ context.Context, locator Locator) ([]byte, error) {
+	storage := locator.KeychainLabel
+	connection, err := dbus.SessionBus()
 	if err != nil {
 		return nil, fmt.Errorf("dbus session: %w", err)
 	}
 
-	svc, err := keyring.GetSecretService(conn)
+	service, err := keyring.GetSecretService(connection)
 	if err != nil {
 		return nil, fmt.Errorf("secret service: %w", err)
 	}
 
-	session, err := svc.OpenSession()
+	session, err := service.OpenSession()
 	if err != nil {
 		return nil, fmt.Errorf("open session: %w", err)
 	}
 	defer session.Close()
 
-	collections, err := svc.GetAllCollections()
+	collections, err := service.GetAllCollections()
 	if err != nil {
 		return nil, fmt.Errorf("get collections: %w", err)
 	}
 
-	for _, col := range collections {
-		items, err := col.GetAllItems()
+	for _, collection := range collections {
+		items, err := collection.GetAllItems()
 		if err != nil {
 			continue
 		}

@@ -13,35 +13,35 @@ import (
 )
 
 func TestCopy_FallsBackToTheLockedRead(t *testing.T) {
-	src := filepath.Join(t.TempDir(), "cookies.db")
+	from := filepath.Join(t.TempDir(), "cookies.db")
 	testData := []byte("cookie data")
-	require.NoError(t, os.WriteFile(src, testData, 0o644))
+	require.NoError(t, os.WriteFile(from, testData, 0o644))
 
-	handle := openExclusive(t, src)
+	handle := openExclusive(t, from)
 	defer syscall.CloseHandle(handle)
 
-	dst := filepath.Join(t.TempDir(), "cookies.db")
-	require.NoError(t, Copy(src, dst, false), "Copy should succeed via the locked-file fallback")
+	into := filepath.Join(t.TempDir(), "cookies.db")
+	require.NoError(t, Copy(from, into, false), "Copy should succeed via the locked-file fallback")
 
-	copied, err := os.ReadFile(dst)
+	copied, err := os.ReadFile(into)
 	require.NoError(t, err)
 	assert.Equal(t, testData, copied)
 }
 
 func TestCopy_PlainWhenNotLocked(t *testing.T) {
-	src := filepath.Join(t.TempDir(), "unlocked.db")
+	from := filepath.Join(t.TempDir(), "unlocked.db")
 	testData := []byte("unlocked data")
-	require.NoError(t, os.WriteFile(src, testData, 0o644))
+	require.NoError(t, os.WriteFile(from, testData, 0o644))
 
-	dst := filepath.Join(t.TempDir(), "unlocked.db")
-	require.NoError(t, Copy(src, dst, false))
+	into := filepath.Join(t.TempDir(), "unlocked.db")
+	require.NoError(t, Copy(from, into, false))
 
-	copied, err := os.ReadFile(dst)
+	copied, err := os.ReadFile(into)
 	require.NoError(t, err)
 	assert.Equal(t, testData, copied)
 }
 
-// Share mode 0 locks the file the way Chrome's locking_mode=EXCLUSIVE does.
+// openExclusive uses share mode 0, which locks the file the way Chrome's locking_mode=EXCLUSIVE does.
 func openExclusive(t *testing.T, path string) syscall.Handle {
 	t.Helper()
 	srcPtr, err := syscall.UTF16PtrFromString(path)

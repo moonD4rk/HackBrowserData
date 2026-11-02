@@ -109,11 +109,11 @@ func insertMozPlace(id int, url, title string, visitCount int, lastVisitDate int
 	)
 }
 
-func insertMozBookmark(id, fk, bookmarkType int, title string, dateAdded int64) string {
+func insertMozBookmark(id, foreignKey, bookmarkType int, title string, dateAdded int64) string {
 	return fmt.Sprintf(
 		`INSERT INTO moz_bookmarks (id, type, fk, parent, position, title, dateAdded, lastModified, guid)
 		 VALUES (%d, %d, %d, 0, 0, '%s', %d, %d, 'bm-guid-%d')`,
-		id, bookmarkType, fk, title, dateAdded, dateAdded, id,
+		id, bookmarkType, foreignKey, title, dateAdded, dateAdded, id,
 	)
 }
 
@@ -143,16 +143,16 @@ func installFile(t *testing.T, profileDir, srcPath, dstName string) {
 func createTestDB(t *testing.T, name string, schemas []string, inserts ...string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), name)
-	db, err := sql.Open("sqlite", path)
+	database, err := sql.Open("sqlite", path)
 	require.NoError(t, err)
-	defer db.Close()
+	defer database.Close()
 
 	for _, schema := range schemas {
-		_, err = db.Exec(schema)
+		_, err = database.Exec(schema)
 		require.NoError(t, err)
 	}
-	for _, stmt := range inserts {
-		_, err = db.Exec(stmt)
+	for _, statement := range inserts {
+		_, err = database.Exec(statement)
 		require.NoError(t, err)
 	}
 	return path
@@ -170,16 +170,16 @@ type testCollector struct {
 	fails   []error
 }
 
-func (c *testCollector) Add(r record.Record) { c.records = append(c.records, r) }
-func (c *testCollector) Fail(err error)      { c.fails = append(c.fails, err) }
+func (c *testCollector) Add(row record.Record) { c.records = append(c.records, row) }
+func (c *testCollector) Fail(err error)        { c.fails = append(c.fails, err) }
 
-func collected[T any](t *testing.T, c *testCollector) []T {
+func collected[T any](t *testing.T, collector *testCollector) []T {
 	t.Helper()
-	got := make([]T, 0, len(c.records))
-	for _, r := range c.records {
-		v, ok := any(r).(*T)
-		require.Truef(t, ok, "collected a %T, want *%T", r, *new(T))
-		got = append(got, *v)
+	got := make([]T, 0, len(collector.records))
+	for _, row := range collector.records {
+		value, ok := any(row).(*T)
+		require.Truef(t, ok, "collected a %T, want *%T", row, *new(T))
+		got = append(got, *value)
 	}
 	return got
 }

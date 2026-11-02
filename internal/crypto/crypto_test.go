@@ -73,41 +73,41 @@ func TestAESGCMDecrypt(t *testing.T) {
 }
 
 func TestPkcs5Padding_NoMutation(t *testing.T) {
-	src := make([]byte, 3, 32) // len=3, cap=32 — append won't allocate
-	copy(src, "abc")
-	backup := make([]byte, cap(src))
-	copy(backup, src[:cap(src)])
+	data := make([]byte, 3, 32) // len=3, cap=32 — append won't allocate
+	copy(data, "abc")
+	backup := make([]byte, cap(data))
+	copy(backup, data[:cap(data)])
 
-	padded := pkcs5Padding(src, 16)
+	padded := pkcs5Padding(data, 16)
 	assert.Len(t, padded, 16)
-	assert.Equal(t, []byte("abc"), src)
+	assert.Equal(t, []byte("abc"), data)
 
-	// The bytes beyond len(src) in the original backing array must not be touched.
-	current := make([]byte, cap(src))
-	copy(current, src[:cap(src)])
+	// The bytes beyond len(data) in the original backing array must not be touched.
+	current := make([]byte, cap(data))
+	copy(current, data[:cap(data)])
 	assert.Equal(t, backup, current, "pkcs5Padding mutated the original slice backing array")
 }
 
 func TestPaddingZero_NoMutation(t *testing.T) {
-	src := make([]byte, 3, 32)
-	copy(src, "abc")
-	backup := make([]byte, cap(src))
-	copy(backup, src[:cap(src)])
+	data := make([]byte, 3, 32)
+	copy(data, "abc")
+	backup := make([]byte, cap(data))
+	copy(backup, data[:cap(data)])
 
-	padded := paddingZero(src, 20)
+	padded := paddingZero(data, 20)
 	assert.Len(t, padded, 20)
 
-	current := make([]byte, cap(src))
-	copy(current, src[:cap(src)])
+	current := make([]byte, cap(data))
+	copy(current, data[:cap(data)])
 	assert.Equal(t, backup, current, "paddingZero mutated the original slice backing array")
 }
 
 func TestAESCBCDecrypt_WrongIVLength(t *testing.T) {
 	key := bytes.Repeat([]byte("k"), 16)
 	wrongIV := []byte("short")
-	ct := make([]byte, 16)
+	ciphertext := make([]byte, 16)
 
-	_, err := AESCBCDecrypt(key, wrongIV, ct)
+	_, err := AESCBCDecrypt(key, wrongIV, ciphertext)
 	require.Error(t, err, "wrong IV length should return error, not panic")
 	assert.ErrorIs(t, err, errInvalidIVLength)
 }
@@ -124,9 +124,9 @@ func TestAESCBCEncrypt_WrongIVLength(t *testing.T) {
 func TestDES3Decrypt_WrongIVLength(t *testing.T) {
 	key := bytes.Repeat([]byte("k"), 24)
 	wrongIV := []byte("ab") // DES needs 8-byte IV
-	ct := make([]byte, 8)
+	ciphertext := make([]byte, 8)
 
-	_, err := DES3Decrypt(key, wrongIV, ct)
+	_, err := DES3Decrypt(key, wrongIV, ciphertext)
 	require.Error(t, err, "wrong IV length should return error, not panic")
 	assert.ErrorIs(t, err, errInvalidIVLength)
 }
@@ -163,9 +163,9 @@ func TestAESGCMEncrypt_WrongNonceLength(t *testing.T) {
 func TestAESGCMDecrypt_WrongNonceLength(t *testing.T) {
 	key := bytes.Repeat([]byte("k"), 16)
 	wrongNonce := []byte("short")
-	ct := make([]byte, 32)
+	ciphertext := make([]byte, 32)
 
-	_, err := AESGCMDecrypt(key, wrongNonce, ct)
+	_, err := AESGCMDecrypt(key, wrongNonce, ciphertext)
 	require.Error(t, err, "wrong nonce length should return error, not panic")
 	assert.ErrorIs(t, err, errInvalidNonceLen)
 }

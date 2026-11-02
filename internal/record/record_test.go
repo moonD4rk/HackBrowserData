@@ -28,52 +28,52 @@ func allRecords() map[category.Category]Record {
 func TestCategory_OneRecordTypePerCategory(t *testing.T) {
 	records := allRecords()
 	assert.Len(t, records, len(category.All()))
-	for _, c := range category.All() {
-		r, ok := records[c]
-		if assert.Truef(t, ok, "no record type for %s", c) {
-			assert.Equalf(t, c, r.Category(), "%T", r)
+	for _, dataCategory := range category.All() {
+		row, ok := records[dataCategory]
+		if assert.Truef(t, ok, "no record type for %s", dataCategory) {
+			assert.Equalf(t, dataCategory, row.Category(), "%T", row)
 		}
 	}
 }
 
-func TestStamp(t *testing.T) {
-	for _, r := range allRecords() {
-		Stamp(r, "Microsoft Edge", "Profile 1")
-		v := reflect.ValueOf(r).Elem()
-		assert.Equalf(t, "Microsoft Edge", v.FieldByName("Browser").String(), "%T", r)
-		assert.Equalf(t, "Profile 1", v.FieldByName("Profile").String(), "%T", r)
+func TestSetBrowserAndProfile(t *testing.T) {
+	for _, row := range allRecords() {
+		row.SetBrowserAndProfile("Microsoft Edge", "Profile 1")
+		value := reflect.ValueOf(row).Elem()
+		assert.Equalf(t, "Microsoft Edge", value.FieldByName("Browser").String(), "%T", row)
+		assert.Equalf(t, "Profile 1", value.FieldByName("Profile").String(), "%T", row)
 	}
 }
 
-// The tags are the output's field names and column headers, so they stay snake_case and lead with the stamp.
+// TestTags_AreSnakeCaseFieldNames freezes the tags, the output's names: snake_case, led by Browser and Profile.
 func TestTags_AreSnakeCaseFieldNames(t *testing.T) {
-	for _, r := range allRecords() {
-		typ := reflect.TypeOf(r).Elem()
-		assert.Equalf(t, "Browser", typ.Field(0).Name, "%s", typ)
-		assert.Equalf(t, "Profile", typ.Field(1).Name, "%s", typ)
-		for i := 0; i < typ.NumField(); i++ {
-			f := typ.Field(i)
-			want := snakeCase(f.Name)
-			assert.Equalf(t, want, f.Tag.Get("json"), "%s.%s json tag", typ, f.Name)
-			assert.Equalf(t, want, f.Tag.Get("csv"), "%s.%s csv tag", typ, f.Name)
+	for _, row := range allRecords() {
+		recordType := reflect.TypeOf(row).Elem()
+		assert.Equalf(t, "Browser", recordType.Field(0).Name, "%s", recordType)
+		assert.Equalf(t, "Profile", recordType.Field(1).Name, "%s", recordType)
+		for i := 0; i < recordType.NumField(); i++ {
+			field := recordType.Field(i)
+			want := snakeCase(field.Name)
+			assert.Equalf(t, want, field.Tag.Get("json"), "%s.%s json tag", recordType, field.Name)
+			assert.Equalf(t, want, field.Tag.Get("csv"), "%s.%s csv tag", recordType, field.Name)
 		}
 	}
 }
 
 func snakeCase(name string) string {
 	runes := []rune(name)
-	var b strings.Builder
-	for i, r := range runes {
-		if i > 0 && unicode.IsUpper(r) {
+	var builder strings.Builder
+	for i, character := range runes {
+		if i > 0 && unicode.IsUpper(character) {
 			prevLower := unicode.IsLower(runes[i-1])
 			acronymEnds := unicode.IsUpper(runes[i-1]) && i+1 < len(runes) && unicode.IsLower(runes[i+1])
 			if prevLower || acronymEnds {
-				b.WriteByte('_')
+				builder.WriteByte('_')
 			}
 		}
-		b.WriteRune(unicode.ToLower(r))
+		builder.WriteRune(unicode.ToLower(character))
 	}
-	return b.String()
+	return builder.String()
 }
 
 func TestSnakeCase(t *testing.T) {

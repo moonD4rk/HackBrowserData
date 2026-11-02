@@ -12,19 +12,19 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 )
 
-func installAt(t *testing.T, home, id string) string {
+func installAt(t *testing.T, home, browserName string) string {
 	t.Helper()
-	def := lookup(t, id)
-	require.NotEmpty(t, def.Platform().UserDataDirs, id)
-	path := filepath.Join(home, filepath.FromSlash(def.Platform().UserDataDirs[0]))
+	namedBrowser := lookup(t, browserName)
+	require.NotEmpty(t, namedBrowser.Platform().UserDataDirs, browserName)
+	path := filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirs[0]))
 	touch(t, path, "Default", "Preferences")
 	touch(t, path, "Default", "History")
 	return path
 }
 
-func dirIDs(d Discovery) []browser.DirID {
-	var ids []browser.DirID
-	for _, dir := range d.Dirs {
+func userDataDirIDs(discovery Discovery) []browser.UserDataDirID {
+	var ids []browser.UserDataDirID
+	for _, dir := range discovery.Dirs {
 		ids = append(ids, dir.ID)
 	}
 	return ids
@@ -35,12 +35,12 @@ func TestDiscover(t *testing.T) {
 	installAt(t, home, "edge")
 	installAt(t, home, "chrome")
 
-	d := Discover(Request{Browser: "all", Home: home})
-	assert.Equal(t, []browser.DirID{"chrome", "edge"}, dirIDs(d), "table order, which is output order")
-	assert.Empty(t, d.Failed)
+	discovery := Discover(Options{Browser: "all", Home: home})
+	assert.Equal(t, []browser.UserDataDirID{"chrome", "edge"}, userDataDirIDs(discovery), "table order, which is output order")
+	assert.Empty(t, discovery.Failed)
 
-	d = Discover(Request{Browser: "edge", Home: home})
-	assert.Equal(t, []browser.DirID{"edge"}, dirIDs(d))
+	discovery = Discover(Options{Browser: "edge", Home: home})
+	assert.Equal(t, []browser.UserDataDirID{"edge"}, userDataDirIDs(discovery))
 }
 
 func TestDiscover_ProfilePathNeedsOneBrowser(t *testing.T) {
@@ -50,16 +50,16 @@ func TestDiscover_ProfilePathNeedsOneBrowser(t *testing.T) {
 	touch(t, custom, "Default", "Preferences")
 	touch(t, custom, "Default", "History")
 
-	d := Discover(Request{Browser: "chrome", Home: home, ProfilePath: custom})
-	require.Len(t, d.Dirs, 1)
-	assert.Equal(t, custom, d.Dirs[0].Path)
+	discovery := Discover(Options{Browser: "chrome", Home: home, ProfilePath: custom})
+	require.Len(t, discovery.Dirs, 1)
+	assert.Equal(t, custom, discovery.Dirs[0].Path)
 
-	d = Discover(Request{Browser: "all", Home: home, ProfilePath: custom})
-	require.Len(t, d.Dirs, 1)
-	assert.NotEqual(t, custom, d.Dirs[0].Path, "-p is ignored without a specific browser")
+	discovery = Discover(Options{Browser: "all", Home: home, ProfilePath: custom})
+	require.Len(t, discovery.Dirs, 1)
+	assert.NotEqual(t, custom, discovery.Dirs[0].Path, "-p is ignored without a specific browser")
 }
 
-// A profile created and never used holds only its Preferences marker, so it is not listed, archived, or keyed.
+// TestDiscover_KeepsOnlyProfilesWithData drops a never-used profile, which holds only its Preferences marker.
 func TestDiscover_KeepsOnlyProfilesWithData(t *testing.T) {
 	home := t.TempDir()
 	chrome := installAt(t, home, "chrome")
@@ -67,9 +67,9 @@ func TestDiscover_KeepsOnlyProfilesWithData(t *testing.T) {
 	edge := installAt(t, home, "edge")
 	require.NoError(t, os.Remove(filepath.Join(edge, "Default", "History")))
 
-	d := Discover(Request{Browser: "all", Home: home})
-	assert.Equal(t, []browser.DirID{"chrome"}, dirIDs(d))
-	assert.Equal(t, []browser.Profile{{Name: "Default", Dir: "Default"}}, d.Dirs[0].Profiles)
+	discovery := Discover(Options{Browser: "all", Home: home})
+	assert.Equal(t, []browser.UserDataDirID{"chrome"}, userDataDirIDs(discovery))
+	assert.Equal(t, []browser.Profile{{Name: "Default", Dir: "Default"}}, discovery.Dirs[0].Profiles)
 }
 
 func TestDiscover_UnreadableDirIsReported(t *testing.T) {
@@ -81,14 +81,14 @@ func TestDiscover_UnreadableDirIsReported(t *testing.T) {
 	require.NoError(t, os.Chmod(path, 0o000))
 	defer func() { require.NoError(t, os.Chmod(path, 0o700)) }()
 
-	d := Discover(Request{Browser: "all", Home: home})
-	assert.Empty(t, d.Dirs)
-	require.Len(t, d.Failed, 1)
-	assert.Equal(t, Extraction{DirID: "chrome"}, d.Failed[0].Extraction)
-	assert.Equal(t, OutcomeError, d.Failed[0].Outcome)
+	discovery := Discover(Options{Browser: "all", Home: home})
+	assert.Empty(t, discovery.Dirs)
+	require.Len(t, discovery.Failed, 1)
+	assert.Equal(t, Extraction{UserDataDirID: "chrome"}, discovery.Failed[0].Extraction)
+	assert.Equal(t, OutcomeError, discovery.Failed[0].Outcome)
 }
 
-// Dropping a profile whose files cannot be checked would hide the failure; the plan reports it instead.
+// TestWithData_KeepsAProfileItCannotCheck keeps it for the plan to report, since dropping it would hide the failure.
 func TestWithData_KeepsAProfileItCannotCheck(t *testing.T) {
 	dir := chromeDir(t, "chrome", "Default")
 	lock(t, filepath.Join(dir.Path, "Default"))
