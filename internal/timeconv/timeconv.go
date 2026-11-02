@@ -7,7 +7,7 @@ const (
 	// chromiumEpochOffsetMicros is Chromium's base::Time::kTimeTToMicrosecondsOffset, from 1601-01-01 to the Unix epoch.
 	chromiumEpochOffsetMicros = 11644473600000000
 	coreDataEpochOffset       = 978307200
-	// maxCoreDataSeconds keeps CoreData inside int64 and below year 9999 before the float conversion.
+	// maxCoreDataSeconds is 10000-01-01 in CoreData time; every earlier value fits int64 and time.Time.MarshalJSON.
 	maxCoreDataSeconds = 252423993600
 )
 
@@ -42,7 +42,7 @@ func Unix(seconds int64) time.Time {
 
 // CoreData converts CFAbsoluteTime, seconds since 2001-01-01 UTC.
 func CoreData(seconds float64) time.Time {
-	if seconds <= 0 || seconds > maxCoreDataSeconds {
+	if seconds <= 0 || seconds >= maxCoreDataSeconds {
 		return time.Time{}
 	}
 	whole := int64(seconds)

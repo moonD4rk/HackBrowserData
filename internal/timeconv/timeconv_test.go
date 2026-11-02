@@ -133,6 +133,13 @@ func TestCoreData_NegativeReturnsZeroTime(t *testing.T) {
 	assert.True(t, CoreData(-1).IsZero())
 }
 
+func TestCoreData_OutOfJSONRangeReturnsZero(t *testing.T) {
+	assert.True(t, CoreData(maxCoreDataSeconds).IsZero(), "10000-01-01 is past what time.Time.MarshalJSON accepts")
+	encoded, err := CoreData(maxCoreDataSeconds - 1).MarshalJSON()
+	require.NoError(t, err)
+	assert.JSONEq(t, `"9999-12-31T23:59:59Z"`, string(encoded))
+}
+
 func TestCoreData_FractionalSecondsPreserved(t *testing.T) {
 	got := CoreData(float64(anchorCoreDataSeconds) + 0.5)
 	assert.Equal(t, 500*int64(time.Millisecond), int64(got.Nanosecond()))
