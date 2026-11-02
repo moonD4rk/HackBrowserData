@@ -2,7 +2,7 @@
 
 ## Frozen
 
-Everything a user sees in the output — file names, formats, field names and their order, the browser and profile values — is part of the compatibility contract ([RFC-000](000-goals-and-constraints.md)). Field names on the wire are the snake_case of the record fields, enforced by lint, so the record fields are frozen with the output.
+Everything a user sees in the output — file names, formats, field names and their order, the browser and profile values — is part of the compatibility contract ([RFC-000](000-goals.md)). Field names on the wire are the snake_case of the record fields, enforced by lint, so the record fields are frozen with the output.
 
 ## Deterministic
 
@@ -17,7 +17,7 @@ The same snapshot always produces byte-identical files. Order is defined once pe
 
 ## No redaction
 
-What reaches export was asked for. The default exports every category, as v1.1.0 did.
+What reaches export was asked for, and the default exports every category.
 
 ## Formats
 

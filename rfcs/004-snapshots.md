@@ -1,4 +1,4 @@
-# RFC-004: Acquisition
+# RFC-004: Snapshots
 
 ## Snapshot-first
 
@@ -16,6 +16,6 @@ A file that cannot be copied fails only the extractions that need it, and a file
 
 `archive` is "capture, then zip", and `restore` is "open or unzip, then extract": the same pipeline, not special modes.
 
-- **The layout is the format.** An archive holds one directory per data directory, with the browser's own relative paths inside. v1.1.0 reads it, and restore rebuilds the directories and profiles from it, with no manifest.
+- **The layout is the format.** An archive holds one directory per data directory, with the browser's own relative paths inside. Older versions read it too, and restore rebuilds the directories and profiles from it alone, with no manifest.
 - **A zip is only transport.** It is written to a temp file and renamed into place, so a failed archive never leaves a partial file; unzipping refuses any entry that would land outside its directory.
 - **Only Chromium is archived.** Firefox and Safari keep no portable key.

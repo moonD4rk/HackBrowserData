@@ -14,7 +14,7 @@ A run is a fixed, one-way sequence of stages, and no stage reaches back:
 
 Capture, Extract, and Export run once per data directory, so at most one directory's copies are on disk at a time. Every command is a cut of this pipeline: `list` stops after discovery, `list --detail` counts records instead of exporting them, `archive` captures and zips, `dumpkeys` retrieves keys only, and `restore` extracts from a snapshot it is given.
 
-**Why.** In v1.1.0 every browser re-implemented the whole run, so each concern was solved several times, and bugs lived where nothing else checked them. Named stages implement each concern once; a browser contributes only where its files are and how to read them.
+**Why.** When each browser runs the whole flow itself, every concern is solved several times, and bugs hide where nothing else checks them. Named stages implement each concern once; a browser contributes only where its files are and how to read them.
 
 ## Outcomes
 

@@ -5,7 +5,7 @@
 - A test needs a fixture file, never a running browser or a mocked database: tests build real files in a temporary directory.
 - Goldens pin the output, and the same fixture always produces the same bytes.
 - Compatibility tests pin the frozen surface: every command's flags, the output, `keys.json`, and archives.
-- Every bug the redesign removed has a regression test.
+- Every fixed bug gets a regression test.
 - Coverage is a signal, not a target.
 
 ## Lint and comments

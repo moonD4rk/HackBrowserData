@@ -11,13 +11,13 @@ These RFCs are HackBrowserData's design record: the decisions that shape the pro
 
 ## Index
 
-| RFC                                 | Decides                                                               |
-| ----------------------------------- | --------------------------------------------------------------------- |
-| [000](000-goals-and-constraints.md) | Why the redesign, its limits, and the frozen external contract        |
-| [001](001-architecture.md)          | The one-way pipeline, outcomes, layering, and naming                  |
-| [002](002-browser-support.md)       | Browsers as data, bases, and forks as rows                            |
-| [003](003-secrets.md)               | Key scopes, lazy retrieval, and where secret handling lives           |
-| [004](004-acquisition.md)           | Snapshot-first capture, and archive and restore as the same pipeline  |
-| [005](005-output.md)                | The frozen output, deterministic order, and safe writing              |
-| [006](006-cli.md)                   | The frozen command surface, validation first, and password input      |
-| [007](007-quality.md)               | How tests, lint, Go 1.20, and dependency rules keep the design honest |
+| RFC                        | Decides                                                               |
+| -------------------------- | --------------------------------------------------------------------- |
+| [000](000-goals.md)        | The goals, the limits, and the external contract                      |
+| [001](001-architecture.md) | The one-way pipeline, outcomes, layering, and naming                  |
+| [002](002-browsers.md)     | Browsers as data, bases, and forks as rows                            |
+| [003](003-secrets.md)      | Key scopes, lazy retrieval, and where secret handling lives           |
+| [004](004-snapshots.md)    | Snapshot-first capture, and archive and restore as the same pipeline  |
+| [005](005-output.md)       | The frozen output, deterministic order, and safe writing              |
+| [006](006-cli.md)          | The frozen command surface, validation first, and password input      |
+| [007](007-quality.md)      | How tests, lint, Go 1.20, and dependency rules keep the design honest |

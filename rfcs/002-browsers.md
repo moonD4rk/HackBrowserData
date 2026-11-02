@@ -1,4 +1,4 @@
-# RFC-002: Browser Support
+# RFC-002: Browsers
 
 ## Decision
 
@@ -6,7 +6,7 @@ The supported browsers are a data table, not code. A row says what a browser is 
 
 ## Why
 
-v1.1.0 spread a browser's facts across several lists joined by key, and checked fork kinds across many files. One table is auditable at a glance, and base behavior is written three times in total, not once per browser.
+Facts spread across several lists drift apart, and fork checks scattered across files are easy to miss. One table is auditable at a glance, and base behavior is written three times in total, not once per browser.
 
 ## Rules
 

@@ -22,5 +22,5 @@ Chromium keys come in versions, and each version is retrieved independently: one
 ## Never
 
 - **No secret in a log line,** ever.
-- **No new technique.** The redesign puts existing, published methods behind these boundaries.
+- **No new technique.** Only existing, published methods sit behind these boundaries.
 - **No vendored loader.** The Windows payload is first-party code. The common third-party loader was rejected because it crashes on Windows internals it walks too far and depends on brittle structure layouts.
