@@ -1,17 +1,16 @@
 package export
 
 import (
-	"archive/zip"
 	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
 
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
+	"github.com/moond4rk/hackbrowserdata/internal/zipfile"
 )
 
 type Writer struct {
@@ -126,7 +125,7 @@ func (w *Writer) pack() error {
 	}
 	sort.Strings(names)
 	zipName := filepath.Base(w.dir) + ".zip"
-	if err := writeZip(filepath.Join(w.dir, zipName), w.dir, names); err != nil {
+	if err := zipfile.Write(filepath.Join(w.dir, zipName), w.dir, names); err != nil {
 		return fmt.Errorf("compress: %w", err)
 	}
 	for _, name := range names {
@@ -136,49 +135,6 @@ func (w *Writer) pack() error {
 	}
 	w.out.Zip = zipName
 	return nil
-}
-
-// writeZip renames a finished temp file into place, so archivePath is never a partial zip.
-func writeZip(archivePath, dir string, names []string) (err error) {
-	temporary, err := os.OpenFile(archivePath+".tmp", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
-	if err != nil {
-		return fmt.Errorf("create %s: %w", archivePath, err)
-	}
-	defer func() {
-		if err != nil {
-			err = errors.Join(err, os.Remove(temporary.Name()))
-		}
-	}()
-	zipWriter := zip.NewWriter(temporary)
-	for _, name := range names {
-		if err := addZipFile(zipWriter, filepath.Join(dir, name), name); err != nil {
-			return errors.Join(fmt.Errorf("add %s: %w", name, err), zipWriter.Close(), temporary.Close())
-		}
-	}
-	if err := zipWriter.Close(); err != nil {
-		return errors.Join(fmt.Errorf("finish %s: %w", archivePath, err), temporary.Close())
-	}
-	if err := temporary.Close(); err != nil {
-		return fmt.Errorf("finish %s: %w", archivePath, err)
-	}
-	if err := os.Rename(temporary.Name(), archivePath); err != nil {
-		return fmt.Errorf("move zip into place: %w", err)
-	}
-	return nil
-}
-
-func addZipFile(zipWriter *zip.Writer, path, name string) error {
-	file, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	entryWriter, err := zipWriter.Create(name)
-	if err != nil {
-		return err
-	}
-	_, err = io.Copy(entryWriter, file)
-	return err
 }
 
 func (w *Writer) open(dataCategory category.Category) (*categoryFile, error) {
