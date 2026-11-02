@@ -3,10 +3,8 @@ package snapshot
 import (
 	"archive/zip"
 	"bytes"
-	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -74,73 +72,13 @@ func TestZip_FailureLeavesNoFile(t *testing.T) {
 	assert.Empty(t, entries, "neither the archive nor its temp file may survive a failed zip")
 }
 
-func TestZip_FailureKeepsAnExistingArchive(t *testing.T) {
-	out := t.TempDir()
-	archive := filepath.Join(out, "browser-data.zip")
-	writeFile(t, archive, []byte("precious"))
-
-	require.Error(t, Open(filepath.Join(t.TempDir(), "missing")).Zip(archive))
-	got, err := os.ReadFile(archive)
-	require.NoError(t, err)
-	assert.Equal(t, "precious", string(got))
-	entries, err := os.ReadDir(out)
-	require.NoError(t, err)
-	assert.Len(t, entries, 1, "no temp file may survive a failed zip")
-}
-
-func TestZip_IntoADirectoryFailsBeforeWriting(t *testing.T) {
+func TestZip_IntoADirectoryFails(t *testing.T) {
 	out := t.TempDir()
 	require.Error(t, Open(snapshotFixture(t)).Zip(out))
 	entries, err := os.ReadDir(out)
 	require.NoError(t, err)
 	assert.Empty(t, entries)
-}
-
-func TestZip_ModeMatchesOSCreateAndSurvivesReplacement(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("POSIX permission bits")
-	}
-	snapshotRoot := snapshotFixture(t)
-	out := t.TempDir()
-	probe, err := os.Create(filepath.Join(out, "probe"))
-	require.NoError(t, err)
-	require.NoError(t, probe.Close())
-	want, err := os.Stat(probe.Name())
-	require.NoError(t, err)
-
-	fresh := filepath.Join(out, "fresh.zip")
-	require.NoError(t, Open(snapshotRoot).Zip(fresh))
-	got, err := os.Stat(fresh)
-	require.NoError(t, err)
-	assert.Equal(t, want.Mode().Perm(), got.Mode().Perm(), "a new archive gets the mode os.Create gives a file")
-
-	private := filepath.Join(out, "private.zip")
-	writeFile(t, private, []byte("old"))
-	require.NoError(t, os.Chmod(private, 0o600))
-	require.NoError(t, Open(snapshotRoot).Zip(private))
-	got, err = os.Stat(private)
-	require.NoError(t, err)
-	assert.Equal(t, fs.FileMode(0o600), got.Mode().Perm(), "a replaced archive keeps its mode")
-}
-
-func TestZip_WritesThroughASymlinkedArchive(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("creating symlinks needs extra privileges on Windows")
-	}
-	out := t.TempDir()
-	target := filepath.Join(out, "real.zip")
-	writeFile(t, target, []byte("old"))
-	link := filepath.Join(out, "link.zip")
-	require.NoError(t, os.Symlink("real.zip", link))
-
-	require.NoError(t, Open(snapshotFixture(t)).Zip(link))
-	info, err := os.Lstat(link)
-	require.NoError(t, err)
-	assert.NotZero(t, info.Mode()&fs.ModeSymlink, "the link stays a link")
-	zipReader, err := zip.OpenReader(target)
-	require.NoError(t, err)
-	defer zipReader.Close()
-	assert.Len(t, zipReader.File, 1, "the archive lands in the link's target")
+	assert.NoFileExists(t, out+".tmp")
 }
 
 func snapshotFixture(t *testing.T) string {

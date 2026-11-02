@@ -19,6 +19,7 @@ internal/
   crypto/                     pure decrypt primitives over bytes (AES-CBC/GCM, 3DES, PBKDF2, ASN.1 PBE)
   snapshot/                   snapshot Dir and Snapshot, Capture, zip transport, the copier
   export/                     Writer; csv / json / cookie-editor encoders; --zip packaging
+  zipfile/                    the one zip writer, for --zip and archive: a temp file renamed into place
   sqlitex/                    thin modernc.org/sqlite helpers (open read-only by path, query)
   timeconv/                   browser epoch conversions (Chromium/WebKit, Unix, Firefox, Core Data)
   winapi/                     Windows only: syscall wrappers, DPAPI, locked-file copy, executable lookup
