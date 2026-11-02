@@ -32,6 +32,6 @@ func extractExtensions(path string, out browser.Collector) error {
 			Enabled:     value.Get("active").Bool(),
 		})
 	}
-	emit(out, extensions)
+	browser.AddAll(out, extensions)
 	return nil
 }

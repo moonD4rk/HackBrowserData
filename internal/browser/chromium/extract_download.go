@@ -32,6 +32,6 @@ func extractDownloads(path string, out browser.Collector) error {
 	if err != nil {
 		return err
 	}
-	emit(out, downloads)
+	browser.AddAll(out, downloads)
 	return nil
 }

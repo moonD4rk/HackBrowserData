@@ -29,7 +29,7 @@ func extractPasswords(ctx context.Context, loginKeychain LoginKeychain, out brow
 			Store:     record.StoreLocal,
 		})
 	}
-	emit(out, logins)
+	browser.AddAll(out, logins)
 	return nil
 }
 

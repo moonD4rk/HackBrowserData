@@ -35,7 +35,7 @@ func extractCookies(path string, out browser.Collector) error {
 			})
 		}
 	}
-	emit(out, cookies)
+	browser.AddAll(out, cookies)
 	return nil
 }
 

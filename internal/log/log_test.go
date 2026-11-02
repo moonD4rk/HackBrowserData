@@ -16,7 +16,7 @@ func TestSetVerbose(t *testing.T) {
 }
 
 func TestSetLevelInvalidPanics(t *testing.T) {
-	logger := NewLogger(newBase(io.Discard))
-	assert.Panics(t, func() { logger.SetLevel(DebugLevel - 1) })
-	assert.Panics(t, func() { logger.SetLevel(WarnLevel + 1) })
+	testLogger := newLogger(io.Discard)
+	assert.Panics(t, func() { testLogger.SetLevel(DebugLevel - 1) })
+	assert.Panics(t, func() { testLogger.SetLevel(WarnLevel + 1) })
 }

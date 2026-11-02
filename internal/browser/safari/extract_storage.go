@@ -67,7 +67,7 @@ func extractLocalStorage(root string, out browser.Collector) error {
 			})
 		}
 	}
-	emit(out, entries)
+	browser.AddAll(out, entries)
 	return nil
 }
 

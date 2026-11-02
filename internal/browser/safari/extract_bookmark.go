@@ -42,7 +42,7 @@ func extractBookmarks(path string, out browser.Collector) error {
 
 	var bookmarks []record.Bookmark
 	walkBookmarks(root.Children, "", &bookmarks)
-	emit(out, bookmarks)
+	browser.AddAll(out, bookmarks)
 	return nil
 }
 

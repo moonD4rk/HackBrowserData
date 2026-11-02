@@ -54,6 +54,6 @@ func extractCookies(path string, out browser.Collector) error {
 	if err != nil {
 		return err
 	}
-	emit(out, cookies)
+	browser.AddAll(out, cookies)
 	return nil
 }

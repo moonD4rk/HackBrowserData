@@ -163,7 +163,7 @@ linters:
     varnamelen:
       # 1 is the strictest the linter allows: it only spares a name used on the line after its declaration.
       max-distance: 1
-      ignore-names: [i, j, ok, id, iv]
+      ignore-names: [i, j, ok, id, iv, db, fd, n]
       ignore-decls:
         - t *testing.T
         - b *testing.B

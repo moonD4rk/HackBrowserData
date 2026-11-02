@@ -80,7 +80,7 @@ The Chromium base supplies two more, for the files no single category owns (belo
 ```go
 // internal/browser/chromium only
 func KeyLocator(dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterkey.Locator, error)
-func ArchiveFileSpecs(dir browser.UserDataDir) []browser.FileSpec
+func ArchiveFileSpecs() []browser.FileSpec
 ```
 
 Safari's `Extractors` takes one more argument, the run's login keychain, which its password extractor captures. Only the default profile's map gets a password extractor, because the keychain belongs to the user, not to one profile ([RFC-006](006-key-retrieval-and-crypto.md)). `LoginKeychain` is the one-method interface Safari declares; `*keychain.Keychain` satisfies it.

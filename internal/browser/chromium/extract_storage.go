@@ -51,7 +51,7 @@ func extractLocalStorage(path string, out browser.Collector) error {
 		}
 		entries = append(entries, entry)
 	}
-	emit(out, entries)
+	browser.AddAll(out, entries)
 	return cursor.Error()
 }
 
@@ -211,7 +211,7 @@ func extractSessionStorage(path string, out browser.Collector) error {
 			Value: value,
 		})
 	}
-	emit(out, entries)
+	browser.AddAll(out, entries)
 	return mapCursor.Error()
 }
 
