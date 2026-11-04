@@ -32,7 +32,9 @@
 !CONTRIBUTING.md
 !CODE_OF_CONDUCT.md
 !SECURITY.md
-!LOGO.png
+!assets/brand/mark*.svg
+!assets/brand/mark*.png
+!assets/brand/social-preview.png
 
 # === GitHub ===
 !.github/workflows/*.yml
