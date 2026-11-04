@@ -1,10 +1,20 @@
 <div align="center">
-<img src="LOGO.png" alt="hack-browser-data logo" width="440px" />
-</div> 
+<a href="https://hackbrowserdata.org">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/brand/mark-dark.svg">
+  <img src="assets/brand/mark.svg" alt="HackBrowserData logo" width="128" height="128">
+</picture>
+</a>
 
 # HackBrowserData
 
+**Decrypt and export passwords, cookies, history and more from 20 browsers on Windows, macOS and Linux.**
+
+[Website](https://hackbrowserdata.org) · [Docs](https://hackbrowserdata.org/getting-started/) · [Download](https://github.com/moonD4rk/HackBrowserData/releases/latest)
+
 [![Lint](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/lint.yml) [![Build](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/build.yml) [![Release](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml/badge.svg)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/release.yml) [![Tests](https://github.com/moonD4rk/HackBrowserData/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/moonD4rk/HackBrowserData/actions/workflows/test.yml) [![codecov](https://codecov.io/gh/moonD4rk/HackBrowserData/branch/main/graph/badge.svg?token=KWJCN38657)](https://codecov.io/gh/moonD4rk/HackBrowserData)
+
+</div>
 
 `HackBrowserData` is a command-line tool for decrypting and exporting browser data (passwords, history, cookies, bookmarks, credit cards, download history, localStorage, sessionStorage and extensions) from the browser. It supports the most popular Chromium-based browsers and Firefox on Windows, macOS and Linux, plus Safari on macOS.
 
