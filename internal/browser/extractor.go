@@ -14,29 +14,34 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// FileSpec is one file or directory an extractor reads; Paths are its candidates in priority order.
-type FileSpec struct {
-	Paths    []string // slash-separated, relative to the profile dir, or to the user data dir when Shared
-	IsDir    bool
-	Shared   bool // belongs to the whole user data dir, such as Local State, so it is captured once per dir
-	Optional bool // the extraction still runs without it
+// Source is one file or directory an extractor reads.
+type Source struct {
+	Path      string   // slash-separated, relative to the profile dir, or to the user data dir when Shared
+	Fallbacks []string // older locations, read only when Path is absent
+	IsDir     bool
+	Shared    bool // belongs to the whole user data dir, such as Local State, so it is captured once per dir
+	Optional  bool // the extraction still runs without it
 }
 
-// CandidatePaths are the Paths for a profile, relative to the user data dir, in priority order.
-func (s FileSpec) CandidatePaths(profile Profile) []string {
-	paths := make([]string, len(s.Paths))
-	for i, relativePath := range s.Paths {
-		if !s.Shared {
-			relativePath = path.Join(profile.RelativePath, relativePath)
+// Paths lists Path and then its Fallbacks, the order they are tried in.
+func (s Source) Paths() []string {
+	return append([]string{s.Path}, s.Fallbacks...)
+}
+
+// CandidatePaths are the Paths for a profile, relative to the user data dir.
+func (s Source) CandidatePaths(profile Profile) []string {
+	paths := s.Paths()
+	if !s.Shared {
+		for i, relativePath := range paths {
+			paths[i] = path.Join(profile.RelativePath, relativePath)
 		}
-		paths[i] = relativePath
 	}
 	return paths
 }
 
 type Extractor struct {
-	FileSpecs []FileSpec
-	Extract   func(ctx context.Context, profileSnapshot ProfileSnapshot, out Collector) error
+	Sources []Source
+	Extract func(ctx context.Context, profileSnapshot ProfileSnapshot, out Collector) error
 }
 
 type Extractors map[category.Category]Extractor
@@ -59,15 +64,15 @@ func NewProfileSnapshot(dirSnapshot snapshot.Snapshot, profile Profile, masterKe
 }
 
 // Path skips a candidate that was never captured but returns the error of one whose copy failed.
-func (ps ProfileSnapshot) Path(fileSpec FileSpec) (string, error) {
-	for _, relativePath := range fileSpec.CandidatePaths(ps.Profile) {
+func (ps ProfileSnapshot) Path(source Source) (string, error) {
+	for _, relativePath := range source.CandidatePaths(ps.Profile) {
 		capturedPath, err := ps.snapshot.Path(relativePath)
 		if errors.Is(err, fs.ErrNotExist) {
 			continue
 		}
 		return capturedPath, err
 	}
-	return "", fmt.Errorf("%s: %w", strings.Join(fileSpec.Paths, " or "), fs.ErrNotExist)
+	return "", fmt.Errorf("%s: %w", strings.Join(source.Paths(), " or "), fs.ErrNotExist)
 }
 
 // MasterKeys may block on its first call; a key version that could not be retrieved is absent from the Set.

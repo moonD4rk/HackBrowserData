@@ -171,7 +171,7 @@ func TestExtractors_CoverEveryCategory(t *testing.T) {
 		extractor, ok := extractors[dataCategory]
 		if assert.Truef(t, ok, "no extractor for %s", dataCategory) {
 			assert.NotNil(t, extractor.Extract, dataCategory)
-			assert.NotEmpty(t, extractor.FileSpecs, dataCategory)
+			assert.NotEmpty(t, extractor.Sources, dataCategory)
 		}
 	}
 }
@@ -236,8 +236,8 @@ func TestExtractors_OverridesFollowTheBrowserNotTheDirectory(t *testing.T) {
 	yandex, ok := browser.Lookup("yandex")
 	require.True(t, ok)
 	extractors := Extractors(browser.UserDataDir{ID: "yandex-2", Browser: yandex}, browser.Profile{})
-	assert.Equal(t, []string{"Ya Passman Data"}, extractors[category.Password].FileSpecs[0].Paths)
-	assert.Equal(t, []string{"Ya Credit Cards"}, extractors[category.CreditCard].FileSpecs[0].Paths)
+	assert.Equal(t, "Ya Passman Data", extractors[category.Password].Sources[0].Path)
+	assert.Equal(t, "Ya Credit Cards", extractors[category.CreditCard].Sources[0].Path)
 }
 
 func TestExtractors_OperaReadsOpsettings(t *testing.T) {
@@ -343,10 +343,10 @@ func TestKeyLocator(t *testing.T) {
 	assert.Empty(t, locator.LocalState)
 }
 
-func TestArchiveFileSpecs(t *testing.T) {
-	assert.Equal(t, []browser.FileSpec{
+func TestArchiveSources(t *testing.T) {
+	assert.Equal(t, []browser.Source{
 		localState,
-		{Paths: []string{"Preferences"}, Optional: true},
-		{Paths: []string{"Preferences_02"}, Optional: true},
-	}, ArchiveFileSpecs())
+		{Path: "Preferences", Optional: true},
+		{Path: "Preferences_02", Optional: true},
+	}, ArchiveSources())
 }

@@ -116,7 +116,7 @@ func TestExtractors_CoverFirefoxCategories(t *testing.T) {
 		}
 		if assert.Truef(t, ok, "no extractor for %s", dataCategory) {
 			assert.NotNil(t, extractor.Extract, dataCategory)
-			assert.NotEmpty(t, extractor.FileSpecs, dataCategory)
+			assert.NotEmpty(t, extractor.Sources, dataCategory)
 		}
 	}
 }

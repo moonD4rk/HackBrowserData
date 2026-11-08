@@ -14,20 +14,23 @@ import (
 )
 
 var (
-	loginsJSON = browser.FileSpec{Paths: []string{"logins.json"}}
-	keyStore   = browser.FileSpec{Paths: []string{"key4.db"}, Optional: true}
-	placesDB   = browser.FileSpec{Paths: []string{"places.sqlite"}}
+	loginsJSON     = browser.Source{Path: "logins.json"}
+	keyStore       = browser.Source{Path: "key4.db", Optional: true}
+	placesDB       = browser.Source{Path: "places.sqlite"}
+	cookiesDB      = browser.Source{Path: "cookies.sqlite"}
+	extensionsJSON = browser.Source{Path: "extensions.json"}
+	webappsStore   = browser.Source{Path: "webappsstore.sqlite"}
 )
 
 // defaultExtractors has no credit card or session storage extractor, because Firefox keeps none that HBD reads.
 var defaultExtractors = browser.Extractors{
 	category.Password:     newDecryptingExtractor(extractPasswords, loginsJSON),
-	category.Cookie:       newPlainExtractor(extractCookies, newFileSpec("cookies.sqlite")),
+	category.Cookie:       newPlainExtractor(extractCookies, cookiesDB),
 	category.Bookmark:     newPlainExtractor(extractBookmarks, placesDB),
 	category.History:      newPlainExtractor(extractHistories, placesDB),
 	category.Download:     newPlainExtractor(extractDownloads, placesDB),
-	category.Extension:    newPlainExtractor(extractExtensions, newFileSpec("extensions.json")),
-	category.LocalStorage: newPlainExtractor(extractLocalStorage, newFileSpec("webappsstore.sqlite")),
+	category.Extension:    newPlainExtractor(extractExtensions, extensionsJSON),
+	category.LocalStorage: newPlainExtractor(extractLocalStorage, webappsStore),
 }
 
 // Discover takes -p as one profile: its parent is the Profiles directory, and only that profile is selected.
@@ -92,11 +95,11 @@ func discoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
 
 func hasDataFile(dir string) bool {
 	for _, extractor := range defaultExtractors {
-		for _, fileSpec := range extractor.FileSpecs {
-			if fileSpec.Optional {
+		for _, source := range extractor.Sources {
+			if source.Optional {
 				continue
 			}
-			for _, relativePath := range fileSpec.Paths {
+			for _, relativePath := range source.Paths() {
 				if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(relativePath))); err == nil {
 					return true
 				}
@@ -114,13 +117,11 @@ func Extractors(_ browser.UserDataDir, _ browser.Profile) browser.Extractors {
 	return extractors
 }
 
-func newFileSpec(path string) browser.FileSpec { return browser.FileSpec{Paths: []string{path}} }
-
-func newPlainExtractor(parse func(string, browser.Collector) error, fileSpec browser.FileSpec) browser.Extractor {
+func newPlainExtractor(parse func(string, browser.Collector) error, source browser.Source) browser.Extractor {
 	return browser.Extractor{
-		FileSpecs: []browser.FileSpec{fileSpec},
+		Sources: []browser.Source{source},
 		Extract: func(_ context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
-			path, err := profileSnapshot.Path(fileSpec)
+			path, err := profileSnapshot.Path(source)
 			if err != nil {
 				return err
 			}
@@ -130,11 +131,11 @@ func newPlainExtractor(parse func(string, browser.Collector) error, fileSpec bro
 }
 
 // newDecryptingExtractor also captures key4.db, the profile's own key store.
-func newDecryptingExtractor(parse func(func() []byte, string, browser.Collector) error, fileSpec browser.FileSpec) browser.Extractor {
+func newDecryptingExtractor(parse func(func() []byte, string, browser.Collector) error, source browser.Source) browser.Extractor {
 	return browser.Extractor{
-		FileSpecs: []browser.FileSpec{fileSpec, keyStore},
+		Sources: []browser.Source{source, keyStore},
 		Extract: func(_ context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
-			path, err := profileSnapshot.Path(fileSpec)
+			path, err := profileSnapshot.Path(source)
 			if err != nil {
 				return err
 			}
