@@ -11,13 +11,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// Extraction is plain data, so a Result prints as it is and list can key record counts by it.
-type Extraction struct {
-	UserDataDirID browser.UserDataDirID
-	ProfileName   string // Profile.Name
-	Category      category.Category
-}
-
 // Plan holds no extractor, so it prints and compares as plain data; Execute builds them again with the run's keychain.
 type Plan struct {
 	Dirs        []DirPlan    // only dirs with something to run, in output order

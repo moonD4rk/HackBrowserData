@@ -2,8 +2,16 @@ package app
 
 import (
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/export"
 )
+
+// Extraction is plain data, so a Result prints as it is and list can key record counts by it.
+type Extraction struct {
+	UserDataDirID browser.UserDataDirID
+	ProfileName   string // Profile.Name
+	Category      category.Category
+}
 
 // Outcome is how one extraction ended. It starts at 1, so a result whose outcome was never set does not read as ok.
 type Outcome int

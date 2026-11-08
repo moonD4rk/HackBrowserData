@@ -12,6 +12,29 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
+// ArchiveFlags are archive's command-line values as cobra parsed them.
+type ArchiveFlags struct {
+	Browser    string
+	Categories string
+}
+
+// ValidateArchive takes no keychain password: an archive copies files and reads no secret.
+func ValidateArchive(flags ArchiveFlags) (Options, error) {
+	browserName, err := parseBrowser(flags.Browser)
+	if err != nil {
+		return Options{}, err
+	}
+	categories, err := parseCategories(flags.Categories)
+	if err != nil {
+		return Options{}, err
+	}
+	home, err := homeDir()
+	if err != nil {
+		return Options{}, err
+	}
+	return Options{Target: Target{BrowserName: browserName, HomeDir: home}, Categories: categories}, nil
+}
+
 // Archive returns how many files and directories it captured.
 func Archive(ctx context.Context, discovery Discovery, categories []category.Category, archivePath string) (int, error) {
 	var dirs []browser.UserDataDir

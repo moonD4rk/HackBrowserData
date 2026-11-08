@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/moond4rk/hackbrowserdata/internal/atomicfile"
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
@@ -12,6 +13,31 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
+
+// DumpKeysFlags are dumpkeys' command-line values as cobra parsed them.
+type DumpKeysFlags struct {
+	Browser  string
+	Keychain KeychainFlags
+}
+
+func ValidateDumpKeys(flags DumpKeysFlags) (Options, error) {
+	browserName, err := parseBrowser(flags.Browser)
+	if err != nil {
+		return Options{}, err
+	}
+	password, err := keychainPasswordFunc(flags.Keychain, os.Stdin)
+	if err != nil {
+		return Options{}, err
+	}
+	home, err := homeDir()
+	if err != nil {
+		return Options{}, err
+	}
+	return Options{
+		Target:   Target{BrowserName: browserName, HomeDir: home},
+		Keychain: KeychainConfig{HomeDir: home, Password: password},
+	}, nil
+}
 
 // DumpKeys writes the key file to outputPath, or to stdout when it is "", and returns how many vaults it holds.
 // A stopped run writes nothing, so it never leaves a keys.json behind.

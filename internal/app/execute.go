@@ -4,12 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
-	"sync"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
-	"github.com/moond4rk/hackbrowserdata/internal/browser/chromium"
-	"github.com/moond4rk/hackbrowserdata/internal/browser/safari"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/export"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
@@ -17,14 +13,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
-
-// loginKeychain is the run's one login keychain, shared by Chromium's v10 key and Safari's passwords; nil off macOS.
-type loginKeychain interface {
-	masterkey.LoginKeychain
-	safari.LoginKeychain
-}
-
-type dirKeysFunc func(ctx context.Context, dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterkey.Set, error)
 
 // Execute retrieves each dir's master keys from this machine. It handles one user data dir at a time, so at most one
 // dir's copies are on disk. Its error means the run could not finish; every other failure is in the Summary.
@@ -49,19 +37,9 @@ func execute(ctx context.Context, plan Plan, output Output, extractors extractor
 	return summary, errors.Join(err, closeErr)
 }
 
-// CountRecords runs the plan with no key and the keychain locked, counting records instead of exporting them.
-func CountRecords(ctx context.Context, plan Plan, keychainConfig KeychainConfig) (Summary, error) {
-	keychain := newLoginKeychain(keychainConfig)
-	return runner{writer: discard{}, extractors: extractorsWith(keychain), keys: keysFromFile(nil)}.run(ctx, plan)
-}
-
 type recordWriter interface {
 	Write(dataCategory category.Category, records []record.Record) error
 }
-
-type discard struct{}
-
-func (discard) Write(category.Category, []record.Record) error { return nil }
 
 // runner is what every user data dir of one run shares; logProgress logs each dir as it starts.
 type runner struct {
@@ -168,76 +146,5 @@ func failAll(dirPlan DirPlan, err error) []Result {
 func closeSnapshot(snapshots *snapshot.Dir) {
 	if err := snapshots.Close(); err != nil {
 		log.Warnf("%v", err)
-	}
-}
-
-type collector struct {
-	browserName, profileName string
-	records                  []record.Record
-	failures                 int
-	firstFailure             error
-}
-
-func (c *collector) Add(row record.Record) {
-	row.SetBrowserAndProfile(c.browserName, c.profileName)
-	c.records = append(c.records, row)
-}
-
-func (c *collector) Fail(err error) {
-	c.failures++
-	if c.firstFailure == nil {
-		c.firstFailure = err
-	}
-	log.Debugf("%s/%s: %v", c.browserName, c.profileName, err)
-}
-
-// result treats a file gone since planning as absent; failures alone are an error, and failures beside records partial.
-func (c *collector) result(extraction Extraction, err error) Result {
-	result := Result{Extraction: extraction, Records: len(c.records), Failures: c.failures}
-	switch {
-	case err != nil && errors.Is(err, fs.ErrNotExist) && result.Records == 0:
-		result.Outcome = OutcomeAbsent
-	case err != nil:
-		result.Outcome, result.Err = OutcomeError, err
-	case result.Failures > 0 && result.Records == 0:
-		result.Outcome, result.Err = OutcomeError, c.firstFailure
-	case result.Failures > 0:
-		result.Outcome = OutcomePartial
-	default:
-		result.Outcome = OutcomeOK
-	}
-	return result
-}
-
-// dirKeys retrieves a dir's keys on first use, for all its profiles; Go 1.20 has no sync.OnceValues.
-type dirKeys struct {
-	once        sync.Once
-	retrieve    dirKeysFunc
-	dir         browser.UserDataDir
-	dirSnapshot snapshot.Snapshot
-	keys        masterkey.Set
-	err         error
-}
-
-func (k *dirKeys) get(ctx context.Context) masterkey.Set {
-	k.once.Do(func() { k.keys, k.err = k.retrieve(ctx, k.dir, k.dirSnapshot) })
-	return k.keys
-}
-
-// keysFromMachine asks this machine's secret stores; on macOS that includes the run's login keychain.
-func keysFromMachine(keychain masterkey.LoginKeychain) dirKeysFunc {
-	return func(ctx context.Context, dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterkey.Set, error) {
-		locator, err := chromium.KeyLocator(dir, dirSnapshot)
-		if err != nil {
-			return nil, err
-		}
-		locator.Keychain = keychain
-		return masterkey.RetrieveAll(ctx, locator)
-	}
-}
-
-func keysFromFile(keys map[browser.UserDataDirID]masterkey.Set) dirKeysFunc {
-	return func(_ context.Context, dir browser.UserDataDir, _ snapshot.Snapshot) (masterkey.Set, error) {
-		return keys[dir.ID], nil
 	}
 }

@@ -239,15 +239,3 @@ func TestExecute_OutputFailureStopsTheRunAndLeavesNoCopies(t *testing.T) {
 	_, statErr := os.Stat(copied)
 	assert.ErrorIs(t, statErr, fs.ErrNotExist)
 }
-
-func TestKeysFromFile(t *testing.T) {
-	want := masterkey.Set{masterkey.V10: []byte("dumped")}
-	keys := keysFromFile(map[browser.UserDataDirID]masterkey.Set{"chrome": want})
-	got, err := keys(context.Background(), browser.UserDataDir{ID: "chrome"}, snapshot.Snapshot{})
-	require.NoError(t, err)
-	assert.Equal(t, want, got)
-
-	got, err = keys(context.Background(), browser.UserDataDir{ID: "edge"}, snapshot.Snapshot{})
-	require.NoError(t, err)
-	assert.Empty(t, got, "a dump without the dir's keys decrypts nothing")
-}
