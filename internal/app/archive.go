@@ -20,7 +20,7 @@ func Archive(ctx context.Context, discovery Discovery, categories []category.Cat
 			dirs = append(dirs, dir)
 		}
 	}
-	files := archiveFiles(NewPlan(Discovery{Dirs: dirs}, categories), dirs)
+	files := archiveFiles(dirs, NewPlan(Discovery{Dirs: dirs}, categories))
 
 	snapshots, err := snapshot.Temp()
 	if err != nil {
@@ -40,26 +40,20 @@ func Archive(ctx context.Context, discovery Discovery, categories []category.Cat
 	return fileCount, nil
 }
 
-func archiveFiles(plan Plan, dirs []browser.UserDataDir) []snapshot.File {
+func archiveFiles(dirs []browser.UserDataDir, plan Plan) []snapshot.File {
 	var files []snapshot.File
 	seen := make(map[snapshot.File]bool)
-	add := func(file snapshot.File) {
-		if !seen[file] {
-			seen[file] = true
-			files = append(files, file)
-		}
-	}
 	for _, dir := range dirs {
 		for _, profile := range dir.Profiles {
 			for _, source := range chromium.ArchiveSources() {
 				if file, ok, err := firstOnDisk(dir, profile, source); err == nil && ok {
-					add(file)
+					files = appendNew(files, seen, file)
 				}
 			}
 		}
-		for _, file := range filesOf(plan, dir.ID) {
-			add(file)
-		}
+	}
+	for _, dirPlan := range plan.Dirs {
+		files = appendNew(files, seen, dirPlan.Files...)
 	}
 	return files
 }

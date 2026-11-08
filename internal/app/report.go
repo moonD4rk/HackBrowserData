@@ -10,7 +10,7 @@ import (
 func Report(writer io.Writer, summary Summary) error {
 	table := tabwriter.NewWriter(writer, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(table, "Browser\tProfile\tCategory\tResult\tRecords\tDetail")
-	for _, failure := range summary.Failures {
+	for _, failure := range summary.DirFailures {
 		fmt.Fprintf(table, "%s\t-\t-\t%s\t0\t%s\n", failure.UserDataDirID, OutcomeError, failure.Err)
 	}
 	for _, result := range summary.Results {

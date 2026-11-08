@@ -11,21 +11,30 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// Extraction is plain data, looked up again when it runs, so a Plan prints as it is and compares with DeepEqual.
+// Extraction is plain data, so a Result prints as it is and list can key record counts by it.
 type Extraction struct {
 	UserDataDirID browser.UserDataDirID
 	ProfileName   string // Profile.Name
 	Category      category.Category
 }
 
-// Plan lists extractions in output order, each file to capture once, the requested extractions that cannot run, and
-// the dirs discovery could not read.
+// Plan holds no extractor, so it prints and compares as plain data; Execute builds them again with the run's keychain.
 type Plan struct {
-	Dirs        []browser.UserDataDir
-	Files       []snapshot.File
-	Extractions []Extraction
-	Skipped     []Result
-	Failures    []DirFailure
+	Dirs        []DirPlan    // only dirs with something to run, in output order
+	Skipped     []Result     // requested extractions that cannot run
+	DirFailures []DirFailure // dirs discovery could not read
+}
+
+// DirPlan captures each file once, however many of its extractions read it, such as Local State.
+type DirPlan struct {
+	Dir      browser.UserDataDir
+	Files    []snapshot.File
+	Profiles []ProfilePlan // only profiles with something to run
+}
+
+type ProfilePlan struct {
+	Profile    browser.Profile
+	Categories []category.Category
 }
 
 type extractorsFunc func(browser.UserDataDir, browser.Profile) browser.Extractors
@@ -36,48 +45,65 @@ func NewPlan(discovery Discovery, categories []category.Category) Plan {
 }
 
 func newPlan(discovery Discovery, categories []category.Category, extractors extractorsFunc) Plan {
-	plan := Plan{Dirs: discovery.Dirs, Failures: append([]DirFailure(nil), discovery.Failures...)}
-	captured := make(map[snapshot.File]bool)
+	plan := Plan{DirFailures: append([]DirFailure(nil), discovery.DirFailures...)}
 	for _, dir := range discovery.Dirs {
-		for _, profile := range dir.Profiles {
-			profileExtractors := extractors(dir, profile)
-			for _, dataCategory := range categories {
-				extraction := Extraction{UserDataDirID: dir.ID, ProfileName: profile.Name, Category: dataCategory}
-				extractor, ok := profileExtractors[dataCategory]
-				if !ok {
-					plan.Skipped = append(plan.Skipped, Result{Extraction: extraction, Outcome: OutcomeUnsupported})
-					continue
-				}
-				files, ok, err := locate(dir, profile, extractor.Sources)
-				if err != nil {
-					plan.Skipped = append(plan.Skipped, Result{Extraction: extraction, Outcome: OutcomeError, Err: err})
-					continue
-				}
-				if !ok {
-					plan.Skipped = append(plan.Skipped, Result{Extraction: extraction, Outcome: OutcomeAbsent})
-					continue
-				}
-				plan.Extractions = append(plan.Extractions, extraction)
-				for _, file := range files {
-					if !captured[file] {
-						captured[file] = true
-						plan.Files = append(plan.Files, file)
-					}
-				}
-			}
+		dirPlan, skipped := planDir(dir, categories, extractors)
+		plan.Skipped = append(plan.Skipped, skipped...)
+		if len(dirPlan.Profiles) > 0 {
+			plan.Dirs = append(plan.Dirs, dirPlan)
 		}
 	}
 	return plan
 }
 
+func planDir(dir browser.UserDataDir, categories []category.Category, extractors extractorsFunc) (DirPlan, []Result) {
+	dirPlan := DirPlan{Dir: dir}
+	var skipped []Result
+	captured := make(map[snapshot.File]bool)
+	for _, profile := range dir.Profiles {
+		profilePlan := ProfilePlan{Profile: profile}
+		profileExtractors := extractors(dir, profile)
+		for _, dataCategory := range categories {
+			extraction := Extraction{UserDataDirID: dir.ID, ProfileName: profile.Name, Category: dataCategory}
+			extractor, supported := profileExtractors[dataCategory]
+			if !supported {
+				skipped = append(skipped, Result{Extraction: extraction, Outcome: OutcomeUnsupported})
+				continue
+			}
+			files, present, err := locate(dir, profile, extractor.Sources)
+			switch {
+			case err != nil:
+				skipped = append(skipped, Result{Extraction: extraction, Outcome: OutcomeError, Err: err})
+			case !present:
+				skipped = append(skipped, Result{Extraction: extraction, Outcome: OutcomeAbsent})
+			default:
+				profilePlan.Categories = append(profilePlan.Categories, dataCategory)
+				dirPlan.Files = appendNew(dirPlan.Files, captured, files...)
+			}
+		}
+		if len(profilePlan.Categories) > 0 {
+			dirPlan.Profiles = append(dirPlan.Profiles, profilePlan)
+		}
+	}
+	return dirPlan, skipped
+}
+
+func appendNew(files []snapshot.File, seen map[snapshot.File]bool, more ...snapshot.File) []snapshot.File {
+	for _, file := range more {
+		if !seen[file] {
+			seen[file] = true
+			files = append(files, file)
+		}
+	}
+	return files
+}
+
 // locate needs every required file and one of the profile's own: Local State alone never makes an extraction present.
 // One that reads no file always runs, and a candidate that cannot be checked is an error, not absence.
-func locate(dir browser.UserDataDir, profile browser.Profile, sources []browser.Source) ([]snapshot.File, bool, error) {
+func locate(dir browser.UserDataDir, profile browser.Profile, sources []browser.Source) (files []snapshot.File, present bool, err error) {
 	if len(sources) == 0 {
 		return nil, true, nil
 	}
-	var files []snapshot.File
-	present := false
 	for _, source := range sources {
 		file, ok, err := firstOnDisk(dir, profile, source)
 		switch {

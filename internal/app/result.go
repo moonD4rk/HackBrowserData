@@ -50,7 +50,7 @@ type DirFailure struct {
 
 // Summary is every result of a run in output order, what never ran first, and the dirs that failed as a whole.
 type Summary struct {
-	Results  []Result
-	Failures []DirFailure
-	Exported export.Output // the files Execute wrote; empty when nothing was exported
+	Results     []Result
+	DirFailures []DirFailure
+	Exported    export.Output // the files Execute wrote; empty when nothing was exported
 }

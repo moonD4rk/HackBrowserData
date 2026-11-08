@@ -20,7 +20,7 @@ func TestReport(t *testing.T) {
 			{Extraction: cookie, Outcome: OutcomePartial, Records: 224, Failures: 4},
 			{Extraction: Extraction{UserDataDirID: "edge", ProfileName: "Default", Category: category.Password}},
 		},
-		Failures: []DirFailure{{UserDataDirID: "arc-2", Err: errors.New("permission denied")}},
+		DirFailures: []DirFailure{{UserDataDirID: "arc-2", Err: errors.New("permission denied")}},
 	}))
 
 	lines := strings.Split(strings.TrimSpace(buffer.String()), "\n")

@@ -85,8 +85,8 @@ func foundNothing(stderr io.Writer, discovery app.Discovery, message string) boo
 	if len(discovery.Dirs) > 0 {
 		return false
 	}
-	if len(discovery.Failures) > 0 {
-		report(stderr, app.Summary{Failures: discovery.Failures})
+	if len(discovery.DirFailures) > 0 {
+		report(stderr, app.Summary{DirFailures: discovery.DirFailures})
 	}
 	log.Warnf("%s", message)
 	return true

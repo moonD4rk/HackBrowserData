@@ -140,9 +140,9 @@ func TestExecute_KeysAreRetrievedOncePerUserDataDir(t *testing.T) {
 	summary, _ := run(t, base, keys, categories, chromeDir(t, "chrome", "Default", "Profile 1"))
 
 	assert.Equal(t, 1, calls)
-	require.Len(t, summary.Failures, 1, "a retrieval error is reported once, for the dir")
-	assert.Equal(t, browser.UserDataDirID("chrome"), summary.Failures[0].UserDataDirID)
-	require.ErrorContains(t, summary.Failures[0].Err, "v20: no ABE")
+	require.Len(t, summary.DirFailures, 1, "a retrieval error is reported once, for the dir")
+	assert.Equal(t, browser.UserDataDirID("chrome"), summary.DirFailures[0].UserDataDirID)
+	require.ErrorContains(t, summary.DirFailures[0].Err, "v20: no ABE")
 	assert.Len(t, summary.Results, 4)
 }
 

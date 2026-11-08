@@ -37,7 +37,7 @@ func TestDiscover(t *testing.T) {
 
 	discovery := Discover(Target{BrowserName: "all", HomeDir: home})
 	assert.Equal(t, []browser.UserDataDirID{"chrome", "edge"}, userDataDirIDs(discovery), "table order, which is output order")
-	assert.Empty(t, discovery.Failures)
+	assert.Empty(t, discovery.DirFailures)
 
 	discovery = Discover(Target{BrowserName: "edge", HomeDir: home})
 	assert.Equal(t, []browser.UserDataDirID{"edge"}, userDataDirIDs(discovery))
@@ -83,9 +83,9 @@ func TestDiscover_UnreadableDirIsReported(t *testing.T) {
 
 	discovery := Discover(Target{BrowserName: "all", HomeDir: home})
 	assert.Empty(t, discovery.Dirs)
-	require.Len(t, discovery.Failures, 1)
-	assert.Equal(t, browser.UserDataDirID("chrome"), discovery.Failures[0].UserDataDirID)
-	assert.Error(t, discovery.Failures[0].Err)
+	require.Len(t, discovery.DirFailures, 1)
+	assert.Equal(t, browser.UserDataDirID("chrome"), discovery.DirFailures[0].UserDataDirID)
+	assert.Error(t, discovery.DirFailures[0].Err)
 }
 
 // TestWithData_KeepsAProfileItCannotCheck keeps it for the plan to report, since dropping it would hide the failure.

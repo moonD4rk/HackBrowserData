@@ -11,8 +11,8 @@ import (
 
 // Discovery keeps a failure per browser whose data could not be read, so it is reported, not taken as absence.
 type Discovery struct {
-	Dirs     []browser.UserDataDir
-	Failures []DirFailure
+	Dirs        []browser.UserDataDir
+	DirFailures []DirFailure
 }
 
 // Discover applies the target's profile path only when one browser is named.
@@ -29,7 +29,7 @@ func Discover(target Target) Discovery {
 		dirs, err := discover(supportedBrowser, discoverOptions)
 		discovery.Dirs = append(discovery.Dirs, withData(dirs)...)
 		if err != nil {
-			discovery.Failures = append(discovery.Failures, DirFailure{UserDataDirID: browser.UserDataDirID(supportedBrowser.Name), Err: err})
+			discovery.DirFailures = append(discovery.DirFailures, DirFailure{UserDataDirID: browser.UserDataDirID(supportedBrowser.Name), Err: err})
 		}
 	}
 	return discovery

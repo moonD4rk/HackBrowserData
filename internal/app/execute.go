@@ -73,16 +73,16 @@ type runner struct {
 
 func (r runner) run(ctx context.Context, plan Plan) (Summary, error) {
 	summary := Summary{
-		Results:  append([]Result(nil), plan.Skipped...),
-		Failures: append([]DirFailure(nil), plan.Failures...),
+		Results:     append([]Result(nil), plan.Skipped...),
+		DirFailures: append([]DirFailure(nil), plan.DirFailures...),
 	}
-	for _, dir := range plan.Dirs {
+	for _, dirPlan := range plan.Dirs {
 		if err := ctx.Err(); err != nil {
 			return summary, fmt.Errorf("run stopped: %w", err)
 		}
-		dirSummary, err := r.runDir(ctx, dir, plan)
+		dirSummary, err := r.runDir(ctx, dirPlan)
 		summary.Results = append(summary.Results, dirSummary.Results...)
-		summary.Failures = append(summary.Failures, dirSummary.Failures...)
+		summary.DirFailures = append(summary.DirFailures, dirSummary.DirFailures...)
 		if err != nil {
 			return summary, err
 		}
@@ -90,25 +90,22 @@ func (r runner) run(ctx context.Context, plan Plan) (Summary, error) {
 	return summary, nil
 }
 
-func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, plan Plan) (Summary, error) {
-	extractions := extractionsOf(plan, dir.ID)
-	if len(extractions) == 0 {
-		return Summary{}, nil
-	}
+func (r runner) runDir(ctx context.Context, dirPlan DirPlan) (Summary, error) {
+	dir := dirPlan.Dir
 	if r.logProgress {
 		log.Infof("Extracting %s...", dir.Browser.DisplayName)
 	}
 
 	snapshots, err := snapshot.Temp()
 	if err != nil {
-		return Summary{Results: failAll(extractions, err)}, nil
+		return Summary{Results: failAll(dirPlan, err)}, nil
 	}
 	defer closeSnapshot(snapshots)
-	if err := snapshots.Capture(ctx, filesOf(plan, dir.ID)); err != nil {
+	if err := snapshots.Capture(ctx, dirPlan.Files); err != nil {
 		if ctx.Err() != nil {
 			return Summary{}, err
 		}
-		return Summary{Results: failAll(extractions, err)}, nil
+		return Summary{Results: failAll(dirPlan, err)}, nil
 	}
 	dirSnapshot := snapshots.Snapshot(string(dir.ID))
 
@@ -121,64 +118,49 @@ func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, plan Plan) 
 		masterKeys = dirKeyRetrieval.get
 	}
 
-	profiles := make(map[string]browser.Profile, len(dir.Profiles))
-	byProfile := make(map[string]browser.Extractors, len(dir.Profiles))
-	for _, profile := range dir.Profiles {
-		profiles[profile.Name] = profile
-		byProfile[profile.Name] = r.extractors(dir, profile)
+	var summary Summary
+	for _, profilePlan := range dirPlan.Profiles {
+		profile := profilePlan.Profile
+		extractors := r.extractors(dir, profile)
+		profileSnapshot := browser.NewProfileSnapshot(dirSnapshot, profile, masterKeys)
+		for _, dataCategory := range profilePlan.Categories {
+			if err := ctx.Err(); err != nil {
+				return summary, fmt.Errorf("run stopped: %w", err)
+			}
+			extraction := Extraction{UserDataDirID: dir.ID, ProfileName: profile.Name, Category: dataCategory}
+			result, err := r.runExtraction(ctx, extraction, extractors[dataCategory], profileSnapshot, dir.Browser.DisplayName)
+			if err != nil {
+				return summary, err
+			}
+			summary.Results = append(summary.Results, result)
+		}
 	}
-
-	results := make([]Result, 0, len(extractions))
-	for _, extraction := range extractions {
-		if err := ctx.Err(); err != nil {
-			return Summary{Results: results}, fmt.Errorf("run stopped: %w", err)
-		}
-		extractor, ok := byProfile[extraction.ProfileName][extraction.Category]
-		if !ok || extractor.Extract == nil {
-			results = append(results, Result{Extraction: extraction, Outcome: OutcomeUnsupported})
-			continue
-		}
-		profile := profiles[extraction.ProfileName]
-		recordCollector := &collector{browserName: dir.Browser.DisplayName, profileName: profile.Name}
-		err := extractor.Extract(ctx, browser.NewProfileSnapshot(dirSnapshot, profile, masterKeys), recordCollector)
-		// Records emitted before an extraction failed are kept, as they always were.
-		if writeErr := r.writer.Write(extraction.Category, recordCollector.records); writeErr != nil {
-			return Summary{Results: results}, writeErr
-		}
-		results = append(results, recordCollector.result(extraction, err))
-	}
-	dirSummary := Summary{Results: results}
 	if dirKeyRetrieval != nil && dirKeyRetrieval.err != nil {
 		keyErr := fmt.Errorf("master key retrieval: %w", dirKeyRetrieval.err)
-		dirSummary.Failures = []DirFailure{{UserDataDirID: dir.ID, Err: keyErr}}
+		summary.DirFailures = []DirFailure{{UserDataDirID: dir.ID, Err: keyErr}}
 	}
-	return dirSummary, nil
+	return summary, nil
 }
 
-func extractionsOf(plan Plan, id browser.UserDataDirID) []Extraction {
-	var out []Extraction
-	for _, extraction := range plan.Extractions {
-		if extraction.UserDataDirID == id {
-			out = append(out, extraction)
+// runExtraction exports the records emitted before an extraction failed, as they always were; its error stops the run.
+func (r runner) runExtraction(
+	ctx context.Context, extraction Extraction, extractor browser.Extractor, profileSnapshot browser.ProfileSnapshot, browserName string,
+) (Result, error) {
+	recordCollector := &collector{browserName: browserName, profileName: extraction.ProfileName}
+	err := extractor.Extract(ctx, profileSnapshot, recordCollector)
+	if writeErr := r.writer.Write(extraction.Category, recordCollector.records); writeErr != nil {
+		return Result{}, writeErr
+	}
+	return recordCollector.result(extraction, err), nil
+}
+
+func failAll(dirPlan DirPlan, err error) []Result {
+	var results []Result
+	for _, profilePlan := range dirPlan.Profiles {
+		for _, dataCategory := range profilePlan.Categories {
+			extraction := Extraction{UserDataDirID: dirPlan.Dir.ID, ProfileName: profilePlan.Profile.Name, Category: dataCategory}
+			results = append(results, Result{Extraction: extraction, Outcome: OutcomeError, Err: err})
 		}
-	}
-	return out
-}
-
-func filesOf(plan Plan, id browser.UserDataDirID) []snapshot.File {
-	var out []snapshot.File
-	for _, file := range plan.Files {
-		if file.UserDataDirID == string(id) {
-			out = append(out, file)
-		}
-	}
-	return out
-}
-
-func failAll(extractions []Extraction, err error) []Result {
-	results := make([]Result, len(extractions))
-	for i, extraction := range extractions {
-		results[i] = Result{Extraction: extraction, Outcome: OutcomeError, Err: err}
 	}
 	return results
 }
