@@ -18,7 +18,7 @@ var (
 )
 
 var defaultExtractors = browser.Extractors{
-	category.Password:       {FileSpecs: withKeyFiles(loginData, loginDataForAccount), Extract: extractPasswordStores},
+	category.Password:       newPasswordExtractor(),
 	category.Cookie:         newDecryptingExtractor(newFileSpec("Network/Cookies", "Cookies"), extractCookies),
 	category.Bookmark:       newPlainExtractor(newFileSpec("Bookmarks"), extractBookmarks),
 	category.History:        newPlainExtractor(newFileSpec("History"), extractHistories),
@@ -80,6 +80,11 @@ func newPlainExtractor(fileSpec browser.FileSpec, parse func(string, browser.Col
 			return parse(path, out)
 		},
 	}
+}
+
+// newPasswordExtractor reads two login stores, which newDecryptingExtractor's single file spec cannot express.
+func newPasswordExtractor() browser.Extractor {
+	return browser.Extractor{FileSpecs: withKeyFiles(loginData, loginDataForAccount), Extract: extractPasswordStores}
 }
 
 // extractPasswordStores reads both stores: a synced-only profile has one, and one failing keeps the other's logins.
