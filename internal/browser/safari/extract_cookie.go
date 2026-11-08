@@ -16,12 +16,11 @@ func extractCookies(path string, out browser.Collector) error {
 		return err
 	}
 
-	var cookies []record.Cookie
 	for _, page := range pages {
 		for _, cookie := range page.Cookies {
 			hasExpire := !cookie.Expires.IsZero()
 			// binarycookies returns local times; UTC keeps the JSON in line with Chromium's and Firefox's cookies.
-			cookies = append(cookies, record.Cookie{
+			out.Add(&record.Cookie{
 				Host:         string(cookie.Domain),
 				Path:         string(cookie.Path),
 				Name:         string(cookie.Name),
@@ -35,7 +34,6 @@ func extractCookies(path string, out browser.Collector) error {
 			})
 		}
 	}
-	browser.AddAll(out, cookies)
 	return nil
 }
 

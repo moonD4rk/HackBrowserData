@@ -35,7 +35,6 @@ func extractPasswords(masterKey func() []byte, path string, out browser.Collecto
 		return err
 	}
 
-	var logins []record.Login
 	for _, value := range gjson.GetBytes(data, "logins").Array() {
 		url := value.Get("formSubmitURL").String()
 		if url == "" {
@@ -52,7 +51,7 @@ func extractPasswords(masterKey func() []byte, path string, out browser.Collecto
 			out.Fail(fmt.Errorf("decrypt password for %s: %w", url, err))
 		}
 
-		logins = append(logins, record.Login{
+		out.Add(&record.Login{
 			URL:       url,
 			Username:  string(user),
 			Password:  string(password),
@@ -60,6 +59,5 @@ func extractPasswords(masterKey func() []byte, path string, out browser.Collecto
 			Store:     record.StoreLocal,
 		})
 	}
-	browser.AddAll(out, logins)
 	return nil
 }

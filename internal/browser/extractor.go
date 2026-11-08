@@ -47,16 +47,6 @@ type Collector interface {
 	Fail(err error)
 }
 
-// AddAll hands rows to out by pointer, because out sets each record's Browser and Profile in place.
-func AddAll[T any, P interface {
-	*T
-	record.Record
-}](out Collector, rows []T) {
-	for i := range rows {
-		out.Add(P(&rows[i]))
-	}
-}
-
 type ProfileSnapshot struct {
 	Profile    Profile
 	snapshot   snapshot.Snapshot

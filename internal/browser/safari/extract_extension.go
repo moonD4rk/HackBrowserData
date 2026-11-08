@@ -29,15 +29,13 @@ func extractExtensions(paths []string, out browser.Collector) error {
 		return err
 	}
 
-	extensions := make([]record.Extension, 0, len(records))
 	for _, entry := range records {
-		extensions = append(extensions, record.Extension{
+		out.Add(&record.Extension{
 			Name:    entry.bundleID,
 			ID:      entry.key,
 			Enabled: entry.enabled,
 		})
 	}
-	browser.AddAll(out, extensions)
 	return nil
 }
 

@@ -8,11 +8,10 @@ import (
 	"path/filepath"
 	"unicode/utf16"
 
-	_ "modernc.org/sqlite"
-
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
+	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 )
 
 // Safari 17+ keeps localStorage at <root>/<top-hash>/<frame-hash>/{origin,LocalStorage/localstorage.sqlite3},
@@ -46,7 +45,6 @@ func extractLocalStorage(root string, out browser.Collector) error {
 		return err
 	}
 
-	var entries []record.LocalStorage
 	for _, originDir := range dirs {
 		origin, err := readOriginFile(filepath.Join(originDir, webkitOriginFile))
 		if err != nil {
@@ -60,14 +58,13 @@ func extractLocalStorage(root string, out browser.Collector) error {
 			continue
 		}
 		for _, item := range items {
-			entries = append(entries, record.LocalStorage{
+			out.Add(&record.LocalStorage{
 				URL:   origin,
 				Key:   item.key,
 				Value: item.value,
 			})
 		}
 	}
-	browser.AddAll(out, entries)
 	return nil
 }
 
@@ -210,15 +207,11 @@ type localStorageItem struct {
 func readLocalStorageFile(path string) ([]localStorageItem, error) {
 	// mode=ro without immutable lets SQLite replay the copied -wal, so entries Safari has not checkpointed appear.
 	// ORDER BY key, rowid keeps exports stable across runs and SQLite versions.
-	dsn := "file:" + path + "?mode=ro"
-	database, err := sql.Open("sqlite", dsn)
+	database, err := sqlitex.Open(path, sqlitex.ReadOnly)
 	if err != nil {
 		return nil, fmt.Errorf("open %s: %w", path, err)
 	}
 	defer database.Close()
-	if err := database.Ping(); err != nil {
-		return nil, fmt.Errorf("ping %s: %w", path, err)
-	}
 
 	rows, err := database.Query(`SELECT key, value FROM ItemTable ORDER BY key, rowid`)
 	if err != nil {

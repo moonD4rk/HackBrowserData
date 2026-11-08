@@ -15,18 +15,18 @@ const (
 )
 
 func extractCreditCards(masterKeys masterKeysFunc, path string, out browser.Collector) error {
-	cards, err := sqlitex.QueryRows(path, false, defaultCreditCardQuery,
-		func(rows *sql.Rows) (record.CreditCard, error) {
+	return sqlitex.EachRow(path, defaultCreditCardQuery,
+		func(rows *sql.Rows) error {
 			var guid, name, month, year, nickname, address string
 			var encryptedNumber []byte
 			if err := rows.Scan(&guid, &name, &month, &year, &encryptedNumber, &nickname, &address); err != nil {
-				return record.CreditCard{}, err
+				return err
 			}
 			number, err := masterKeys.decrypt(encryptedNumber)
 			if err != nil {
 				out.Fail(fmt.Errorf("decrypt card %s: %w", guid, err))
 			}
-			return record.CreditCard{
+			out.Add(&record.CreditCard{
 				GUID:     guid,
 				Name:     name,
 				Number:   string(number),
@@ -34,11 +34,7 @@ func extractCreditCards(masterKeys masterKeysFunc, path string, out browser.Coll
 				ExpYear:  year,
 				NickName: nickname,
 				Address:  address,
-			}, nil
-		})
-	if err != nil {
-		return err
-	}
-	browser.AddAll(out, cards)
-	return nil
+			})
+			return nil
+		}, out.Fail)
 }

@@ -15,29 +15,25 @@ const (
 )
 
 func extractPasswords(masterKeys masterKeysFunc, path string, store record.Store, out browser.Collector) error {
-	logins, err := sqlitex.QueryRows(path, false, defaultLoginQuery,
-		func(rows *sql.Rows) (record.Login, error) {
+	return sqlitex.EachRow(path, defaultLoginQuery,
+		func(rows *sql.Rows) error {
 			var url, username string
 			var encryptedPassword []byte
 			var created int64
 			if err := rows.Scan(&url, &username, &encryptedPassword, &created); err != nil {
-				return record.Login{}, err
+				return err
 			}
 			password, err := masterKeys.decrypt(encryptedPassword)
 			if err != nil {
 				out.Fail(fmt.Errorf("decrypt password for %s: %w", url, err))
 			}
-			return record.Login{
+			out.Add(&record.Login{
 				URL:       url,
 				Username:  username,
 				Password:  string(password),
 				CreatedAt: timeconv.Chromium(created),
 				Store:     store,
-			}, nil
-		})
-	if err != nil {
-		return err
-	}
-	browser.AddAll(out, logins)
-	return nil
+			})
+			return nil
+		}, out.Fail)
 }

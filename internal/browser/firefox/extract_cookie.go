@@ -13,8 +13,8 @@ const cookieQuery = `SELECT name, value, host, path,
 	creationTime, expiry, isSecure, isHttpOnly, sameSite FROM moz_cookies`
 
 func extractCookies(path string, out browser.Collector) error {
-	cookies, err := sqlitex.QueryRows(path, true, cookieQuery,
-		func(rows *sql.Rows) (record.Cookie, error) {
+	return sqlitex.EachRow(path, cookieQuery,
+		func(rows *sql.Rows) error {
 			var (
 				name, value, host, cookiePath string
 				isSecure, isHTTPOnly          int
@@ -23,7 +23,7 @@ func extractCookies(path string, out browser.Collector) error {
 			)
 			if err := rows.Scan(&name, &value, &host, &cookiePath,
 				&createdAt, &expiry, &isSecure, &isHTTPOnly, &sameSite); err != nil {
-				return record.Cookie{}, err
+				return err
 			}
 			hasExpire := expiry > 0
 			sameSiteStr := "unspecified"
@@ -37,7 +37,7 @@ func extractCookies(path string, out browser.Collector) error {
 			case 256:
 				// not specified by Set-Cookie
 			}
-			return record.Cookie{
+			out.Add(&record.Cookie{
 				Name:         name,
 				Host:         host,
 				Path:         cookiePath,
@@ -49,11 +49,7 @@ func extractCookies(path string, out browser.Collector) error {
 				ExpireAt:     timeconv.Unix(expiry),
 				CreatedAt:    timeconv.UnixMicro(createdAt),
 				SameSite:     sameSiteStr,
-			}, nil
-		})
-	if err != nil {
-		return err
-	}
-	browser.AddAll(out, cookies)
-	return nil
+			})
+			return nil
+		}, out.Fail, sqlitex.JournalOff)
 }

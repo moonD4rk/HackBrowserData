@@ -13,24 +13,20 @@ const historyQuery = `SELECT url, COALESCE(last_visit_date, 0),
 	COALESCE(title, ''), visit_count FROM moz_places`
 
 func extractHistories(path string, out browser.Collector) error {
-	histories, err := sqlitex.QueryRows(path, true, historyQuery,
-		func(rows *sql.Rows) (record.History, error) {
+	return sqlitex.EachRow(path, historyQuery,
+		func(rows *sql.Rows) error {
 			var url, title string
 			var visitCount int
 			var lastVisit int64
 			if err := rows.Scan(&url, &lastVisit, &title, &visitCount); err != nil {
-				return record.History{}, err
+				return err
 			}
-			return record.History{
+			out.Add(&record.History{
 				URL:        url,
 				Title:      title,
 				VisitCount: visitCount,
 				LastVisit:  timeconv.UnixMicro(lastVisit),
-			}, nil
-		})
-	if err != nil {
-		return err
-	}
-	browser.AddAll(out, histories)
-	return nil
+			})
+			return nil
+		}, out.Fail, sqlitex.JournalOff)
 }

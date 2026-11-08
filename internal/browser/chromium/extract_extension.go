@@ -38,7 +38,6 @@ func extractExtensionsAt(path string, jsonPaths []string, out browser.Collector)
 		return fmt.Errorf("cannot find extensions in settings")
 	}
 
-	var extensions []record.Extension
 	settings.ForEach(func(id, extension gjson.Result) bool {
 		// Skip system/component extensions
 		// https://source.chromium.org/chromium/chromium/src/+/main:extensions/common/mojom/manifest.mojom
@@ -52,7 +51,7 @@ func extractExtensionsAt(path string, jsonPaths []string, out browser.Collector)
 			return true
 		}
 
-		extensions = append(extensions, record.Extension{
+		out.Add(&record.Extension{
 			Name:        manifest.Get("name").String(),
 			ID:          id.String(),
 			Description: manifest.Get("description").String(),
@@ -63,7 +62,6 @@ func extractExtensionsAt(path string, jsonPaths []string, out browser.Collector)
 		return true
 	})
 
-	browser.AddAll(out, extensions)
 	return nil
 }
 

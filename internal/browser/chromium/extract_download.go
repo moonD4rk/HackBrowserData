@@ -13,25 +13,21 @@ const downloadQuery = `SELECT target_path, tab_url, total_bytes, start_time, end
 	mime_type FROM downloads`
 
 func extractDownloads(path string, out browser.Collector) error {
-	downloads, err := sqlitex.QueryRows(path, false, downloadQuery,
-		func(rows *sql.Rows) (record.Download, error) {
+	return sqlitex.EachRow(path, downloadQuery,
+		func(rows *sql.Rows) error {
 			var targetPath, url, mimeType string
 			var totalBytes, startTime, endTime int64
 			if err := rows.Scan(&targetPath, &url, &totalBytes, &startTime, &endTime, &mimeType); err != nil {
-				return record.Download{}, err
+				return err
 			}
-			return record.Download{
+			out.Add(&record.Download{
 				URL:        url,
 				TargetPath: targetPath,
 				MimeType:   mimeType,
 				TotalBytes: totalBytes,
 				StartTime:  timeconv.Chromium(startTime),
 				EndTime:    timeconv.Chromium(endTime),
-			}, nil
-		})
-	if err != nil {
-		return err
-	}
-	browser.AddAll(out, downloads)
-	return nil
+			})
+			return nil
+		}, out.Fail)
 }

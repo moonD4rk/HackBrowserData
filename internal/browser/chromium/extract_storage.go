@@ -40,7 +40,6 @@ func extractLocalStorage(path string, out browser.Collector) error {
 	}
 	defer database.Close()
 
-	var entries []record.LocalStorage
 	cursor := database.NewIterator(nil, nil)
 	defer cursor.Release()
 
@@ -49,9 +48,8 @@ func extractLocalStorage(path string, out browser.Collector) error {
 		if !ok {
 			continue
 		}
-		entries = append(entries, entry)
+		out.Add(&entry)
 	}
-	browser.AddAll(out, entries)
 	return cursor.Error()
 }
 
@@ -181,7 +179,6 @@ func extractSessionStorage(path string, out browser.Collector) error {
 		return fmt.Errorf("read namespace entries: %w", err)
 	}
 
-	var entries []record.SessionStorage
 	mapCursor := database.NewIterator(nil, nil)
 	defer mapCursor.Release()
 
@@ -205,13 +202,12 @@ func extractSessionStorage(path string, out browser.Collector) error {
 		}
 
 		value := decodeSessionStorageValue(mapCursor.Value())
-		entries = append(entries, record.SessionStorage{
+		out.Add(&record.SessionStorage{
 			URL:   origin,
 			Key:   keyName,
 			Value: value,
 		})
 	}
-	browser.AddAll(out, entries)
 	return mapCursor.Error()
 }
 

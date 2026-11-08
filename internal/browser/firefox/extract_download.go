@@ -17,12 +17,12 @@ const downloadQuery = `SELECT place_id, GROUP_CONCAT(content), url, dateAdded
 	t GROUP BY place_id`
 
 func extractDownloads(path string, out browser.Collector) error {
-	downloads, err := sqlitex.QueryRows(path, true, downloadQuery,
-		func(rows *sql.Rows) (record.Download, error) {
+	return sqlitex.EachRow(path, downloadQuery,
+		func(rows *sql.Rows) error {
 			var placeID, dateAdded int64
 			var content, url string
 			if err := rows.Scan(&placeID, &content, &url, &dateAdded); err != nil {
-				return record.Download{}, err
+				return err
 			}
 
 			entry := record.Download{
@@ -41,11 +41,7 @@ func extractDownloads(path string, out browser.Collector) error {
 				entry.TargetPath = content
 			}
 
-			return entry, nil
-		})
-	if err != nil {
-		return err
-	}
-	browser.AddAll(out, downloads)
-	return nil
+			out.Add(&entry)
+			return nil
+		}, out.Fail, sqlitex.JournalOff)
 }

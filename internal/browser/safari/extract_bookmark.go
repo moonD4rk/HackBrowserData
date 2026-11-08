@@ -40,14 +40,13 @@ func extractBookmarks(path string, out browser.Collector) error {
 		return fmt.Errorf("decode bookmarks: %w", err)
 	}
 
-	var bookmarks []record.Bookmark
-	walkBookmarks(root.Children, "", &bookmarks)
-	browser.AddAll(out, bookmarks)
+	var leaves int64
+	walkBookmarks(root.Children, "", &leaves, out)
 	return nil
 }
 
 // walkBookmarks numbers leaves from 1 across all folders: the plist stores no number, and per-folder indexes repeat.
-func walkBookmarks(nodes []bookmarkNode, folder string, out *[]record.Bookmark) {
+func walkBookmarks(nodes []bookmarkNode, folder string, leaves *int64, out browser.Collector) {
 	for _, node := range nodes {
 		switch node.Type {
 		case bookmarkTypeLeaf:
@@ -58,8 +57,9 @@ func walkBookmarks(nodes []bookmarkNode, folder string, out *[]record.Bookmark) 
 			if node.URLString == "" {
 				continue
 			}
-			*out = append(*out, record.Bookmark{
-				ID:        int64(len(*out) + 1),
+			*leaves++
+			out.Add(&record.Bookmark{
+				ID:        *leaves,
 				Name:      title,
 				URL:       node.URLString,
 				Folder:    folder,
@@ -71,7 +71,7 @@ func walkBookmarks(nodes []bookmarkNode, folder string, out *[]record.Bookmark) 
 			if name == "com.apple.ReadingList" {
 				name = "ReadingList"
 			}
-			walkBookmarks(node.Children, name, out)
+			walkBookmarks(node.Children, name, leaves, out)
 		}
 	}
 }

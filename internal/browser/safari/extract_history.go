@@ -22,26 +22,22 @@ const (
 )
 
 func extractHistories(path string, out browser.Collector) error {
-	histories, err := sqlitex.QueryRows(path, true, historyQuery,
-		func(rows *sql.Rows) (record.History, error) {
+	return sqlitex.EachRow(path, historyQuery,
+		func(rows *sql.Rows) error {
 			var (
 				url, title string
 				visitCount int
 				visitTime  float64
 			)
 			if err := rows.Scan(&url, &title, &visitCount, &visitTime); err != nil {
-				return record.History{}, err
+				return err
 			}
-			return record.History{
+			out.Add(&record.History{
 				URL:        url,
 				Title:      title,
 				VisitCount: visitCount,
 				LastVisit:  timeconv.CoreData(visitTime),
-			}, nil
-		})
-	if err != nil {
-		return err
-	}
-	browser.AddAll(out, histories)
-	return nil
+			})
+			return nil
+		}, out.Fail, sqlitex.JournalOff)
 }

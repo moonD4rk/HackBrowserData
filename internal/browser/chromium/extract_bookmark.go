@@ -16,20 +16,18 @@ func extractBookmarks(path string, out browser.Collector) error {
 		return err
 	}
 
-	var bookmarks []record.Bookmark
 	roots := gjson.GetBytes(data, "roots")
 	roots.ForEach(func(_, value gjson.Result) bool {
-		walkBookmarks(value, "", &bookmarks)
+		walkBookmarks(value, "", out)
 		return true
 	})
-	browser.AddAll(out, bookmarks)
 	return nil
 }
 
-func walkBookmarks(node gjson.Result, folder string, out *[]record.Bookmark) {
+func walkBookmarks(node gjson.Result, folder string, out browser.Collector) {
 	nodeType := node.Get("type").String()
 	if nodeType == "url" {
-		*out = append(*out, record.Bookmark{
+		out.Add(&record.Bookmark{
 			ID:        node.Get("id").Int(),
 			Name:      node.Get("name").String(),
 			Type:      nodeType,

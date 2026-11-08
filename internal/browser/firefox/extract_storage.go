@@ -13,23 +13,19 @@ import (
 const localStorageQuery = `SELECT originKey, key, value FROM webappsstore2`
 
 func extractLocalStorage(path string, out browser.Collector) error {
-	entries, err := sqlitex.QueryRows(path, true, localStorageQuery,
-		func(rows *sql.Rows) (record.LocalStorage, error) {
+	return sqlitex.EachRow(path, localStorageQuery,
+		func(rows *sql.Rows) error {
 			var originKey, key, value string
 			if err := rows.Scan(&originKey, &key, &value); err != nil {
-				return record.LocalStorage{}, err
+				return err
 			}
-			return record.LocalStorage{
+			out.Add(&record.LocalStorage{
 				URL:   parseOriginKey(originKey),
 				Key:   key,
 				Value: value,
-			}, nil
-		})
-	if err != nil {
-		return err
-	}
-	browser.AddAll(out, entries)
-	return nil
+			})
+			return nil
+		}, out.Fail, sqlitex.JournalOff)
 }
 
 func reverseString(text string) string {

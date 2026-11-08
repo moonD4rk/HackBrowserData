@@ -16,28 +16,24 @@ const bookmarkQuery = `SELECT b.id, p.url, b.type, b.dateAdded, COALESCE(b.title
 	LEFT JOIN moz_bookmarks f ON b.parent = f.id`
 
 func extractBookmarks(path string, out browser.Collector) error {
-	bookmarks, err := sqlitex.QueryRows(path, true, bookmarkQuery,
-		func(rows *sql.Rows) (record.Bookmark, error) {
+	return sqlitex.EachRow(path, bookmarkQuery,
+		func(rows *sql.Rows) error {
 			var id, dateAdded int64
 			var url, title, folder string
 			var typeCode int64
 			if err := rows.Scan(&id, &url, &typeCode, &dateAdded, &title, &folder); err != nil {
-				return record.Bookmark{}, err
+				return err
 			}
-			return record.Bookmark{
+			out.Add(&record.Bookmark{
 				ID:        id,
 				Name:      title,
 				Type:      bookmarkType(typeCode),
 				URL:       url,
 				Folder:    folder,
 				CreatedAt: timeconv.UnixMicro(dateAdded),
-			}, nil
-		})
-	if err != nil {
-		return err
-	}
-	browser.AddAll(out, bookmarks)
-	return nil
+			})
+			return nil
+		}, out.Fail, sqlitex.JournalOff)
 }
 
 func bookmarkType(typeCode int64) string {

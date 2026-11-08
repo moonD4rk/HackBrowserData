@@ -2,6 +2,7 @@ package sqlitex
 
 import (
 	"database/sql"
+	"errors"
 	"path/filepath"
 	"testing"
 
@@ -9,201 +10,99 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestEachRow(t *testing.T) {
-	dir := t.TempDir()
-	dbPath := filepath.Join(dir, "test.db")
-
-	database, err := sql.Open("sqlite", dbPath)
+func createDB(t *testing.T, statements ...string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "test.db")
+	database, err := sql.Open("sqlite", path)
 	require.NoError(t, err)
-
-	_, err = database.Exec("CREATE TABLE items (id INTEGER, name TEXT)")
-	require.NoError(t, err)
-	_, err = database.Exec("INSERT INTO items VALUES (1, 'alpha'), (2, 'beta'), (3, 'gamma')")
-	require.NoError(t, err)
+	for _, statement := range statements {
+		_, err := database.Exec(statement)
+		require.NoError(t, err, statement)
+	}
 	require.NoError(t, database.Close())
+	return path
+}
 
-	var names []string
-	err = eachRow(dbPath, false, "SELECT name FROM items ORDER BY id", func(rows *sql.Rows) error {
+func scanNames(names *[]string) func(*sql.Rows) error {
+	return func(rows *sql.Rows) error {
 		var name string
 		if err := rows.Scan(&name); err != nil {
 			return err
 		}
-		names = append(names, name)
+		*names = append(*names, name)
 		return nil
-	})
+	}
+}
 
-	require.NoError(t, err)
+func noSkip(t *testing.T) func(error) {
+	return func(err error) { t.Errorf("unexpected skipped row: %v", err) }
+}
+
+func TestEachRow(t *testing.T) {
+	path := createDB(t,
+		"CREATE TABLE items (id INTEGER, name TEXT)",
+		"INSERT INTO items VALUES (1, 'alpha'), (2, 'beta'), (3, 'gamma')")
+
+	var names []string
+	require.NoError(t, EachRow(path, "SELECT name FROM items ORDER BY id", scanNames(&names), noSkip(t)))
 	assert.Equal(t, []string{"alpha", "beta", "gamma"}, names)
 }
 
 func TestEachRow_JournalOff(t *testing.T) {
-	dir := t.TempDir()
-	dbPath := filepath.Join(dir, "test.db")
+	path := createDB(t, "CREATE TABLE t (v TEXT)", "INSERT INTO t VALUES ('x')")
 
-	database, err := sql.Open("sqlite", dbPath)
-	require.NoError(t, err)
-	_, err = database.Exec("CREATE TABLE t (v TEXT)")
-	require.NoError(t, err)
-	_, err = database.Exec("INSERT INTO t VALUES ('ok')")
-	require.NoError(t, err)
-	require.NoError(t, database.Close())
+	var names []string
+	require.NoError(t, EachRow(path, "SELECT v FROM t", scanNames(&names), noSkip(t), JournalOff))
+	assert.Equal(t, []string{"x"}, names)
+}
 
-	var values []string
-	err = eachRow(dbPath, true, "SELECT v FROM t", func(rows *sql.Rows) error {
-		var value string
-		if err := rows.Scan(&value); err != nil {
-			return err
-		}
-		values = append(values, value)
-		return nil
-	})
+func TestEachRow_ReadOnlyImmutable(t *testing.T) {
+	path := createDB(t, "CREATE TABLE t (v TEXT)", "INSERT INTO t VALUES ('x')")
+
+	var names []string
+	require.NoError(t, EachRow(path, "SELECT v FROM t", scanNames(&names), noSkip(t), ReadOnly, Immutable))
+	assert.Equal(t, []string{"x"}, names)
+}
+
+// TestEachRow_SkipsARowThatFailsToScan hands the failure to skip, where an extractor reports it as a record problem.
+func TestEachRow_SkipsARowThatFailsToScan(t *testing.T) {
+	path := createDB(t,
+		"CREATE TABLE items (id INTEGER, name TEXT)",
+		"INSERT INTO items VALUES (1, 'alpha'), (2, NULL), (3, 'gamma')")
+
+	var (
+		names   []string
+		skipped []error
+	)
+	err := EachRow(path, "SELECT name FROM items ORDER BY id", scanNames(&names), func(err error) { skipped = append(skipped, err) })
 	require.NoError(t, err)
-	assert.Equal(t, []string{"ok"}, values)
+	assert.Equal(t, []string{"alpha", "gamma"}, names)
+	assert.Len(t, skipped, 1)
 }
 
 func TestEachRow_FileNotFound(t *testing.T) {
-	err := eachRow("/nonexistent/path.db", false, "SELECT 1", func(rows *sql.Rows) error {
-		return nil
-	})
+	err := EachRow(filepath.Join(t.TempDir(), "missing.db"), "SELECT 1", scanNames(new([]string)), noSkip(t))
 	require.Error(t, err)
+	assert.Contains(t, err.Error(), "database file")
 }
 
 func TestEachRow_BadQuery(t *testing.T) {
-	dir := t.TempDir()
-	dbPath := filepath.Join(dir, "test.db")
+	path := createDB(t, "CREATE TABLE t (v TEXT)")
+	require.Error(t, EachRow(path, "SELECT nonexistent FROM t", scanNames(new([]string)), noSkip(t)))
+}
 
-	database, err := sql.Open("sqlite", dbPath)
+func TestEachRow_ScanErrorStopsNothing(t *testing.T) {
+	path := createDB(t, "CREATE TABLE t (v TEXT)", "INSERT INTO t VALUES ('a'), ('b')")
+	failure := errors.New("bad row")
+	var skipped []error
+	err := EachRow(path, "SELECT v FROM t", func(*sql.Rows) error { return failure }, func(err error) { skipped = append(skipped, err) })
 	require.NoError(t, err)
-	_, err = database.Exec("CREATE TABLE t (v TEXT)")
-	require.NoError(t, err)
-	require.NoError(t, database.Close())
+	assert.Equal(t, []error{failure, failure}, skipped)
+}
 
-	err = eachRow(dbPath, false, "SELECT nonexistent FROM t", func(rows *sql.Rows) error {
-		return nil
-	})
+func TestOpen_MissingFileCreatesNothing(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "missing.db")
+	_, err := Open(path)
 	require.Error(t, err)
-}
-
-func TestCountRows(t *testing.T) {
-	tests := []struct {
-		name       string
-		schema     string
-		inserts    string
-		journalOff bool
-		query      string
-		wantCount  int
-		wantErr    bool
-	}{
-		{
-			name:      "count rows",
-			schema:    "CREATE TABLE items (id INTEGER, name TEXT)",
-			inserts:   "INSERT INTO items VALUES (1, 'alpha'), (2, 'beta'), (3, 'gamma')",
-			query:     "SELECT COUNT(*) FROM items",
-			wantCount: 3,
-		},
-		{
-			name:      "empty table",
-			schema:    "CREATE TABLE t (v TEXT)",
-			query:     "SELECT COUNT(*) FROM t",
-			wantCount: 0,
-		},
-		{
-			name:       "journal off",
-			schema:     "CREATE TABLE t (v TEXT)",
-			inserts:    "INSERT INTO t VALUES ('a'), ('b')",
-			journalOff: true,
-			query:      "SELECT COUNT(*) FROM t",
-			wantCount:  2,
-		},
-		{
-			name:    "file not found",
-			query:   "SELECT COUNT(*) FROM t",
-			wantErr: true,
-		},
-		{
-			name:    "bad query",
-			schema:  "CREATE TABLE t (v TEXT)",
-			query:   "SELECT COUNT(*) FROM nonexistent",
-			wantErr: true,
-		},
-	}
-
-	for _, testCase := range tests {
-		t.Run(testCase.name, func(t *testing.T) {
-			var dbPath string
-			if testCase.schema != "" {
-				dbPath = filepath.Join(t.TempDir(), "test.db")
-				database, err := sql.Open("sqlite", dbPath)
-				require.NoError(t, err)
-				_, err = database.Exec(testCase.schema)
-				require.NoError(t, err)
-				if testCase.inserts != "" {
-					_, err = database.Exec(testCase.inserts)
-					require.NoError(t, err)
-				}
-				require.NoError(t, database.Close())
-			} else {
-				dbPath = "/nonexistent/path.db"
-			}
-
-			count, err := CountRows(dbPath, testCase.journalOff, testCase.query)
-			if testCase.wantErr {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-			assert.Equal(t, testCase.wantCount, count)
-		})
-	}
-}
-
-func TestQueryRows(t *testing.T) {
-	dir := t.TempDir()
-	dbPath := filepath.Join(dir, "test.db")
-
-	database, err := sql.Open("sqlite", dbPath)
-	require.NoError(t, err)
-	_, err = database.Exec("CREATE TABLE users (name TEXT, age INTEGER)")
-	require.NoError(t, err)
-	_, err = database.Exec("INSERT INTO users VALUES ('alice', 30), ('bob', 25)")
-	require.NoError(t, err)
-	require.NoError(t, database.Close())
-
-	type user struct {
-		Name string
-		Age  int
-	}
-
-	users, err := QueryRows(dbPath, false, "SELECT name, age FROM users ORDER BY name",
-		func(rows *sql.Rows) (user, error) {
-			var found user
-			err := rows.Scan(&found.Name, &found.Age)
-			return found, err
-		})
-
-	require.NoError(t, err)
-	assert.Equal(t, []user{{"alice", 30}, {"bob", 25}}, users)
-}
-
-func TestQueryRows_Empty(t *testing.T) {
-	dir := t.TempDir()
-	dbPath := filepath.Join(dir, "test.db")
-
-	database, err := sql.Open("sqlite", dbPath)
-	require.NoError(t, err)
-	_, err = database.Exec("CREATE TABLE empty (v TEXT)")
-	require.NoError(t, err)
-	require.NoError(t, database.Close())
-
-	results, err := QueryRows(dbPath, false, "SELECT v FROM empty",
-		func(rows *sql.Rows) (string, error) {
-			var value string
-			if err := rows.Scan(&value); err != nil {
-				return "", err
-			}
-			return value, nil
-		})
-
-	require.NoError(t, err)
-	assert.Nil(t, results)
+	assert.NoFileExists(t, path)
 }

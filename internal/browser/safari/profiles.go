@@ -9,11 +9,10 @@ import (
 	"regexp"
 	"strings"
 
-	_ "modernc.org/sqlite"
-
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
+	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 )
 
 // Profiles are SafariTabs.db bookmarks rows with subtype=2; "DefaultProfile" is the default, which has no UUID dir.
@@ -60,17 +59,11 @@ func readNamedProfilesFromDB(library string) ([]browser.Profile, error) {
 	}
 
 	// Immutable, as on the live file before: the copied -wal is not replayed, so the profile list stays today's.
-	dsn := "file:" + path + "?mode=ro&immutable=1"
-	database, err := sql.Open("sqlite", dsn)
+	database, err := sqlitex.Open(path, sqlitex.ReadOnly, sqlitex.Immutable)
 	if err != nil {
 		return nil, fmt.Errorf("open SafariTabs.db: %w", err)
 	}
 	defer database.Close()
-
-	// Ping forces connection; sql.Open is lazy and won't detect a missing file.
-	if err := database.Ping(); err != nil {
-		return nil, fmt.Errorf("ping SafariTabs.db: %w", err)
-	}
 
 	rows, err := database.Query(
 		`SELECT external_uuid, title FROM bookmarks WHERE subtype = ? AND external_uuid != ?`,

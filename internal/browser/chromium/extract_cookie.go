@@ -17,8 +17,8 @@ const cookieQuery = `SELECT name, encrypted_value, host_key, path,
 	has_expires, is_persistent, samesite FROM cookies`
 
 func extractCookies(masterKeys masterKeysFunc, path string, out browser.Collector) error {
-	cookies, err := sqlitex.QueryRows(path, false, cookieQuery,
-		func(rows *sql.Rows) (record.Cookie, error) {
+	return sqlitex.EachRow(path, cookieQuery,
+		func(rows *sql.Rows) error {
 			var (
 				name, host, cookiePath  string
 				isSecure, isHTTPOnly    int
@@ -30,7 +30,7 @@ func extractCookies(masterKeys masterKeysFunc, path string, out browser.Collecto
 			if err := rows.Scan(&name, &encryptedValue, &host, &cookiePath,
 				&createdAt, &expireAt, &isSecure, &isHTTPOnly,
 				&hasExpire, &isPersistent, &sameSite); err != nil {
-				return record.Cookie{}, err
+				return err
 			}
 
 			value, err := masterKeys.decrypt(encryptedValue)
@@ -49,7 +49,7 @@ func extractCookies(masterKeys masterKeysFunc, path string, out browser.Collecto
 			case -1:
 				// not specified by Set-Cookie
 			}
-			return record.Cookie{
+			out.Add(&record.Cookie{
 				Name:         name,
 				Host:         host,
 				Path:         cookiePath,
@@ -61,13 +61,9 @@ func extractCookies(masterKeys masterKeysFunc, path string, out browser.Collecto
 				ExpireAt:     timeconv.Chromium(expireAt),
 				CreatedAt:    timeconv.Chromium(createdAt),
 				SameSite:     sameSiteName,
-			}, nil
-		})
-	if err != nil {
-		return err
-	}
-	browser.AddAll(out, cookies)
-	return nil
+			})
+			return nil
+		}, out.Fail)
 }
 
 // stripCookieHash removes the SHA256(host_key) Chrome 130+ prepends; a value without that prefix is returned as is.
