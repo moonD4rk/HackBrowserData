@@ -3,6 +3,7 @@ package chromium
 import (
 	"database/sql"
 	"fmt"
+	"path/filepath"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
@@ -14,7 +15,14 @@ const (
 	defaultLoginQuery = `SELECT origin_url, username_value, password_value, date_created FROM logins`
 )
 
-func extractPasswords(masterKeys masterKeysFunc, path string, store record.Store, out browser.Collector) error {
+// accountLoginData holds the signed-in account's logins, which Chrome keeps apart from Login Data.
+const accountLoginData = "Login Data For Account"
+
+func extractPasswords(masterKeys masterKeysFunc, path string, out browser.Collector) error {
+	store := record.StoreLocal
+	if filepath.Base(path) == accountLoginData {
+		store = record.StoreAccount
+	}
 	logins, err := sqlitex.QueryRows(path, false, defaultLoginQuery,
 		func(rows *sql.Rows) (record.Login, error) {
 			var url, username string

@@ -71,23 +71,23 @@ func Extractors(dir browser.UserDataDir, profile browser.Profile, loginKeychain 
 	if !named {
 		return browser.Extractors{
 			category.Password: newPasswordExtractor(loginKeychain),
-			category.History:  newPlainExtractor(newFileSpec("History.db"), extractHistories),
-			category.Cookie: newPlainExtractor(newFileSpec(
+			category.History:  newPlainExtractor(extractHistories, newFileSpec("History.db")),
+			category.Cookie: newPlainExtractor(extractCookies, newFileSpec(
 				library(containerDir+"/Cookies/Cookies.binarycookies"),
 				library("Cookies/Cookies.binarycookies"),
-			), extractCookies),
-			category.Bookmark:     newPlainExtractor(newFileSpec("Bookmarks.plist"), extractBookmarks),
-			category.Download:     newPlainExtractor(newFileSpec("Downloads.plist"), downloadsOf(defaultProfileSentinel)),
-			category.LocalStorage: newPlainExtractor(newDirectorySpec(library(containerDir+"/WebKit/WebsiteData/Default")), extractLocalStorage),
+			)),
+			category.Bookmark:     newPlainExtractor(extractBookmarks, newFileSpec("Bookmarks.plist")),
+			category.Download:     newPlainExtractor(downloadsOf(defaultProfileSentinel), newFileSpec("Downloads.plist")),
+			category.LocalStorage: newPlainExtractor(extractLocalStorage, newDirectorySpec(library(containerDir+"/WebKit/WebsiteData/Default"))),
 			category.Extension:    newExtensionExtractor(library),
 		}
 	}
 	store := containerDir + "/WebKit/WebsiteDataStore/" + strings.ToLower(uuid)
 	return browser.Extractors{
-		category.History:      newPlainExtractor(newFileSpec("History.db"), extractHistories),
-		category.Cookie:       newPlainExtractor(newFileSpec(library(store+"/Cookies/Cookies.binarycookies")), extractCookies),
-		category.Download:     newPlainExtractor(newFileSpec(library(defaultProfileDir(dir)+"/Downloads.plist")), downloadsOf(uuid)),
-		category.LocalStorage: newPlainExtractor(newDirectorySpec(library(store+"/Origins")), extractLocalStorage),
+		category.History:      newPlainExtractor(extractHistories, newFileSpec("History.db")),
+		category.Cookie:       newPlainExtractor(extractCookies, newFileSpec(library(store+"/Cookies/Cookies.binarycookies"))),
+		category.Download:     newPlainExtractor(downloadsOf(uuid), newFileSpec(library(defaultProfileDir(dir)+"/Downloads.plist"))),
+		category.LocalStorage: newPlainExtractor(extractLocalStorage, newDirectorySpec(library(store+"/Origins"))),
 	}
 }
 
@@ -121,7 +121,7 @@ func newDirectorySpec(relativePath string) browser.FileSpec {
 	return browser.FileSpec{Paths: []string{relativePath}, IsDir: true}
 }
 
-func newPlainExtractor(fileSpec browser.FileSpec, parse func(string, browser.Collector) error) browser.Extractor {
+func newPlainExtractor(parse func(string, browser.Collector) error, fileSpec browser.FileSpec) browser.Extractor {
 	return browser.Extractor{
 		FileSpecs: []browser.FileSpec{fileSpec},
 		Extract: func(_ context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {

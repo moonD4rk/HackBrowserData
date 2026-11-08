@@ -21,13 +21,13 @@ var (
 
 // defaultExtractors has no credit card or session storage extractor, because Firefox keeps none that HBD reads.
 var defaultExtractors = browser.Extractors{
-	category.Password:     {FileSpecs: []browser.FileSpec{loginsJSON, keyStore}, Extract: extractLogins},
-	category.Cookie:       newPlainExtractor(newFileSpec("cookies.sqlite"), extractCookies),
-	category.Bookmark:     newPlainExtractor(placesDB, extractBookmarks),
-	category.History:      newPlainExtractor(placesDB, extractHistories),
-	category.Download:     newPlainExtractor(placesDB, extractDownloads),
-	category.Extension:    newPlainExtractor(newFileSpec("extensions.json"), extractExtensions),
-	category.LocalStorage: newPlainExtractor(newFileSpec("webappsstore.sqlite"), extractLocalStorage),
+	category.Password:     newDecryptingExtractor(extractPasswords, loginsJSON),
+	category.Cookie:       newPlainExtractor(extractCookies, newFileSpec("cookies.sqlite")),
+	category.Bookmark:     newPlainExtractor(extractBookmarks, placesDB),
+	category.History:      newPlainExtractor(extractHistories, placesDB),
+	category.Download:     newPlainExtractor(extractDownloads, placesDB),
+	category.Extension:    newPlainExtractor(extractExtensions, newFileSpec("extensions.json")),
+	category.LocalStorage: newPlainExtractor(extractLocalStorage, newFileSpec("webappsstore.sqlite")),
 }
 
 // Discover takes -p as one profile: its parent is the Profiles directory, and only that profile is selected.
@@ -116,7 +116,7 @@ func Extractors(_ browser.UserDataDir, _ browser.Profile) browser.Extractors {
 
 func newFileSpec(path string) browser.FileSpec { return browser.FileSpec{Paths: []string{path}} }
 
-func newPlainExtractor(fileSpec browser.FileSpec, parse func(string, browser.Collector) error) browser.Extractor {
+func newPlainExtractor(parse func(string, browser.Collector) error, fileSpec browser.FileSpec) browser.Extractor {
 	return browser.Extractor{
 		FileSpecs: []browser.FileSpec{fileSpec},
 		Extract: func(_ context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
@@ -129,28 +129,37 @@ func newPlainExtractor(fileSpec browser.FileSpec, parse func(string, browser.Col
 	}
 }
 
-// extractLogins derives the key only once a login needs it; without one the logins export with empty secrets.
-func extractLogins(_ context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
-	path, err := profileSnapshot.Path(loginsJSON)
-	if err != nil {
-		return err
+// newDecryptingExtractor also captures key4.db, the profile's own key store.
+func newDecryptingExtractor(parse func(func() []byte, string, browser.Collector) error, fileSpec browser.FileSpec) browser.Extractor {
+	return browser.Extractor{
+		FileSpecs: []browser.FileSpec{fileSpec, keyStore},
+		Extract: func(_ context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
+			path, err := profileSnapshot.Path(fileSpec)
+			if err != nil {
+				return err
+			}
+			return parse(masterKeyOf(profileSnapshot, path, out), path, out)
+		},
 	}
+}
+
+// masterKeyOf derives the key only once a login needs it; without one the logins export with empty secrets.
+func masterKeyOf(profileSnapshot browser.ProfileSnapshot, loginsPath string, out browser.Collector) func() []byte {
 	var (
 		key     []byte
 		derived bool
 	)
-	masterKey := func() []byte {
+	return func() []byte {
 		if !derived {
 			derived = true
-			retrieved, keyErr := profileKey(profileSnapshot, path)
-			if keyErr != nil {
-				out.Fail(fmt.Errorf("master key: %w", keyErr))
+			retrieved, err := profileKey(profileSnapshot, loginsPath)
+			if err != nil {
+				out.Fail(fmt.Errorf("master key: %w", err))
 			}
 			key = retrieved
 		}
 		return key
 	}
-	return extractPasswords(masterKey, path, out)
 }
 
 func profileKey(profileSnapshot browser.ProfileSnapshot, loginsPath string) ([]byte, error) {
