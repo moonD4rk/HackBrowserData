@@ -15,14 +15,14 @@ import (
 var errNoPassword = errors.New("macOS login password not given and stdin is not a terminal")
 
 // keychainPasswordFunc is read lazily: a flag, else a no-echo prompt on a terminal, else none (metadata only).
-func keychainPasswordFunc(flags Flags, stdin *os.File) (func(context.Context) (string, error), error) {
+func keychainPasswordFunc(flags KeychainFlags, stdin *os.File) (func(context.Context) (string, error), error) {
 	switch {
-	case flags.KeychainPassword != "" && flags.KeychainPasswordStdin:
+	case flags.Password != "" && flags.PasswordStdin:
 		return nil, errors.New("--keychain-pw and --keychain-pw-stdin cannot be used together")
-	case flags.KeychainPassword != "":
-		password := flags.KeychainPassword
+	case flags.Password != "":
+		password := flags.Password
 		return func(context.Context) (string, error) { return password, nil }, nil
-	case flags.KeychainPasswordStdin:
+	case flags.PasswordStdin:
 		return func(ctx context.Context) (string, error) {
 			return untilDone(ctx, func() (string, error) { return firstLine(stdin) })
 		}, nil

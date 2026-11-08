@@ -55,7 +55,7 @@ func TestValidateRestore_RejectsBadInput(t *testing.T) {
 
 	options, keyFile, err := ValidateRestore(RestoreFlags{KeyFile: keys, DataDir: data, Browser: "Chrome", Categories: "all", Format: "json", OutputDir: t.TempDir()})
 	require.NoError(t, err)
-	assert.Equal(t, "chrome", options.BrowserName)
+	assert.Equal(t, "chrome", options.Target.BrowserName)
 	assert.Len(t, keyFile.Vaults, 1)
 }
 
@@ -68,7 +68,7 @@ func TestDiscoverRestore_SecondUserDataDir(t *testing.T) {
 	second.Keys = masterkey.Set{masterkey.V10: []byte("arc-2")}
 	keyFile := masterkey.KeyFile{Vaults: []masterkey.Vault{testVault("chrome"), testVault("arc"), second}}
 
-	discovery, keys, err := DiscoverRestore(root, keyFile, Options{BrowserName: "arc"})
+	discovery, keys, err := DiscoverRestore(root, keyFile, "arc")
 	require.NoError(t, err)
 	assert.Equal(t, []browser.UserDataDirID{"arc", "arc-2"}, userDataDirIDs(discovery), "a vault's ID names its directory")
 	assert.Equal(t, filepath.Join(root, "arc-2"), discovery.Dirs[1].Path)
@@ -84,7 +84,7 @@ func TestDiscoverRestore_FromLayout(t *testing.T) {
 	nightly.Kind = "chromium-yandex"
 	keyFile := masterkey.KeyFile{Vaults: []masterkey.Vault{testVault("chrome"), nightly, testVault("chrome"), testVault("edge")}}
 
-	discovery, keys, err := DiscoverRestore(root, keyFile, Options{BrowserName: "all"})
+	discovery, keys, err := DiscoverRestore(root, keyFile, "all")
 	require.NoError(t, err)
 	assert.Equal(t, []browser.UserDataDirID{"chrome", "nightly"}, userDataDirIDs(discovery), "a repeated vault restores once, one without data not at all")
 	assert.Len(t, keys, 2)
@@ -98,10 +98,10 @@ func TestDiscoverRestore_OneUserDataNeedsOneVault(t *testing.T) {
 	touch(t, root, "Default", "History")
 	keyFile := masterkey.KeyFile{Vaults: []masterkey.Vault{testVault("chrome"), testVault("edge")}}
 
-	_, _, err := DiscoverRestore(root, keyFile, Options{BrowserName: "all"})
+	_, _, err := DiscoverRestore(root, keyFile, "all")
 	require.Error(t, err)
 
-	discovery, _, err := DiscoverRestore(root, keyFile, Options{BrowserName: "edge"})
+	discovery, _, err := DiscoverRestore(root, keyFile, "edge")
 	require.NoError(t, err)
 	require.Equal(t, []browser.UserDataDirID{"edge"}, userDataDirIDs(discovery))
 	assert.Equal(t, root, discovery.Dirs[0].Path)

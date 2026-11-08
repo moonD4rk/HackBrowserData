@@ -14,41 +14,72 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/export"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
-	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
-type Flags struct {
-	Browser               string
-	Categories            string
-	Format                string
-	OutputDir             string
-	Zip                   bool
-	ProfilePath           string
-	KeychainPassword      string
-	KeychainPasswordStdin bool
-}
-
-type Options struct {
-	BrowserName string // "all" or one Browser.Name
-	Categories  []category.Category
-	Format      export.Format
+// DumpFlags are dump's command-line values as cobra parsed them.
+type DumpFlags struct {
+	Browser     string
+	Categories  string
+	Format      string
 	OutputDir   string
 	Zip         bool
 	ProfilePath string
-	HomeDir     string
+	Keychain    KeychainFlags
+}
 
-	// KeychainPassword runs when the keychain first opens; "" leaves it locked, and nil, as list has it, silently.
-	KeychainPassword func(ctx context.Context) (string, error)
-	// ImportedKeys are a key file's keys by user data dir; nil retrieves every dir's keys from this machine.
-	ImportedKeys map[browser.UserDataDirID]masterkey.Set
+// DumpKeysFlags are dumpkeys' command-line values as cobra parsed them.
+type DumpKeysFlags struct {
+	Browser  string
+	Keychain KeychainFlags
+}
+
+// ArchiveFlags are archive's command-line values as cobra parsed them.
+type ArchiveFlags struct {
+	Browser    string
+	Categories string
+}
+
+// KeychainFlags say where the macOS login keychain password comes from; both empty means a prompt, or none.
+type KeychainFlags struct {
+	Password      string
+	PasswordStdin bool
+}
+
+// Target is what Discover looks for.
+type Target struct {
+	BrowserName string // "all" or one Browser.Name
+	ProfilePath string // a custom profile dir, used only with one browser
+	HomeDir     string
+}
+
+// Output is where and how Execute writes records.
+type Output struct {
+	Dir    string
+	Format export.Format
+	Zip    bool
+}
+
+// KeychainConfig locates the macOS login keychain and says how to get its password; other systems ignore it.
+type KeychainConfig struct {
+	HomeDir string
+	// Password runs when the keychain first opens; "" leaves it locked, and nil, as list has it, silently.
+	Password func(ctx context.Context) (string, error)
+}
+
+// Options are a command's validated flags, grouped by the stage that reads them; a command leaves the rest empty.
+type Options struct {
+	Target     Target
+	Categories []category.Category
+	Output     Output
+	Keychain   KeychainConfig
 }
 
 // ValidateDump checks every flag before any browser or secret is touched, so a bad flag fails fast.
-func ValidateDump(flags Flags) (Options, error) {
+func ValidateDump(flags DumpFlags) (Options, error) {
 	return validateDump(flags, os.Stdin)
 }
 
-func validateDump(flags Flags, stdin *os.File) (Options, error) {
+func validateDump(flags DumpFlags, stdin *os.File) (Options, error) {
 	browserName, err := parseBrowser(flags.Browser)
 	if err != nil {
 		return Options{}, err
@@ -68,7 +99,7 @@ func validateDump(flags Flags, stdin *os.File) (Options, error) {
 	if err != nil {
 		return Options{}, err
 	}
-	password, err := keychainPasswordFunc(flags, stdin)
+	password, err := keychainPasswordFunc(flags.Keychain, stdin)
 	if err != nil {
 		return Options{}, err
 	}
@@ -77,23 +108,19 @@ func validateDump(flags Flags, stdin *os.File) (Options, error) {
 		return Options{}, err
 	}
 	return Options{
-		BrowserName:      browserName,
-		Categories:       categories,
-		Format:           format,
-		OutputDir:        flags.OutputDir,
-		Zip:              flags.Zip,
-		ProfilePath:      profilePath,
-		HomeDir:          home,
-		KeychainPassword: password,
+		Target:     Target{BrowserName: browserName, ProfilePath: profilePath, HomeDir: home},
+		Categories: categories,
+		Output:     Output{Dir: flags.OutputDir, Format: format, Zip: flags.Zip},
+		Keychain:   KeychainConfig{HomeDir: home, Password: password},
 	}, nil
 }
 
-func ValidateDumpKeys(flags Flags) (Options, error) {
+func ValidateDumpKeys(flags DumpKeysFlags) (Options, error) {
 	browserName, err := parseBrowser(flags.Browser)
 	if err != nil {
 		return Options{}, err
 	}
-	password, err := keychainPasswordFunc(flags, os.Stdin)
+	password, err := keychainPasswordFunc(flags.Keychain, os.Stdin)
 	if err != nil {
 		return Options{}, err
 	}
@@ -101,11 +128,14 @@ func ValidateDumpKeys(flags Flags) (Options, error) {
 	if err != nil {
 		return Options{}, err
 	}
-	return Options{BrowserName: browserName, HomeDir: home, KeychainPassword: password}, nil
+	return Options{
+		Target:   Target{BrowserName: browserName, HomeDir: home},
+		Keychain: KeychainConfig{HomeDir: home, Password: password},
+	}, nil
 }
 
 // ValidateArchive takes no keychain password: an archive copies files and reads no secret.
-func ValidateArchive(flags Flags) (Options, error) {
+func ValidateArchive(flags ArchiveFlags) (Options, error) {
 	browserName, err := parseBrowser(flags.Browser)
 	if err != nil {
 		return Options{}, err
@@ -118,7 +148,7 @@ func ValidateArchive(flags Flags) (Options, error) {
 	if err != nil {
 		return Options{}, err
 	}
-	return Options{BrowserName: browserName, Categories: categories, HomeDir: home}, nil
+	return Options{Target: Target{BrowserName: browserName, HomeDir: home}, Categories: categories}, nil
 }
 
 // ListOptions is what list reads: every browser and category, with the keychain left locked, so counting never prompts.
@@ -127,7 +157,11 @@ func ListOptions() (Options, error) {
 	if err != nil {
 		return Options{}, err
 	}
-	return Options{BrowserName: allBrowsers, Categories: category.All(), HomeDir: home}, nil
+	return Options{
+		Target:     Target{BrowserName: allBrowsers, HomeDir: home},
+		Categories: category.All(),
+		Keychain:   KeychainConfig{HomeDir: home},
+	}, nil
 }
 
 func homeDir() (string, error) {

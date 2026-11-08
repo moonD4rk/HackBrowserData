@@ -9,7 +9,7 @@ import (
 
 func newArchiveCommand() *cobra.Command {
 	var (
-		flags      app.Flags
+		flags      app.ArchiveFlags
 		outputPath string
 	)
 
@@ -23,12 +23,11 @@ func newArchiveCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			discovery := app.Discover(options)
-			if len(discovery.Dirs) == 0 {
-				log.Warnf("no browsers found")
+			discovery := app.Discover(options.Target)
+			if foundNothing(command.ErrOrStderr(), discovery, "no browsers found") {
 				return nil
 			}
-			fileCount, err := app.Archive(command.Context(), discovery, options, outputPath)
+			fileCount, err := app.Archive(command.Context(), discovery, options.Categories, outputPath)
 			if err != nil {
 				return err
 			}

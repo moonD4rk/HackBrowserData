@@ -10,15 +10,12 @@ import (
 func Report(writer io.Writer, summary Summary) error {
 	table := tabwriter.NewWriter(writer, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(table, "Browser\tProfile\tCategory\tResult\tRecords\tDetail")
+	for _, failure := range summary.Failures {
+		fmt.Fprintf(table, "%s\t-\t-\t%s\t0\t%s\n", failure.UserDataDirID, OutcomeError, failure.Err)
+	}
 	for _, result := range summary.Results {
-		profile, cat := "-", "-"
-		if result.ProfileName != "" {
-			profile = result.ProfileName
-		}
-		if result.Category != 0 {
-			cat = result.Category.String()
-		}
-		fmt.Fprintf(table, "%s\t%s\t%s\t%s\t%d\t%s\n", result.UserDataDirID, profile, cat, result.Outcome, result.Records, detail(result))
+		fmt.Fprintf(table, "%s\t%s\t%s\t%s\t%d\t%s\n",
+			result.UserDataDirID, result.ProfileName, result.Category, result.Outcome, result.Records, detail(result))
 	}
 	return table.Flush()
 }

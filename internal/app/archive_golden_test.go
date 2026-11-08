@@ -94,11 +94,11 @@ func TestArchiveGolden(t *testing.T) {
 	for _, testCase := range tests {
 		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
-			options, err := app.ValidateArchive(app.Flags{Browser: archiveLayoutBrowser, Categories: testCase.categories})
+			options, err := app.ValidateArchive(app.ArchiveFlags{Browser: archiveLayoutBrowser, Categories: testCase.categories})
 			require.NoError(t, err)
-			options.HomeDir = home
+			options.Target.HomeDir = home
 			out := filepath.Join(t.TempDir(), "browser-data.zip")
-			fileCount, err := app.Archive(context.Background(), app.Discover(options), options, out)
+			fileCount, err := app.Archive(context.Background(), app.Discover(options.Target), options.Categories, out)
 			require.NoError(t, err)
 			golden.Assert(t, testCase.golden, fmt.Sprintf("entries=%d\n", fileCount)+golden.ZipListing(t, out))
 
@@ -125,11 +125,11 @@ func TestArchiveRestoreRoundTrip(t *testing.T) {
 		require.True(t, ok, fixture.Name)
 		browsertest.WriteChromiumUserDataDir(t, filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirs[0])), fixture.Name)
 	}
-	options, err := app.ValidateArchive(app.Flags{Browser: "all", Categories: "all"})
+	options, err := app.ValidateArchive(app.ArchiveFlags{Browser: "all", Categories: "all"})
 	require.NoError(t, err)
-	options.HomeDir = home
+	options.Target.HomeDir = home
 	archive := filepath.Join(t.TempDir(), "data.zip")
-	_, err = app.Archive(context.Background(), app.Discover(options), options, archive)
+	_, err = app.Archive(context.Background(), app.Discover(options.Target), options.Categories, archive)
 	require.NoError(t, err)
 
 	out := restoreGolden(t, app.RestoreFlags{KeyFile: chromiumKeyFile(t), DataZip: archive, OutputDir: t.TempDir()})

@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
-	"os"
+	"io"
 
 	"github.com/moond4rk/hackbrowserdata/internal/atomicfile"
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
@@ -15,13 +15,13 @@ import (
 
 // DumpKeys writes the key file to outputPath, or to stdout when it is "", and returns how many vaults it holds.
 // A stopped run writes nothing, so it never leaves a keys.json behind.
-func DumpKeys(ctx context.Context, discovery Discovery, options Options, outputPath string) (int, error) {
-	keyFile, err := dumpKeysWith(ctx, discovery, keysFromMachine(newLoginKeychain(options)))
+func DumpKeys(ctx context.Context, discovery Discovery, keychainConfig KeychainConfig, stdout io.Writer, outputPath string) (int, error) {
+	keyFile, err := dumpKeysWith(ctx, discovery, keysFromMachine(newLoginKeychain(keychainConfig)))
 	if err != nil {
 		return 0, err
 	}
 	if outputPath == "" {
-		return len(keyFile.Vaults), keyFile.Write(os.Stdout)
+		return len(keyFile.Vaults), keyFile.Write(stdout)
 	}
 	if err := writeKeyFile(outputPath, keyFile); err != nil {
 		return 0, err

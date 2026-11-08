@@ -43,7 +43,7 @@ func newRestoreCommand() *cobra.Command {
 }
 
 func runRestore(ctx context.Context, stderr io.Writer, flags app.RestoreFlags) error {
-	options, dump, err := app.ValidateRestore(flags)
+	options, keyFile, err := app.ValidateRestore(flags)
 	if err != nil {
 		return err
 	}
@@ -53,16 +53,16 @@ func runRestore(ctx context.Context, stderr io.Writer, flags app.RestoreFlags) e
 	}
 	defer closeRestoreData(data)
 
-	discovery, keys, err := app.DiscoverRestore(data.Path(), dump, options)
+	discovery, keys, err := app.DiscoverRestore(data.Path(), keyFile, options.Target.BrowserName)
 	if err != nil {
 		return err
 	}
-	if len(discovery.Dirs) == 0 {
-		log.Warnf("no browsers to restore from the supplied keys and data")
+	if foundNothing(stderr, discovery, "no browsers to restore from the supplied keys and data") {
 		return nil
 	}
-	options.ImportedKeys = keys
-	summary, err := app.Execute(ctx, app.NewPlan(discovery, options), options)
+	plan := app.NewPlan(discovery, options.Categories)
+	summary, err := app.ExecuteWithKeys(ctx, plan, options.Output, keys)
+	announceExport(stderr, summary.Exported)
 	if ctx.Err() == nil {
 		report(stderr, summary)
 	}

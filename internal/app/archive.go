@@ -7,19 +7,20 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/chromium"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
 // Archive returns how many files and directories it captured.
-func Archive(ctx context.Context, discovery Discovery, options Options, archivePath string) (int, error) {
+func Archive(ctx context.Context, discovery Discovery, categories []category.Category, archivePath string) (int, error) {
 	var dirs []browser.UserDataDir
 	for _, dir := range discovery.Dirs {
 		if dir.Browser.Base == browser.Chromium {
 			dirs = append(dirs, dir)
 		}
 	}
-	files := archiveFiles(NewPlan(Discovery{Dirs: dirs}, options), dirs)
+	files := archiveFiles(NewPlan(Discovery{Dirs: dirs}, categories), dirs)
 
 	snapshots, err := snapshot.Temp()
 	if err != nil {

@@ -61,7 +61,11 @@ func ValidateRestore(flags RestoreFlags) (Options, masterkey.KeyFile, error) {
 	if filter != allBrowsers && len(vaultsOf(keyFile, filter)) == 0 {
 		return Options{}, masterkey.KeyFile{}, fmt.Errorf("no vault for browser %q in keys (have: %s)", filter, vaultBrowserNames(keyFile.Vaults))
 	}
-	options := Options{BrowserName: filter, Categories: categories, Format: format, OutputDir: flags.OutputDir, Zip: flags.Zip}
+	options := Options{
+		Target:     Target{BrowserName: filter},
+		Categories: categories,
+		Output:     Output{Dir: flags.OutputDir, Format: format, Zip: flags.Zip},
+	}
 	return options, keyFile, nil
 }
 
@@ -98,9 +102,9 @@ func readKeyFile(path string) (masterkey.KeyFile, error) {
 // DiscoverRestore rebuilds the user data dirs under root, and their keys, from the key file: each vault names a
 // subdirectory of root, or root is one browser's User Data.
 func DiscoverRestore(
-	root string, keyFile masterkey.KeyFile, options Options,
+	root string, keyFile masterkey.KeyFile, browserName string,
 ) (Discovery, map[browser.UserDataDirID]masterkey.Set, error) {
-	vaults := vaultsOf(keyFile, options.BrowserName)
+	vaults := vaultsOf(keyFile, browserName)
 	archived := false
 	for _, vault := range vaults {
 		if dirExists(filepath.Join(root, string(vaultUserDataDirID(vault)))) {

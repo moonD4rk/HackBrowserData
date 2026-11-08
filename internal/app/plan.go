@@ -14,32 +14,34 @@ import (
 // Extraction is plain data, looked up again when it runs, so a Plan prints as it is and compares with DeepEqual.
 type Extraction struct {
 	UserDataDirID browser.UserDataDirID
-	ProfileName   string            // Profile.Name; "" in a result about a whole user data dir
-	Category      category.Category // zero in a result about a whole user data dir
+	ProfileName   string // Profile.Name
+	Category      category.Category
 }
 
-// Plan lists extractions in output order, each file to capture once, and the requested extractions that cannot run.
+// Plan lists extractions in output order, each file to capture once, the requested extractions that cannot run, and
+// the dirs discovery could not read.
 type Plan struct {
 	Dirs        []browser.UserDataDir
 	Files       []snapshot.File
 	Extractions []Extraction
 	Skipped     []Result
+	Failures    []DirFailure
 }
 
 type extractorsFunc func(browser.UserDataDir, browser.Profile) browser.Extractors
 
 // NewPlan only stats the files the extractors' sources name, so it opens nothing and needs no keychain.
-func NewPlan(discovery Discovery, options Options) Plan {
-	return newPlan(discovery, options, extractorsWith(nil))
+func NewPlan(discovery Discovery, categories []category.Category) Plan {
+	return newPlan(discovery, categories, extractorsWith(nil))
 }
 
-func newPlan(discovery Discovery, options Options, extractors extractorsFunc) Plan {
-	plan := Plan{Dirs: discovery.Dirs, Skipped: append([]Result(nil), discovery.Errors...)}
+func newPlan(discovery Discovery, categories []category.Category, extractors extractorsFunc) Plan {
+	plan := Plan{Dirs: discovery.Dirs, Failures: append([]DirFailure(nil), discovery.Failures...)}
 	captured := make(map[snapshot.File]bool)
 	for _, dir := range discovery.Dirs {
 		for _, profile := range dir.Profiles {
 			profileExtractors := extractors(dir, profile)
-			for _, dataCategory := range options.Categories {
+			for _, dataCategory := range categories {
 				extraction := Extraction{UserDataDirID: dir.ID, ProfileName: profile.Name, Category: dataCategory}
 				extractor, ok := profileExtractors[dataCategory]
 				if !ok {

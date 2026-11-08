@@ -54,10 +54,10 @@ func chromeDir(t *testing.T, id browser.UserDataDirID, profiles ...string) brows
 
 func run(t *testing.T, base extractorsFunc, keys dirKeysFunc, categories []category.Category, dirs ...browser.UserDataDir) (Summary, string) {
 	t.Helper()
-	options := Options{Categories: categories, OutputDir: t.TempDir()}
-	summary, err := execute(context.Background(), newPlan(Discovery{Dirs: dirs}, options, base), options, base, keys)
+	output := Output{Dir: t.TempDir()}
+	summary, err := execute(context.Background(), newPlan(Discovery{Dirs: dirs}, categories, base), output, base, keys)
 	require.NoError(t, err)
-	return summary, options.OutputDir
+	return summary, output.Dir
 }
 
 func outcomes(summary Summary) map[category.Category]Result {
@@ -140,11 +140,10 @@ func TestExecute_KeysAreRetrievedOncePerUserDataDir(t *testing.T) {
 	summary, _ := run(t, base, keys, categories, chromeDir(t, "chrome", "Default", "Profile 1"))
 
 	assert.Equal(t, 1, calls)
-	last := summary.Results[len(summary.Results)-1]
-	assert.Equal(t, Extraction{UserDataDirID: "chrome"}, last.Extraction, "a retrieval error is reported once, for the dir")
-	assert.Equal(t, OutcomeError, last.Outcome)
-	require.ErrorContains(t, last.Err, "v20: no ABE")
-	assert.Len(t, summary.Results, 5)
+	require.Len(t, summary.Failures, 1, "a retrieval error is reported once, for the dir")
+	assert.Equal(t, browser.UserDataDirID("chrome"), summary.Failures[0].UserDataDirID)
+	require.ErrorContains(t, summary.Failures[0].Err, "v20: no ABE")
+	assert.Len(t, summary.Results, 4)
 }
 
 // TestExecute_HistoryNeverRetrievesKeys checks nothing to decrypt means no key retrieval, so no prompt on macOS.
@@ -206,10 +205,10 @@ func TestExecute_StopEndsTheRunBeforeTheNextExtractionAndRemovesTheCopy(t *testi
 			return nil
 		},
 	})
-	options := Options{Categories: []category.Category{category.History, category.Download}, OutputDir: t.TempDir()}
+	categories := []category.Category{category.History, category.Download}
 	discovery := Discovery{Dirs: []browser.UserDataDir{chromeDir(t, "chrome", "Default"), chromeDir(t, "chrome-2", "Default")}}
 
-	_, err := execute(ctx, newPlan(discovery, options, base), options, base, noKeys(t))
+	_, err := execute(ctx, newPlan(discovery, categories, base), Output{Dir: t.TempDir()}, base, noKeys(t))
 	require.ErrorIs(t, err, context.Canceled)
 	require.Len(t, copied, 1, "the next user data dir is never captured")
 	_, statErr := os.Stat(copied[0])
@@ -228,19 +227,20 @@ func TestExecute_OutputFailureStopsTheRunAndLeavesNoCopies(t *testing.T) {
 			return nil
 		},
 	})
-	options := Options{Categories: []category.Category{category.History}, OutputDir: t.TempDir()}
-	require.NoError(t, os.Chmod(options.OutputDir, 0o500))
-	defer func() { require.NoError(t, os.Chmod(options.OutputDir, 0o700)) }()
+	output := Output{Dir: t.TempDir()}
+	require.NoError(t, os.Chmod(output.Dir, 0o500))
+	defer func() { require.NoError(t, os.Chmod(output.Dir, 0o700)) }()
 
-	plan := newPlan(Discovery{Dirs: []browser.UserDataDir{chromeDir(t, "chrome", "Default")}}, options, base)
-	_, err := execute(context.Background(), plan, options, base, noKeys(t))
+	categories := []category.Category{category.History}
+	plan := newPlan(Discovery{Dirs: []browser.UserDataDir{chromeDir(t, "chrome", "Default")}}, categories, base)
+	_, err := execute(context.Background(), plan, output, base, noKeys(t))
 	require.Error(t, err)
 	require.NotEmpty(t, copied)
 	_, statErr := os.Stat(copied)
 	assert.ErrorIs(t, statErr, fs.ErrNotExist)
 }
 
-func TestExecute_ImportedKeys(t *testing.T) {
+func TestKeysFromFile(t *testing.T) {
 	want := masterkey.Set{masterkey.V10: []byte("dumped")}
 	keys := keysFromFile(map[browser.UserDataDirID]masterkey.Set{"chrome": want})
 	got, err := keys(context.Background(), browser.UserDataDir{ID: "chrome"}, snapshot.Snapshot{})

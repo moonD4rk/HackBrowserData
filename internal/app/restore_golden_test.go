@@ -105,10 +105,10 @@ func restoreGolden(t *testing.T, flags app.RestoreFlags) string {
 	}
 	defer data.Close()
 
-	discovery, keys, err := app.DiscoverRestore(data.Path(), keyFile, options)
+	discovery, keys, err := app.DiscoverRestore(data.Path(), keyFile, options.Target.BrowserName)
 	require.NoError(t, err)
-	options.ImportedKeys = keys
-	_, err = app.Execute(context.Background(), app.NewPlan(discovery, options), options)
+	plan := app.NewPlan(discovery, options.Categories)
+	_, err = app.ExecuteWithKeys(context.Background(), plan, options.Output, keys)
 	require.NoError(t, err)
 	return flags.OutputDir
 }
