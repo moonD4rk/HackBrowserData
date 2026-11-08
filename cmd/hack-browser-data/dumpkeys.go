@@ -1,10 +1,6 @@
 package main
 
 import (
-	"errors"
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
 
 	"github.com/moond4rk/hackbrowserdata/internal/app"
@@ -27,20 +23,12 @@ func newDumpKeysCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			keyFile, err := app.DumpKeys(command.Context(), app.Discover(options), options)
+			vaultCount, err := app.DumpKeys(command.Context(), app.Discover(options), options, outputPath)
 			if err != nil {
 				return err
 			}
-			log.Infof("Exported keys for %d vault(s)", len(keyFile.Vaults))
-
-			if outputPath == "" {
-				return keyFile.Write(os.Stdout)
-			}
-			file, err := os.OpenFile(outputPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
-			if err != nil {
-				return fmt.Errorf("create %s: %w", outputPath, err)
-			}
-			return errors.Join(keyFile.Write(file), file.Close())
+			log.Infof("Exported keys for %d vault(s)", vaultCount)
+			return nil
 		},
 	}
 

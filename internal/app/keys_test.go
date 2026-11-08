@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -78,4 +80,29 @@ func TestDumpKeys_StoppedRunReturnsNoKeyFile(t *testing.T) {
 	keyFile, err := dumpKeysWith(ctx, Discovery{Dirs: []browser.UserDataDir{chrome, brave}}, keys)
 	require.ErrorIs(t, err, context.Canceled)
 	assert.Empty(t, keyFile.Vaults)
+}
+
+func TestWriteKeyFile_ReplacesTheFileWhole(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "keys.json")
+	require.NoError(t, os.WriteFile(path, []byte("stale"), 0o600))
+	keyFile := masterkey.NewKeyFile()
+	keyFile.Vaults = append(keyFile.Vaults, masterkey.Vault{
+		Browser: "chrome", Kind: "chromium", Profiles: []string{"Default"}, Keys: masterkey.Set{masterkey.V10: []byte("key")},
+	})
+
+	require.NoError(t, writeKeyFile(path, keyFile))
+	file, err := os.Open(path)
+	require.NoError(t, err)
+	defer file.Close()
+	written, err := masterkey.ReadKeyFile(file)
+	require.NoError(t, err)
+	assert.Equal(t, keyFile.Vaults, written.Vaults)
+}
+
+func TestWriteKeyFile_FailureLeavesNoFile(t *testing.T) {
+	dir := t.TempDir()
+	require.Error(t, writeKeyFile(filepath.Join(dir, "missing", "keys.json"), masterkey.NewKeyFile()))
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	assert.Empty(t, entries)
 }

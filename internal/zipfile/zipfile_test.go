@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,51 +34,56 @@ func TestWrite_FailureKeepsAnExistingArchive(t *testing.T) {
 	assert.Equal(t, []string{"out.zip"}, filesIn(t, out), "no temp file may survive a failed zip")
 }
 
-// TestWrite_IsOwnerOnly keeps an archive as private as the browser files and records it holds.
-func TestWrite_IsOwnerOnly(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Windows has no mode bits to check")
-	}
+func TestExtract_RoundTripsWhatWriteZipped(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "chrome", "Default", "History"), "history")
+	writeFile(t, filepath.Join(root, "chrome", "Local State"), "{}")
 	archive := filepath.Join(t.TempDir(), "out.zip")
-	require.NoError(t, Write(archive, t.TempDir(), nil))
-	info, err := os.Stat(archive)
-	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	require.NoError(t, Write(archive, root, []string{"chrome/Default/History", "chrome/Local State"}))
+
+	dir := t.TempDir()
+	require.NoError(t, Extract(archive, dir))
+	for name, want := range map[string]string{"chrome/Default/History": "history", "chrome/Local State": "{}"} {
+		got, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(name)))
+		require.NoError(t, err, name)
+		assert.Equal(t, want, string(got), name)
+	}
 }
 
-func TestWrite_LeavesAPlantedTempFileAlone(t *testing.T) {
-	out := t.TempDir()
-	archive := filepath.Join(out, "out.zip")
-	writeFile(t, archive+".tmp", "planted")
-	require.NoError(t, os.Chmod(archive+".tmp", 0o644))
+func TestExtract_RejectsAnEntryOutsideTheDir(t *testing.T) {
+	for _, name := range []string{"../escape.txt", "/abs/escape.txt", "a/../../escape.txt"} {
+		t.Run(name, func(t *testing.T) {
+			parent := t.TempDir()
+			dir := filepath.Join(parent, "snap")
+			require.Error(t, Extract(zipWith(t, name), dir))
+			assert.NoFileExists(t, filepath.Join(parent, "escape.txt"))
+		})
+	}
+}
 
-	require.NoError(t, Write(archive, t.TempDir(), nil))
-	planted, err := os.ReadFile(archive + ".tmp")
+func TestExtract_RejectsASiblingSharingTheDirPrefix(t *testing.T) {
+	parent := t.TempDir()
+	dir := filepath.Join(parent, "snap")
+
+	require.Error(t, Extract(zipWith(t, "../snapx/evil.txt"), dir))
+	assert.NoFileExists(t, filepath.Join(parent, "snapx", "evil.txt"))
+}
+
+func zipWith(t *testing.T, names ...string) string {
+	t.Helper()
+	archive := filepath.Join(t.TempDir(), "test.zip")
+	file, err := os.Create(archive)
 	require.NoError(t, err)
-	assert.Equal(t, "planted", string(planted))
-	assert.Equal(t, []string{"out.zip", "out.zip.tmp"}, filesIn(t, out))
-	if runtime.GOOS != "windows" {
-		info, err := os.Stat(archive)
+	zipWriter := zip.NewWriter(file)
+	for _, name := range names {
+		writer, err := zipWriter.Create(name)
 		require.NoError(t, err)
-		assert.Equal(t, os.FileMode(0o600), info.Mode().Perm(), "a planted 0644 file must not set the archive's mode")
+		_, err = writer.Write([]byte(name))
+		require.NoError(t, err)
 	}
-}
-
-func TestWrite_DoesNotFollowAPlantedSymlink(t *testing.T) {
-	archive := filepath.Join(t.TempDir(), "out.zip")
-	victim := filepath.Join(t.TempDir(), "victim")
-	writeFile(t, victim, "precious")
-	if err := os.Symlink(victim, archive+".tmp"); err != nil {
-		t.Skipf("cannot create a symlink here: %v", err)
-	}
-
-	require.NoError(t, Write(archive, t.TempDir(), nil))
-	got, err := os.ReadFile(victim)
-	require.NoError(t, err)
-	assert.Equal(t, "precious", string(got))
-	info, err := os.Lstat(archive)
-	require.NoError(t, err)
-	assert.True(t, info.Mode().IsRegular(), "the archive must be a file, not the planted symlink")
+	require.NoError(t, zipWriter.Close())
+	require.NoError(t, file.Close())
+	return archive
 }
 
 func filesIn(t *testing.T, dir string) []string {

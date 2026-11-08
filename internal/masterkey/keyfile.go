@@ -59,10 +59,10 @@ func currentHost() Host {
 	return host
 }
 
-func (d KeyFile) Write(writer io.Writer) error {
+func (k KeyFile) Write(writer io.Writer) error {
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(d); err != nil {
+	if err := encoder.Encode(k); err != nil {
 		return fmt.Errorf("encode key file: %w", err)
 	}
 	return nil
