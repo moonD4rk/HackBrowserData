@@ -24,7 +24,7 @@ func TestExtractCookies(t *testing.T) {
 	path := setupCookieDB(t)
 
 	var out testCollector
-	err := extractCookies(masterkey.Set{}, path, &out)
+	err := extractCookies(keysOf(masterkey.Set{}), path, &out)
 	got := collected[record.Cookie](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)

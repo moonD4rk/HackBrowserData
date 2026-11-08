@@ -147,7 +147,7 @@ func TestExecute_KeysAreRetrievedOncePerUserDataDir(t *testing.T) {
 	assert.Len(t, summary.Results, 5)
 }
 
-// TestExecute_HistoryNeverRetrievesKeys checks data without secrets never retrieves a key, so never prompts on macOS.
+// TestExecute_HistoryNeverRetrievesKeys checks nothing to decrypt means no key retrieval, so no prompt on macOS.
 func TestExecute_HistoryNeverRetrievesKeys(t *testing.T) {
 	path := t.TempDir()
 	touch(t, path, "Local State")
@@ -163,7 +163,7 @@ func TestExecute_HistoryNeverRetrievesKeys(t *testing.T) {
 		return nil, nil
 	}
 	run(t, extractorsWith(nil), counting, []category.Category{category.Cookie, category.History}, dir)
-	assert.Equal(t, 1, calls)
+	assert.Equal(t, 0, calls, "an empty cookie store holds no value to decrypt, so it retrieves no key either")
 }
 
 func TestExecute_RemovesEachSnapshotBeforeTheNextDir(t *testing.T) {

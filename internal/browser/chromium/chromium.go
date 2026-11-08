@@ -176,9 +176,9 @@ func KeyFileSpecs() []browser.FileSpec {
 	return []browser.FileSpec{localState}
 }
 
-// ArchiveFileSpecs add each profile's marker, by which restore rediscovers the profiles, and Local State as v1.1.0 did.
+// ArchiveFileSpecs add each profile's marker, by which restore rediscovers the profiles, to the key files.
 func ArchiveFileSpecs() []browser.FileSpec {
-	fileSpecs := []browser.FileSpec{localState}
+	fileSpecs := KeyFileSpecs()
 	for _, marker := range profileMarkers {
 		fileSpecs = append(fileSpecs, browser.FileSpec{Paths: []string{marker}, Optional: true})
 	}

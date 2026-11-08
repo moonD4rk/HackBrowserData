@@ -18,7 +18,7 @@ var (
 )
 
 var defaultExtractors = browser.Extractors{
-	category.Password:       {FileSpecs: []browser.FileSpec{loginData, loginDataForAccount, localState}, Extract: extractPasswordStores},
+	category.Password:       {FileSpecs: withKeyFiles(loginData, loginDataForAccount), Extract: extractPasswordStores},
 	category.Cookie:         newDecryptingExtractor(newFileSpec("Network/Cookies", "Cookies"), extractCookies),
 	category.Bookmark:       newPlainExtractor(newFileSpec("Bookmarks"), extractBookmarks),
 	category.History:        newPlainExtractor(newFileSpec("History"), extractHistories),
@@ -29,28 +29,15 @@ var defaultExtractors = browser.Extractors{
 	category.SessionStorage: newPlainExtractor(newDirectorySpec("Session Storage"), extractSessionStorage),
 }
 
-// overrides is keyed by Browser.Name, never UserDataDirID, which differs for a second user data dir of one browser.
-var overrides = map[string]browser.Extractors{
-	"yandex": {
-		category.Password:   newDecryptingExtractor(newFileSpec("Ya Passman Data"), extractYandexPasswords),
-		category.CreditCard: newDecryptingExtractor(newFileSpec("Ya Credit Cards"), extractYandexCreditCards),
-	},
-	"opera":    operaExtractors,
-	"opera-gx": operaExtractors,
-	"vought":   operaExtractors,
-}
-
-var operaExtractors = browser.Extractors{
-	category.Extension: newPlainExtractor(newFileSpec("Secure Preferences"), extractOperaExtensions),
-}
-
 func Extractors(dir browser.UserDataDir, _ browser.Profile) browser.Extractors {
 	extractors := make(browser.Extractors, len(defaultExtractors))
 	for dataCategory, extractor := range defaultExtractors {
 		extractors[dataCategory] = extractor
 	}
-	for dataCategory, extractor := range overrides[dir.Browser.Name] {
-		extractors[dataCategory] = extractor
+	if fork, ok := overrideFor(dir.Browser.Name); ok {
+		for dataCategory, extractor := range fork.extractors {
+			extractors[dataCategory] = extractor
+		}
 	}
 	return extractors
 }
@@ -60,18 +47,26 @@ func newDirectorySpec(path string) browser.FileSpec {
 	return browser.FileSpec{Paths: []string{path}, IsDir: true}
 }
 
-// newDecryptingExtractor lists Local State beside fileSpec, so the keys that decrypt it are in the snapshot.
-func newDecryptingExtractor(fileSpec browser.FileSpec, parse func(masterkey.Set, string, browser.Collector) error) browser.Extractor {
+// withKeyFiles adds the files the dir's master keys come from, so a decrypting extraction finds them in the snapshot.
+func withKeyFiles(fileSpecs ...browser.FileSpec) []browser.FileSpec {
+	return append(fileSpecs, KeyFileSpecs()...)
+}
+
+func newDecryptingExtractor(fileSpec browser.FileSpec, parse func(masterKeysFunc, string, browser.Collector) error) browser.Extractor {
 	return browser.Extractor{
-		FileSpecs: []browser.FileSpec{fileSpec, localState},
+		FileSpecs: withKeyFiles(fileSpec),
 		Extract: func(ctx context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
 			path, err := profileSnapshot.Path(fileSpec)
 			if err != nil {
 				return err
 			}
-			return parse(profileSnapshot.MasterKeys(ctx), path, out)
+			return parse(masterKeysOf(ctx, profileSnapshot), path, out)
 		},
 	}
+}
+
+func masterKeysOf(ctx context.Context, profileSnapshot browser.ProfileSnapshot) masterKeysFunc {
+	return func() masterkey.Set { return profileSnapshot.MasterKeys(ctx) }
 }
 
 func newPlainExtractor(fileSpec browser.FileSpec, parse func(string, browser.Collector) error) browser.Extractor {
@@ -103,7 +98,7 @@ func extractPasswordStores(ctx context.Context, profileSnapshot browser.ProfileS
 			continue
 		}
 		if err == nil {
-			err = extractPasswords(profileSnapshot.MasterKeys(ctx), path, loginStore.store, out)
+			err = extractPasswords(masterKeysOf(ctx, profileSnapshot), path, loginStore.store, out)
 		}
 		errs = append(errs, err)
 	}

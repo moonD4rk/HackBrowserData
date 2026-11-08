@@ -176,29 +176,48 @@ func TestExtractors_CoverEveryCategory(t *testing.T) {
 	}
 }
 
-func TestOverrides_KeysAreChromiumBrowsers(t *testing.T) {
-	for name := range overrides {
-		chromiumBrowser, ok := browser.Lookup(name)
-		if assert.Truef(t, ok, "override %q names no browser", name) {
-			assert.Equalf(t, browser.Chromium, chromiumBrowser.Base, "override %q is not a Chromium browser", name)
+func TestOverrides_NameChromiumBrowsers(t *testing.T) {
+	for _, fork := range overrides {
+		for _, name := range fork.browserNames {
+			chromiumBrowser, ok := browser.Lookup(name)
+			if assert.Truef(t, ok, "override %q names no browser", name) {
+				assert.Equalf(t, browser.Chromium, chromiumBrowser.Base, "override %q is not a Chromium browser", name)
+			}
+		}
+	}
+}
+
+// TestOverrides_KindsAndNamesAreUnique keeps BrowserNameForKind and overrideFor from depending on table order.
+func TestOverrides_KindsAndNamesAreUnique(t *testing.T) {
+	kinds := map[string]bool{kindChromium: true}
+	names := map[string]bool{}
+	for _, fork := range overrides {
+		assert.Falsef(t, kinds[fork.kind], "kind %q is used twice", fork.kind)
+		kinds[fork.kind] = true
+		for _, name := range fork.browserNames {
+			assert.Falsef(t, names[name], "browser %q is in two overrides", name)
+			names[name] = true
 		}
 	}
 }
 
 // TestVaultKind_RoundTripsEveryFork checks a kind leads back to its fork, or restore would parse it as plain Chromium.
 func TestVaultKind_RoundTripsEveryFork(t *testing.T) {
-	assert.Len(t, kinds, len(overrides))
-	for name := range overrides {
-		kind := VaultKind(browser.Browser{Name: name})
-		require.NotEqualf(t, kindChromium, kind, "override %q has no keys.json kind", name)
-		forkFormatName, err := BrowserNameForKind(kind, "unknown")
-		require.NoError(t, err)
-		assert.Equalf(t, categoriesOf(overrides[name]), categoriesOf(overrides[forkFormatName]), "kind %s of %q", kind, name)
+	for _, fork := range overrides {
+		for _, name := range fork.browserNames {
+			kind := VaultKind(browser.Browser{Name: name})
+			require.Equalf(t, fork.kind, kind, "override %q", name)
+			forkBrowserName, err := BrowserNameForKind(kind, "unknown")
+			require.NoError(t, err)
+			restored, ok := overrideFor(forkBrowserName)
+			require.True(t, ok, forkBrowserName)
+			assert.Equalf(t, categoriesOf(fork.extractors), categoriesOf(restored.extractors), "kind %s of %q", kind, name)
+		}
 	}
 	assert.Equal(t, kindChromium, VaultKind(browser.Browser{Name: "chrome"}))
-	plainFormatName, err := BrowserNameForKind(kindChromium, "unknown")
+	plainBrowserName, err := BrowserNameForKind(kindChromium, "unknown")
 	require.NoError(t, err)
-	assert.Equal(t, "unknown", plainFormatName)
+	assert.Equal(t, "unknown", plainBrowserName)
 	_, err = BrowserNameForKind("bogus", "unknown")
 	assert.Error(t, err)
 }
