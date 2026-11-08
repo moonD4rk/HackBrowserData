@@ -9,7 +9,6 @@ import (
 	"unicode/utf16"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
-	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 )
@@ -48,21 +47,12 @@ func extractLocalStorage(root string, out browser.Collector) error {
 	for _, originDir := range dirs {
 		origin, err := readOriginFile(filepath.Join(originDir, webkitOriginFile))
 		if err != nil {
-			log.Debugf("safari localstorage: origin %s: %v", originDir, err)
+			out.Fail(fmt.Errorf("origin %s: %w", originDir, err))
 			continue
 		}
 		dbPath := filepath.Join(originDir, webkitLocalStorageSubdir, webkitLocalStorageDB)
-		items, err := readLocalStorageFile(dbPath)
-		if err != nil {
-			log.Debugf("safari localstorage: db %s: %v", dbPath, err)
-			continue
-		}
-		for _, item := range items {
-			out.Add(&record.LocalStorage{
-				URL:   origin,
-				Key:   item.key,
-				Value: item.value,
-			})
+		if err := extractOriginStorage(dbPath, origin, out); err != nil {
+			out.Fail(fmt.Errorf("db %s: %w", dbPath, err))
 		}
 	}
 	return nil
@@ -199,45 +189,36 @@ func formatOriginURL(endpoint originEndpoint) string {
 	return url
 }
 
-type localStorageItem struct {
-	key   string
-	value string
-}
-
-func readLocalStorageFile(path string) ([]localStorageItem, error) {
+func extractOriginStorage(path, origin string, out browser.Collector) error {
 	// mode=ro without immutable lets SQLite replay the copied -wal, so entries Safari has not checkpointed appear.
 	// ORDER BY key, rowid keeps exports stable across runs and SQLite versions.
 	database, err := sqlitex.Open(path, sqlitex.ReadOnly)
 	if err != nil {
-		return nil, fmt.Errorf("open %s: %w", path, err)
+		return fmt.Errorf("open %s: %w", path, err)
 	}
 	defer database.Close()
 
 	rows, err := database.Query(`SELECT key, value FROM ItemTable ORDER BY key, rowid`)
 	if err != nil {
-		return nil, fmt.Errorf("query ItemTable: %w", err)
+		return fmt.Errorf("query ItemTable: %w", err)
 	}
 	defer rows.Close()
 
-	var items []localStorageItem
 	for rows.Next() {
 		var key sql.NullString
 		var value []byte
 		if err := rows.Scan(&key, &value); err != nil {
-			log.Debugf("safari localstorage: scan row in %s: %v", path, err)
+			out.Fail(fmt.Errorf("scan row in %s: %w", path, err))
 			continue
 		}
 		if !key.Valid {
 			// NULL keys would collide with empty-string keys in the output, and ItemTable's UNIQUE still allows several.
-			log.Debugf("safari localstorage: skip row with NULL key in %s", path)
+			out.Fail(fmt.Errorf("row with NULL key in %s", path))
 			continue
 		}
-		items = append(items, localStorageItem{
-			key:   key.String,
-			value: decodeLocalStorageValue(value),
-		})
+		out.Add(&record.LocalStorage{URL: origin, Key: key.String, Value: decodeLocalStorageValue(value)})
 	}
-	return items, rows.Err()
+	return rows.Err()
 }
 
 // decodeLocalStorageValue turns values at or above the cap into a size marker to bound the output, as Chromium's does.
