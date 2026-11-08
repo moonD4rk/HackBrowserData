@@ -20,7 +20,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-var history = browser.FileSpec{Paths: []string{"History"}}
+var history = browser.Source{Path: "History"}
 
 type extractFunc func(ctx context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error
 
@@ -29,7 +29,7 @@ func fakeBase(extractFuncs map[category.Category]extractFunc) extractorsFunc {
 	return func(browser.UserDataDir, browser.Profile) browser.Extractors {
 		extractors := make(browser.Extractors, len(extractFuncs))
 		for dataCategory, extract := range extractFuncs {
-			extractors[dataCategory] = browser.Extractor{FileSpecs: []browser.FileSpec{history}, Extract: extract}
+			extractors[dataCategory] = browser.Extractor{Sources: []browser.Source{history}, Extract: extract}
 		}
 		return extractors
 	}

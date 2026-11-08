@@ -23,15 +23,15 @@ var overrides = []override{
 		browserNames: []string{"yandex"},
 		kind:         "chromium-yandex",
 		extractors: browser.Extractors{
-			category.Password:   newDecryptingExtractor(extractYandexPasswords, newFileSpec("Ya Passman Data")),
-			category.CreditCard: newDecryptingExtractor(extractYandexCreditCards, newFileSpec("Ya Credit Cards")),
+			category.Password:   newDecryptingExtractor(extractYandexPasswords, yaPassmanData),
+			category.CreditCard: newDecryptingExtractor(extractYandexCreditCards, yaCreditCards),
 		},
 	},
 	{
 		browserNames: []string{"opera", "opera-gx", "vought"},
 		kind:         "chromium-opera",
 		extractors: browser.Extractors{
-			category.Extension: newPlainExtractor(extractOperaExtensions, newFileSpec("Secure Preferences")),
+			category.Extension: newPlainExtractor(extractOperaExtensions, securePreferences),
 		},
 	},
 }

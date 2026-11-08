@@ -56,10 +56,10 @@ func withData(dirs []browser.UserDataDir) []browser.UserDataDir {
 
 func hasData(dir browser.UserDataDir, profile browser.Profile, extractors browser.Extractors) bool {
 	for _, extractor := range extractors {
-		if len(extractor.FileSpecs) == 0 {
+		if len(extractor.Sources) == 0 {
 			continue
 		}
-		if _, ok, err := locate(dir, profile, extractor.FileSpecs); ok || err != nil {
+		if _, ok, err := locate(dir, profile, extractor.Sources); ok || err != nil {
 			return true
 		}
 	}

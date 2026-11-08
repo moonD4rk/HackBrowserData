@@ -53,7 +53,7 @@ func DiscoverAt(chromiumBrowser browser.Browser, id browser.UserDataDirID, path 
 
 // profileAt takes chrome://version's path: a profile dir without Local State selects that profile of its parent.
 func profileAt(chromiumBrowser browser.Browser, path string) (browser.UserDataDir, bool) {
-	if path == "" || !isProfileDir(path) || hasAnyFile(path, localState.Paths) {
+	if path == "" || !isProfileDir(path) || hasAnyFile(path, localState.Paths()) {
 		return browser.UserDataDir{}, false
 	}
 	clean := filepath.Clean(path)
@@ -137,9 +137,9 @@ func isSkippedDir(name string) bool {
 func profileFilePaths(dir browser.UserDataDir) []string {
 	var paths []string
 	for _, extractor := range Extractors(dir, browser.Profile{}) {
-		for _, fileSpec := range extractor.FileSpecs {
-			if !fileSpec.Shared {
-				paths = append(paths, fileSpec.Paths...)
+		for _, source := range extractor.Sources {
+			if !source.Shared {
+				paths = append(paths, source.Paths()...)
 			}
 		}
 	}
@@ -161,7 +161,7 @@ func KeyLocator(dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterk
 	locator := masterkey.Locator{
 		SecretLabel: platform.SecretLabel, Executable: platform.Executable, ExecutableFallbacks: platform.ExecutableFallbacks, ABE: platform.ABE,
 	}
-	path, err := dirSnapshot.Path(localState.Paths[0])
+	path, err := dirSnapshot.Path(localState.Path)
 	switch {
 	case err == nil:
 		locator.LocalState = path
@@ -171,16 +171,16 @@ func KeyLocator(dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterk
 	return locator, nil
 }
 
-// KeyFileSpecs are the files KeyLocator reads from a snapshot.
-func KeyFileSpecs() []browser.FileSpec {
-	return []browser.FileSpec{localState}
+// KeySources are the files KeyLocator reads from a snapshot.
+func KeySources() []browser.Source {
+	return []browser.Source{localState}
 }
 
-// ArchiveFileSpecs add each profile's marker, by which restore rediscovers the profiles, to the key files.
-func ArchiveFileSpecs() []browser.FileSpec {
-	fileSpecs := KeyFileSpecs()
+// ArchiveSources add each profile's marker, by which restore rediscovers the profiles, to the key files.
+func ArchiveSources() []browser.Source {
+	sources := KeySources()
 	for _, marker := range profileMarkers {
-		fileSpecs = append(fileSpecs, browser.FileSpec{Paths: []string{marker}, Optional: true})
+		sources = append(sources, browser.Source{Path: marker, Optional: true})
 	}
-	return fileSpecs
+	return sources
 }

@@ -81,8 +81,8 @@ func retrieveKeys(ctx context.Context, dir browser.UserDataDir, keys dirKeysFunc
 	}
 	defer closeSnapshot(snapshots)
 	var files []snapshot.File
-	for _, fileSpec := range chromium.KeyFileSpecs() {
-		if file, ok, err := firstOnDisk(dir, browser.Profile{}, fileSpec); err == nil && ok {
+	for _, source := range chromium.KeySources() {
+		if file, ok, err := firstOnDisk(dir, browser.Profile{}, source); err == nil && ok {
 			files = append(files, file)
 		}
 	}
