@@ -78,12 +78,12 @@ func TestExportGolden(t *testing.T) {
 		t.Run(testCase.format, func(t *testing.T) {
 			dir := filepath.Join(t.TempDir(), "results")
 			exportWrite(t, dir, testCase.format, false, profileExports())
-			got := golden.Bundle(t, dir)
+			got := golden.ConcatDir(t, dir)
 			if testCase.jsonFallback {
 				jsonDir := filepath.Join(t.TempDir(), "results")
 				exportWrite(t, jsonDir, "json", false, profileExports())
 				golden.AssertJSONFallback(t, dir, jsonDir)
-				got = golden.BundleFiles(t, dir, "cookie.json")
+				got = golden.ConcatFiles(t, dir, "cookie.json")
 			}
 			golden.Assert(t, "export-"+testCase.format+".golden", got)
 			assert.Equal(t, exportCategoryFiles(testCase.fileExtension, category.All()...), exportDirFiles(t, dir))
@@ -111,11 +111,11 @@ func TestExportGolden(t *testing.T) {
 	})
 }
 
-func exportWrite(t *testing.T, dir, format string, compress bool, exports []profileExport) {
+func exportWrite(t *testing.T, dir, format string, zipOutput bool, exports []profileExport) {
 	t.Helper()
 	parsedFormat, err := export.ParseFormat(format)
 	require.NoError(t, err)
-	writer, err := export.NewWriter(dir, parsedFormat, compress)
+	writer, err := export.NewWriter(dir, parsedFormat, zipOutput)
 	require.NoError(t, err)
 	for _, batch := range exports {
 		require.NoError(t, writeProfileExport(writer, batch))

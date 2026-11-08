@@ -84,15 +84,15 @@ func TestTableRows(t *testing.T) {
 
 		windows := browser.Windows
 		if windows.ABE == masterkey.ABENone {
-			assert.Emptyf(t, windows.Exe, "%s: an executable is only used by ABE", browser.Name)
-			assert.Emptyf(t, windows.ExeFallbacks, "%s: executable fallbacks are only used by ABE", browser.Name)
+			assert.Emptyf(t, windows.Executable, "%s: an executable is only used by ABE", browser.Name)
+			assert.Emptyf(t, windows.ExecutableFallbacks, "%s: executable fallbacks are only used by ABE", browser.Name)
 			continue
 		}
 		assert.Equal(t, Chromium, browser.Base, browser.Name)
-		assert.NotEmpty(t, windows.Exe, browser.Name)
-		for _, fallback := range windows.ExeFallbacks {
-			assert.Truef(t, strings.HasSuffix(strings.ToLower(fallback), `\`+strings.ToLower(windows.Exe)),
-				"%s: fallback %q does not name %s", browser.Name, fallback, windows.Exe)
+		assert.NotEmpty(t, windows.Executable, browser.Name)
+		for _, fallback := range windows.ExecutableFallbacks {
+			assert.Truef(t, strings.HasSuffix(strings.ToLower(fallback), `\`+strings.ToLower(windows.Executable)),
+				"%s: fallback %q does not name %s", browser.Name, fallback, windows.Executable)
 		}
 	}
 }
@@ -123,9 +123,9 @@ func TestABERowsMatchPayloadTable(t *testing.T) {
 		if platform.ABE == masterkey.ABENone {
 			continue
 		}
-		kind, ok := payload[strings.ToLower(platform.Exe)]
-		if assert.Truef(t, ok, "%s: com_iid.c has no row for %s", browser.Name, platform.Exe) {
-			assert.Equalf(t, platform.ABE, kind, "%s: com_iid.c dispatches %s as another ABE kind", browser.Name, platform.Exe)
+		kind, ok := payload[strings.ToLower(platform.Executable)]
+		if assert.Truef(t, ok, "%s: com_iid.c has no row for %s", browser.Name, platform.Executable) {
+			assert.Equalf(t, platform.ABE, kind, "%s: com_iid.c dispatches %s as another ABE kind", browser.Name, platform.Executable)
 		}
 	}
 }

@@ -33,11 +33,11 @@ type LoginKeychain interface {
 	InternetPasswords(ctx context.Context) ([]keychainbreaker.InternetPassword, error)
 }
 
-// Discover makes the Safari directory the default profile's Dir; -p names another, whose parent replaces ~/Library.
+// Discover makes the Safari directory the default profile; -p names another, whose parent replaces ~/Library.
 func Discover(safariBrowser browser.Browser, options browser.DiscoverOptions) ([]browser.UserDataDir, error) {
 	var errs []error
 	var dirs []browser.UserDataDir
-	for i, safariPath := range safariPaths(safariBrowser, options) {
+	for i, safariPath := range userDataDirPaths(safariBrowser, options) {
 		if _, err := os.Stat(safariPath); err != nil {
 			if !errors.Is(err, fs.ErrNotExist) {
 				errs = append(errs, fmt.Errorf("%s: %w", safariPath, err))
@@ -45,32 +45,32 @@ func Discover(safariBrowser browser.Browser, options browser.DiscoverOptions) ([
 			continue
 		}
 		library := filepath.Dir(safariPath)
-		profiles := append([]browser.Profile{{Name: defaultProfileName, Dir: filepath.Base(safariPath)}}, namedProfiles(library)...)
+		profiles := append([]browser.Profile{{Name: defaultProfileName, RelativePath: filepath.Base(safariPath)}}, namedProfiles(library)...)
 		disambiguateNames(profiles)
 		dirs = append(dirs, browser.UserDataDir{ID: safariBrowser.UserDataDirID(i), Browser: safariBrowser, Path: library, Profiles: profiles})
 	}
 	return dirs, errors.Join(errs...)
 }
 
-func safariPaths(safariBrowser browser.Browser, options browser.DiscoverOptions) []string {
+func userDataDirPaths(safariBrowser browser.Browser, options browser.DiscoverOptions) []string {
 	if options.ProfilePath != "" {
 		return []string{filepath.Clean(options.ProfilePath)}
 	}
 	paths := make([]string, 0, len(safariBrowser.Platform().UserDataDirs))
 	for _, relativePath := range safariBrowser.Platform().UserDataDirs {
-		paths = append(paths, filepath.Join(options.Home, filepath.FromSlash(relativePath)))
+		paths = append(paths, filepath.Join(options.HomeDir, filepath.FromSlash(relativePath)))
 	}
 	return paths
 }
 
-// Extractors builds a named profile's file specs from Profile.Dir; its files sit under two dirs named for its UUID.
+// Extractors builds a named profile's specs from Profile.RelativePath; its files sit under two dirs named for its UUID.
 // The keychain, Bookmarks.plist, and the extension plists carry no profile tag, so only the default profile reads them.
 func Extractors(dir browser.UserDataDir, profile browser.Profile, loginKeychain LoginKeychain) browser.Extractors {
 	library := func(relativePath string) string { return fromLibrary(profile, relativePath) }
-	uuid, named := profileUUID(profile)
+	uuid, named := namedProfileUUID(profile)
 	if !named {
 		return browser.Extractors{
-			category.Password: {Extract: passwordsFrom(loginKeychain)},
+			category.Password: newPasswordExtractor(loginKeychain),
 			category.History:  newPlainExtractor(newFileSpec("History.db"), extractHistories),
 			category.Cookie: newPlainExtractor(newFileSpec(
 				library(containerDir+"/Cookies/Cookies.binarycookies"),
@@ -79,41 +79,41 @@ func Extractors(dir browser.UserDataDir, profile browser.Profile, loginKeychain 
 			category.Bookmark:     newPlainExtractor(newFileSpec("Bookmarks.plist"), extractBookmarks),
 			category.Download:     newPlainExtractor(newFileSpec("Downloads.plist"), downloadsOf(defaultProfileSentinel)),
 			category.LocalStorage: newPlainExtractor(newDirectorySpec(library(containerDir+"/WebKit/WebsiteData/Default")), extractLocalStorage),
-			category.Extension:    extensionsFrom(library),
+			category.Extension:    newExtensionExtractor(library),
 		}
 	}
 	store := containerDir + "/WebKit/WebsiteDataStore/" + strings.ToLower(uuid)
 	return browser.Extractors{
 		category.History:      newPlainExtractor(newFileSpec("History.db"), extractHistories),
 		category.Cookie:       newPlainExtractor(newFileSpec(library(store+"/Cookies/Cookies.binarycookies")), extractCookies),
-		category.Download:     newPlainExtractor(newFileSpec(library(safariDir(dir)+"/Downloads.plist")), downloadsOf(uuid)),
+		category.Download:     newPlainExtractor(newFileSpec(library(defaultProfileDir(dir)+"/Downloads.plist")), downloadsOf(uuid)),
 		category.LocalStorage: newPlainExtractor(newDirectorySpec(library(store+"/Origins")), extractLocalStorage),
 	}
 }
 
-func profileUUID(profile browser.Profile) (string, bool) {
-	if path.Dir(profile.Dir) != namedProfilesDir {
+func namedProfileUUID(profile browser.Profile) (string, bool) {
+	if path.Dir(profile.RelativePath) != namedProfilesDir {
 		return "", false
 	}
-	return path.Base(profile.Dir), true
+	return path.Base(profile.RelativePath), true
 }
 
-// safariDir is the default profile's Dir, which holds the Downloads.plist every profile reads its entries from.
-func safariDir(dir browser.UserDataDir) string {
+// defaultProfileDir is where the default profile lives; its Downloads.plist holds every profile's entries.
+func defaultProfileDir(dir browser.UserDataDir) string {
 	for _, profile := range dir.Profiles {
-		if _, named := profileUUID(profile); !named {
-			return profile.Dir
+		if _, named := namedProfileUUID(profile); !named {
+			return profile.RelativePath
 		}
 	}
 	return "Safari"
 }
 
-// fromLibrary turns a path under ~/Library into one relative to profile.Dir, which file specs are joined with.
+// fromLibrary turns a path under ~/Library into one relative to profile.RelativePath, which file specs are joined with.
 func fromLibrary(profile browser.Profile, relativePath string) string {
-	if profile.Dir == "" {
+	if profile.RelativePath == "" {
 		return relativePath
 	}
-	return strings.Repeat("../", strings.Count(profile.Dir, "/")+1) + relativePath
+	return strings.Repeat("../", strings.Count(profile.RelativePath, "/")+1) + relativePath
 }
 
 func newFileSpec(paths ...string) browser.FileSpec { return browser.FileSpec{Paths: paths} }
@@ -134,21 +134,21 @@ func newPlainExtractor(fileSpec browser.FileSpec, parse func(string, browser.Col
 	}
 }
 
-// passwordsFrom reads no file, so it always runs; without a usable password the locked keychain yields metadata only.
-func passwordsFrom(loginKeychain LoginKeychain) func(context.Context, browser.ProfileSnapshot, browser.Collector) error {
-	return func(ctx context.Context, _ browser.ProfileSnapshot, out browser.Collector) error {
+// newPasswordExtractor lists no file, so it always runs; without a usable password the keychain yields metadata only.
+func newPasswordExtractor(loginKeychain LoginKeychain) browser.Extractor {
+	return browser.Extractor{Extract: func(ctx context.Context, _ browser.ProfileSnapshot, out browser.Collector) error {
 		if loginKeychain == nil {
 			return errNoKeychain
 		}
 		return extractPasswords(ctx, loginKeychain, out)
-	}
+	}}
 }
 
-func downloadsOf(owner string) func(string, browser.Collector) error {
-	return func(path string, out browser.Collector) error { return extractDownloads(path, owner, out) }
+func downloadsOf(profileUUID string) func(string, browser.Collector) error {
+	return func(path string, out browser.Collector) error { return extractDownloads(path, profileUUID, out) }
 }
 
-func extensionsFrom(library func(string) string) browser.Extractor {
+func newExtensionExtractor(library func(string) string) browser.Extractor {
 	fileSpecs := []browser.FileSpec{
 		{Paths: []string{library(containerDir + "/Safari/AppExtensions/Extensions.plist")}, Optional: true},
 		{Paths: []string{library(containerDir + "/Safari/WebExtensions/Extensions.plist")}, Optional: true},

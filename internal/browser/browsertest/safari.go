@@ -17,53 +17,53 @@ import (
 )
 
 const (
-	safariFixtureWorkUUID     = "5604E6F5-02ED-4E40-8249-63DE7BC986C8"
-	safariFixtureUntitledUUID = "9A1B2C3D-4E5F-4A6B-8C7D-0E1F2A3B4C5D"
+	safariWorkUUID     = "5604E6F5-02ED-4E40-8249-63DE7BC986C8"
+	safariUntitledUUID = "9A1B2C3D-4E5F-4A6B-8C7D-0E1F2A3B4C5D"
 )
 
-var safariFixtureStart = time.Date(2024, 3, 1, 9, 0, 0, 0, time.UTC)
+var safariStart = time.Date(2024, 3, 1, 9, 0, 0, 0, time.UTC)
 
-func SafariLibrary(t *testing.T, library string) {
+func WriteSafariLibrary(t *testing.T, library string) {
 	t.Helper()
-	timeAt := safariFixtureStart.Add
-	visit := func(offset time.Duration) float64 { return safariFixtureCoreData(timeAt(offset)) }
+	timeAt := safariStart.Add
+	visit := func(offset time.Duration) float64 { return safariCoreData(timeAt(offset)) }
 	day := 24 * time.Hour
 	legacyHome := filepath.Join(library, "Safari")
 	container := filepath.Join(library, "Containers", "com.apple.Safari", "Data", "Library")
-	workStore := filepath.Join(container, "WebKit", "WebsiteDataStore", strings.ToLower(safariFixtureWorkUUID))
+	workStore := filepath.Join(container, "WebKit", "WebsiteDataStore", strings.ToLower(safariWorkUUID))
 
-	fixtureSQLite(t, filepath.Join(container, "Safari", "SafariTabs.db"), safariFixtureTabsSchema,
+	writeSQLite(t, filepath.Join(container, "Safari", "SafariTabs.db"), safariTabsSchema,
 		`INSERT INTO bookmarks (id, parent, type, title, order_index, external_uuid, subtype) VALUES
 		 (1, 0, 1, 'Favorites', 0, 'Favorites', 0),
 		 (2, 0, 1, '', 1, 'DefaultProfile', 2),
-		 (3, 0, 1, 'Work', 2, '`+safariFixtureWorkUUID+`', 2),
-		 (4, 0, 1, NULL, 3, '`+safariFixtureUntitledUUID+`', 2)`)
+		 (3, 0, 1, 'Work', 2, '`+safariWorkUUID+`', 2),
+		 (4, 0, 1, NULL, 3, '`+safariUntitledUUID+`', 2)`)
 
-	fixtureSQLite(t, filepath.Join(legacyHome, "History.db"), safariFixtureHistoryItemsSchema, safariFixtureHistoryVisitsSchema,
-		safariFixtureInsertHistoryItem(1, "https://www.home.safari.test/", 42),
-		safariFixtureInsertHistoryVisit(1, 1, visit(time.Hour), "Home (old)"),
-		safariFixtureInsertHistoryVisit(2, 1, visit(3*time.Hour+500*time.Millisecond), "Home"),
-		safariFixtureInsertHistoryItem(2, "https://docs.home.safari.test/guide?q=go&lang=en", 7),
-		safariFixtureInsertHistoryVisit(3, 2, visit(4*time.Hour), `Guide, "quoted" & <b>bold</b>`),
-		safariFixtureInsertHistoryItem(3, "https://news.home.safari.test/ja", 3),
-		safariFixtureInsertHistoryVisit(4, 3, visit(5*time.Hour), "ニュース"),
-		safariFixtureInsertHistoryItem(4, "https://files.home.safari.test/report.pdf", 0),
+	writeSQLite(t, filepath.Join(legacyHome, "History.db"), safariHistoryItemsSchema, safariHistoryVisitsSchema,
+		insertSafariHistoryItem(1, "https://www.home.safari.test/", 42),
+		insertSafariHistoryVisit(1, 1, visit(time.Hour), "Home (old)"),
+		insertSafariHistoryVisit(2, 1, visit(3*time.Hour+500*time.Millisecond), "Home"),
+		insertSafariHistoryItem(2, "https://docs.home.safari.test/guide?q=go&lang=en", 7),
+		insertSafariHistoryVisit(3, 2, visit(4*time.Hour), `Guide, "quoted" & <b>bold</b>`),
+		insertSafariHistoryItem(3, "https://news.home.safari.test/ja", 3),
+		insertSafariHistoryVisit(4, 3, visit(5*time.Hour), "ニュース"),
+		insertSafariHistoryItem(4, "https://files.home.safari.test/report.pdf", 0),
 	)
-	fixtureSQLite(t, filepath.Join(container, "Safari", "Profiles", safariFixtureWorkUUID, "History.db"),
-		safariFixtureHistoryItemsSchema, safariFixtureHistoryVisitsSchema,
-		safariFixtureInsertHistoryItem(1, "https://intranet.work.safari.test/", 12),
-		safariFixtureInsertHistoryVisit(1, 1, visit(6*time.Hour), "Intranet"),
-		safariFixtureInsertHistoryItem(2, "https://wiki.work.safari.test/onboarding", 2),
-		safariFixtureInsertHistoryVisit(2, 2, visit(7*time.Hour), "Onboarding"),
+	writeSQLite(t, filepath.Join(container, "Safari", "Profiles", safariWorkUUID, "History.db"),
+		safariHistoryItemsSchema, safariHistoryVisitsSchema,
+		insertSafariHistoryItem(1, "https://intranet.work.safari.test/", 12),
+		insertSafariHistoryVisit(1, 1, visit(6*time.Hour), "Intranet"),
+		insertSafariHistoryItem(2, "https://wiki.work.safari.test/onboarding", 2),
+		insertSafariHistoryVisit(2, 2, visit(7*time.Hour), "Onboarding"),
 	)
-	fixtureSQLite(t, filepath.Join(container, "Safari", "Profiles", safariFixtureUntitledUUID, "History.db"),
-		safariFixtureHistoryItemsSchema, safariFixtureHistoryVisitsSchema,
-		safariFixtureInsertHistoryItem(1, "https://www.untitled.safari.test/", 1),
-		safariFixtureInsertHistoryVisit(1, 1, visit(8*time.Hour), "Untitled"),
+	writeSQLite(t, filepath.Join(container, "Safari", "Profiles", safariUntitledUUID, "History.db"),
+		safariHistoryItemsSchema, safariHistoryVisitsSchema,
+		insertSafariHistoryItem(1, "https://www.untitled.safari.test/", 1),
+		insertSafariHistoryVisit(1, 1, visit(8*time.Hour), "Untitled"),
 	)
 
-	fixtureWrite(t, filepath.Join(container, "Cookies", "Cookies.binarycookies"), string(safariFixtureCookieFile(t,
-		[]safariFixtureCookie{
+	writeFile(t, filepath.Join(container, "Cookies", "Cookies.binarycookies"), string(encodeSafariCookieFile(t,
+		[]safariCookie{
 			{
 				domain: ".home.safari.test", name: "SID", path: "/", value: "sid-home.safari.test", flags: 0x5,
 				expires: timeAt(365 * day), created: timeAt(10*time.Minute + 750*time.Millisecond),
@@ -73,7 +73,7 @@ func SafariLibrary(t *testing.T, library string) {
 				expires: timeAt(30 * day), created: timeAt(20 * time.Minute),
 			},
 		},
-		[]safariFixtureCookie{
+		[]safariCookie{
 			{
 				domain: ".home.safari.test", name: "tracker", path: "/", value: "opt-out", flags: 0x1,
 				expires: timeAt(730 * day), created: timeAt(30 * time.Minute),
@@ -85,14 +85,14 @@ func SafariLibrary(t *testing.T, library string) {
 		},
 	)))
 	// Since macOS 14 the jar lives in the container, which wins over a leftover ~/Library/Cookies jar.
-	fixtureWrite(t, filepath.Join(library, "Cookies", "Cookies.binarycookies"), string(safariFixtureCookieFile(t,
-		[]safariFixtureCookie{{
+	writeFile(t, filepath.Join(library, "Cookies", "Cookies.binarycookies"), string(encodeSafariCookieFile(t,
+		[]safariCookie{{
 			domain: "old.home.safari.test", name: "legacy", path: "/", value: "stale",
 			expires: timeAt(day), created: timeAt(time.Minute),
 		}},
 	)))
-	fixtureWrite(t, filepath.Join(workStore, "Cookies", "Cookies.binarycookies"), string(safariFixtureCookieFile(t,
-		[]safariFixtureCookie{
+	writeFile(t, filepath.Join(workStore, "Cookies", "Cookies.binarycookies"), string(encodeSafariCookieFile(t,
+		[]safariCookie{
 			{
 				domain: ".work.safari.test", name: "SSO", path: "/", value: "sso-work.safari.test", flags: 0x5,
 				expires: timeAt(7 * day), created: timeAt(6 * time.Hour),
@@ -104,54 +104,54 @@ func SafariLibrary(t *testing.T, library string) {
 		},
 	)))
 
-	safariFixturePlist(t, filepath.Join(legacyHome, "Bookmarks.plist"), safariFixtureBookmarks)
-	safariFixturePlist(t, filepath.Join(legacyHome, "Downloads.plist"), fmt.Sprintf(safariFixtureDownloads, safariFixtureWorkUUID))
+	writeSafariPlist(t, filepath.Join(legacyHome, "Bookmarks.plist"), safariBookmarksPlist)
+	writeSafariPlist(t, filepath.Join(legacyHome, "Downloads.plist"), fmt.Sprintf(safariDownloadsPlist, safariWorkUUID))
 
 	defaultStore := filepath.Join(container, "WebKit", "WebsiteData", "Default")
-	fixtureWrite(t, filepath.Join(defaultStore, "salt"), "\x8f\x1e\x5a\x33\x0c\xd4\x71\x9b")
-	app := safariFixtureEndpoint{scheme: "https", host: "app.home.safari.test"}
-	safariFixtureOrigin(t, defaultStore, app, app,
+	writeFile(t, filepath.Join(defaultStore, "salt"), "\x8f\x1e\x5a\x33\x0c\xd4\x71\x9b")
+	app := safariEndpoint{scheme: "https", host: "app.home.safari.test"}
+	writeSafariOrigin(t, defaultStore, app, app,
 		[2]string{"greeting", "café"},
 		[2]string{"言語", "日本語"},
 		[2]string{"blob", strings.Repeat("x", 1100)},
 	)
-	safariFixtureOrigin(t, defaultStore,
-		safariFixtureEndpoint{scheme: "https", host: "shop.home.safari.test"},
-		safariFixtureEndpoint{scheme: "https", host: "cdn.home.safari.test", port: 8443},
+	writeSafariOrigin(t, defaultStore,
+		safariEndpoint{scheme: "https", host: "shop.home.safari.test"},
+		safariEndpoint{scheme: "https", host: "cdn.home.safari.test", port: 8443},
 		[2]string{"consent", "yes"},
 	)
-	idbOnly := safariFixtureEndpoint{scheme: "https", host: "idb.home.safari.test"}
-	safariFixtureOrigin(t, defaultStore, idbOnly, idbOnly)
-	workApp := safariFixtureEndpoint{scheme: "https", host: "app.work.safari.test"}
-	safariFixtureOrigin(t, filepath.Join(workStore, "Origins"), workApp, workApp, [2]string{"greeting", "hello"})
+	idbOnly := safariEndpoint{scheme: "https", host: "idb.home.safari.test"}
+	writeSafariOrigin(t, defaultStore, idbOnly, idbOnly)
+	workApp := safariEndpoint{scheme: "https", host: "app.work.safari.test"}
+	writeSafariOrigin(t, filepath.Join(workStore, "Origins"), workApp, workApp, [2]string{"greeting", "hello"})
 
-	safariFixturePlist(t, filepath.Join(container, "Safari", "AppExtensions", "Extensions.plist"), safariFixtureAppExtensions)
-	safariFixturePlist(t, filepath.Join(container, "Safari", "WebExtensions", "Extensions.plist"), safariFixtureWebExtensions)
+	writeSafariPlist(t, filepath.Join(container, "Safari", "AppExtensions", "Extensions.plist"), safariAppExtensionsPlist)
+	writeSafariPlist(t, filepath.Join(container, "Safari", "WebExtensions", "Extensions.plist"), safariWebExtensionsPlist)
 }
 
-func safariFixtureCoreData(timestamp time.Time) float64 {
+func safariCoreData(timestamp time.Time) float64 {
 	const unixToCoreDataSeconds = 978_307_200
 	return float64(timestamp.UnixMilli())/1000 - unixToCoreDataSeconds
 }
 
-// safariFixturePlist writes XML, though Safari writes binary plists, so the fixtures read like plutil's XML output.
-func safariFixturePlist(t *testing.T, path, body string) {
+// writeSafariPlist writes XML, though Safari writes binary plists, so the fixtures read like plutil's XML output.
+func writeSafariPlist(t *testing.T, path, body string) {
 	t.Helper()
 	var value any
 	_, err := plist.Unmarshal([]byte(`<plist version="1.0">`+body+`</plist>`), &value)
 	require.NoError(t, err)
 	data, err := plist.Marshal(value, plist.BinaryFormat)
 	require.NoError(t, err)
-	fixtureWrite(t, path, string(data))
+	writeFile(t, path, string(data))
 }
 
-type safariFixtureCookie struct {
+type safariCookie struct {
 	domain, name, path, value string
 	flags                     uint32
 	expires, created          time.Time
 }
 
-type safariFixtureCookieHeader struct {
+type safariCookieHeader struct {
 	Size          uint32
 	Version       uint32
 	Flags         uint32
@@ -166,13 +166,13 @@ type safariFixtureCookieHeader struct {
 	Created       float64
 }
 
-// safariFixtureCookieFile takes one page of the jar per argument.
-func safariFixtureCookieFile(t *testing.T, pages ...[]safariFixtureCookie) []byte {
+// encodeSafariCookieFile takes one page of the jar per argument.
+func encodeSafariCookieFile(t *testing.T, pages ...[]safariCookie) []byte {
 	t.Helper()
 	encoded := make([][]byte, len(pages))
 	file := binary.BigEndian.AppendUint32([]byte("cook"), uint32(len(pages)))
 	for i, cookies := range pages {
-		encoded[i] = safariFixtureCookiePage(t, cookies)
+		encoded[i] = encodeSafariCookiePage(t, cookies)
 		file = binary.BigEndian.AppendUint32(file, uint32(len(encoded[i])))
 	}
 	for _, page := range encoded {
@@ -181,11 +181,11 @@ func safariFixtureCookieFile(t *testing.T, pages ...[]safariFixtureCookie) []byt
 	return append(file, make([]byte, 8)...) // the checksum, which the decoder reads but never verifies
 }
 
-func safariFixtureCookiePage(t *testing.T, cookies []safariFixtureCookie) []byte {
+func encodeSafariCookiePage(t *testing.T, cookies []safariCookie) []byte {
 	t.Helper()
 	records := make([][]byte, len(cookies))
 	for i, cookie := range cookies {
-		records[i] = safariFixtureCookieRecord(t, cookie)
+		records[i] = encodeSafariCookieRecord(t, cookie)
 	}
 	page := binary.LittleEndian.AppendUint32([]byte{0x00, 0x00, 0x01, 0x00}, uint32(len(cookies)))
 	offset := 4 + 4 + 4*len(cookies) + 4
@@ -200,12 +200,12 @@ func safariFixtureCookiePage(t *testing.T, cookies []safariFixtureCookie) []byte
 	return page
 }
 
-func safariFixtureCookieRecord(t *testing.T, cookie safariFixtureCookie) []byte {
+func encodeSafariCookieRecord(t *testing.T, cookie safariCookie) []byte {
 	t.Helper()
-	header := safariFixtureCookieHeader{
+	header := safariCookieHeader{
 		Flags:   cookie.flags,
-		Expires: safariFixtureCoreData(cookie.expires),
-		Created: safariFixtureCoreData(cookie.created),
+		Expires: safariCoreData(cookie.expires),
+		Created: safariCoreData(cookie.created),
 	}
 	headerSize := uint32(binary.Size(header))
 	var strs []byte
@@ -227,32 +227,32 @@ func safariFixtureCookieRecord(t *testing.T, cookie safariFixtureCookie) []byte 
 	return append(buffer.Bytes(), strs...)
 }
 
-type safariFixtureEndpoint struct {
+type safariEndpoint struct {
 	scheme, host string
 	port         uint16
 }
 
-// safariFixtureOrigin takes top and frame, which differ for third-party storage; without items, one origin file stays.
-func safariFixtureOrigin(t *testing.T, root string, top, frame safariFixtureEndpoint, items ...[2]string) {
+// writeSafariOrigin takes top and frame, which differ for third-party storage; without items, one origin file stays.
+func writeSafariOrigin(t *testing.T, root string, top, frame safariEndpoint, items ...[2]string) {
 	t.Helper()
-	dir := filepath.Join(root, safariFixtureHash(top), safariFixtureHash(frame))
-	fixtureWrite(t, filepath.Join(dir, "origin"), string(append(safariFixtureOriginBlock(top), safariFixtureOriginBlock(frame)...)))
+	dir := filepath.Join(root, safariOriginHash(top), safariOriginHash(frame))
+	writeFile(t, filepath.Join(dir, "origin"), string(append(encodeSafariOriginBlock(top), encodeSafariOriginBlock(frame)...)))
 	if len(items) == 0 {
 		return
 	}
-	statements := []string{safariFixtureItemTableSchema}
+	statements := []string{safariItemTableSchema}
 	for _, item := range items {
-		statements = append(statements, fmt.Sprintf(`INSERT INTO ItemTable (key, value) VALUES ('%s', x'%x')`, item[0], safariFixtureUTF16(item[1])))
+		statements = append(statements, fmt.Sprintf(`INSERT INTO ItemTable (key, value) VALUES ('%s', x'%x')`, item[0], safariUTF16(item[1])))
 	}
-	fixtureSQLite(t, filepath.Join(dir, "LocalStorage", "localstorage.sqlite3"), statements...)
+	writeSQLite(t, filepath.Join(dir, "LocalStorage", "localstorage.sqlite3"), statements...)
 }
 
-func safariFixtureHash(endpoint safariFixtureEndpoint) string {
+func safariOriginHash(endpoint safariEndpoint) string {
 	sum := sha256.Sum256([]byte(fmt.Sprintf("%s://%s:%d", endpoint.scheme, endpoint.host, endpoint.port)))
 	return hex.EncodeToString(sum[:])
 }
 
-func safariFixtureOriginBlock(endpoint safariFixtureEndpoint) []byte {
+func encodeSafariOriginBlock(endpoint safariEndpoint) []byte {
 	const latin1, defaultPort, explicitPort = 0x01, 0x00, 0x01
 	var block []byte
 	for _, part := range []string{endpoint.scheme, endpoint.host} {
@@ -265,7 +265,7 @@ func safariFixtureOriginBlock(endpoint safariFixtureEndpoint) []byte {
 	return binary.LittleEndian.AppendUint16(append(block, explicitPort), endpoint.port)
 }
 
-func safariFixtureUTF16(text string) []byte {
+func safariUTF16(text string) []byte {
 	var encoded []byte
 	for _, unit := range utf16.Encode([]rune(text)) {
 		encoded = binary.LittleEndian.AppendUint16(encoded, unit)
@@ -273,16 +273,16 @@ func safariFixtureUTF16(text string) []byte {
 	return encoded
 }
 
-func safariFixtureInsertHistoryItem(id int, url string, visitCount int) string {
+func insertSafariHistoryItem(id int, url string, visitCount int) string {
 	return fmt.Sprintf(`INSERT INTO history_items (id, url, visit_count) VALUES (%d, '%s', %d)`, id, url, visitCount)
 }
 
-func safariFixtureInsertHistoryVisit(id, item int, visitTime float64, title string) string {
+func insertSafariHistoryVisit(id, item int, visitTime float64, title string) string {
 	return fmt.Sprintf(`INSERT INTO history_visits (id, history_item, visit_time, title) VALUES (%d, %d, %f, '%s')`,
 		id, item, visitTime, title)
 }
 
-const safariFixtureTabsSchema = `CREATE TABLE bookmarks (
+const safariTabsSchema = `CREATE TABLE bookmarks (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	parent INTEGER,
 	type INTEGER,
@@ -293,7 +293,7 @@ const safariFixtureTabsSchema = `CREATE TABLE bookmarks (
 	subtype INTEGER DEFAULT 0
 )`
 
-const safariFixtureHistoryItemsSchema = `CREATE TABLE history_items (
+const safariHistoryItemsSchema = `CREATE TABLE history_items (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	url TEXT NOT NULL UNIQUE,
 	domain_expansion TEXT NULL,
@@ -305,7 +305,7 @@ const safariFixtureHistoryItemsSchema = `CREATE TABLE history_items (
 	visit_count_score INTEGER NOT NULL DEFAULT 0
 )`
 
-const safariFixtureHistoryVisitsSchema = `CREATE TABLE history_visits (
+const safariHistoryVisitsSchema = `CREATE TABLE history_visits (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	history_item INTEGER NOT NULL REFERENCES history_items(id),
 	visit_time REAL NOT NULL,
@@ -321,9 +321,9 @@ const safariFixtureHistoryVisitsSchema = `CREATE TABLE history_visits (
 	score INTEGER NOT NULL DEFAULT 0
 )`
 
-const safariFixtureItemTableSchema = `CREATE TABLE ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB NOT NULL ON CONFLICT FAIL)`
+const safariItemTableSchema = `CREATE TABLE ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB NOT NULL ON CONFLICT FAIL)`
 
-const safariFixtureBookmarks = `<dict>
+const safariBookmarksPlist = `<dict>
 	<key>Children</key>
 	<array>
 		<dict>
@@ -396,7 +396,7 @@ const safariFixtureBookmarks = `<dict>
 	<key>WebBookmarkType</key><string>WebBookmarkTypeList</string>
 </dict>`
 
-const safariFixtureDownloads = `<dict>
+const safariDownloadsPlist = `<dict>
 	<key>DownloadHistory</key>
 	<array>
 		<dict>
@@ -428,12 +428,12 @@ const safariFixtureDownloads = `<dict>
 	</array>
 </dict>`
 
-const safariFixtureAppExtensions = `<dict>
+const safariAppExtensionsPlist = `<dict>
 	<key>com.example.Clipper.Extension (ABCDE12345)</key>
 	<dict><key>Permissions</key><dict/></dict>
 </dict>`
 
-const safariFixtureWebExtensions = `<dict>
+const safariWebExtensionsPlist = `<dict>
 	<key>com.example.Blocker.Extension (FGHIJ67890)</key>
 	<dict><key>Enabled</key><true/></dict>
 	<key>com.example.Reader.Extension (KLMNO13579)</key>

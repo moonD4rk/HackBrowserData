@@ -23,14 +23,14 @@ const (
 
 	cipherDPAPI cipherVersion = "dpapi"
 
-	versionPrefixLen = 3
+	versionPrefixLength = 3
 )
 
 func detectVersion(ciphertext []byte) cipherVersion {
-	if len(ciphertext) < versionPrefixLen {
+	if len(ciphertext) < versionPrefixLength {
 		return cipherDPAPI
 	}
-	prefix := string(ciphertext[:versionPrefixLen])
+	prefix := string(ciphertext[:versionPrefixLength])
 	switch prefix {
 	case "v10":
 		return cipherV10
@@ -49,31 +49,31 @@ var errShortCiphertext = errors.New("ciphertext too short")
 
 const gcmNonceSize = 12
 
-var chromiumCBCIV = bytes.Repeat([]byte{0x20}, aes.BlockSize)
+var cbcIV = bytes.Repeat([]byte{0x20}, aes.BlockSize)
 
-// kEmptyKey is Chromium's decrypt-only fallback for data a KWallet race corrupted in Chrome ~89 (crbug.com/40055416).
-var kEmptyKey = crypto.PBKDF2Key([]byte(""), []byte("saltysalt"), 1, 16, sha1.New)
+// emptyPasswordKey is Chromium's decrypt-only fallback for data a KWallet race corrupted (crbug.com/40055416).
+var emptyPasswordKey = crypto.PBKDF2Key([]byte(""), []byte("saltysalt"), 1, 16, sha1.New)
 
 func decryptGCM(key, ciphertext []byte) ([]byte, error) {
-	if len(ciphertext) < versionPrefixLen+gcmNonceSize {
+	if len(ciphertext) < versionPrefixLength+gcmNonceSize {
 		return nil, errShortCiphertext
 	}
-	nonce := ciphertext[versionPrefixLen : versionPrefixLen+gcmNonceSize]
-	payload := ciphertext[versionPrefixLen+gcmNonceSize:]
+	nonce := ciphertext[versionPrefixLength : versionPrefixLength+gcmNonceSize]
+	payload := ciphertext[versionPrefixLength+gcmNonceSize:]
 	return crypto.AESGCMDecrypt(key, nonce, payload)
 }
 
 func decryptCBC(key, ciphertext []byte) ([]byte, error) {
-	if len(ciphertext) < versionPrefixLen+aes.BlockSize {
+	if len(ciphertext) < versionPrefixLength+aes.BlockSize {
 		return nil, errShortCiphertext
 	}
-	payload := ciphertext[versionPrefixLen:]
-	plaintext, err := crypto.AESCBCDecrypt(key, chromiumCBCIV, payload)
+	payload := ciphertext[versionPrefixLength:]
+	plaintext, err := crypto.AESCBCDecrypt(key, cbcIV, payload)
 	if err == nil {
 		return plaintext, nil
 	}
-	if alt, altErr := crypto.AESCBCDecrypt(kEmptyKey, chromiumCBCIV, payload); altErr == nil {
-		return alt, nil
+	if fallback, fallbackErr := crypto.AESCBCDecrypt(emptyPasswordKey, cbcIV, payload); fallbackErr == nil {
+		return fallback, nil
 	}
 	return nil, err
 }

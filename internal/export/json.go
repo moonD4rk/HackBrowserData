@@ -14,14 +14,14 @@ const jsonIndent = "  "
 type jsonEncoder struct {
 	writer     io.Writer
 	escapeHTML bool
-	value      func(record.Record) any
+	convert    func(record.Record) any
 	written    int
 }
 
 func (e *jsonEncoder) encode(row record.Record) error {
 	var value any = row
-	if e.value != nil {
-		value = e.value(row)
+	if e.convert != nil {
+		value = e.convert(row)
 	}
 	var buffer bytes.Buffer
 	valueEncoder := json.NewEncoder(&buffer)

@@ -12,7 +12,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-func buildTestBookmarksPlist(t *testing.T, root safariBookmark) string {
+func buildTestBookmarksPlist(t *testing.T, root bookmarkNode) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "Bookmarks.plist")
 	file, err := os.Create(path)
@@ -23,13 +23,13 @@ func buildTestBookmarksPlist(t *testing.T, root safariBookmark) string {
 }
 
 func TestExtractBookmarks(t *testing.T) {
-	root := safariBookmark{
+	root := bookmarkNode{
 		Type: bookmarkTypeList,
-		Children: []safariBookmark{
+		Children: []bookmarkNode{
 			{
 				Type:  bookmarkTypeList,
 				Title: "BookmarksBar",
-				Children: []safariBookmark{
+				Children: []bookmarkNode{
 					{
 						Type:          bookmarkTypeLeaf,
 						URLString:     "https://github.com",
@@ -45,7 +45,7 @@ func TestExtractBookmarks(t *testing.T) {
 			{
 				Type:  bookmarkTypeList,
 				Title: "BookmarksMenu",
-				Children: []safariBookmark{
+				Children: []bookmarkNode{
 					{
 						Type:          bookmarkTypeLeaf,
 						URLString:     "https://example.com",
@@ -75,13 +75,13 @@ func TestExtractBookmarks(t *testing.T) {
 }
 
 func TestExtractBookmarks_ReadingList(t *testing.T) {
-	root := safariBookmark{
+	root := bookmarkNode{
 		Type: bookmarkTypeList,
-		Children: []safariBookmark{
+		Children: []bookmarkNode{
 			{
 				Type:  bookmarkTypeList,
 				Title: "com.apple.ReadingList",
-				Children: []safariBookmark{
+				Children: []bookmarkNode{
 					{
 						Type:          bookmarkTypeLeaf,
 						URLString:     "https://blog.example.com/post",
@@ -102,9 +102,9 @@ func TestExtractBookmarks_ReadingList(t *testing.T) {
 }
 
 func TestExtractBookmarks_SkipsEmptyURL(t *testing.T) {
-	root := safariBookmark{
+	root := bookmarkNode{
 		Type: bookmarkTypeList,
-		Children: []safariBookmark{
+		Children: []bookmarkNode{
 			{
 				Type:          bookmarkTypeLeaf,
 				URLString:     "", // no URL, should be skipped
@@ -128,17 +128,17 @@ func TestExtractBookmarks_SkipsEmptyURL(t *testing.T) {
 }
 
 func TestExtractBookmarks_NestedFolders(t *testing.T) {
-	root := safariBookmark{
+	root := bookmarkNode{
 		Type: bookmarkTypeList,
-		Children: []safariBookmark{
+		Children: []bookmarkNode{
 			{
 				Type:  bookmarkTypeList,
 				Title: "Work",
-				Children: []safariBookmark{
+				Children: []bookmarkNode{
 					{
 						Type:  bookmarkTypeList,
 						Title: "Projects",
-						Children: []safariBookmark{
+						Children: []bookmarkNode{
 							{Type: bookmarkTypeLeaf, URLString: "https://deep.com", URIDictionary: uriDictionary{Title: "Deep"}},
 						},
 					},
@@ -164,7 +164,7 @@ func TestExtractBookmarks_NestedFolders(t *testing.T) {
 }
 
 func TestExtractBookmarks_Empty(t *testing.T) {
-	root := safariBookmark{Type: bookmarkTypeList}
+	root := bookmarkNode{Type: bookmarkTypeList}
 	path := buildTestBookmarksPlist(t, root)
 
 	var out testCollector
@@ -176,18 +176,18 @@ func TestExtractBookmarks_Empty(t *testing.T) {
 
 // TestExtractBookmarks_IDsAreUniqueAcrossFolders guards a fixed bug: IDs were sibling indexes, so each folder had a 0.
 func TestExtractBookmarks_IDsAreUniqueAcrossFolders(t *testing.T) {
-	leaf := func(url string) safariBookmark {
-		return safariBookmark{Type: bookmarkTypeLeaf, URLString: url, URIDictionary: uriDictionary{Title: url}}
+	leaf := func(url string) bookmarkNode {
+		return bookmarkNode{Type: bookmarkTypeLeaf, URLString: url, URIDictionary: uriDictionary{Title: url}}
 	}
-	path := buildTestBookmarksPlist(t, safariBookmark{
+	path := buildTestBookmarksPlist(t, bookmarkNode{
 		Type: bookmarkTypeList,
-		Children: []safariBookmark{
-			{Type: bookmarkTypeList, Title: "BookmarksBar", Children: []safariBookmark{
+		Children: []bookmarkNode{
+			{Type: bookmarkTypeList, Title: "BookmarksBar", Children: []bookmarkNode{
 				leaf("https://a.test"),
-				{Type: bookmarkTypeList, Title: "Nested", Children: []safariBookmark{leaf("https://b.test")}},
+				{Type: bookmarkTypeList, Title: "Nested", Children: []bookmarkNode{leaf("https://b.test")}},
 				leaf("https://c.test"),
 			}},
-			{Type: bookmarkTypeList, Title: "BookmarksMenu", Children: []safariBookmark{leaf("https://d.test")}},
+			{Type: bookmarkTypeList, Title: "BookmarksMenu", Children: []bookmarkNode{leaf("https://d.test")}},
 		},
 	})
 

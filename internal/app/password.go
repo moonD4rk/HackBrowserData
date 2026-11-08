@@ -14,8 +14,8 @@ import (
 
 var errNoPassword = errors.New("macOS login password not given and stdin is not a terminal")
 
-// keychainPassword is read lazily: a flag, else a no-echo prompt on a terminal, else none (metadata only).
-func keychainPassword(flags Flags, stdin *os.File) (func(context.Context) (string, error), error) {
+// keychainPasswordFunc is read lazily: a flag, else a no-echo prompt on a terminal, else none (metadata only).
+func keychainPasswordFunc(flags Flags, stdin *os.File) (func(context.Context) (string, error), error) {
 	switch {
 	case flags.KeychainPassword != "" && flags.KeychainPasswordStdin:
 		return nil, errors.New("--keychain-pw and --keychain-pw-stdin cannot be used together")
@@ -27,7 +27,7 @@ func keychainPassword(flags Flags, stdin *os.File) (func(context.Context) (strin
 			return untilDone(ctx, func() (string, error) { return firstLine(stdin) })
 		}, nil
 	case term.IsTerminal(int(stdin.Fd())):
-		return func(ctx context.Context) (string, error) { return prompt(ctx, stdin) }, nil
+		return func(ctx context.Context) (string, error) { return promptPassword(ctx, stdin) }, nil
 	default:
 		return func(context.Context) (string, error) { return "", errNoPassword }, nil
 	}
@@ -41,7 +41,7 @@ func firstLine(reader io.Reader) (string, error) {
 	return strings.TrimRight(line, "\r\n"), nil
 }
 
-func prompt(ctx context.Context, stdin *os.File) (string, error) {
+func promptPassword(ctx context.Context, stdin *os.File) (string, error) {
 	fileDescriptor := int(stdin.Fd())
 	state, err := term.GetState(fileDescriptor)
 	if err != nil {

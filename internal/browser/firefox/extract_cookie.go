@@ -9,11 +9,11 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 )
 
-const firefoxCookieQuery = `SELECT name, value, host, path,
+const cookieQuery = `SELECT name, value, host, path,
 	creationTime, expiry, isSecure, isHttpOnly, sameSite FROM moz_cookies`
 
 func extractCookies(path string, out browser.Collector) error {
-	cookies, err := sqlitex.QueryRows(path, true, firefoxCookieQuery,
+	cookies, err := sqlitex.QueryRows(path, true, cookieQuery,
 		func(rows *sql.Rows) (record.Cookie, error) {
 			var (
 				name, value, host, cookiePath string

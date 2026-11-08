@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,10 +11,11 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"github.com/moond4rk/hackbrowserdata/internal/app"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
-func rootCmd() *cobra.Command {
+func newRootCommand() *cobra.Command {
 	var verbose bool
 	root := &cobra.Command{
 		Use:   "hack-browser-data",
@@ -33,8 +35,8 @@ GitHub: https://github.com/moonD4rk/HackBrowserData`,
 
 	root.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "enable debug logging")
 
-	dump := dumpCmd()
-	root.AddCommand(dump, dumpKeysCmd(), archiveCmd(), restoreCmd(), listCmd(), versionCmd())
+	dump := newDumpCommand()
+	root.AddCommand(dump, newDumpKeysCommand(), newArchiveCommand(), newRestoreCommand(), newListCommand(), newVersionCommand())
 
 	// Without a subcommand the root runs dump, as v1.1.0 did, so it carries dump's flags too.
 	root.RunE = func(command *cobra.Command, args []string) error {
@@ -48,14 +50,14 @@ GitHub: https://github.com/moonD4rk/HackBrowserData`,
 	})
 
 	for _, command := range root.Commands() {
-		quietWhenStopped(command)
+		silenceWhenStopped(command)
 	}
-	quietWhenStopped(root)
+	silenceWhenStopped(root)
 	return root
 }
 
-// quietWhenStopped keeps a stopped run's error and usage off the screen; main then ends the process by the signal.
-func quietWhenStopped(command *cobra.Command) {
+// silenceWhenStopped keeps a stopped run's error and usage off the screen; main then ends the process by the signal.
+func silenceWhenStopped(command *cobra.Command) {
 	run := command.RunE
 	if run == nil {
 		return
@@ -66,6 +68,13 @@ func quietWhenStopped(command *cobra.Command) {
 			invoked.SilenceErrors, invoked.SilenceUsage = true, true
 		}
 		return err
+	}
+}
+
+// report prints the run's summary; it is not part of the output, so failing to print it never fails the run.
+func report(writer io.Writer, summary app.Summary) {
+	if err := app.Report(writer, summary); err != nil {
+		log.Warnf("print summary: %v", err)
 	}
 }
 
@@ -95,7 +104,7 @@ func main() {
 		}
 		cancel(stopError{received})
 	}()
-	err := rootCmd().ExecuteContext(ctx)
+	err := newRootCommand().ExecuteContext(ctx)
 	var stop stopError
 	if errors.As(context.Cause(ctx), &stop) {
 		exitBy(stop.received)

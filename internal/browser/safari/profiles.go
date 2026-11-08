@@ -18,8 +18,8 @@ import (
 
 // Profiles are SafariTabs.db bookmarks rows with subtype=2; "DefaultProfile" is the default, which has no UUID dir.
 const (
-	safariTabsDBRelPath    = containerDir + "/Safari/SafariTabs.db"
-	safariProfileSubtype   = 2
+	tabsDatabasePath       = containerDir + "/Safari/SafariTabs.db"
+	profileSubtype         = 2
 	defaultProfileSentinel = "DefaultProfile"
 )
 
@@ -50,11 +50,11 @@ func readNamedProfilesFromDB(library string) ([]browser.Profile, error) {
 		}
 	}()
 	if err := snapshotDir.Capture(context.Background(), []snapshot.File{{
-		UserDataDirID: discoveryUserDataDirID, UserDataDirPath: library, RelativePath: safariTabsDBRelPath,
+		UserDataDirID: discoveryUserDataDirID, UserDataDirPath: library, RelativePath: tabsDatabasePath,
 	}}); err != nil {
 		return nil, fmt.Errorf("copy SafariTabs.db: %w", err)
 	}
-	path, err := snapshotDir.Snapshot(discoveryUserDataDirID).Path(safariTabsDBRelPath)
+	path, err := snapshotDir.Snapshot(discoveryUserDataDirID).Path(tabsDatabasePath)
 	if err != nil {
 		return nil, fmt.Errorf("copy SafariTabs.db: %w", err)
 	}
@@ -74,7 +74,7 @@ func readNamedProfilesFromDB(library string) ([]browser.Profile, error) {
 
 	rows, err := database.Query(
 		`SELECT external_uuid, title FROM bookmarks WHERE subtype = ? AND external_uuid != ?`,
-		safariProfileSubtype, defaultProfileSentinel,
+		profileSubtype, defaultProfileSentinel,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("query SafariTabs.db: %w", err)
@@ -118,7 +118,7 @@ func readNamedProfilesFromDir(library string) []browser.Profile {
 
 // newNamedProfile sets Dir to the profile's own History.db directory, so its UUID travels with it to Extractors.
 func newNamedProfile(upperUUID, title string) browser.Profile {
-	return browser.Profile{Name: resolveProfileName(title, upperUUID), Dir: namedProfilesDir + "/" + upperUUID}
+	return browser.Profile{Name: resolveProfileName(title, upperUUID), RelativePath: namedProfilesDir + "/" + upperUUID}
 }
 
 func isCanonicalUUID(value string) bool { return uuidPattern.MatchString(value) }

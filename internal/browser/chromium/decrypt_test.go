@@ -71,7 +71,7 @@ func TestDecryptValue_V10_V11_SlotSeparation(t *testing.T) {
 	v10Key := bytes.Repeat([]byte{0x10}, 16) // V10 slot key (peanuts-derived kV10Key)
 	v11Key := bytes.Repeat([]byte{0x11}, 16) // V11 slot key (keyring-derived kV11Key)
 
-	iv := bytes.Repeat([]byte{0x20}, 16) // matches crypto.chromiumCBCIV on darwin/linux
+	iv := bytes.Repeat([]byte{0x20}, 16) // matches cbcIV on darwin/linux
 	v10plain := []byte("password-from-v10-era")
 	v11plain := []byte("password-from-v11-era")
 

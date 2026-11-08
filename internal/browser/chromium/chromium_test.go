@@ -18,7 +18,7 @@ import (
 )
 
 func testBrowser(name string, userDataDirs ...string) browser.Browser {
-	platform := browser.Platform{UserDataDirs: userDataDirs, KeychainLabel: "Test Safe Storage"}
+	platform := browser.Platform{UserDataDirs: userDataDirs, SecretLabel: "Test Safe Storage"}
 	return browser.Browser{Name: name, DisplayName: name, Base: browser.Chromium, Darwin: platform, Linux: platform, Windows: platform}
 }
 
@@ -48,15 +48,15 @@ func TestDiscover_FindsMarkedProfiles(t *testing.T) {
 	touch(t, home, "ud", "QQ", "Preferences_02")
 	require.NoError(t, os.MkdirAll(filepath.Join(home, "ud", "Crashpad"), 0o700))
 
-	dirs, err := Discover(testBrowser("chrome", "ud"), browser.DiscoverOptions{Home: home})
+	dirs, err := Discover(testBrowser("chrome", "ud"), browser.DiscoverOptions{HomeDir: home})
 	require.NoError(t, err)
 	require.Len(t, dirs, 1)
 	assert.Equal(t, browser.UserDataDirID("chrome"), dirs[0].ID)
 	assert.Equal(t, home+"/ud", dirs[0].Path, "joined with a slash, as keys.json has always recorded it")
 	assert.Equal(t, []browser.Profile{
-		{Name: "Default", Dir: "Default"},
-		{Name: "Profile 1", Dir: "Profile 1"},
-		{Name: "QQ", Dir: "QQ"},
+		{Name: "Default", RelativePath: "Default"},
+		{Name: "Profile 1", RelativePath: "Profile 1"},
+		{Name: "QQ", RelativePath: "QQ"},
 	}, dirs[0].Profiles)
 }
 
@@ -66,7 +66,7 @@ func TestDiscover_EveryGlobMatchIsItsOwnUserDataDir(t *testing.T) {
 	touch(t, home, "Packages", "Arc_b", "User Data", "Default", "Preferences")
 	touch(t, home, "Packages", "Arc_a", "User Data", "Default", "Preferences")
 
-	dirs, err := Discover(testBrowser("arc", "Packages/Arc_*/User Data"), browser.DiscoverOptions{Home: home})
+	dirs, err := Discover(testBrowser("arc", "Packages/Arc_*/User Data"), browser.DiscoverOptions{HomeDir: home})
 	require.NoError(t, err)
 	require.Len(t, dirs, 2)
 	assert.Equal(t, browser.UserDataDirID("arc"), dirs[0].ID)
@@ -80,7 +80,7 @@ func TestDiscover_FlatLayoutIsOneProfile(t *testing.T) {
 	home := t.TempDir()
 	touch(t, home, "Opera Stable", "Login Data")
 
-	dirs, err := Discover(testBrowser("opera", "Opera Stable"), browser.DiscoverOptions{Home: home})
+	dirs, err := Discover(testBrowser("opera", "Opera Stable"), browser.DiscoverOptions{HomeDir: home})
 	require.NoError(t, err)
 	require.Len(t, dirs, 1)
 	assert.Equal(t, []browser.Profile{{Name: "Opera Stable"}}, dirs[0].Profiles)
@@ -91,14 +91,14 @@ func TestDiscover_CopiedTreeWithoutMarkers(t *testing.T) {
 	touch(t, home, "ud", "Default", "History")
 	require.NoError(t, os.MkdirAll(filepath.Join(home, "ud", "Crashpad"), 0o700))
 
-	dirs, err := Discover(testBrowser("chrome", "ud"), browser.DiscoverOptions{Home: home})
+	dirs, err := Discover(testBrowser("chrome", "ud"), browser.DiscoverOptions{HomeDir: home})
 	require.NoError(t, err)
 	require.Len(t, dirs, 1)
-	assert.Equal(t, []browser.Profile{{Name: "Default", Dir: "Default"}}, dirs[0].Profiles)
+	assert.Equal(t, []browser.Profile{{Name: "Default", RelativePath: "Default"}}, dirs[0].Profiles)
 }
 
 func TestDiscover_MissingUserDataDirYieldsNothing(t *testing.T) {
-	dirs, err := Discover(testBrowser("chrome", "ud"), browser.DiscoverOptions{Home: t.TempDir()})
+	dirs, err := Discover(testBrowser("chrome", "ud"), browser.DiscoverOptions{HomeDir: t.TempDir()})
 	require.NoError(t, err)
 	assert.Empty(t, dirs)
 }
@@ -114,13 +114,13 @@ func TestDiscover_UnreadableUserDataDirIsAnError(t *testing.T) {
 	require.NoError(t, os.Chmod(userDataDir, 0o000))
 	defer func() { require.NoError(t, os.Chmod(userDataDir, 0o700)) }()
 
-	dirs, err := Discover(testBrowser("chrome", "ud"), browser.DiscoverOptions{Home: home})
+	dirs, err := Discover(testBrowser("chrome", "ud"), browser.DiscoverOptions{HomeDir: home})
 	require.Error(t, err)
 	assert.Empty(t, dirs)
 }
 
 func TestDiscover_MalformedGlobIsAnError(t *testing.T) {
-	_, err := Discover(testBrowser("chrome", "ud["), browser.DiscoverOptions{Home: t.TempDir()})
+	_, err := Discover(testBrowser("chrome", "ud["), browser.DiscoverOptions{HomeDir: t.TempDir()})
 	require.Error(t, err)
 }
 
@@ -128,7 +128,7 @@ func TestDiscover_ProfilePathReplacesTheTable(t *testing.T) {
 	custom := t.TempDir()
 	touch(t, custom, "Default", "Preferences")
 
-	dirs, err := Discover(testBrowser("chrome", "ud"), browser.DiscoverOptions{Home: t.TempDir(), ProfilePath: custom})
+	dirs, err := Discover(testBrowser("chrome", "ud"), browser.DiscoverOptions{HomeDir: t.TempDir(), ProfilePath: custom})
 	require.NoError(t, err)
 	require.Len(t, dirs, 1)
 	assert.Equal(t, custom, dirs[0].Path)
@@ -141,12 +141,12 @@ func TestDiscover_ProfilePathAtAProfileSelectsOnlyIt(t *testing.T) {
 	touch(t, userData, "Default", "Preferences")
 	touch(t, userData, "Profile 1", "Preferences")
 
-	options := browser.DiscoverOptions{Home: t.TempDir(), ProfilePath: filepath.Join(userData, "Profile 1") + string(filepath.Separator)}
+	options := browser.DiscoverOptions{HomeDir: t.TempDir(), ProfilePath: filepath.Join(userData, "Profile 1") + string(filepath.Separator)}
 	dirs, err := Discover(testBrowser("chrome", "ud"), options)
 	require.NoError(t, err)
 	want := browser.UserDataDir{
 		ID: "chrome", Browser: testBrowser("chrome", "ud"), Path: userData,
-		Profiles: []browser.Profile{{Name: "Profile 1", Dir: "Profile 1"}},
+		Profiles: []browser.Profile{{Name: "Profile 1", RelativePath: "Profile 1"}},
 	}
 	assert.Equal(t, []browser.UserDataDir{want}, dirs)
 }
@@ -158,7 +158,7 @@ func TestDiscover_ProfilePathAtAFlatUserDataDir(t *testing.T) {
 	touch(t, flat, "Preferences")
 	touch(t, flat, "History")
 
-	dirs, err := Discover(testBrowser("opera", "ud"), browser.DiscoverOptions{Home: t.TempDir(), ProfilePath: flat})
+	dirs, err := Discover(testBrowser("opera", "ud"), browser.DiscoverOptions{HomeDir: t.TempDir(), ProfilePath: flat})
 	require.NoError(t, err)
 	require.Len(t, dirs, 1)
 	assert.Equal(t, flat, dirs[0].Path)
@@ -191,15 +191,15 @@ func TestVaultKind_RoundTripsEveryFork(t *testing.T) {
 	for name := range overrides {
 		kind := VaultKind(browser.Browser{Name: name})
 		require.NotEqualf(t, kindChromium, kind, "override %q has no keys.json kind", name)
-		forkFormatName, err := FormatName(kind, "unknown")
+		forkFormatName, err := BrowserNameForKind(kind, "unknown")
 		require.NoError(t, err)
 		assert.Equalf(t, categoriesOf(overrides[name]), categoriesOf(overrides[forkFormatName]), "kind %s of %q", kind, name)
 	}
 	assert.Equal(t, kindChromium, VaultKind(browser.Browser{Name: "chrome"}))
-	plainFormatName, err := FormatName(kindChromium, "unknown")
+	plainFormatName, err := BrowserNameForKind(kindChromium, "unknown")
 	require.NoError(t, err)
 	assert.Equal(t, "unknown", plainFormatName)
-	_, err = FormatName("bogus", "unknown")
+	_, err = BrowserNameForKind("bogus", "unknown")
 	assert.Error(t, err)
 }
 
@@ -226,7 +226,7 @@ func TestExtractors_OperaReadsOpsettings(t *testing.T) {
 		"extensions": {"opsettings": {"ext1": {"location": 1, "manifest": {"name": "Opera Ext", "version": "1.0"}}}}
 	}`)
 	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{"Default/Secure Preferences": preferencesPath}),
-		browser.Profile{Name: "Default", Dir: "Default"}, nil)
+		browser.Profile{Name: "Default", RelativePath: "Default"}, nil)
 
 	for _, name := range []string{"opera", "opera-gx", "vought"} {
 		chromiumBrowser, ok := browser.Lookup(name)
@@ -251,7 +251,7 @@ func TestExtractPasswordStores_LocalBeforeAccount(t *testing.T) {
 	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{
 		"Default/Login Data":             local,
 		"Default/Login Data For Account": account,
-	}), browser.Profile{Name: "Default", Dir: "Default"}, nil)
+	}), browser.Profile{Name: "Default", RelativePath: "Default"}, nil)
 
 	var out testCollector
 	require.NoError(t, extractPasswordStores(context.Background(), profileSnapshot, &out))
@@ -267,7 +267,7 @@ func TestExtractPasswordStores_AccountOnly(t *testing.T) {
 	account := createTestDB(t, "Login Data For Account", loginsSchema,
 		insertLogin("https://account.example", "", "account-user", "", 13360000000000000))
 	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{"Default/Login Data For Account": account}),
-		browser.Profile{Name: "Default", Dir: "Default"}, nil)
+		browser.Profile{Name: "Default", RelativePath: "Default"}, nil)
 
 	var out testCollector
 	require.NoError(t, extractPasswordStores(context.Background(), profileSnapshot, &out))
@@ -283,7 +283,7 @@ func TestExtractPasswordStores_OneBrokenDatabaseKeepsTheOther(t *testing.T) {
 	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{
 		"Default/Login Data":             broken,
 		"Default/Login Data For Account": account,
-	}), browser.Profile{Name: "Default", Dir: "Default"}, nil)
+	}), browser.Profile{Name: "Default", RelativePath: "Default"}, nil)
 
 	var out testCollector
 	require.Error(t, extractPasswordStores(context.Background(), profileSnapshot, &out))
@@ -298,7 +298,7 @@ func TestExtractors_EachProfileReadsItsOwnFiles(t *testing.T) {
 	})
 	dir := browser.UserDataDir{Browser: testBrowser("chrome")}
 	want := map[string]string{"Default": "Home", "Profile 1": "Work"}
-	for _, profile := range []browser.Profile{{Name: "Default", Dir: "Default"}, {Name: "Profile 1", Dir: "Profile 1"}} {
+	for _, profile := range []browser.Profile{{Name: "Default", RelativePath: "Default"}, {Name: "Profile 1", RelativePath: "Profile 1"}} {
 		var out testCollector
 		require.NoError(t, Extractors(dir, profile)[category.History].Extract(context.Background(), browser.NewProfileSnapshot(dirSnapshot, profile, nil), &out))
 		got := collected[record.History](t, &out)
@@ -308,15 +308,15 @@ func TestExtractors_EachProfileReadsItsOwnFiles(t *testing.T) {
 }
 
 func TestKeyLocator(t *testing.T) {
-	platform := browser.Platform{KeychainLabel: "Test Safe Storage", Exe: "chrome.exe", ABE: masterkey.ABEChromeBase}
+	platform := browser.Platform{SecretLabel: "Test Safe Storage", Executable: "chrome.exe", ABE: masterkey.ABEChromeBase}
 	dir := browser.UserDataDir{ID: "chrome", Browser: browser.Browser{Name: "chrome", Base: browser.Chromium, Darwin: platform, Linux: platform, Windows: platform}}
 
 	dirSnapshot := snapshotOf(t, map[string]string{"Local State": createTestJSON(t, "Local State", "{}")})
 	locator, err := KeyLocator(dir, dirSnapshot)
 	require.NoError(t, err)
 	assert.NotEmpty(t, locator.LocalState)
-	assert.Equal(t, "Test Safe Storage", locator.KeychainLabel)
-	assert.Equal(t, "chrome.exe", locator.Exe)
+	assert.Equal(t, "Test Safe Storage", locator.SecretLabel)
+	assert.Equal(t, "chrome.exe", locator.Executable)
 	assert.Equal(t, masterkey.ABEChromeBase, locator.ABE)
 
 	locator, err = KeyLocator(dir, snapshotOf(t, nil))

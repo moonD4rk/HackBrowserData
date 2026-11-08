@@ -36,11 +36,11 @@ func extractCreditCards(masterKeys masterkey.Set, path string, out browser.Colle
 	cards, err := sqlitex.QueryRows(path, false, defaultCreditCardQuery,
 		func(rows *sql.Rows) (record.CreditCard, error) {
 			var guid, name, month, year, nickname, address string
-			var encNumber []byte
-			if err := rows.Scan(&guid, &name, &month, &year, &encNumber, &nickname, &address); err != nil {
+			var encryptedNumber []byte
+			if err := rows.Scan(&guid, &name, &month, &year, &encryptedNumber, &nickname, &address); err != nil {
 				return record.CreditCard{}, err
 			}
-			number, err := decryptValue(masterKeys, encNumber)
+			number, err := decryptValue(masterKeys, encryptedNumber)
 			if err != nil {
 				out.Fail(fmt.Errorf("decrypt card %s: %w", guid, err))
 			}

@@ -13,7 +13,7 @@ import (
 func TestPosixRetriever(t *testing.T) {
 	retriever := posixRetriever{}
 
-	key, err := retriever.Retrieve(context.Background(), Locator{KeychainLabel: "Chrome"})
+	key, err := retriever.Retrieve(context.Background(), Locator{SecretLabel: "Chrome"})
 	require.NoError(t, err)
 	assert.Equal(t, linuxParams.deriveKey([]byte("peanuts")), key)
 	assert.Len(t, key, linuxParams.keySize)
@@ -28,7 +28,7 @@ func TestPosixRetriever(t *testing.T) {
 	assert.False(t, allZero, "derived key should not be all zeros")
 
 	// The password is fixed, so the key is the same for any locator and on every call.
-	braveKey, err := retriever.Retrieve(context.Background(), Locator{KeychainLabel: "Brave"})
+	braveKey, err := retriever.Retrieve(context.Background(), Locator{SecretLabel: "Brave"})
 	require.NoError(t, err)
 	assert.Equal(t, key, braveKey, "kV10Key should be constant across any storage label")
 }

@@ -9,10 +9,10 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 )
 
-const defaultHistoryQuery = `SELECT url, title, visit_count, last_visit_time FROM urls`
+const historyQuery = `SELECT url, title, visit_count, last_visit_time FROM urls`
 
 func extractHistories(path string, out browser.Collector) error {
-	histories, err := sqlitex.QueryRows(path, false, defaultHistoryQuery,
+	histories, err := sqlitex.QueryRows(path, false, historyQuery,
 		func(rows *sql.Rows) (record.History, error) {
 			var url, title string
 			var visitCount int

@@ -11,7 +11,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
-func dumpKeysCmd() *cobra.Command {
+func newDumpKeysCommand() *cobra.Command {
 	var (
 		flags      app.Flags
 		outputPath string
@@ -23,30 +23,30 @@ func dumpKeysCmd() *cobra.Command {
 		Example: `  hack-browser-data dumpkeys -o keys.json
   hack-browser-data dumpkeys -b chrome`,
 		RunE: func(command *cobra.Command, args []string) error {
-			options, err := app.ValidateKeys(flags)
+			options, err := app.ValidateDumpKeys(flags)
 			if err != nil {
 				return err
 			}
-			dump, err := app.DumpKeys(command.Context(), app.Discover(options), options)
+			keyFile, err := app.DumpKeys(command.Context(), app.Discover(options), options)
 			if err != nil {
 				return err
 			}
-			log.Infof("Exported keys for %d vault(s)", len(dump.Vaults))
+			log.Infof("Exported keys for %d vault(s)", len(keyFile.Vaults))
 
 			if outputPath == "" {
-				return dump.WriteJSON(os.Stdout)
+				return keyFile.Write(os.Stdout)
 			}
 			file, err := os.OpenFile(outputPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 			if err != nil {
 				return fmt.Errorf("create %s: %w", outputPath, err)
 			}
-			return errors.Join(dump.WriteJSON(file), file.Close())
+			return errors.Join(keyFile.Write(file), file.Close())
 		},
 	}
 
 	command.Flags().StringVarP(&flags.Browser, "browser", "b", "all", "target browser: all|"+browserNames())
 	command.Flags().StringVarP(&outputPath, "output", "o", "", "output file (default: stdout)")
-	keychainPasswordFlags(command, &flags)
+	addKeychainPasswordFlags(command, &flags)
 
 	return command
 }

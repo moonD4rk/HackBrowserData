@@ -8,17 +8,17 @@ import (
 var defaultLogger = newLogger(os.Stderr)
 
 func SetVerbose() {
-	defaultLogger.SetLevel(DebugLevel)
+	defaultLogger.setLevel(debugLevel)
 }
 
 func Debugf(format string, args ...any) {
-	defaultLogger.logMsg(DebugLevel, fmt.Sprintf(format, args...))
+	defaultLogger.write(debugLevel, fmt.Sprintf(format, args...))
 }
 
 func Infof(format string, args ...any) {
-	defaultLogger.logMsg(InfoLevel, fmt.Sprintf(format, args...))
+	defaultLogger.write(infoLevel, fmt.Sprintf(format, args...))
 }
 
 func Warnf(format string, args ...any) {
-	defaultLogger.logMsg(WarnLevel, fmt.Sprintf(format, args...))
+	defaultLogger.write(warnLevel, fmt.Sprintf(format, args...))
 }

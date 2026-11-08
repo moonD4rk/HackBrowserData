@@ -30,8 +30,8 @@ const (
 
 // origin file encoding-byte constants (WebCore SecurityOrigin serialization).
 const (
-	originEncASCII = 0x01 // Latin-1 / ASCII
-	originEncUTF16 = 0x00 // UTF-16 LE
+	originEncodingASCII = 0x01 // Latin-1 / ASCII
+	originEncodingUTF16 = 0x00 // UTF-16 LE
 )
 
 // After scheme and host, 0x00 means the default port and 0x01 a uint16 LE port in the next two bytes.
@@ -177,9 +177,9 @@ func readOriginString(data []byte, position int) (string, int, error) {
 	chunk := data[position : position+length]
 	position += length
 	switch encoding {
-	case originEncASCII:
+	case originEncodingASCII:
 		return decodeLatin1(chunk), position, nil
-	case originEncUTF16:
+	case originEncodingUTF16:
 		return decodeUTF16LE(chunk), position, nil
 	default:
 		return decodeLatin1(chunk), position, nil

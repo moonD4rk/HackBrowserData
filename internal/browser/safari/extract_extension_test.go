@@ -12,7 +12,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// testExtensionEntry is a map rather than safariExtension, so fixtures can omit Enabled as App Extensions do.
+// testExtensionEntry is a map rather than extensionState, so fixtures can omit Enabled as App Extensions do.
 type testExtensionEntry map[string]any
 
 func writeTestExtensionsPlist(t *testing.T, container, subdir string, entries map[string]testExtensionEntry) {

@@ -96,7 +96,7 @@ func TestArchiveGolden(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			options, err := app.ValidateArchive(app.Flags{Browser: archiveLayoutBrowser, Categories: testCase.categories})
 			require.NoError(t, err)
-			options.Home = home
+			options.HomeDir = home
 			out := filepath.Join(t.TempDir(), "browser-data.zip")
 			fileCount, err := app.Archive(context.Background(), app.Discover(options), options, out)
 			require.NoError(t, err)
@@ -120,18 +120,18 @@ func TestArchiveGolden(t *testing.T) {
 // TestArchiveRestoreRoundTrip archives on one host and restores on another, which must write what dump writes.
 func TestArchiveRestoreRoundTrip(t *testing.T) {
 	home := t.TempDir()
-	for _, fixture := range browsertest.ChromiumInstalls {
+	for _, fixture := range browsertest.ChromiumUserDataDirs {
 		namedBrowser, ok := browser.Lookup(fixture.Name)
 		require.True(t, ok, fixture.Name)
-		browsertest.ChromiumUserData(t, filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirs[0])), fixture.Name)
+		browsertest.WriteChromiumUserDataDir(t, filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirs[0])), fixture.Name)
 	}
 	options, err := app.ValidateArchive(app.Flags{Browser: "all", Categories: "all"})
 	require.NoError(t, err)
-	options.Home = home
+	options.HomeDir = home
 	archive := filepath.Join(t.TempDir(), "data.zip")
 	_, err = app.Archive(context.Background(), app.Discover(options), options, archive)
 	require.NoError(t, err)
 
-	out := restoreGolden(t, app.RestoreFlags{Keys: chromiumFixtureKeysFile(t), DataZip: archive, Dir: t.TempDir()})
-	assert.Equal(t, golden.Read(t, "extract-json.golden"), golden.Bundle(t, out))
+	out := restoreGolden(t, app.RestoreFlags{KeyFile: chromiumKeyFile(t), DataZip: archive, OutputDir: t.TempDir()})
+	assert.Equal(t, golden.Read(t, "extract-json.golden"), golden.ConcatDir(t, out))
 }

@@ -72,34 +72,34 @@ func TestAESGCMDecrypt(t *testing.T) {
 	assert.Equal(t, plainText, decrypted)
 }
 
-func TestPkcs5Padding_NoMutation(t *testing.T) {
+func TestPKCS5Pad_NoMutation(t *testing.T) {
 	data := make([]byte, 3, 32) // len=3, cap=32 — append won't allocate
 	copy(data, "abc")
 	backup := make([]byte, cap(data))
 	copy(backup, data[:cap(data)])
 
-	padded := pkcs5Padding(data, 16)
+	padded := pkcs5Pad(data, 16)
 	assert.Len(t, padded, 16)
 	assert.Equal(t, []byte("abc"), data)
 
 	// The bytes beyond len(data) in the original backing array must not be touched.
 	current := make([]byte, cap(data))
 	copy(current, data[:cap(data)])
-	assert.Equal(t, backup, current, "pkcs5Padding mutated the original slice backing array")
+	assert.Equal(t, backup, current, "pkcs5Pad mutated the original slice backing array")
 }
 
-func TestPaddingZero_NoMutation(t *testing.T) {
+func TestZeroPad_NoMutation(t *testing.T) {
 	data := make([]byte, 3, 32)
 	copy(data, "abc")
 	backup := make([]byte, cap(data))
 	copy(backup, data[:cap(data)])
 
-	padded := paddingZero(data, 20)
+	padded := zeroPad(data, 20)
 	assert.Len(t, padded, 20)
 
 	current := make([]byte, cap(data))
 	copy(current, data[:cap(data)])
-	assert.Equal(t, backup, current, "paddingZero mutated the original slice backing array")
+	assert.Equal(t, backup, current, "zeroPad mutated the original slice backing array")
 }
 
 func TestAESCBCDecrypt_WrongIVLength(t *testing.T) {
@@ -157,7 +157,7 @@ func TestAESGCMEncrypt_WrongNonceLength(t *testing.T) {
 
 	_, err := AESGCMEncrypt(key, wrongNonce, plainText)
 	require.Error(t, err, "wrong nonce length should return error, not panic")
-	assert.ErrorIs(t, err, errInvalidNonceLen)
+	assert.ErrorIs(t, err, errInvalidNonceLength)
 }
 
 func TestAESGCMDecrypt_WrongNonceLength(t *testing.T) {
@@ -167,7 +167,7 @@ func TestAESGCMDecrypt_WrongNonceLength(t *testing.T) {
 
 	_, err := AESGCMDecrypt(key, wrongNonce, ciphertext)
 	require.Error(t, err, "wrong nonce length should return error, not panic")
-	assert.ErrorIs(t, err, errInvalidNonceLen)
+	assert.ErrorIs(t, err, errInvalidNonceLength)
 }
 
 func TestDES3Decrypt_EmptyCiphertext(t *testing.T) {

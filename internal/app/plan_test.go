@@ -39,18 +39,18 @@ func TestNewPlan(t *testing.T) {
 	touch(t, path, "Profile 1", "History")
 	dir := browser.UserDataDir{
 		ID: "chrome", Browser: lookup(t, "chrome"), Path: path,
-		Profiles: []browser.Profile{{Name: "Default", Dir: "Default"}, {Name: "Profile 1", Dir: "Profile 1"}},
+		Profiles: []browser.Profile{{Name: "Default", RelativePath: "Default"}, {Name: "Profile 1", RelativePath: "Profile 1"}},
 	}
 	failed := dirFailure("edge", errors.New("permission denied"))
 	options := Options{Categories: []category.Category{category.Password, category.Cookie, category.History, category.Download, category.CreditCard}}
 
-	got := NewPlan(Discovery{Dirs: []browser.UserDataDir{dir}, Failed: []Result{failed}}, options)
+	got := NewPlan(Discovery{Dirs: []browser.UserDataDir{dir}, Errors: []Result{failed}}, options)
 
 	file := func(relativePath string) snapshot.File {
 		return snapshot.File{UserDataDirID: "chrome", UserDataDirPath: path, RelativePath: relativePath}
 	}
 	extraction := func(profile string, dataCategory category.Category) Extraction {
-		return Extraction{UserDataDirID: "chrome", Profile: profile, Category: dataCategory}
+		return Extraction{UserDataDirID: "chrome", ProfileName: profile, Category: dataCategory}
 	}
 	skipped := func(profile string, dataCategory category.Category, outcome Outcome) Result {
 		return Result{Extraction: extraction(profile, dataCategory), Outcome: outcome}
@@ -81,7 +81,7 @@ func TestNewPlan(t *testing.T) {
 func TestNewPlan_PicksTheFirstCandidateOnDisk(t *testing.T) {
 	path := t.TempDir()
 	touch(t, path, "Default", "Cookies")
-	dir := browser.UserDataDir{ID: "chrome", Browser: lookup(t, "chrome"), Path: path, Profiles: []browser.Profile{{Name: "Default", Dir: "Default"}}}
+	dir := browser.UserDataDir{ID: "chrome", Browser: lookup(t, "chrome"), Path: path, Profiles: []browser.Profile{{Name: "Default", RelativePath: "Default"}}}
 
 	got := NewPlan(Discovery{Dirs: []browser.UserDataDir{dir}}, Options{Categories: []category.Category{category.Cookie}})
 	assert.Equal(t, []snapshot.File{{UserDataDirID: "chrome", UserDataDirPath: path, RelativePath: "Default/Cookies"}}, got.Files)
@@ -94,28 +94,28 @@ func TestNewPlan_FlatLayoutProfile(t *testing.T) {
 
 	got := NewPlan(Discovery{Dirs: []browser.UserDataDir{dir}}, Options{Categories: []category.Category{category.History}})
 	assert.Equal(t, []snapshot.File{{UserDataDirID: "opera", UserDataDirPath: path, RelativePath: "History"}}, got.Files)
-	assert.Equal(t, []Extraction{{UserDataDirID: "opera", Profile: "Opera Stable", Category: category.History}}, got.Extractions)
+	assert.Equal(t, []Extraction{{UserDataDirID: "opera", ProfileName: "Opera Stable", Category: category.History}}, got.Extractions)
 }
 
 func TestNewPlan_UnsupportedCategory(t *testing.T) {
-	dir := browser.UserDataDir{ID: "x", Path: t.TempDir(), Profiles: []browser.Profile{{Name: "Default", Dir: "Default"}}}
+	dir := browser.UserDataDir{ID: "x", Path: t.TempDir(), Profiles: []browser.Profile{{Name: "Default", RelativePath: "Default"}}}
 	none := func(browser.UserDataDir, browser.Profile) browser.Extractors { return browser.Extractors{} }
 
 	got := newPlan(Discovery{Dirs: []browser.UserDataDir{dir}}, Options{Categories: []category.Category{category.CreditCard}}, none)
-	assert.Equal(t, []Result{{Extraction: Extraction{UserDataDirID: "x", Profile: "Default", Category: category.CreditCard}, Outcome: OutcomeUnsupported}},
+	assert.Equal(t, []Result{{Extraction: Extraction{UserDataDirID: "x", ProfileName: "Default", Category: category.CreditCard}, Outcome: OutcomeUnsupported}},
 		got.Skipped)
 	assert.Empty(t, got.Extractions)
 }
 
 // TestNewPlan_ExtractorWithoutFileSpecsRuns covers Safari's passwords: read from the keychain, they are never absent.
 func TestNewPlan_ExtractorWithoutFileSpecsRuns(t *testing.T) {
-	dir := browser.UserDataDir{ID: "safari", Path: t.TempDir(), Profiles: []browser.Profile{{Name: "default", Dir: "Safari"}}}
+	dir := browser.UserDataDir{ID: "safari", Path: t.TempDir(), Profiles: []browser.Profile{{Name: "default", RelativePath: "Safari"}}}
 	keychainOnly := func(browser.UserDataDir, browser.Profile) browser.Extractors {
 		return browser.Extractors{category.Password: {}}
 	}
 
 	got := newPlan(Discovery{Dirs: []browser.UserDataDir{dir}}, Options{Categories: []category.Category{category.Password}}, keychainOnly)
-	assert.Equal(t, []Extraction{{UserDataDirID: "safari", Profile: "default", Category: category.Password}}, got.Extractions)
+	assert.Equal(t, []Extraction{{UserDataDirID: "safari", ProfileName: "default", Category: category.Password}}, got.Extractions)
 	assert.Empty(t, got.Files)
 	assert.Empty(t, got.Skipped)
 }

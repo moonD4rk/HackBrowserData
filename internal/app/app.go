@@ -1,4 +1,4 @@
-// Package app runs the pipeline: Validate, Discover, NewPlan, Execute, and Report.
+// Package app runs the pipeline: the Validate functions, Discover, NewPlan, Execute, and Report.
 package app
 
 import (
@@ -21,7 +21,7 @@ type Flags struct {
 	Browser               string
 	Categories            string
 	Format                string
-	Dir                   string
+	OutputDir             string
 	Zip                   bool
 	ProfilePath           string
 	KeychainPassword      string
@@ -29,26 +29,26 @@ type Flags struct {
 }
 
 type Options struct {
-	Browser     string // "all" or one Browser.Name
+	BrowserName string // "all" or one Browser.Name
 	Categories  []category.Category
 	Format      export.Format
-	Dir         string
+	OutputDir   string
 	Zip         bool
 	ProfilePath string
-	Home        string
+	HomeDir     string
 
 	// KeychainPassword runs when the keychain first opens; "" leaves it locked, and nil, as list has it, silently.
 	KeychainPassword func(ctx context.Context) (string, error)
-	// Keys are a dump's keys by user data dir; nil retrieves every dir's keys from this machine.
-	Keys map[browser.UserDataDirID]masterkey.Set
+	// ImportedKeys are a key file's keys by user data dir; nil retrieves every dir's keys from this machine.
+	ImportedKeys map[browser.UserDataDirID]masterkey.Set
 }
 
-// Validate checks every flag before any browser or secret is touched, so a bad flag fails fast.
-func Validate(flags Flags) (Options, error) {
-	return validate(flags, os.Stdin)
+// ValidateDump checks every flag before any browser or secret is touched, so a bad flag fails fast.
+func ValidateDump(flags Flags) (Options, error) {
+	return validateDump(flags, os.Stdin)
 }
 
-func validate(flags Flags, stdin *os.File) (Options, error) {
+func validateDump(flags Flags, stdin *os.File) (Options, error) {
 	browserName, err := parseBrowser(flags.Browser)
 	if err != nil {
 		return Options{}, err
@@ -61,14 +61,14 @@ func validate(flags Flags, stdin *os.File) (Options, error) {
 	if err != nil {
 		return Options{}, err
 	}
-	if err := checkOutputDir(flags.Dir); err != nil {
+	if err := checkOutputDir(flags.OutputDir); err != nil {
 		return Options{}, err
 	}
 	profilePath, err := checkProfilePath(browserName, flags.ProfilePath)
 	if err != nil {
 		return Options{}, err
 	}
-	password, err := keychainPassword(flags, stdin)
+	password, err := keychainPasswordFunc(flags, stdin)
 	if err != nil {
 		return Options{}, err
 	}
@@ -77,23 +77,23 @@ func validate(flags Flags, stdin *os.File) (Options, error) {
 		return Options{}, err
 	}
 	return Options{
-		Browser:          browserName,
+		BrowserName:      browserName,
 		Categories:       categories,
 		Format:           format,
-		Dir:              flags.Dir,
+		OutputDir:        flags.OutputDir,
 		Zip:              flags.Zip,
 		ProfilePath:      profilePath,
-		Home:             home,
+		HomeDir:          home,
 		KeychainPassword: password,
 	}, nil
 }
 
-func ValidateKeys(flags Flags) (Options, error) {
+func ValidateDumpKeys(flags Flags) (Options, error) {
 	browserName, err := parseBrowser(flags.Browser)
 	if err != nil {
 		return Options{}, err
 	}
-	password, err := keychainPassword(flags, os.Stdin)
+	password, err := keychainPasswordFunc(flags, os.Stdin)
 	if err != nil {
 		return Options{}, err
 	}
@@ -101,7 +101,7 @@ func ValidateKeys(flags Flags) (Options, error) {
 	if err != nil {
 		return Options{}, err
 	}
-	return Options{Browser: browserName, Home: home, KeychainPassword: password}, nil
+	return Options{BrowserName: browserName, HomeDir: home, KeychainPassword: password}, nil
 }
 
 // ValidateArchive takes no keychain password: an archive copies files and reads no secret.
@@ -118,7 +118,7 @@ func ValidateArchive(flags Flags) (Options, error) {
 	if err != nil {
 		return Options{}, err
 	}
-	return Options{Browser: browserName, Categories: categories, Home: home}, nil
+	return Options{BrowserName: browserName, Categories: categories, HomeDir: home}, nil
 }
 
 // ListOptions is what list reads: every browser and category, with the keychain left locked, so counting never prompts.
@@ -127,7 +127,7 @@ func ListOptions() (Options, error) {
 	if err != nil {
 		return Options{}, err
 	}
-	return Options{Browser: allBrowsers, Categories: category.All(), Home: home}, nil
+	return Options{BrowserName: allBrowsers, Categories: category.All(), HomeDir: home}, nil
 }
 
 func homeDir() (string, error) {

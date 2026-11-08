@@ -1,22 +1,22 @@
 package log
 
-type Level int32
+type logLevel int32
 
 const (
-	DebugLevel Level = iota + 1
+	debugLevel logLevel = iota + 1
 
-	InfoLevel
+	infoLevel
 
-	WarnLevel
+	warnLevel
 )
 
-func (l Level) String() string {
+func (l logLevel) String() string {
 	switch l {
-	case DebugLevel:
+	case debugLevel:
 		return "DBG"
-	case InfoLevel:
+	case infoLevel:
 		return "INF"
-	case WarnLevel:
+	case warnLevel:
 		return "WRN"
 	default:
 		return "???"

@@ -33,10 +33,10 @@ func (o Outcome) String() string {
 // Result is one extraction's outcome, or a failure of a whole user data dir when Profile and Category are empty.
 type Result struct {
 	Extraction
-	Outcome Outcome
-	Count   int   // records emitted
-	Failed  int   // record-level problems reported
-	Err     error // set when Outcome is OutcomeError
+	Outcome  Outcome
+	Records  int   // records emitted
+	Failures int   // record-level problems reported
+	Err      error // set when Outcome is OutcomeError
 }
 
 // Summary is every result of a run, in output order: what never ran first, then each user data dir's extractions.

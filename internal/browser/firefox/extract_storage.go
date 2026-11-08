@@ -10,10 +10,10 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 )
 
-const firefoxLocalStorageQuery = `SELECT originKey, key, value FROM webappsstore2`
+const localStorageQuery = `SELECT originKey, key, value FROM webappsstore2`
 
 func extractLocalStorage(path string, out browser.Collector) error {
-	entries, err := sqlitex.QueryRows(path, true, firefoxLocalStorageQuery,
+	entries, err := sqlitex.QueryRows(path, true, localStorageQuery,
 		func(rows *sql.Rows) (record.LocalStorage, error) {
 			var originKey, key, value string
 			if err := rows.Scan(&originKey, &key, &value); err != nil {

@@ -56,7 +56,7 @@ func (r *gcoredumpRetriever) Retrieve(_ context.Context, locator Locator) ([]byt
 		return nil, ErrNotApplicable
 	}
 
-	key, err := findStorageKey(r.records, locator.KeychainLabel)
+	key, err := findStorageKey(r.records, locator.SecretLabel)
 	if err != nil {
 		log.Debugf("gcoredump: %v", err)
 		return nil, ErrNotApplicable
@@ -82,7 +82,7 @@ func (keychainRetriever) Retrieve(ctx context.Context, locator Locator) ([]byte,
 	if locator.Keychain == nil {
 		return nil, ErrNotApplicable
 	}
-	secret, err := locator.Keychain.GenericPassword(ctx, locator.KeychainLabel)
+	secret, err := locator.Keychain.GenericPassword(ctx, locator.SecretLabel)
 	if errors.Is(err, keychain.ErrLocked) {
 		return nil, ErrNotApplicable
 	}
@@ -106,7 +106,7 @@ type securityResult struct {
 func (*securityRetriever) Version() Version { return V10 }
 
 func (r *securityRetriever) Retrieve(ctx context.Context, locator Locator) ([]byte, error) {
-	storage := locator.KeychainLabel
+	storage := locator.SecretLabel
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 

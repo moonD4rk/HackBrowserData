@@ -14,19 +14,19 @@ import (
 )
 
 type Writer struct {
-	dir      string
-	format   Format
-	compress bool
-	files    map[category.Category]*categoryFile
-	failed   bool
-	out      Output
+	dir    string
+	format Format
+	zip    bool
+	files  map[category.Category]*categoryFile
+	failed bool
+	out    Output
 }
 
 // Output is what a clean Close left in the output dir: each category file in category order, and the zip with --zip.
 type Output struct {
-	Dir   string
-	Files []File
-	Zip   string
+	Dir     string
+	Files   []File
+	ZipName string
 }
 
 type File struct {
@@ -42,12 +42,12 @@ type categoryFile struct {
 	count    int
 }
 
-// NewWriter creates dir. With compress, Close packs the files it wrote into <dir>/<base of dir>.zip.
-func NewWriter(dir string, format Format, compress bool) (*Writer, error) {
+// NewWriter creates dir. With zip, Close packs the files it wrote into <dir>/<base of dir>.zip.
+func NewWriter(dir string, format Format, zip bool) (*Writer, error) {
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, fmt.Errorf("create output dir: %w", err)
 	}
-	return &Writer{dir: dir, format: format, compress: compress, files: make(map[category.Category]*categoryFile)}, nil
+	return &Writer{dir: dir, format: format, zip: zip, files: make(map[category.Category]*categoryFile)}, nil
 }
 
 // Write reorders records in place.
@@ -101,14 +101,14 @@ func (w *Writer) Close() error {
 		return nil
 	}
 	if len(w.files) == 0 {
-		if w.compress {
-			return fmt.Errorf("compress: no files to compress in %s", w.dir)
+		if w.zip {
+			return fmt.Errorf("zip: no files to zip in %s", w.dir)
 		}
 		return nil
 	}
 	w.out = Output{Dir: w.dir, Files: files}
-	if w.compress {
-		return w.pack()
+	if w.zip {
+		return w.writeZip()
 	}
 	return nil
 }
@@ -117,8 +117,8 @@ func (w *Writer) Output() Output {
 	return w.out
 }
 
-// pack removes the loose files only after the zip is in place, so a failure leaves every one of them where it was.
-func (w *Writer) pack() error {
+// writeZip removes the loose files only after the zip is in place, so a failure leaves every one of them where it was.
+func (w *Writer) writeZip() error {
 	names := make([]string, 0, len(w.files))
 	for _, file := range w.files {
 		names = append(names, file.name)
@@ -126,14 +126,14 @@ func (w *Writer) pack() error {
 	sort.Strings(names)
 	zipName := filepath.Base(w.dir) + ".zip"
 	if err := zipfile.Write(filepath.Join(w.dir, zipName), w.dir, names); err != nil {
-		return fmt.Errorf("compress: %w", err)
+		return fmt.Errorf("zip: %w", err)
 	}
 	for _, name := range names {
 		if err := os.Remove(filepath.Join(w.dir, name)); err != nil {
-			return fmt.Errorf("compress: remove %s: %w", name, err)
+			return fmt.Errorf("zip: remove %s: %w", name, err)
 		}
 	}
-	w.out.Zip = zipName
+	w.out.ZipName = zipName
 	return nil
 }
 

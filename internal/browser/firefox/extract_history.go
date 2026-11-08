@@ -9,11 +9,11 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 )
 
-const firefoxHistoryQuery = `SELECT url, COALESCE(last_visit_date, 0),
+const historyQuery = `SELECT url, COALESCE(last_visit_date, 0),
 	COALESCE(title, ''), visit_count FROM moz_places`
 
 func extractHistories(path string, out browser.Collector) error {
-	histories, err := sqlitex.QueryRows(path, true, firefoxHistoryQuery,
+	histories, err := sqlitex.QueryRows(path, true, historyQuery,
 		func(rows *sql.Rows) (record.History, error) {
 			var url, title string
 			var visitCount int

@@ -10,25 +10,25 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-var defaultExtensionKeys = []string{
+var extensionJSONPaths = []string{
 	"extensions.settings",
 	"settings.extensions",
 	"settings.settings",
 }
 
 func extractExtensions(path string, out browser.Collector) error {
-	return extractExtensionsWithKeys(path, defaultExtensionKeys, out)
+	return extractExtensionsAt(path, extensionJSONPaths, out)
 }
 
-// extractExtensionsWithKeys takes the JSON paths, because variants such as Opera keep extension settings elsewhere.
-func extractExtensionsWithKeys(path string, keys []string, out browser.Collector) error {
+// extractExtensionsAt takes the JSON paths, because variants such as Opera keep extension settings elsewhere.
+func extractExtensionsAt(path string, jsonPaths []string, out browser.Collector) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
 	var settings gjson.Result
-	for _, key := range keys {
+	for _, key := range jsonPaths {
 		settings = gjson.GetBytes(data, key)
 		if settings.Exists() {
 			break
@@ -77,5 +77,5 @@ func isExtensionEnabled(extension gjson.Result) bool {
 }
 
 func extractOperaExtensions(path string, out browser.Collector) error {
-	return extractExtensionsWithKeys(path, []string{"extensions.opsettings"}, out)
+	return extractExtensionsAt(path, []string{"extensions.opsettings"}, out)
 }

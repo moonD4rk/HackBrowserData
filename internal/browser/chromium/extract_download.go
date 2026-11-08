@@ -9,11 +9,11 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 )
 
-const defaultDownloadQuery = `SELECT target_path, tab_url, total_bytes, start_time, end_time,
+const downloadQuery = `SELECT target_path, tab_url, total_bytes, start_time, end_time,
 	mime_type FROM downloads`
 
 func extractDownloads(path string, out browser.Collector) error {
-	downloads, err := sqlitex.QueryRows(path, false, defaultDownloadQuery,
+	downloads, err := sqlitex.QueryRows(path, false, downloadQuery,
 		func(rows *sql.Rows) (record.Download, error) {
 			var targetPath, url, mimeType string
 			var totalBytes, startTime, endTime int64

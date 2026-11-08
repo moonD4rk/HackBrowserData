@@ -12,7 +12,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 )
 
-func installAt(t *testing.T, home, browserName string) string {
+func writeUserDataDir(t *testing.T, home, browserName string) string {
 	t.Helper()
 	namedBrowser := lookup(t, browserName)
 	require.NotEmpty(t, namedBrowser.Platform().UserDataDirs, browserName)
@@ -32,29 +32,29 @@ func userDataDirIDs(discovery Discovery) []browser.UserDataDirID {
 
 func TestDiscover(t *testing.T) {
 	home := t.TempDir()
-	installAt(t, home, "edge")
-	installAt(t, home, "chrome")
+	writeUserDataDir(t, home, "edge")
+	writeUserDataDir(t, home, "chrome")
 
-	discovery := Discover(Options{Browser: "all", Home: home})
+	discovery := Discover(Options{BrowserName: "all", HomeDir: home})
 	assert.Equal(t, []browser.UserDataDirID{"chrome", "edge"}, userDataDirIDs(discovery), "table order, which is output order")
-	assert.Empty(t, discovery.Failed)
+	assert.Empty(t, discovery.Errors)
 
-	discovery = Discover(Options{Browser: "edge", Home: home})
+	discovery = Discover(Options{BrowserName: "edge", HomeDir: home})
 	assert.Equal(t, []browser.UserDataDirID{"edge"}, userDataDirIDs(discovery))
 }
 
 func TestDiscover_ProfilePathNeedsOneBrowser(t *testing.T) {
 	home := t.TempDir()
-	installAt(t, home, "chrome")
+	writeUserDataDir(t, home, "chrome")
 	custom := t.TempDir()
 	touch(t, custom, "Default", "Preferences")
 	touch(t, custom, "Default", "History")
 
-	discovery := Discover(Options{Browser: "chrome", Home: home, ProfilePath: custom})
+	discovery := Discover(Options{BrowserName: "chrome", HomeDir: home, ProfilePath: custom})
 	require.Len(t, discovery.Dirs, 1)
 	assert.Equal(t, custom, discovery.Dirs[0].Path)
 
-	discovery = Discover(Options{Browser: "all", Home: home, ProfilePath: custom})
+	discovery = Discover(Options{BrowserName: "all", HomeDir: home, ProfilePath: custom})
 	require.Len(t, discovery.Dirs, 1)
 	assert.NotEqual(t, custom, discovery.Dirs[0].Path, "-p is ignored without a specific browser")
 }
@@ -62,14 +62,14 @@ func TestDiscover_ProfilePathNeedsOneBrowser(t *testing.T) {
 // TestDiscover_KeepsOnlyProfilesWithData drops a never-used profile, which holds only its Preferences marker.
 func TestDiscover_KeepsOnlyProfilesWithData(t *testing.T) {
 	home := t.TempDir()
-	chrome := installAt(t, home, "chrome")
+	chrome := writeUserDataDir(t, home, "chrome")
 	touch(t, chrome, "Profile 1", "Preferences")
-	edge := installAt(t, home, "edge")
+	edge := writeUserDataDir(t, home, "edge")
 	require.NoError(t, os.Remove(filepath.Join(edge, "Default", "History")))
 
-	discovery := Discover(Options{Browser: "all", Home: home})
+	discovery := Discover(Options{BrowserName: "all", HomeDir: home})
 	assert.Equal(t, []browser.UserDataDirID{"chrome"}, userDataDirIDs(discovery))
-	assert.Equal(t, []browser.Profile{{Name: "Default", Dir: "Default"}}, discovery.Dirs[0].Profiles)
+	assert.Equal(t, []browser.Profile{{Name: "Default", RelativePath: "Default"}}, discovery.Dirs[0].Profiles)
 }
 
 func TestDiscover_UnreadableDirIsReported(t *testing.T) {
@@ -77,15 +77,15 @@ func TestDiscover_UnreadableDirIsReported(t *testing.T) {
 		t.Skip("directory permissions do not deny reads here")
 	}
 	home := t.TempDir()
-	path := installAt(t, home, "chrome")
+	path := writeUserDataDir(t, home, "chrome")
 	require.NoError(t, os.Chmod(path, 0o000))
 	defer func() { require.NoError(t, os.Chmod(path, 0o700)) }()
 
-	discovery := Discover(Options{Browser: "all", Home: home})
+	discovery := Discover(Options{BrowserName: "all", HomeDir: home})
 	assert.Empty(t, discovery.Dirs)
-	require.Len(t, discovery.Failed, 1)
-	assert.Equal(t, Extraction{UserDataDirID: "chrome"}, discovery.Failed[0].Extraction)
-	assert.Equal(t, OutcomeError, discovery.Failed[0].Outcome)
+	require.Len(t, discovery.Errors, 1)
+	assert.Equal(t, Extraction{UserDataDirID: "chrome"}, discovery.Errors[0].Extraction)
+	assert.Equal(t, OutcomeError, discovery.Errors[0].Outcome)
 }
 
 // TestWithData_KeepsAProfileItCannotCheck keeps it for the plan to report, since dropping it would hide the failure.

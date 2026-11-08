@@ -20,11 +20,11 @@ import (
 func TestExtractGolden(t *testing.T) {
 	home := t.TempDir()
 	keys := make(map[browser.UserDataDirID]masterkey.Set)
-	for _, fixture := range browsertest.ChromiumInstalls {
+	for _, fixture := range browsertest.ChromiumUserDataDirs {
 		namedBrowser, ok := browser.Lookup(fixture.Name)
 		require.True(t, ok, fixture.Name)
 		require.Equal(t, fixture.DisplayName, namedBrowser.DisplayName, "records carry the table's display name")
-		browsertest.ChromiumUserData(t, filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirs[0])), fixture.Name)
+		browsertest.WriteChromiumUserDataDir(t, filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirs[0])), fixture.Name)
 		keys[browser.UserDataDirID(fixture.Name)] = browsertest.ChromiumKeys
 	}
 
@@ -37,7 +37,7 @@ func TestExtractGoldenFirefox(t *testing.T) {
 	home := t.TempDir()
 	firefoxBrowser, ok := browser.Lookup("firefox")
 	require.True(t, ok)
-	browsertest.FirefoxUserData(t, filepath.Join(home, filepath.FromSlash(firefoxBrowser.Platform().UserDataDirs[0])))
+	browsertest.WriteFirefoxUserDataDir(t, filepath.Join(home, filepath.FromSlash(firefoxBrowser.Platform().UserDataDirs[0])))
 
 	assertExtractGoldens(t, "extract-firefox", func(t *testing.T, format string) string {
 		return extractGoldenRun(t, home, nil, format)
@@ -49,7 +49,7 @@ func TestExtractGoldenSafari(t *testing.T) {
 		t.Skip("Safari is in the browser table on macOS only")
 	}
 	home := t.TempDir()
-	browsertest.SafariLibrary(t, filepath.Join(home, "Library"))
+	browsertest.WriteSafariLibrary(t, filepath.Join(home, "Library"))
 
 	assertExtractGoldens(t, "extract-safari", func(t *testing.T, format string) string {
 		return extractGoldenRun(t, home, nil, format)
@@ -59,9 +59,9 @@ func TestExtractGoldenSafari(t *testing.T) {
 func extractGoldenRun(t *testing.T, home string, keys map[browser.UserDataDirID]masterkey.Set, format string) string {
 	t.Helper()
 	out := t.TempDir()
-	options, err := app.Validate(app.Flags{Browser: "all", Categories: "all", Format: format, Dir: out})
+	options, err := app.ValidateDump(app.Flags{Browser: "all", Categories: "all", Format: format, OutputDir: out})
 	require.NoError(t, err)
-	options.Home, options.Keys = home, keys
+	options.HomeDir, options.ImportedKeys = home, keys
 
 	plan := app.NewPlan(app.Discover(options), options)
 	_, err = app.Execute(context.Background(), plan, options)
@@ -84,10 +84,10 @@ func assertExtractGoldens(t *testing.T, prefix string, run func(t *testing.T, fo
 		testCase := testCase
 		t.Run(testCase.format, func(t *testing.T) {
 			out := run(t, testCase.format)
-			got := golden.Bundle(t, out)
+			got := golden.ConcatDir(t, out)
 			if testCase.jsonFallback {
 				golden.AssertJSONFallback(t, out, run(t, "json"))
-				got = golden.BundleFiles(t, out, "cookie.json")
+				got = golden.ConcatFiles(t, out, "cookie.json")
 			}
 			golden.Assert(t, prefix+"-"+testCase.format+".golden", got)
 		})

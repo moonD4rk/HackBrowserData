@@ -22,7 +22,7 @@ func encryptAESGCM(t *testing.T, key, nonce, plaintext, aad []byte) []byte {
 }
 
 // testPlaintextPayloadLen is 96 (blob) - 12 (nonce) - 16 (tag) = 68 bytes of payload before sealing.
-const testPlaintextPayloadLen = yandexIntKeyBlobLen - gcmNonceSize - 16
+const testPlaintextPayloadLen = yandexIntermediateKeyBlobLength - gcmNonceSize - 16
 
 func buildLocalEncryptorBlob(t *testing.T, masterKey, dataKey []byte) []byte {
 	t.Helper()
@@ -31,8 +31,8 @@ func buildLocalEncryptorBlob(t *testing.T, masterKey, dataKey []byte) []byte {
 	plaintext = append(plaintext, dataKey...)
 	plaintext = append(plaintext, make([]byte, testPlaintextPayloadLen-len(plaintext))...)
 	ciphertext := encryptAESGCM(t, masterKey, nonce, plaintext, nil)
-	if len(ciphertext) != yandexIntKeyBlobLen-gcmNonceSize {
-		t.Fatalf("unexpected ciphertext len: got %d want %d", len(ciphertext), yandexIntKeyBlobLen-gcmNonceSize)
+	if len(ciphertext) != yandexIntermediateKeyBlobLength-gcmNonceSize {
+		t.Fatalf("unexpected ciphertext len: got %d want %d", len(ciphertext), yandexIntermediateKeyBlobLength-gcmNonceSize)
 	}
 	blob := []byte{0x01, 0x02, 0x03, 0x04} // arbitrary protobuf preamble
 	blob = append(blob, localEncryptorPrefix...)
@@ -44,7 +44,7 @@ func buildLocalEncryptorBlob(t *testing.T, masterKey, dataKey []byte) []byte {
 
 func TestDecryptYandexIntermediateKey_RoundTrip(t *testing.T) {
 	masterKey := bytes.Repeat([]byte{0x11}, 32)
-	dataKey := bytes.Repeat([]byte{0x22}, yandexDataKeyLen)
+	dataKey := bytes.Repeat([]byte{0x22}, yandexDataKeyLength)
 	blob := buildLocalEncryptorBlob(t, masterKey, dataKey)
 
 	got, err := decryptYandexIntermediateKey(masterKey, blob)
@@ -65,7 +65,7 @@ func TestDecryptYandexIntermediateKey_MissingMarker(t *testing.T) {
 
 func TestDecryptYandexIntermediateKey_Truncated(t *testing.T) {
 	blob := append([]byte{0x00, 0x00}, localEncryptorPrefix...)
-	blob = append(blob, bytes.Repeat([]byte{0x55}, yandexIntKeyBlobLen-1)...)
+	blob = append(blob, bytes.Repeat([]byte{0x55}, yandexIntermediateKeyBlobLength-1)...)
 	_, err := decryptYandexIntermediateKey(bytes.Repeat([]byte{0x11}, 32), blob)
 	if !errors.Is(err, errYandexBlobShort) {
 		t.Fatalf("expected errYandexBlobShort, got %v", err)
@@ -75,7 +75,7 @@ func TestDecryptYandexIntermediateKey_Truncated(t *testing.T) {
 func TestDecryptYandexIntermediateKey_BadSignature(t *testing.T) {
 	masterKey := bytes.Repeat([]byte{0x11}, 32)
 	nonce := bytes.Repeat([]byte{0xAB}, gcmNonceSize)
-	plaintext := append([]byte{0xDE, 0xAD, 0xBE, 0xEF}, bytes.Repeat([]byte{0x22}, yandexDataKeyLen)...)
+	plaintext := append([]byte{0xDE, 0xAD, 0xBE, 0xEF}, bytes.Repeat([]byte{0x22}, yandexDataKeyLength)...)
 	plaintext = append(plaintext, make([]byte, testPlaintextPayloadLen-len(plaintext))...)
 	ciphertext := encryptAESGCM(t, masterKey, nonce, plaintext, nil)
 	blob := append([]byte{}, localEncryptorPrefix...)

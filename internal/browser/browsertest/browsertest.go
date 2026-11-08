@@ -10,13 +10,13 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func fixtureWrite(t *testing.T, path, content string) {
+func writeFile(t *testing.T, path, content string) {
 	t.Helper()
 	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
 	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
 }
 
-func fixtureSQLite(t *testing.T, path string, statements ...string) {
+func writeSQLite(t *testing.T, path string, statements ...string) {
 	t.Helper()
 	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
 	database, err := sql.Open("sqlite", path)

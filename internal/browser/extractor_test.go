@@ -27,7 +27,7 @@ func TestProfileSnapshotPath(t *testing.T) {
 	legacyCookies := writeSnapshotFile(t, root, "chrome/Default/Cookies")
 	localState := writeSnapshotFile(t, root, "chrome/Local State")
 	dirSnapshot := snapshot.Open(root).Snapshot("chrome")
-	profileSnapshot := NewProfileSnapshot(dirSnapshot, Profile{Name: "Default", Dir: "Default"}, nil)
+	profileSnapshot := NewProfileSnapshot(dirSnapshot, Profile{Name: "Default", RelativePath: "Default"}, nil)
 
 	got, err := profileSnapshot.Path(FileSpec{Paths: []string{"Network/Cookies", "Cookies"}})
 	require.NoError(t, err)
@@ -65,7 +65,7 @@ func TestProfileSnapshotPath_FailedCopyIsReported(t *testing.T) {
 		{UserDataDirID: "chrome", UserDataDirPath: from, RelativePath: "Default/Cookies"},
 	}))
 
-	profileSnapshot := NewProfileSnapshot(snapshotDir.Snapshot("chrome"), Profile{Name: "Default", Dir: "Default"}, nil)
+	profileSnapshot := NewProfileSnapshot(snapshotDir.Snapshot("chrome"), Profile{Name: "Default", RelativePath: "Default"}, nil)
 	_, err = profileSnapshot.Path(FileSpec{Paths: []string{"Network/Cookies", "Cookies"}})
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, fs.ErrNotExist)
@@ -86,7 +86,7 @@ func TestProfileSnapshotMasterKeys(t *testing.T) {
 }
 
 func TestFileSpec_CandidatePaths(t *testing.T) {
-	profile := Profile{Name: "Default", Dir: "Default"}
+	profile := Profile{Name: "Default", RelativePath: "Default"}
 	assert.Equal(t, []string{"Default/Network/Cookies", "Default/Cookies"}, FileSpec{Paths: []string{"Network/Cookies", "Cookies"}}.CandidatePaths(profile))
 	assert.Equal(t, []string{"Local State"}, FileSpec{Paths: []string{"Local State"}, Shared: true}.CandidatePaths(profile))
 	assert.Equal(t, []string{"History"}, FileSpec{Paths: []string{"History"}}.CandidatePaths(Profile{Name: "default"}),

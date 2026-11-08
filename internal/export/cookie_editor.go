@@ -8,7 +8,7 @@ import (
 
 var sameSiteNone = "no_restriction"
 
-func cookieEditorValue(row record.Record) any {
+func toCookieEditor(row record.Record) any {
 	cookie, ok := row.(*record.Cookie)
 	if !ok {
 		return row

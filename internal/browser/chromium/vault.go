@@ -28,8 +28,8 @@ func VaultKind(chromiumBrowser browser.Browser) string {
 	return kindChromium
 }
 
-// FormatName is the browser Name whose extractors read a vault of kind; a plain Chromium vault keeps its own name.
-func FormatName(kind, name string) (string, error) {
+// BrowserNameForKind names the browser whose extractors read a vault of kind; a plain Chromium vault keeps its own.
+func BrowserNameForKind(kind, name string) (string, error) {
 	switch kind {
 	case kindChromium:
 		return name, nil
@@ -38,6 +38,6 @@ func FormatName(kind, name string) (string, error) {
 	case kindOpera:
 		return "opera", nil
 	default:
-		return "", fmt.Errorf("unknown engine kind %q", kind)
+		return "", fmt.Errorf("unknown vault kind %q", kind)
 	}
 }

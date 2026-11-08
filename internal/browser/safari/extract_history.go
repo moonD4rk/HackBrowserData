@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	// safariHistoryQuery joins each item's latest visit, so title and visit_time come from the same history_visits row.
-	safariHistoryQuery = `SELECT hi.url, COALESCE(hv.title, ''), hi.visit_count,
+	// historyQuery joins each item's latest visit, so title and visit_time come from the same history_visits row.
+	historyQuery = `SELECT hi.url, COALESCE(hv.title, ''), hi.visit_count,
 		COALESCE(hv.visit_time, 0)
 		FROM history_items hi
 		LEFT JOIN history_visits hv ON hv.id = (
@@ -22,7 +22,7 @@ const (
 )
 
 func extractHistories(path string, out browser.Collector) error {
-	histories, err := sqlitex.QueryRows(path, true, safariHistoryQuery,
+	histories, err := sqlitex.QueryRows(path, true, historyQuery,
 		func(rows *sql.Rows) (record.History, error) {
 			var (
 				url, title string

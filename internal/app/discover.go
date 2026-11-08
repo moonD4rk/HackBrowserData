@@ -12,24 +12,24 @@ import (
 // Discovery holds an error result per browser whose data could not be read, so it is reported, not taken as absence.
 type Discovery struct {
 	Dirs   []browser.UserDataDir
-	Failed []Result
+	Errors []Result
 }
 
 // Discover applies -p only when one browser is named.
 func Discover(options Options) Discovery {
 	var discovery Discovery
 	for _, supportedBrowser := range browser.Supported() {
-		if options.Browser != allBrowsers && supportedBrowser.Name != options.Browser {
+		if options.BrowserName != allBrowsers && supportedBrowser.Name != options.BrowserName {
 			continue
 		}
-		discoverOptions := browser.DiscoverOptions{Home: options.Home}
-		if options.Browser != allBrowsers {
+		discoverOptions := browser.DiscoverOptions{HomeDir: options.HomeDir}
+		if options.BrowserName != allBrowsers {
 			discoverOptions.ProfilePath = options.ProfilePath
 		}
 		dirs, err := discover(supportedBrowser, discoverOptions)
 		discovery.Dirs = append(discovery.Dirs, withData(dirs)...)
 		if err != nil {
-			discovery.Failed = append(discovery.Failed, dirFailure(browser.UserDataDirID(supportedBrowser.Name), err))
+			discovery.Errors = append(discovery.Errors, dirFailure(browser.UserDataDirID(supportedBrowser.Name), err))
 		}
 	}
 	return discovery

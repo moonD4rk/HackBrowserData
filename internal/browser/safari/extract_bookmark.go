@@ -11,12 +11,12 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-type safariBookmark struct {
-	Type          string           `plist:"WebBookmarkType"`
-	Title         string           `plist:"Title"`
-	URLString     string           `plist:"URLString"`
-	URIDictionary uriDictionary    `plist:"URIDictionary"`
-	Children      []safariBookmark `plist:"Children"`
+type bookmarkNode struct {
+	Type          string         `plist:"WebBookmarkType"`
+	Title         string         `plist:"Title"`
+	URLString     string         `plist:"URLString"`
+	URIDictionary uriDictionary  `plist:"URIDictionary"`
+	Children      []bookmarkNode `plist:"Children"`
 }
 
 type uriDictionary struct {
@@ -35,7 +35,7 @@ func extractBookmarks(path string, out browser.Collector) error {
 	}
 	defer file.Close()
 
-	var root safariBookmark
+	var root bookmarkNode
 	if err := plist.NewDecoder(file).Decode(&root); err != nil {
 		return fmt.Errorf("decode bookmarks: %w", err)
 	}
@@ -47,7 +47,7 @@ func extractBookmarks(path string, out browser.Collector) error {
 }
 
 // walkBookmarks numbers leaves from 1 across all folders: the plist stores no number, and per-folder indexes repeat.
-func walkBookmarks(nodes []safariBookmark, folder string, out *[]record.Bookmark) {
+func walkBookmarks(nodes []bookmarkNode, folder string, out *[]record.Bookmark) {
 	for _, node := range nodes {
 		switch node.Type {
 		case bookmarkTypeLeaf:

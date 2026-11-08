@@ -17,13 +17,13 @@ import (
 // updateEnv is an env var rather than a flag, so every package sees it and, read at test time, it keys the test cache.
 const updateEnv = "HBD_UPDATE_GOLDEN"
 
-const dir = "testdata"
+const testdataDir = "testdata"
 
 func Assert(t testing.TB, name, got string) {
 	t.Helper()
-	path := filepath.Join(dir, name)
+	path := filepath.Join(testdataDir, name)
 	if os.Getenv(updateEnv) == "1" {
-		require.NoError(t, os.MkdirAll(dir, 0o755))
+		require.NoError(t, os.MkdirAll(testdataDir, 0o755))
 		require.NoError(t, os.WriteFile(path, []byte(got), 0o644))
 	}
 	want, err := os.ReadFile(path)
@@ -33,12 +33,12 @@ func Assert(t testing.TB, name, got string) {
 
 func Read(t testing.TB, name string) string {
 	t.Helper()
-	data, err := os.ReadFile(filepath.Join(dir, name))
+	data, err := os.ReadFile(filepath.Join(testdataDir, name))
 	require.NoError(t, err)
 	return string(data)
 }
 
-func Bundle(t testing.TB, dir string) string {
+func ConcatDir(t testing.TB, dir string) string {
 	t.Helper()
 	entries, err := os.ReadDir(dir)
 	require.NoError(t, err)
@@ -47,10 +47,10 @@ func Bundle(t testing.TB, dir string) string {
 		require.Truef(t, entry.Type().IsRegular(), "unexpected non-regular entry %s in %s", entry.Name(), dir)
 		names = append(names, entry.Name())
 	}
-	return BundleFiles(t, dir, names...)
+	return ConcatFiles(t, dir, names...)
 }
 
-func BundleFiles(t testing.TB, dir string, names ...string) string {
+func ConcatFiles(t testing.TB, dir string, names ...string) string {
 	t.Helper()
 	var builder strings.Builder
 	for _, name := range names {

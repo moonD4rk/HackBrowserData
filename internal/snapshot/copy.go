@@ -11,8 +11,8 @@ import (
 	"strings"
 )
 
-// Copy copies a file together with its SQLite -wal and -shm sidecars, or a directory minus every entry named *lock.
-func Copy(from, into string, isDir bool) error {
+// copyPath copies a file together with its SQLite -wal and -shm sidecars, or a directory minus every entry named *lock.
+func copyPath(from, into string, isDir bool) error {
 	if isDir {
 		return copyDir(from, into)
 	}

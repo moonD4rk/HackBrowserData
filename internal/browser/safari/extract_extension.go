@@ -17,14 +17,14 @@ import (
 // Only Web Extensions carry Enabled; a listed App Extension is enabled.
 var extensionKeyPattern = regexp.MustCompile(`^(\S+)\s+\(([^)]+)\)$`)
 
-// safariExtension decodes only the fields record.Extension needs.
-type safariExtension struct {
+// extensionState decodes only the fields record.Extension needs.
+type extensionState struct {
 	Enabled *bool `plist:"Enabled"`
 }
 
 // extractExtensions merges the plists in paths, sorted by key for deterministic output.
 func extractExtensions(paths []string, out browser.Collector) error {
-	records, err := readSafariExtensions(paths)
+	records, err := readExtensions(paths)
 	if err != nil {
 		return err
 	}
@@ -47,10 +47,10 @@ type extensionRecord struct {
 	enabled  bool
 }
 
-func readSafariExtensions(paths []string) ([]extensionRecord, error) {
+func readExtensions(paths []string) ([]extensionRecord, error) {
 	var all []extensionRecord
 	for _, plistPath := range paths {
-		records, err := decodeSafariExtensionsPlist(plistPath)
+		records, err := decodeExtensionsPlist(plistPath)
 		if err != nil {
 			return nil, err
 		}
@@ -60,14 +60,14 @@ func readSafariExtensions(paths []string) ([]extensionRecord, error) {
 	return all, nil
 }
 
-func decodeSafariExtensionsPlist(path string) ([]extensionRecord, error) {
+func decodeExtensionsPlist(path string) ([]extensionRecord, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	var decoded map[string]safariExtension
+	var decoded map[string]extensionState
 	if err := plist.NewDecoder(file).Decode(&decoded); err != nil {
 		return nil, fmt.Errorf("decode extensions %s: %w", path, err)
 	}
