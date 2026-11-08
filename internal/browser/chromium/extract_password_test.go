@@ -22,7 +22,7 @@ func TestExtractPasswords(t *testing.T) {
 	path := setupLoginDB(t)
 
 	var out testCollector
-	err := extractPasswords(keysOf(masterkey.Set{}), path, record.StoreLocal, &out)
+	err := extractPasswords(keysOf(masterkey.Set{}), path, &out)
 	got := collected[record.Login](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
@@ -40,12 +40,12 @@ func TestExtractPasswords(t *testing.T) {
 
 // TestExtractPasswords_UndecryptableBlobStillListed keeps such a login, or a missing key would shrink the export.
 func TestExtractPasswords_UndecryptableBlobStillListed(t *testing.T) {
-	path := createTestDB(t, "Login Data", loginsSchema,
+	path := createTestDB(t, accountLoginData, loginsSchema,
 		insertLogin("https://enc.com", "https://enc.com/login", "carol", "763130deadbeef", 13350000000000000),
 	)
 
 	var out testCollector
-	err := extractPasswords(keysOf(masterkey.Set{}), path, record.StoreAccount, &out)
+	err := extractPasswords(keysOf(masterkey.Set{}), path, &out)
 	got := collected[record.Login](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 1)

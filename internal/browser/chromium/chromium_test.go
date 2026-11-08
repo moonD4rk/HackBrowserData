@@ -263,7 +263,7 @@ func TestExtractors_OperaReadsOpsettings(t *testing.T) {
 	require.Error(t, err, "Chrome has no opsettings fallback")
 }
 
-func TestExtractPasswordStores_LocalBeforeAccount(t *testing.T) {
+func TestPasswordExtractor_LocalBeforeAccount(t *testing.T) {
 	local := createTestDB(t, "Login Data", loginsSchema, insertLogin("https://local.example", "", "local-user", "", 13340000000000000))
 	account := createTestDB(t, "Login Data For Account", loginsSchema,
 		insertLogin("https://account.example", "", "account-user", "", 13360000000000000))
@@ -273,7 +273,7 @@ func TestExtractPasswordStores_LocalBeforeAccount(t *testing.T) {
 	}), browser.Profile{Name: "Default", RelativePath: "Default"}, nil)
 
 	var out testCollector
-	require.NoError(t, extractPasswordStores(context.Background(), profileSnapshot, &out))
+	require.NoError(t, defaultExtractors[category.Password].Extract(context.Background(), profileSnapshot, &out))
 	got := collected[record.Login](t, &out)
 	require.Len(t, got, 2)
 	assert.Equal(t, "local-user", got[0].Username)
@@ -282,20 +282,20 @@ func TestExtractPasswordStores_LocalBeforeAccount(t *testing.T) {
 	assert.Equal(t, record.StoreAccount, got[1].Store)
 }
 
-func TestExtractPasswordStores_AccountOnly(t *testing.T) {
+func TestPasswordExtractor_AccountOnly(t *testing.T) {
 	account := createTestDB(t, "Login Data For Account", loginsSchema,
 		insertLogin("https://account.example", "", "account-user", "", 13360000000000000))
 	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{"Default/Login Data For Account": account}),
 		browser.Profile{Name: "Default", RelativePath: "Default"}, nil)
 
 	var out testCollector
-	require.NoError(t, extractPasswordStores(context.Background(), profileSnapshot, &out))
+	require.NoError(t, defaultExtractors[category.Password].Extract(context.Background(), profileSnapshot, &out))
 	got := collected[record.Login](t, &out)
 	require.Len(t, got, 1)
 	assert.Equal(t, record.StoreAccount, got[0].Store)
 }
 
-func TestExtractPasswordStores_OneBrokenDatabaseKeepsTheOther(t *testing.T) {
+func TestPasswordExtractor_OneBrokenDatabaseKeepsTheOther(t *testing.T) {
 	broken := createTestJSON(t, "Login Data", "not a database")
 	account := createTestDB(t, "Login Data For Account", loginsSchema,
 		insertLogin("https://account.example", "", "account-user", "", 13360000000000000))
@@ -305,7 +305,7 @@ func TestExtractPasswordStores_OneBrokenDatabaseKeepsTheOther(t *testing.T) {
 	}), browser.Profile{Name: "Default", RelativePath: "Default"}, nil)
 
 	var out testCollector
-	require.Error(t, extractPasswordStores(context.Background(), profileSnapshot, &out))
+	require.Error(t, defaultExtractors[category.Password].Extract(context.Background(), profileSnapshot, &out))
 	assert.Len(t, collected[record.Login](t, &out), 1)
 }
 
