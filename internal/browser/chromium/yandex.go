@@ -132,8 +132,6 @@ const yandexLoginQuery = `SELECT origin_url, username_element, username_value,
 
 // extractYandexPasswords reads origin_url, which the per-row AAD covers, not action_url.
 func extractYandexPasswords(masterKeys masterKeysFunc, path string, out browser.Collector) error {
-	loadDataKey := yandexDataKeyLoader(path, masterKeys)
-
 	database, err := sqlitex.Open(path)
 	if err != nil {
 		return err
@@ -146,6 +144,11 @@ func extractYandexPasswords(masterKeys masterKeysFunc, path string, out browser.
 	}
 	defer rows.Close()
 
+	// The data key is loaded by the first row, so an empty table fetches no key.
+	var (
+		dataKey []byte
+		keyErr  error
+	)
 	for rows.Next() {
 		var originURL, usernameElement, usernameValue, passwordElement, signonRealm string
 		var passwordValue []byte
@@ -160,7 +163,9 @@ func extractYandexPasswords(masterKeys masterKeysFunc, path string, out browser.
 			CreatedAt: timeconv.Chromium(created),
 			Store:     record.StoreLocal,
 		}
-		dataKey, keyErr := loadDataKey()
+		if dataKey == nil && keyErr == nil {
+			dataKey, keyErr = loadYandexDataKey(path, masterKeys()[masterkey.V10])
+		}
 		if dataKey == nil {
 			out.Fail(fmt.Errorf("yandex: password for %s: %w", originURL, keyErr))
 			out.Add(&entry)
@@ -196,8 +201,6 @@ type yandexPrivateData struct {
 
 // extractYandexCreditCards reads the records table (not Chromium's credit_cards). AAD = guid.
 func extractYandexCreditCards(masterKeys masterKeysFunc, path string, out browser.Collector) error {
-	loadDataKey := yandexDataKeyLoader(path, masterKeys)
-
 	database, err := sqlitex.Open(path)
 	if err != nil {
 		return err
@@ -210,6 +213,11 @@ func extractYandexCreditCards(masterKeys masterKeysFunc, path string, out browse
 	}
 	defer rows.Close()
 
+	// The data key is loaded by the first row, so an empty table fetches no key.
+	var (
+		dataKey []byte
+		keyErr  error
+	)
 	for rows.Next() {
 		var guid, publicData string
 		var privateData []byte
@@ -231,7 +239,9 @@ func extractYandexCreditCards(masterKeys masterKeysFunc, path string, out browse
 			ExpYear:  public.ExpireDateYear,
 			NickName: public.CardTitle,
 		}
-		dataKey, keyErr := loadDataKey()
+		if dataKey == nil && keyErr == nil {
+			dataKey, keyErr = loadYandexDataKey(path, masterKeys()[masterkey.V10])
+		}
 		if dataKey == nil {
 			out.Fail(fmt.Errorf("yandex: card %s: %w", guid, keyErr))
 			out.Add(&entry)
@@ -257,20 +267,4 @@ func extractYandexCreditCards(masterKeys masterKeysFunc, path string, out browse
 		out.Add(&entry)
 	}
 	return rows.Err()
-}
-
-// yandexDataKeyLoader loads the profile's data key for the first row that needs it, so an empty table fetches no key.
-func yandexDataKeyLoader(path string, masterKeys masterKeysFunc) func() ([]byte, error) {
-	var (
-		dataKey []byte
-		err     error
-		loaded  bool
-	)
-	return func() ([]byte, error) {
-		if !loaded {
-			loaded = true
-			dataKey, err = loadYandexDataKey(path, masterKeys()[masterkey.V10])
-		}
-		return dataKey, err
-	}
 }

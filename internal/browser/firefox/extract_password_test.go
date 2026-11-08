@@ -18,7 +18,7 @@ const loginPBEHex = "303b0410f8000000000000000000000000000001301506092a864886f70
 
 var testGlobalSalt = bytes.Repeat([]byte("moond4rk"), 3) // 24 bytes
 
-func fixedKey(key []byte) func() []byte { return func() []byte { return key } }
+func fixedKey(key []byte) func() ([]byte, error) { return func() ([]byte, error) { return key, nil } }
 
 func loginPBEBase64(t *testing.T) string {
 	t.Helper()

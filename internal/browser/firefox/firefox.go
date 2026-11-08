@@ -131,7 +131,7 @@ func newPlainExtractor(parse func(string, browser.Collector) error, source brows
 }
 
 // newDecryptingExtractor also captures key4.db, the profile's own key store.
-func newDecryptingExtractor(parse func(func() []byte, string, browser.Collector) error, source browser.Source) browser.Extractor {
+func newDecryptingExtractor(parse func(func() ([]byte, error), string, browser.Collector) error, source browser.Source) browser.Extractor {
 	return browser.Extractor{
 		Sources: []browser.Source{source, keyStore},
 		Extract: func(_ context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
@@ -139,27 +139,9 @@ func newDecryptingExtractor(parse func(func() []byte, string, browser.Collector)
 			if err != nil {
 				return err
 			}
-			return parse(masterKeyOf(profileSnapshot, path, out), path, out)
+			masterKey := func() ([]byte, error) { return profileKey(profileSnapshot, path) }
+			return parse(masterKey, path, out)
 		},
-	}
-}
-
-// masterKeyOf derives the key only once a login needs it; without one the logins export with empty secrets.
-func masterKeyOf(profileSnapshot browser.ProfileSnapshot, loginsPath string, out browser.Collector) func() []byte {
-	var (
-		key     []byte
-		derived bool
-	)
-	return func() []byte {
-		if !derived {
-			derived = true
-			retrieved, err := profileKey(profileSnapshot, loginsPath)
-			if err != nil {
-				out.Fail(fmt.Errorf("master key: %w", err))
-			}
-			key = retrieved
-		}
-		return key
 	}
 }
 
