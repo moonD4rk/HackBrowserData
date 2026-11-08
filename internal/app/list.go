@@ -20,10 +20,13 @@ func ListOptions() (Options, error) {
 	}, nil
 }
 
-// CountRecords runs the plan with no key and the keychain locked, counting records instead of exporting them.
-func CountRecords(ctx context.Context, plan Plan, keychainConfig KeychainConfig) (Summary, error) {
+// CountRecords runs with no key and the keychain locked, counting records instead of exporting them.
+func CountRecords(
+	ctx context.Context, discovery Discovery, categories []category.Category, keychainConfig KeychainConfig,
+) (Summary, error) {
 	keychain := newLoginKeychain(keychainConfig)
-	return runner{writer: discard{}, extractors: extractorsWith(keychain), keys: keysFromFile(nil)}.run(ctx, plan)
+	counter := runner{writer: discard{}, extractors: extractorsWith(keychain), retrieveKeys: keysFromFile(nil)}
+	return counter.run(ctx, discovery, categories)
 }
 
 type discard struct{}

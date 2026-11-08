@@ -117,7 +117,7 @@ func TestDiscover_EmptyDBIsAuthoritative(t *testing.T) {
 	assert.Equal(t, []browser.Profile{defaultProfile}, discoverProfiles(t, home))
 }
 
-// TestDiscover_MissingDBFallsBackToReadDir lists the Profiles dir, keeping dirs without data: presence is Plan's call.
+// TestDiscover_MissingDBFallsBackToReadDir lists the Profiles dir, keeping dirs without data: presence is planning's call.
 func TestDiscover_MissingDBFallsBackToReadDir(t *testing.T) {
 	const uuid = "11111111-2222-3333-4444-555555555555"
 	const empty = "4E2D8DD0-A7D2-4684-939A-898B7675C700"

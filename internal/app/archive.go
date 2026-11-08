@@ -43,7 +43,7 @@ func Archive(ctx context.Context, discovery Discovery, categories []category.Cat
 			dirs = append(dirs, dir)
 		}
 	}
-	files := archiveFiles(dirs, NewPlan(Discovery{Dirs: dirs}, categories))
+	files := archiveFiles(dirs, categories)
 
 	snapshots, err := snapshot.Temp()
 	if err != nil {
@@ -63,7 +63,8 @@ func Archive(ctx context.Context, discovery Discovery, categories []category.Cat
 	return fileCount, nil
 }
 
-func archiveFiles(dirs []browser.UserDataDir, plan Plan) []snapshot.File {
+func archiveFiles(dirs []browser.UserDataDir, categories []category.Category) []snapshot.File {
+	extractors := extractorsWith(nil)
 	var files []snapshot.File
 	seen := make(map[snapshot.File]bool)
 	for _, dir := range dirs {
@@ -74,9 +75,7 @@ func archiveFiles(dirs []browser.UserDataDir, plan Plan) []snapshot.File {
 				}
 			}
 		}
-	}
-	for _, dirPlan := range plan.Dirs {
-		files = appendNew(files, seen, dirPlan.Files...)
+		files = appendNew(files, seen, planDir(dir, categories, extractors).files...)
 	}
 	return files
 }

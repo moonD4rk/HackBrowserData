@@ -22,7 +22,7 @@ type dirKeysFunc func(ctx context.Context, dir browser.UserDataDir, dirSnapshot 
 // dirKeys retrieves a dir's keys on first use, for all its profiles; Go 1.20 has no sync.OnceValues.
 type dirKeys struct {
 	once        sync.Once
-	retrieve    dirKeysFunc
+	retrieve    dirKeysFunc // nil for a dir whose base keeps no master keys
 	dir         browser.UserDataDir
 	dirSnapshot snapshot.Snapshot
 	keys        masterkey.Set
@@ -30,7 +30,11 @@ type dirKeys struct {
 }
 
 func (k *dirKeys) get(ctx context.Context) masterkey.Set {
-	k.once.Do(func() { k.keys, k.err = k.retrieve(ctx, k.dir, k.dirSnapshot) })
+	k.once.Do(func() {
+		if k.retrieve != nil {
+			k.keys, k.err = k.retrieve(ctx, k.dir, k.dirSnapshot)
+		}
+	})
 	return k.keys
 }
 

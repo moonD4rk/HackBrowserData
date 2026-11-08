@@ -56,7 +56,7 @@ type DirFailure struct {
 	Err           error
 }
 
-// Summary is every result of a run in output order, what never ran first, and the dirs that failed as a whole.
+// Summary lists each dir's results in turn, what never ran before what ran, and the dirs that failed as a whole.
 type Summary struct {
 	Results     []Result
 	DirFailures []DirFailure

@@ -37,8 +37,7 @@ func newListCommand() *cobra.Command {
 			if !detail {
 				return printProfiles(command.OutOrStdout(), discovery)
 			}
-			plan := app.NewPlan(discovery, options.Categories)
-			summary, err := app.CountRecords(command.Context(), plan, options.Keychain)
+			summary, err := app.CountRecords(command.Context(), discovery, options.Categories, options.Keychain)
 			if err != nil {
 				return err
 			}

@@ -107,8 +107,7 @@ func restoreGolden(t *testing.T, flags app.RestoreFlags) string {
 
 	discovery, keys, err := app.DiscoverRestore(data.Path(), keyFile, options.Target.BrowserName)
 	require.NoError(t, err)
-	plan := app.NewPlan(discovery, options.Categories)
-	_, err = app.ExecuteWithKeys(context.Background(), plan, options.Output, keys)
+	_, err = app.ExecuteWithKeys(context.Background(), discovery, options.Categories, options.Output, keys)
 	require.NoError(t, err)
 	return flags.OutputDir
 }

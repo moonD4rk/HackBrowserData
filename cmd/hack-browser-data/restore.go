@@ -60,8 +60,7 @@ func runRestore(ctx context.Context, stderr io.Writer, flags app.RestoreFlags) e
 	if foundNothing(stderr, discovery, "no browsers to restore from the supplied keys and data") {
 		return nil
 	}
-	plan := app.NewPlan(discovery, options.Categories)
-	summary, err := app.ExecuteWithKeys(ctx, plan, options.Output, keys)
+	summary, err := app.ExecuteWithKeys(ctx, discovery, options.Categories, options.Output, keys)
 	announceExport(stderr, summary.Exported)
 	if ctx.Err() == nil {
 		report(stderr, summary)

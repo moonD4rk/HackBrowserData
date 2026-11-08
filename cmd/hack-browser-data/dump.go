@@ -49,8 +49,7 @@ func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychai
 	if foundNothing(stderr, discovery, "no browsers found") {
 		return nil
 	}
-	plan := app.NewPlan(discovery, options.Categories)
-	summary, err := app.Execute(ctx, plan, options.Output, options.Keychain)
+	summary, err := app.Execute(ctx, discovery, options.Categories, options.Output, options.Keychain)
 	announceExport(stderr, summary.Exported)
 	if ctx.Err() == nil {
 		report(stderr, summary)

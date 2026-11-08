@@ -63,8 +63,7 @@ func extractGoldenRun(t *testing.T, home string, keys map[browser.UserDataDirID]
 	require.NoError(t, err)
 	options.Target.HomeDir = home
 
-	plan := app.NewPlan(app.Discover(options.Target), options.Categories)
-	_, err = app.ExecuteWithKeys(context.Background(), plan, options.Output, keys)
+	_, err = app.ExecuteWithKeys(context.Background(), app.Discover(options.Target), options.Categories, options.Output, keys)
 	require.NoError(t, err)
 	return out
 }

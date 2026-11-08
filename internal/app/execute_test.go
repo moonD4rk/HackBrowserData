@@ -55,7 +55,7 @@ func chromeDir(t *testing.T, id browser.UserDataDirID, profiles ...string) brows
 func run(t *testing.T, base extractorsFunc, keys dirKeysFunc, categories []category.Category, dirs ...browser.UserDataDir) (Summary, string) {
 	t.Helper()
 	output := Output{Dir: t.TempDir()}
-	summary, err := execute(context.Background(), newPlan(Discovery{Dirs: dirs}, categories, base), output, base, keys)
+	summary, err := execute(context.Background(), Discovery{Dirs: dirs}, categories, output, base, keys)
 	require.NoError(t, err)
 	return summary, output.Dir
 }
@@ -116,6 +116,28 @@ func TestExecute_Outcomes(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(data), `"browser": "Chrome"`, "the collector sets the browser's display name")
 	assert.Contains(t, string(data), `"profile": "Default"`)
+}
+
+func TestExecute_ReportsEachDirWhatNeverRanFirst(t *testing.T) {
+	failed := DirFailure{UserDataDirID: "edge", Err: errors.New("permission denied")}
+	chrome, brave := chromeDir(t, "chrome", "Default"), chromeDir(t, "brave", "Default")
+	base := fakeBase(map[category.Category]extractFunc{
+		category.History: func(context.Context, browser.ProfileSnapshot, browser.Collector) error { return nil },
+	})
+	categories := []category.Category{category.Password, category.History}
+	discovery := Discovery{Dirs: []browser.UserDataDir{chrome, brave}, DirFailures: []DirFailure{failed}}
+
+	summary, err := execute(context.Background(), discovery, categories, Output{Dir: t.TempDir()}, base, noKeys(t))
+	require.NoError(t, err)
+	assert.Equal(t, []DirFailure{failed}, summary.DirFailures, "discovery's failures are reported with the run's")
+	var got []string
+	for _, result := range summary.Results {
+		got = append(got, fmt.Sprintf("%s/%s %s", result.UserDataDirID, result.Category, result.Outcome))
+	}
+	assert.Equal(t, []string{
+		"chrome/password unsupported", "chrome/history ok",
+		"brave/password unsupported", "brave/history ok",
+	}, got)
 }
 
 func TestExecute_KeysAreRetrievedOncePerUserDataDir(t *testing.T) {
@@ -208,7 +230,7 @@ func TestExecute_StopEndsTheRunBeforeTheNextExtractionAndRemovesTheCopy(t *testi
 	categories := []category.Category{category.History, category.Download}
 	discovery := Discovery{Dirs: []browser.UserDataDir{chromeDir(t, "chrome", "Default"), chromeDir(t, "chrome-2", "Default")}}
 
-	_, err := execute(ctx, newPlan(discovery, categories, base), Output{Dir: t.TempDir()}, base, noKeys(t))
+	_, err := execute(ctx, discovery, categories, Output{Dir: t.TempDir()}, base, noKeys(t))
 	require.ErrorIs(t, err, context.Canceled)
 	require.Len(t, copied, 1, "the next user data dir is never captured")
 	_, statErr := os.Stat(copied[0])
@@ -231,9 +253,8 @@ func TestExecute_OutputFailureStopsTheRunAndLeavesNoCopies(t *testing.T) {
 	require.NoError(t, os.Chmod(output.Dir, 0o500))
 	defer func() { require.NoError(t, os.Chmod(output.Dir, 0o700)) }()
 
-	categories := []category.Category{category.History}
-	plan := newPlan(Discovery{Dirs: []browser.UserDataDir{chromeDir(t, "chrome", "Default")}}, categories, base)
-	_, err := execute(context.Background(), plan, output, base, noKeys(t))
+	discovery := Discovery{Dirs: []browser.UserDataDir{chromeDir(t, "chrome", "Default")}}
+	_, err := execute(context.Background(), discovery, []category.Category{category.History}, output, base, noKeys(t))
 	require.Error(t, err)
 	require.NotEmpty(t, copied)
 	_, statErr := os.Stat(copied)
