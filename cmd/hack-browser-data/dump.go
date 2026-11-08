@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"io"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -10,7 +11,10 @@ import (
 )
 
 func newDumpCommand() *cobra.Command {
-	var flags app.DumpFlags
+	var (
+		flags    app.DumpFlags
+		keychain keychainFlags
+	)
 
 	command := &cobra.Command{
 		Use:   "dump",
@@ -21,7 +25,7 @@ func newDumpCommand() *cobra.Command {
   hack-browser-data dump -f cookie-editor
   hack-browser-data dump --zip`,
 		RunE: func(command *cobra.Command, args []string) error {
-			return runDump(command.Context(), command.ErrOrStderr(), flags)
+			return runDump(command.Context(), command.ErrOrStderr(), flags, keychain)
 		},
 	}
 
@@ -30,21 +34,14 @@ func newDumpCommand() *cobra.Command {
 	command.Flags().StringVarP(&flags.Format, "format", "f", "json", "output format: csv|json|cookie-editor")
 	command.Flags().StringVarP(&flags.OutputDir, "dir", "d", "results", "output directory")
 	command.Flags().StringVarP(&flags.ProfilePath, "profile-path", "p", "", "custom profile dir path, get with chrome://version")
-	addKeychainPasswordFlags(command, &flags.Keychain)
+	addKeychainPasswordFlags(command, &keychain)
 	command.Flags().BoolVar(&flags.Zip, "zip", false, "compress output to zip")
 
 	return command
 }
 
-func addKeychainPasswordFlags(command *cobra.Command, flags *app.KeychainFlags) {
-	command.Flags().StringVar(&flags.Password, "keychain-pw", "", "macOS keychain password (visible in ps and shell history)")
-	command.Flags().BoolVar(&flags.PasswordStdin, "keychain-pw-stdin", false,
-		"read the macOS keychain password from the first line of stdin")
-	command.MarkFlagsMutuallyExclusive("keychain-pw", "keychain-pw-stdin")
-}
-
-func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags) error {
-	options, err := app.ValidateDump(flags)
+func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychain keychainFlags) error {
+	options, err := app.ValidateDump(flags, keychainPasswordFunc(keychain, os.Stdin))
 	if err != nil {
 		return err
 	}

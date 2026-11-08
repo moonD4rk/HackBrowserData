@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -16,15 +17,10 @@ type DumpFlags struct {
 	OutputDir   string
 	Zip         bool
 	ProfilePath string
-	Keychain    KeychainFlags
 }
 
 // ValidateDump checks every flag before any browser or secret is touched, so a bad flag fails fast.
-func ValidateDump(flags DumpFlags) (Options, error) {
-	return validateDump(flags, os.Stdin)
-}
-
-func validateDump(flags DumpFlags, stdin *os.File) (Options, error) {
+func ValidateDump(flags DumpFlags, keychainPassword func(context.Context) (string, error)) (Options, error) {
 	browserName, err := parseBrowser(flags.Browser)
 	if err != nil {
 		return Options{}, err
@@ -44,10 +40,6 @@ func validateDump(flags DumpFlags, stdin *os.File) (Options, error) {
 	if err != nil {
 		return Options{}, err
 	}
-	password, err := keychainPasswordFunc(flags.Keychain, stdin)
-	if err != nil {
-		return Options{}, err
-	}
 	home, err := homeDir()
 	if err != nil {
 		return Options{}, err
@@ -56,7 +48,7 @@ func validateDump(flags DumpFlags, stdin *os.File) (Options, error) {
 		Target:     Target{BrowserName: browserName, ProfilePath: profilePath, HomeDir: home},
 		Categories: categories,
 		Output:     Output{Dir: flags.OutputDir, Format: format, Zip: flags.Zip},
-		Keychain:   KeychainConfig{HomeDir: home, Password: password},
+		Keychain:   KeychainConfig{HomeDir: home, Password: keychainPassword},
 	}, nil
 }
 

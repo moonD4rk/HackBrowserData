@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 
 	"github.com/moond4rk/hackbrowserdata/internal/app"
@@ -10,6 +12,7 @@ import (
 func newDumpKeysCommand() *cobra.Command {
 	var (
 		flags      app.DumpKeysFlags
+		keychain   keychainFlags
 		outputPath string
 	)
 
@@ -19,7 +22,7 @@ func newDumpKeysCommand() *cobra.Command {
 		Example: `  hack-browser-data dumpkeys -o keys.json
   hack-browser-data dumpkeys -b chrome`,
 		RunE: func(command *cobra.Command, args []string) error {
-			options, err := app.ValidateDumpKeys(flags)
+			options, err := app.ValidateDumpKeys(flags, keychainPasswordFunc(keychain, os.Stdin))
 			if err != nil {
 				return err
 			}
@@ -35,7 +38,7 @@ func newDumpKeysCommand() *cobra.Command {
 
 	command.Flags().StringVarP(&flags.Browser, "browser", "b", "all", "target browser: all|"+browserNames())
 	command.Flags().StringVarP(&outputPath, "output", "o", "", "output file (default: stdout)")
-	addKeychainPasswordFlags(command, &flags.Keychain)
+	addKeychainPasswordFlags(command, &keychain)
 
 	return command
 }

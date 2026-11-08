@@ -43,12 +43,6 @@ type KeychainConfig struct {
 	Password func(ctx context.Context) (string, error)
 }
 
-// KeychainFlags say where the macOS login keychain password comes from; both empty means a prompt, or none.
-type KeychainFlags struct {
-	Password      string
-	PasswordStdin bool
-}
-
 func homeDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {

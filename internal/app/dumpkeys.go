@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 
 	"github.com/moond4rk/hackbrowserdata/internal/atomicfile"
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
@@ -16,16 +15,11 @@ import (
 
 // DumpKeysFlags are dumpkeys' command-line values as cobra parsed them.
 type DumpKeysFlags struct {
-	Browser  string
-	Keychain KeychainFlags
+	Browser string
 }
 
-func ValidateDumpKeys(flags DumpKeysFlags) (Options, error) {
+func ValidateDumpKeys(flags DumpKeysFlags, keychainPassword func(context.Context) (string, error)) (Options, error) {
 	browserName, err := parseBrowser(flags.Browser)
-	if err != nil {
-		return Options{}, err
-	}
-	password, err := keychainPasswordFunc(flags.Keychain, os.Stdin)
 	if err != nil {
 		return Options{}, err
 	}
@@ -35,7 +29,7 @@ func ValidateDumpKeys(flags DumpKeysFlags) (Options, error) {
 	}
 	return Options{
 		Target:   Target{BrowserName: browserName, HomeDir: home},
-		Keychain: KeychainConfig{HomeDir: home, Password: password},
+		Keychain: KeychainConfig{HomeDir: home, Password: keychainPassword},
 	}, nil
 }
 
