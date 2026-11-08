@@ -257,20 +257,40 @@ func TestExtractLocalStorage_EmptyRoot(t *testing.T) {
 	assert.Empty(t, entries)
 }
 
-func TestReadLocalStorageFile_SkipsNullKey(t *testing.T) {
+func TestExtractLocalStorage_ReportsBrokenOriginsAndGoesOn(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "Origins")
+	for _, hash := range []string{"badDB", "badOrigin", "good"} {
+		writeTestOriginStore(t, root, hash, hash, "https://"+hash+".example", "https://"+hash+".example",
+			[]testLocalStorageItem{{Key: "k", Value: "v"}})
+	}
+	require.NoError(t, os.WriteFile(filepath.Join(root, "badOrigin", "badOrigin", webkitOriginFile), []byte{0xff}, 0o644))
+	badDB := filepath.Join(root, "badDB", "badDB", webkitLocalStorageSubdir, webkitLocalStorageDB)
+	require.NoError(t, os.WriteFile(badDB, []byte("not a database"), 0o644))
+
+	var out testCollector
+	require.NoError(t, extractLocalStorage(root, &out))
+	entries := collected[record.LocalStorage](t, &out)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "https://good.example", entries[0].URL)
+	assert.Len(t, out.fails, 2, "each broken origin is reported, not skipped silently")
+}
+
+func TestExtractOriginStorage_ReportsNullKey(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "ls.sqlite3")
 	writeLocalStorageDB(t, dbPath, []testLocalStorageItem{
 		{Key: "real", Value: "keeper"},
 	}, true /*addNullKey*/)
 
-	items, err := readLocalStorageFile(dbPath)
-	require.NoError(t, err)
-	require.Len(t, items, 1)
-	assert.Equal(t, "real", items[0].key)
-	assert.Equal(t, "keeper", items[0].value)
+	var out testCollector
+	require.NoError(t, extractOriginStorage(dbPath, "https://example.com", &out))
+	entries := collected[record.LocalStorage](t, &out)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "real", entries[0].Key)
+	assert.Equal(t, "keeper", entries[0].Value)
+	assert.Len(t, out.fails, 1)
 }
 
-func TestReadLocalStorageFile_ReturnsRowsInKeyOrder(t *testing.T) {
+func TestExtractOriginStorage_EmitsRowsInKeyOrder(t *testing.T) {
 	// Rows go in reverse order; ORDER BY key, rowid must return them ascending so exports are deterministic.
 	dbPath := filepath.Join(t.TempDir(), "ls.sqlite3")
 	writeLocalStorageDB(t, dbPath, []testLocalStorageItem{
@@ -279,10 +299,11 @@ func TestReadLocalStorageFile_ReturnsRowsInKeyOrder(t *testing.T) {
 		{Key: "apple", Value: "a"},
 	}, false /*addNullKey*/)
 
-	items, err := readLocalStorageFile(dbPath)
-	require.NoError(t, err)
-	require.Len(t, items, 3)
-	assert.Equal(t, "apple", items[0].key)
-	assert.Equal(t, "mango", items[1].key)
-	assert.Equal(t, "zebra", items[2].key)
+	var out testCollector
+	require.NoError(t, extractOriginStorage(dbPath, "https://example.com", &out))
+	entries := collected[record.LocalStorage](t, &out)
+	require.Len(t, entries, 3)
+	assert.Equal(t, "apple", entries[0].Key)
+	assert.Equal(t, "mango", entries[1].Key)
+	assert.Equal(t, "zebra", entries[2].Key)
 }
