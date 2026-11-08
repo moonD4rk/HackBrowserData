@@ -1,7 +1,6 @@
 package firefox
 
 import (
-	"database/sql"
 	"strings"
 
 	"github.com/tidwall/gjson"
@@ -17,31 +16,43 @@ const downloadQuery = `SELECT place_id, GROUP_CONCAT(content), url, dateAdded
 	t GROUP BY place_id`
 
 func extractDownloads(path string, out browser.Collector) error {
-	return sqlitex.EachRow(path, downloadQuery,
-		func(rows *sql.Rows) error {
-			var placeID, dateAdded int64
-			var content, url string
-			if err := rows.Scan(&placeID, &content, &url, &dateAdded); err != nil {
-				return err
-			}
+	database, err := sqlitex.Open(path, sqlitex.JournalOff)
+	if err != nil {
+		return err
+	}
+	defer database.Close()
 
-			entry := record.Download{
-				URL:       url,
-				StartTime: timeconv.UnixMicro(dateAdded),
-			}
+	rows, err := database.Query(downloadQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
 
-			// Firefox stores the content as "target_path,{json}"; the JSON holds fileSize and endTime.
-			contentList := strings.SplitN(content, ",{", 2)
-			if len(contentList) == 2 {
-				entry.TargetPath = contentList[0]
-				json := "{" + contentList[1]
-				entry.TotalBytes = gjson.Get(json, "fileSize").Int()
-				entry.EndTime = timeconv.UnixMilli(gjson.Get(json, "endTime").Int())
-			} else {
-				entry.TargetPath = content
-			}
+	for rows.Next() {
+		var placeID, dateAdded int64
+		var content, url string
+		if err := rows.Scan(&placeID, &content, &url, &dateAdded); err != nil {
+			out.Fail(err)
+			continue
+		}
 
-			out.Add(&entry)
-			return nil
-		}, out.Fail, sqlitex.JournalOff)
+		entry := record.Download{
+			URL:       url,
+			StartTime: timeconv.UnixMicro(dateAdded),
+		}
+
+		// Firefox stores the content as "target_path,{json}"; the JSON holds fileSize and endTime.
+		contentList := strings.SplitN(content, ",{", 2)
+		if len(contentList) == 2 {
+			entry.TargetPath = contentList[0]
+			json := "{" + contentList[1]
+			entry.TotalBytes = gjson.Get(json, "fileSize").Int()
+			entry.EndTime = timeconv.UnixMilli(gjson.Get(json, "endTime").Int())
+		} else {
+			entry.TargetPath = content
+		}
+
+		out.Add(&entry)
+	}
+	return rows.Err()
 }

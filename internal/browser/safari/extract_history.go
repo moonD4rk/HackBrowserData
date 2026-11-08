@@ -1,8 +1,6 @@
 package safari
 
 import (
-	"database/sql"
-
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
@@ -22,22 +20,34 @@ const (
 )
 
 func extractHistories(path string, out browser.Collector) error {
-	return sqlitex.EachRow(path, historyQuery,
-		func(rows *sql.Rows) error {
-			var (
-				url, title string
-				visitCount int
-				visitTime  float64
-			)
-			if err := rows.Scan(&url, &title, &visitCount, &visitTime); err != nil {
-				return err
-			}
-			out.Add(&record.History{
-				URL:        url,
-				Title:      title,
-				VisitCount: visitCount,
-				LastVisit:  timeconv.CoreData(visitTime),
-			})
-			return nil
-		}, out.Fail, sqlitex.JournalOff)
+	database, err := sqlitex.Open(path, sqlitex.JournalOff)
+	if err != nil {
+		return err
+	}
+	defer database.Close()
+
+	rows, err := database.Query(historyQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			url, title string
+			visitCount int
+			visitTime  float64
+		)
+		if err := rows.Scan(&url, &title, &visitCount, &visitTime); err != nil {
+			out.Fail(err)
+			continue
+		}
+		out.Add(&record.History{
+			URL:        url,
+			Title:      title,
+			VisitCount: visitCount,
+			LastVisit:  timeconv.CoreData(visitTime),
+		})
+	}
+	return rows.Err()
 }

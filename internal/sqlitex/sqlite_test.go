@@ -2,7 +2,6 @@ package sqlitex
 
 import (
 	"database/sql"
-	"errors"
 	"path/filepath"
 	"testing"
 
@@ -23,86 +22,46 @@ func createDB(t *testing.T, statements ...string) string {
 	return path
 }
 
-func scanNames(names *[]string) func(*sql.Rows) error {
-	return func(rows *sql.Rows) error {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return err
-		}
-		*names = append(*names, name)
-		return nil
-	}
-}
-
-func noSkip(t *testing.T) func(error) {
-	return func(err error) { t.Errorf("unexpected skipped row: %v", err) }
-}
-
-func TestEachRow(t *testing.T) {
-	path := createDB(t,
-		"CREATE TABLE items (id INTEGER, name TEXT)",
-		"INSERT INTO items VALUES (1, 'alpha'), (2, 'beta'), (3, 'gamma')")
-
-	var names []string
-	require.NoError(t, EachRow(path, "SELECT name FROM items ORDER BY id", scanNames(&names), noSkip(t)))
-	assert.Equal(t, []string{"alpha", "beta", "gamma"}, names)
-}
-
-func TestEachRow_JournalOff(t *testing.T) {
-	path := createDB(t, "CREATE TABLE t (v TEXT)", "INSERT INTO t VALUES ('x')")
-
-	var names []string
-	require.NoError(t, EachRow(path, "SELECT v FROM t", scanNames(&names), noSkip(t), JournalOff))
-	assert.Equal(t, []string{"x"}, names)
-}
-
-func TestEachRow_ReadOnlyImmutable(t *testing.T) {
-	path := createDB(t, "CREATE TABLE t (v TEXT)", "INSERT INTO t VALUES ('x')")
-
-	var names []string
-	require.NoError(t, EachRow(path, "SELECT v FROM t", scanNames(&names), noSkip(t), ReadOnly, Immutable))
-	assert.Equal(t, []string{"x"}, names)
-}
-
-// TestEachRow_SkipsARowThatFailsToScan hands the failure to skip, where an extractor reports it as a record problem.
-func TestEachRow_SkipsARowThatFailsToScan(t *testing.T) {
-	path := createDB(t,
-		"CREATE TABLE items (id INTEGER, name TEXT)",
-		"INSERT INTO items VALUES (1, 'alpha'), (2, NULL), (3, 'gamma')")
-
-	var (
-		names   []string
-		skipped []error
-	)
-	err := EachRow(path, "SELECT name FROM items ORDER BY id", scanNames(&names), func(err error) { skipped = append(skipped, err) })
+func readValue(t *testing.T, path string, options ...Option) string {
+	t.Helper()
+	database, err := Open(path, options...)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"alpha", "gamma"}, names)
-	assert.Len(t, skipped, 1)
+	defer database.Close()
+
+	var value string
+	require.NoError(t, database.QueryRow("SELECT v FROM t").Scan(&value))
+	return value
 }
 
-func TestEachRow_FileNotFound(t *testing.T) {
-	err := EachRow(filepath.Join(t.TempDir(), "missing.db"), "SELECT 1", scanNames(new([]string)), noSkip(t))
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "database file")
+func TestOpen(t *testing.T) {
+	path := createDB(t, "CREATE TABLE t (v TEXT)", "INSERT INTO t VALUES ('x')")
+	assert.Equal(t, "x", readValue(t, path))
 }
 
-func TestEachRow_BadQuery(t *testing.T) {
+func TestOpen_JournalOff(t *testing.T) {
+	path := createDB(t, "CREATE TABLE t (v TEXT)", "INSERT INTO t VALUES ('x')")
+	assert.Equal(t, "x", readValue(t, path, JournalOff))
+}
+
+func TestOpen_ReadOnlyImmutable(t *testing.T) {
+	path := createDB(t, "CREATE TABLE t (v TEXT)", "INSERT INTO t VALUES ('x')")
+	assert.Equal(t, "x", readValue(t, path, ReadOnly, Immutable))
+}
+
+func TestOpen_ReadOnlyRejectsWrites(t *testing.T) {
 	path := createDB(t, "CREATE TABLE t (v TEXT)")
-	require.Error(t, EachRow(path, "SELECT nonexistent FROM t", scanNames(new([]string)), noSkip(t)))
-}
-
-func TestEachRow_ScanErrorStopsNothing(t *testing.T) {
-	path := createDB(t, "CREATE TABLE t (v TEXT)", "INSERT INTO t VALUES ('a'), ('b')")
-	failure := errors.New("bad row")
-	var skipped []error
-	err := EachRow(path, "SELECT v FROM t", func(*sql.Rows) error { return failure }, func(err error) { skipped = append(skipped, err) })
+	database, err := Open(path, ReadOnly)
 	require.NoError(t, err)
-	assert.Equal(t, []error{failure, failure}, skipped)
+	defer database.Close()
+
+	_, err = database.Exec("INSERT INTO t VALUES ('x')")
+	require.Error(t, err)
 }
 
 func TestOpen_MissingFileCreatesNothing(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "missing.db")
 	_, err := Open(path)
 	require.Error(t, err)
+	assert.Contains(t, err.Error(), "database file")
 	assert.NoFileExists(t, path)
 }

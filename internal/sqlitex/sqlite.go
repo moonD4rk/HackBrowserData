@@ -1,4 +1,4 @@
-// Package sqlitex opens the copied SQLite databases that extractors read and walks their rows.
+// Package sqlitex opens the copied SQLite databases that extractors read.
 package sqlitex
 
 import (
@@ -51,26 +51,4 @@ func Open(path string, options ...Option) (*sql.DB, error) {
 		}
 	}
 	return database, nil
-}
-
-// EachRow hands every row of query to scan; a row scan rejects goes to skip, and the walk goes on.
-func EachRow(path, query string, scan func(*sql.Rows) error, skip func(error), options ...Option) error {
-	database, err := Open(path, options...)
-	if err != nil {
-		return err
-	}
-	defer database.Close()
-
-	rows, err := database.Query(query)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		if err := scan(rows); err != nil {
-			skip(err)
-		}
-	}
-	return rows.Err()
 }

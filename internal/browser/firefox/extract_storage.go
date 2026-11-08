@@ -1,7 +1,6 @@
 package firefox
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
 
@@ -13,19 +12,31 @@ import (
 const localStorageQuery = `SELECT originKey, key, value FROM webappsstore2`
 
 func extractLocalStorage(path string, out browser.Collector) error {
-	return sqlitex.EachRow(path, localStorageQuery,
-		func(rows *sql.Rows) error {
-			var originKey, key, value string
-			if err := rows.Scan(&originKey, &key, &value); err != nil {
-				return err
-			}
-			out.Add(&record.LocalStorage{
-				URL:   parseOriginKey(originKey),
-				Key:   key,
-				Value: value,
-			})
-			return nil
-		}, out.Fail, sqlitex.JournalOff)
+	database, err := sqlitex.Open(path, sqlitex.JournalOff)
+	if err != nil {
+		return err
+	}
+	defer database.Close()
+
+	rows, err := database.Query(localStorageQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var originKey, key, value string
+		if err := rows.Scan(&originKey, &key, &value); err != nil {
+			out.Fail(err)
+			continue
+		}
+		out.Add(&record.LocalStorage{
+			URL:   parseOriginKey(originKey),
+			Key:   key,
+			Value: value,
+		})
+	}
+	return rows.Err()
 }
 
 func reverseString(text string) string {
