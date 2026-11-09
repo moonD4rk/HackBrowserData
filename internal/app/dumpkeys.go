@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
-	"os"
+	"io"
 
 	"github.com/moond4rk/hackbrowserdata/internal/atomicfile"
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
@@ -13,15 +13,35 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
+// DumpKeysFlags are dumpkeys' command-line values as cobra parsed them.
+type DumpKeysFlags struct {
+	Browser string
+}
+
+func ValidateDumpKeys(flags DumpKeysFlags, keychainPassword func(context.Context) (string, error)) (Options, error) {
+	browserName, err := parseBrowser(flags.Browser)
+	if err != nil {
+		return Options{}, err
+	}
+	home, err := homeDir()
+	if err != nil {
+		return Options{}, err
+	}
+	return Options{
+		Target:   Target{BrowserName: browserName, HomeDir: home},
+		Keychain: KeychainConfig{HomeDir: home, Password: keychainPassword},
+	}, nil
+}
+
 // DumpKeys writes the key file to outputPath, or to stdout when it is "", and returns how many vaults it holds.
 // A stopped run writes nothing, so it never leaves a keys.json behind.
-func DumpKeys(ctx context.Context, discovery Discovery, options Options, outputPath string) (int, error) {
-	keyFile, err := dumpKeysWith(ctx, discovery, keysFromMachine(newLoginKeychain(options)))
+func DumpKeys(ctx context.Context, discovery Discovery, keychainConfig KeychainConfig, stdout io.Writer, outputPath string) (int, error) {
+	keyFile, err := dumpKeysWith(ctx, discovery, keysFromMachine(newLoginKeychain(keychainConfig)))
 	if err != nil {
 		return 0, err
 	}
 	if outputPath == "" {
-		return len(keyFile.Vaults), keyFile.Write(os.Stdout)
+		return len(keyFile.Vaults), keyFile.Write(stdout)
 	}
 	if err := writeKeyFile(outputPath, keyFile); err != nil {
 		return 0, err

@@ -59,12 +59,11 @@ func TestExtractGoldenSafari(t *testing.T) {
 func extractGoldenRun(t *testing.T, home string, keys map[browser.UserDataDirID]masterkey.Set, format string) string {
 	t.Helper()
 	out := t.TempDir()
-	options, err := app.ValidateDump(app.Flags{Browser: "all", Categories: "all", Format: format, OutputDir: out})
+	options, err := app.ValidateDump(app.DumpFlags{Browser: "all", Categories: "all", Format: format, OutputDir: out}, nil)
 	require.NoError(t, err)
-	options.HomeDir, options.ImportedKeys = home, keys
+	options.Target.HomeDir = home
 
-	plan := app.NewPlan(app.Discover(options), options)
-	_, err = app.Execute(context.Background(), plan, options)
+	_, err = app.ExecuteWithKeys(context.Background(), app.Discover(options.Target), options.Categories, options.Output, keys)
 	require.NoError(t, err)
 	return out
 }

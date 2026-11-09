@@ -7,19 +7,43 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/chromium"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
+// ArchiveFlags are archive's command-line values as cobra parsed them.
+type ArchiveFlags struct {
+	Browser    string
+	Categories string
+}
+
+// ValidateArchive takes no keychain password: an archive copies files and reads no secret.
+func ValidateArchive(flags ArchiveFlags) (Options, error) {
+	browserName, err := parseBrowser(flags.Browser)
+	if err != nil {
+		return Options{}, err
+	}
+	categories, err := parseCategories(flags.Categories)
+	if err != nil {
+		return Options{}, err
+	}
+	home, err := homeDir()
+	if err != nil {
+		return Options{}, err
+	}
+	return Options{Target: Target{BrowserName: browserName, HomeDir: home}, Categories: categories}, nil
+}
+
 // Archive returns how many files and directories it captured.
-func Archive(ctx context.Context, discovery Discovery, options Options, archivePath string) (int, error) {
+func Archive(ctx context.Context, discovery Discovery, categories []category.Category, archivePath string) (int, error) {
 	var dirs []browser.UserDataDir
 	for _, dir := range discovery.Dirs {
 		if dir.Browser.Base == browser.Chromium {
 			dirs = append(dirs, dir)
 		}
 	}
-	files := archiveFiles(NewPlan(Discovery{Dirs: dirs}, options), dirs)
+	files := archiveFiles(dirs, categories)
 
 	snapshots, err := snapshot.Temp()
 	if err != nil {
@@ -39,26 +63,19 @@ func Archive(ctx context.Context, discovery Discovery, options Options, archiveP
 	return fileCount, nil
 }
 
-func archiveFiles(plan Plan, dirs []browser.UserDataDir) []snapshot.File {
+func archiveFiles(dirs []browser.UserDataDir, categories []category.Category) []snapshot.File {
+	extractors := extractorsWith(nil)
 	var files []snapshot.File
 	seen := make(map[snapshot.File]bool)
-	add := func(file snapshot.File) {
-		if !seen[file] {
-			seen[file] = true
-			files = append(files, file)
-		}
-	}
 	for _, dir := range dirs {
 		for _, profile := range dir.Profiles {
 			for _, source := range chromium.ArchiveSources() {
 				if file, ok, err := firstOnDisk(dir, profile, source); err == nil && ok {
-					add(file)
+					files = appendNew(files, seen, file)
 				}
 			}
 		}
-		for _, file := range filesOf(plan, dir.ID) {
-			add(file)
-		}
+		files = appendNew(files, seen, planDir(dir, categories, extractors).files...)
 	}
 	return files
 }

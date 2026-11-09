@@ -26,9 +26,9 @@ func newListCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			discovery := app.Discover(options)
-			for _, result := range discovery.Errors {
-				log.Warnf("%s: %v", result.UserDataDirID, result.Err)
+			discovery := app.Discover(options.Target)
+			for _, failure := range discovery.DirFailures {
+				log.Warnf("%s: %v", failure.UserDataDirID, failure.Err)
 			}
 			if len(discovery.Dirs) == 0 {
 				command.Println("No browsers found.")
@@ -37,7 +37,7 @@ func newListCommand() *cobra.Command {
 			if !detail {
 				return printProfiles(command.OutOrStdout(), discovery)
 			}
-			summary, err := app.CountRecords(command.Context(), app.NewPlan(discovery, options), options)
+			summary, err := app.CountRecords(command.Context(), discovery, options.Categories, options.Keychain)
 			if err != nil {
 				return err
 			}

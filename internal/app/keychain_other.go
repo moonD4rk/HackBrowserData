@@ -2,4 +2,4 @@
 
 package app
 
-func newLoginKeychain(Options) loginKeychain { return nil }
+func newLoginKeychain(KeychainConfig) loginKeychain { return nil }

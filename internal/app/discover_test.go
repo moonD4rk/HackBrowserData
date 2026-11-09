@@ -35,11 +35,11 @@ func TestDiscover(t *testing.T) {
 	writeUserDataDir(t, home, "edge")
 	writeUserDataDir(t, home, "chrome")
 
-	discovery := Discover(Options{BrowserName: "all", HomeDir: home})
+	discovery := Discover(Target{BrowserName: "all", HomeDir: home})
 	assert.Equal(t, []browser.UserDataDirID{"chrome", "edge"}, userDataDirIDs(discovery), "table order, which is output order")
-	assert.Empty(t, discovery.Errors)
+	assert.Empty(t, discovery.DirFailures)
 
-	discovery = Discover(Options{BrowserName: "edge", HomeDir: home})
+	discovery = Discover(Target{BrowserName: "edge", HomeDir: home})
 	assert.Equal(t, []browser.UserDataDirID{"edge"}, userDataDirIDs(discovery))
 }
 
@@ -50,11 +50,11 @@ func TestDiscover_ProfilePathNeedsOneBrowser(t *testing.T) {
 	touch(t, custom, "Default", "Preferences")
 	touch(t, custom, "Default", "History")
 
-	discovery := Discover(Options{BrowserName: "chrome", HomeDir: home, ProfilePath: custom})
+	discovery := Discover(Target{BrowserName: "chrome", HomeDir: home, ProfilePath: custom})
 	require.Len(t, discovery.Dirs, 1)
 	assert.Equal(t, custom, discovery.Dirs[0].Path)
 
-	discovery = Discover(Options{BrowserName: "all", HomeDir: home, ProfilePath: custom})
+	discovery = Discover(Target{BrowserName: "all", HomeDir: home, ProfilePath: custom})
 	require.Len(t, discovery.Dirs, 1)
 	assert.NotEqual(t, custom, discovery.Dirs[0].Path, "-p is ignored without a specific browser")
 }
@@ -67,7 +67,7 @@ func TestDiscover_KeepsOnlyProfilesWithData(t *testing.T) {
 	edge := writeUserDataDir(t, home, "edge")
 	require.NoError(t, os.Remove(filepath.Join(edge, "Default", "History")))
 
-	discovery := Discover(Options{BrowserName: "all", HomeDir: home})
+	discovery := Discover(Target{BrowserName: "all", HomeDir: home})
 	assert.Equal(t, []browser.UserDataDirID{"chrome"}, userDataDirIDs(discovery))
 	assert.Equal(t, []browser.Profile{{Name: "Default", RelativePath: "Default"}}, discovery.Dirs[0].Profiles)
 }
@@ -81,11 +81,11 @@ func TestDiscover_UnreadableDirIsReported(t *testing.T) {
 	require.NoError(t, os.Chmod(path, 0o000))
 	defer func() { require.NoError(t, os.Chmod(path, 0o700)) }()
 
-	discovery := Discover(Options{BrowserName: "all", HomeDir: home})
+	discovery := Discover(Target{BrowserName: "all", HomeDir: home})
 	assert.Empty(t, discovery.Dirs)
-	require.Len(t, discovery.Errors, 1)
-	assert.Equal(t, Extraction{UserDataDirID: "chrome"}, discovery.Errors[0].Extraction)
-	assert.Equal(t, OutcomeError, discovery.Errors[0].Outcome)
+	require.Len(t, discovery.DirFailures, 1)
+	assert.Equal(t, browser.UserDataDirID("chrome"), discovery.DirFailures[0].UserDataDirID)
+	assert.Error(t, discovery.DirFailures[0].Err)
 }
 
 // TestWithData_KeepsAProfileItCannotCheck keeps it for the plan to report, since dropping it would hide the failure.

@@ -1,4 +1,4 @@
-package app
+package main
 
 import (
 	"bufio"
@@ -9,27 +9,39 @@ import (
 	"os"
 	"strings"
 
+	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
+
+// keychainFlags say where the macOS login keychain password comes from; both empty means a prompt, or none.
+type keychainFlags struct {
+	password      string
+	passwordStdin bool
+}
+
+func addKeychainPasswordFlags(command *cobra.Command, flags *keychainFlags) {
+	command.Flags().StringVar(&flags.password, "keychain-pw", "", "macOS keychain password (visible in ps and shell history)")
+	command.Flags().BoolVar(&flags.passwordStdin, "keychain-pw-stdin", false,
+		"read the macOS keychain password from the first line of stdin")
+	command.MarkFlagsMutuallyExclusive("keychain-pw", "keychain-pw-stdin")
+}
 
 var errNoPassword = errors.New("macOS login password not given and stdin is not a terminal")
 
 // keychainPasswordFunc is read lazily: a flag, else a no-echo prompt on a terminal, else none (metadata only).
-func keychainPasswordFunc(flags Flags, stdin *os.File) (func(context.Context) (string, error), error) {
+func keychainPasswordFunc(flags keychainFlags, stdin *os.File) func(context.Context) (string, error) {
 	switch {
-	case flags.KeychainPassword != "" && flags.KeychainPasswordStdin:
-		return nil, errors.New("--keychain-pw and --keychain-pw-stdin cannot be used together")
-	case flags.KeychainPassword != "":
-		password := flags.KeychainPassword
-		return func(context.Context) (string, error) { return password, nil }, nil
-	case flags.KeychainPasswordStdin:
+	case flags.password != "":
+		password := flags.password
+		return func(context.Context) (string, error) { return password, nil }
+	case flags.passwordStdin:
 		return func(ctx context.Context) (string, error) {
 			return untilDone(ctx, func() (string, error) { return firstLine(stdin) })
-		}, nil
+		}
 	case term.IsTerminal(int(stdin.Fd())):
-		return func(ctx context.Context) (string, error) { return promptPassword(ctx, stdin) }, nil
+		return func(ctx context.Context) (string, error) { return promptPassword(ctx, stdin) }
 	default:
-		return func(context.Context) (string, error) { return "", errNoPassword }, nil
+		return func(context.Context) (string, error) { return "", errNoPassword }
 	}
 }
 

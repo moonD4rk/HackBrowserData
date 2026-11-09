@@ -9,27 +9,27 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/browser/safari"
 )
 
-// Discovery holds an error result per browser whose data could not be read, so it is reported, not taken as absence.
+// Discovery keeps a failure per browser whose data could not be read, so it is reported, not taken as absence.
 type Discovery struct {
-	Dirs   []browser.UserDataDir
-	Errors []Result
+	Dirs        []browser.UserDataDir
+	DirFailures []DirFailure
 }
 
-// Discover applies -p only when one browser is named.
-func Discover(options Options) Discovery {
+// Discover applies the target's profile path only when one browser is named.
+func Discover(target Target) Discovery {
 	var discovery Discovery
 	for _, supportedBrowser := range browser.Supported() {
-		if options.BrowserName != allBrowsers && supportedBrowser.Name != options.BrowserName {
+		if target.BrowserName != allBrowsers && supportedBrowser.Name != target.BrowserName {
 			continue
 		}
-		discoverOptions := browser.DiscoverOptions{HomeDir: options.HomeDir}
-		if options.BrowserName != allBrowsers {
-			discoverOptions.ProfilePath = options.ProfilePath
+		discoverOptions := browser.DiscoverOptions{HomeDir: target.HomeDir}
+		if target.BrowserName != allBrowsers {
+			discoverOptions.ProfilePath = target.ProfilePath
 		}
 		dirs, err := discover(supportedBrowser, discoverOptions)
 		discovery.Dirs = append(discovery.Dirs, withData(dirs)...)
 		if err != nil {
-			discovery.Errors = append(discovery.Errors, dirFailure(browser.UserDataDirID(supportedBrowser.Name), err))
+			discovery.DirFailures = append(discovery.DirFailures, DirFailure{UserDataDirID: browser.UserDataDirID(supportedBrowser.Name), Err: err})
 		}
 	}
 	return discovery
