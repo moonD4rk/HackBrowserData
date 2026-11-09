@@ -2,8 +2,6 @@ package chromium
 
 import (
 	"bytes"
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/sha1"
 	"errors"
 	"testing"
@@ -15,44 +13,13 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-func encryptAESGCM(t *testing.T, key, nonce, plaintext, aad []byte) []byte {
-	t.Helper()
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		t.Fatalf("aes.NewCipher: %v", err)
-	}
-	aead, err := cipher.NewGCM(block)
-	if err != nil {
-		t.Fatalf("cipher.NewGCM: %v", err)
-	}
-	return aead.Seal(nil, nonce, plaintext, aad)
-}
-
 // testPlaintextPayloadLen is 96 (blob) - 12 (nonce) - 16 (tag) = 68 bytes of payload before sealing.
 const testPlaintextPayloadLen = yandexIntermediateKeyBlobLength - gcmNonceSize - 16
-
-func buildLocalEncryptorBlob(t *testing.T, masterKey, dataKey []byte) []byte {
-	t.Helper()
-	nonce := bytes.Repeat([]byte{0xAB}, gcmNonceSize)
-	plaintext := append([]byte{}, yandexSignature...)
-	plaintext = append(plaintext, dataKey...)
-	plaintext = append(plaintext, make([]byte, testPlaintextPayloadLen-len(plaintext))...)
-	ciphertext := encryptAESGCM(t, masterKey, nonce, plaintext, nil)
-	if len(ciphertext) != yandexIntermediateKeyBlobLength-gcmNonceSize {
-		t.Fatalf("unexpected ciphertext len: got %d want %d", len(ciphertext), yandexIntermediateKeyBlobLength-gcmNonceSize)
-	}
-	blob := []byte{0x01, 0x02, 0x03, 0x04} // arbitrary protobuf preamble
-	blob = append(blob, localEncryptorPrefix...)
-	blob = append(blob, nonce...)
-	blob = append(blob, ciphertext...)
-	blob = append(blob, 0xFF, 0xFE) // trailing junk should be ignored
-	return blob
-}
 
 func TestDecryptYandexIntermediateKey_RoundTrip(t *testing.T) {
 	masterKey := bytes.Repeat([]byte{0x11}, 32)
 	dataKey := bytes.Repeat([]byte{0x22}, yandexDataKeyLength)
-	blob := buildLocalEncryptorBlob(t, masterKey, dataKey)
+	blob := append(buildYandexLocalEncryptorBlob(t, masterKey, dataKey), 0xFF, 0xFE) // trailing junk is ignored
 
 	got, err := decryptYandexIntermediateKey(masterKey, blob)
 	if err != nil {
@@ -84,7 +51,7 @@ func TestDecryptYandexIntermediateKey_BadSignature(t *testing.T) {
 	nonce := bytes.Repeat([]byte{0xAB}, gcmNonceSize)
 	plaintext := append([]byte{0xDE, 0xAD, 0xBE, 0xEF}, bytes.Repeat([]byte{0x22}, yandexDataKeyLength)...)
 	plaintext = append(plaintext, make([]byte, testPlaintextPayloadLen-len(plaintext))...)
-	ciphertext := encryptAESGCM(t, masterKey, nonce, plaintext, nil)
+	ciphertext := yandexSealAESGCM(t, masterKey, nonce, plaintext, nil)
 	blob := append([]byte{}, localEncryptorPrefix...)
 	blob = append(blob, nonce...)
 	blob = append(blob, ciphertext...)
@@ -101,7 +68,7 @@ func TestDecryptYandexIntermediateKey_TrailingDataIgnored(t *testing.T) {
 	plaintext := append([]byte{}, yandexSignature...)
 	plaintext = append(plaintext, bytes.Repeat([]byte{0x22}, 16)...)
 	plaintext = append(plaintext, make([]byte, testPlaintextPayloadLen-len(plaintext))...)
-	ciphertext := encryptAESGCM(t, masterKey, nonce, plaintext, nil)
+	ciphertext := yandexSealAESGCM(t, masterKey, nonce, plaintext, nil)
 	blob := append([]byte{}, localEncryptorPrefix...)
 	blob = append(blob, nonce...)
 	blob = append(blob, ciphertext...)
@@ -145,6 +112,7 @@ func TestExtractYandexPasswords(t *testing.T) {
 	assert.Equal(t, "bob", got[1].Username)
 	assert.Equal(t, "sesame", got[1].Password)
 	assert.Equal(t, "hunter2", got[0].Password)
+	assert.Empty(t, out.fails)
 }
 
 func TestExtractYandexPasswords_MasterPasswordKeepsTheLogins(t *testing.T) {
@@ -216,7 +184,6 @@ func TestYandexLoginAAD_NoMasterPassword(t *testing.T) {
 	want := hasher.Sum(nil)
 
 	assert.Equal(t, want, got)
-	assert.Len(t, got, sha1.Size)
 }
 
 func TestYandexLoginAAD_WithMasterPassword(t *testing.T) {
@@ -278,6 +245,7 @@ func TestExtractYandexCreditCards(t *testing.T) {
 	assert.Equal(t, "5555555555554444", secondCard.Number)
 	assert.Equal(t, "456", secondCard.CVC)
 	assert.Empty(t, secondCard.Comment)
+	assert.Empty(t, out.fails)
 }
 
 func TestExtractYandexCreditCards_WrongMasterKey(t *testing.T) {

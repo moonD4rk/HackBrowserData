@@ -1,5 +1,3 @@
-//go:build darwin || linux
-
 package chromium
 
 import (
@@ -12,6 +10,8 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/crypto"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
+
+var testAESKey = []byte("0123456789abcdef")
 
 func TestDecryptValue_V10(t *testing.T) {
 	plaintext := []byte("test_secret_value")
@@ -53,15 +53,17 @@ func TestDecryptValue_V10(t *testing.T) {
 	}
 }
 
-func TestDecryptValue_V11(t *testing.T) {
-	plaintext := []byte("test_secret_value")
-	testCBCIV := bytes.Repeat([]byte{0x20}, 16)
-	cbcEncrypted, err := crypto.AESCBCEncrypt(testAESKey, testCBCIV, plaintext)
-	require.NoError(t, err)
-	v11Ciphertext := append([]byte("v11"), cbcEncrypted...)
+// TestDecryptValue_V10_CrossHostGCM decrypts a v10 value sealed with a 32-byte key, as on Windows, on any host.
+func TestDecryptValue_V10_CrossHostGCM(t *testing.T) {
+	aesKey := []byte("0123456789abcdef0123456789abcdef") // 32 bytes
+	plaintext := []byte("v10_cross_host")
+	nonce := []byte("v10_nonce_12") // 12-byte AES-GCM nonce
 
-	// v11 ciphertexts route to the V11 slot (Linux's keyring-derived kV11Key) — not V10 (peanuts).
-	got, err := decryptValue(masterkey.Set{masterkey.V11: testAESKey}, v11Ciphertext)
+	gcm, err := crypto.AESGCMEncrypt(aesKey, nonce, plaintext)
+	require.NoError(t, err)
+	ciphertext := append([]byte("v10"), append(nonce, gcm...)...)
+
+	got, err := decryptValue(masterkey.Set{masterkey.V10: aesKey}, ciphertext)
 	require.NoError(t, err)
 	assert.Equal(t, plaintext, got)
 }
@@ -71,7 +73,7 @@ func TestDecryptValue_V10_V11_SlotSeparation(t *testing.T) {
 	v10Key := bytes.Repeat([]byte{0x10}, 16) // V10 slot key (peanuts-derived kV10Key)
 	v11Key := bytes.Repeat([]byte{0x11}, 16) // V11 slot key (keyring-derived kV11Key)
 
-	iv := bytes.Repeat([]byte{0x20}, 16) // matches cbcIV on darwin/linux
+	iv := bytes.Repeat([]byte{0x20}, 16)
 	v10plain := []byte("password-from-v10-era")
 	v11plain := []byte("password-from-v11-era")
 
@@ -106,6 +108,50 @@ func TestDecryptValue_V10_V11_SlotSeparation(t *testing.T) {
 	})
 }
 
+// TestDecryptValue_MixedTier guards #578: each value in a mixed-version profile routes to its own version's key.
+func TestDecryptValue_MixedTier(t *testing.T) {
+	v10Key := bytes.Repeat([]byte{0x10}, 16) // V10 slot key (wrong for v20 payload)
+	v11Key := bytes.Repeat([]byte{0x11}, 16) // V11 slot key (wrong for v20 payload)
+	v20Key := bytes.Repeat([]byte{0x20}, 16) // V20 slot key (correct for v20 payload)
+
+	plaintext := []byte("cookie-value-encrypted-with-k20")
+	nonce := []byte("v20_nonce_12") // 12-byte AES-GCM nonce
+
+	gcmEnc, err := crypto.AESGCMEncrypt(v20Key, nonce, plaintext)
+	require.NoError(t, err)
+	v20Ciphertext := append([]byte("v20"), append(nonce, gcmEnc...)...)
+
+	t.Run("all tiers populated: v20 picks V20, decrypts", func(t *testing.T) {
+		got, err := decryptValue(masterkey.Set{masterkey.V10: v10Key, masterkey.V11: v11Key, masterkey.V20: v20Key}, v20Ciphertext)
+		require.NoError(t, err)
+		assert.Equal(t, plaintext, got)
+	})
+
+	t.Run("V20 holds wrong key: v20 still picks V20 slot (not V10/V11), errors", func(t *testing.T) {
+		// Wrong keys in the V20 slot must fail even when another slot holds the right one: routing is by prefix.
+		_, err := decryptValue(masterkey.Set{masterkey.V10: v20Key, masterkey.V11: v20Key, masterkey.V20: v10Key}, v20Ciphertext)
+		require.Error(t, err)
+	})
+
+	t.Run("only V20 populated: v20 still decrypts", func(t *testing.T) {
+		// Missing V10 and V11 keys must not block v20 values.
+		got, err := decryptValue(masterkey.Set{masterkey.V20: v20Key}, v20Ciphertext)
+		require.NoError(t, err)
+		assert.Equal(t, plaintext, got)
+	})
+
+	t.Run("V20 slot unpopulated: v20 errors (no key to use)", func(t *testing.T) {
+		_, err := decryptValue(masterkey.Set{masterkey.V10: v10Key, masterkey.V11: v11Key}, v20Ciphertext)
+		require.Error(t, err)
+	})
+}
+
+func TestDecryptValue_V20_ShortCiphertext(t *testing.T) {
+	// Missing nonce (prefix only) must error, not panic.
+	_, err := decryptValue(masterkey.Set{masterkey.V20: testAESKey}, []byte("v20"))
+	require.Error(t, err)
+}
+
 func TestDetectVersion(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -129,37 +175,6 @@ func TestDetectVersion(t *testing.T) {
 	}
 }
 
-// decryptGCM and decryptCBC are platform-neutral, so a key dumped on one OS decrypts its data on any OS.
-
-var (
-	// cbcKey is the 16-byte tier (macOS/Linux v10, v11); gcmKey the 32-byte tier (Windows v10, v20).
-	cbcKey   = bytes.Repeat([]byte("moond4rk"), 2)
-	gcmKey   = bytes.Repeat([]byte("moond4rk"), 4)
-	gcmNonce = cbcKey[:12]
-)
-
-func TestDecryptGCM_CrossPlatform(t *testing.T) {
-	plaintext := []byte("windows_v10_value")
-	gcm, err := crypto.AESGCMEncrypt(gcmKey, gcmNonce, plaintext)
-	require.NoError(t, err)
-
-	ciphertext := append([]byte("v10"), append(gcmNonce, gcm...)...)
-	got, err := decryptGCM(gcmKey, ciphertext)
-	require.NoError(t, err)
-	assert.Equal(t, plaintext, got)
-}
-
-func TestDecryptCBC_CrossPlatform(t *testing.T) {
-	plaintext := []byte("posix_v10_value")
-	encrypted, err := crypto.AESCBCEncrypt(cbcKey, cbcIV, plaintext)
-	require.NoError(t, err)
-
-	ciphertext := append([]byte("v10"), encrypted...)
-	got, err := decryptCBC(cbcKey, ciphertext)
-	require.NoError(t, err)
-	assert.Equal(t, plaintext, got)
-}
-
 // TestEmptyPasswordKey_MatchesChromium pins emptyPasswordKey to the reference bytes in os_crypt_linux.cc.
 func TestEmptyPasswordKey_MatchesChromium(t *testing.T) {
 	want := []byte{
@@ -167,7 +182,6 @@ func TestEmptyPasswordKey_MatchesChromium(t *testing.T) {
 		0xc5, 0x41, 0x87, 0xfa, 0x48, 0x18, 0xd1, 0x7f,
 	}
 	assert.Equal(t, want, emptyPasswordKey)
-	assert.Len(t, emptyPasswordKey, 16)
 }
 
 func TestDecryptCBC_EmptyKeyFallback(t *testing.T) {
@@ -183,6 +197,8 @@ func TestDecryptCBC_EmptyKeyFallback(t *testing.T) {
 }
 
 func TestDecrypt_ShortCiphertext(t *testing.T) {
+	cbcKey := bytes.Repeat([]byte("moond4rk"), 2)
+	gcmKey := bytes.Repeat([]byte("moond4rk"), 4)
 	// GCM minimum is prefix(3)+nonce(12) = 15 bytes.
 	_, err := decryptGCM(gcmKey, []byte("v10nonce11"))
 	require.ErrorIs(t, err, errShortCiphertext)

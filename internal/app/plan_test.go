@@ -87,6 +87,11 @@ func TestPlanDir_PicksTheFirstCandidateOnDisk(t *testing.T) {
 
 	plan := planDir(dir, []category.Category{category.Cookie}, extractorsWith(nil))
 	assert.Equal(t, []snapshot.File{{UserDataDirID: "chrome", UserDataDirPath: path, RelativePath: "Default/Cookies"}}, plan.files)
+
+	touch(t, path, "Default", "Network", "Cookies")
+	plan = planDir(dir, []category.Category{category.Cookie}, extractorsWith(nil))
+	assert.Equal(t, []snapshot.File{{UserDataDirID: "chrome", UserDataDirPath: path, RelativePath: "Default/Network/Cookies"}}, plan.files,
+		"a leftover legacy Cookies never wins")
 }
 
 func TestPlanDir_FlatLayoutProfile(t *testing.T) {

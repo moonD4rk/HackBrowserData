@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -136,8 +137,8 @@ func TestExtractCookies(t *testing.T) {
 	assert.Equal(t, "/", cookie.Path)
 	assert.True(t, cookie.IsSecure)
 	assert.True(t, cookie.IsHTTPOnly)
-	assert.False(t, cookie.CreatedAt.IsZero())
-	assert.False(t, cookie.ExpireAt.IsZero())
+	assert.Equal(t, time.Date(2023, 3, 8, 20, 26, 40, 0, time.UTC), cookie.CreatedAt)
+	assert.Equal(t, time.Date(2064, 5, 18, 3, 33, 20, 0, time.UTC), cookie.ExpireAt)
 }
 
 func TestExtractCookies_InvalidFile(t *testing.T) {

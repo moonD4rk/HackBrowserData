@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moond4rk/hackbrowserdata/internal/app"
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/browsertest"
 	"github.com/moond4rk/hackbrowserdata/internal/golden"
 
@@ -56,6 +57,25 @@ func TestRestoreGolden(t *testing.T) {
 		out := restoreGolden(t, app.RestoreFlags{KeyFile: keys, DataZip: dataZip, OutputDir: t.TempDir()})
 		assert.Equal(t, want, golden.ConcatDir(t, out))
 	})
+}
+
+// TestArchiveRestoreRoundTrip archives on one host and restores on another, which must write what dump writes.
+func TestArchiveRestoreRoundTrip(t *testing.T) {
+	home := t.TempDir()
+	for _, fixture := range browsertest.ChromiumUserDataDirs {
+		namedBrowser, ok := browser.Lookup(fixture.Name)
+		require.True(t, ok, fixture.Name)
+		browsertest.WriteChromiumUserDataDir(t, filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirs[0])), fixture.Name)
+	}
+	options, err := app.ValidateArchive(app.ArchiveFlags{Browser: "all", Categories: "all"})
+	require.NoError(t, err)
+	options.Target.HomeDir = home
+	archive := filepath.Join(t.TempDir(), "data.zip")
+	_, err = app.Archive(context.Background(), app.Discover(options.Target), options.Categories, archive)
+	require.NoError(t, err)
+
+	out := restoreGolden(t, app.RestoreFlags{KeyFile: chromiumKeyFile(t), DataZip: archive, OutputDir: t.TempDir()})
+	assert.Equal(t, golden.Read(t, "extract-json.golden"), golden.ConcatDir(t, out))
 }
 
 func chromiumKeyFile(t *testing.T) string {

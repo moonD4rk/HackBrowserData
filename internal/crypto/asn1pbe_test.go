@@ -21,8 +21,6 @@ var (
 		RawHexPBE        string
 		GlobalSalt       []byte
 		Encrypted        []byte
-		IterationCount   int
-		KeyLength        int
 		Plaintext        []byte
 		ObjectIdentifier asn1.ObjectIdentifier
 	}{
@@ -31,8 +29,6 @@ var (
 			GlobalSalt:       bytes.Repeat([]byte(baseKey), 3),
 			Encrypted:        []byte{0x95, 0x18, 0x3a, 0x14, 0xc7, 0x52, 0xe7, 0xb1, 0xd0, 0xaa, 0xa4, 0x7f, 0x53, 0xe0, 0x50, 0x97},
 			Plaintext:        pbePlaintext,
-			IterationCount:   1,
-			KeyLength:        32,
 			ObjectIdentifier: objWithSHA1AndAES,
 		},
 	}
@@ -72,7 +68,7 @@ var (
 	}
 )
 
-func TestNewASN1PBE(t *testing.T) {
+func TestNewASN1PBE_PrivateKeyPBE(t *testing.T) {
 	for _, testCase := range privateKeyPBETestCases {
 		nssRaw, err := hex.DecodeString(testCase.RawHexPBE)
 		require.NoError(t, err)
@@ -270,7 +266,7 @@ func TestCredentialPBE_Encrypt(t *testing.T) {
 			},
 			Encrypted: testCase.Encrypted,
 		}
-		encrypted, err := credentialPBETC.Encrypt(testCase.GlobalSalt, plainText)
+		encrypted, err := credentialPBETC.Encrypt(testCase.GlobalSalt, testCase.Plaintext)
 		require.NoError(t, err)
 		assert.NotEmpty(t, encrypted)
 		assert.Equal(t, credentialPBETC.Encrypted, encrypted)

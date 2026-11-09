@@ -42,6 +42,21 @@ func TestExtractCookies(t *testing.T) {
 	assert.False(t, got[1].CreatedAt.IsZero())
 	assert.True(t, got[1].ExpireAt.After(got[1].CreatedAt))
 	assert.True(t, got[0].IsHTTPOnly)
+	assert.Empty(t, out.fails)
+}
+
+// TestExtractCookies_UndecryptableValueStillListed keeps such a cookie, or a missing key would shrink the export.
+func TestExtractCookies_UndecryptableValueStillListed(t *testing.T) {
+	path := createTestDB(t, "Cookies", cookiesSchema,
+		insertCookie("SID", ".enc.com", "/", "763130deadbeef", 13350000000000000, 13360000000000000, 1, 1))
+
+	var out testCollector
+	require.NoError(t, extractCookies(keysOf(masterkey.Set{}), path, &out))
+	got := collected[record.Cookie](t, &out)
+	require.Len(t, got, 1)
+	assert.Equal(t, "SID", got[0].Name)
+	assert.Empty(t, got[0].Value)
+	assert.Len(t, out.fails, 1, "the unrecovered value is reported, which makes the extraction partial")
 }
 
 func TestStripCookieHash(t *testing.T) {

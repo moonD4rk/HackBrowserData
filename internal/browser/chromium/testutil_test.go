@@ -10,12 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 	_ "modernc.org/sqlite"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/browsertest"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
+	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
-
-var testAESKey = []byte("0123456789abcdef")
 
 // Real Chrome schemas from sqlite3 .schema, so the queries are tested against the columns browsers have.
 
@@ -181,6 +181,22 @@ func insertCreditCard(name string, month, year int, encNumberHex, nickName, addr
 		 VALUES ('%s-%d-%d', '%s', %d, %d, x'%s', '%s', '%s')`,
 		name, month, year, name, month, year, encNumberHex, nickName, address,
 	)
+}
+
+func testBrowser(name string, userDataDirs ...string) browser.Browser {
+	platform := browser.Platform{UserDataDirs: userDataDirs, SecretLabel: "Test Safe Storage"}
+	return browser.Browser{Name: name, DisplayName: name, Base: browser.Chromium, Darwin: platform, Linux: platform, Windows: platform}
+}
+
+func snapshotOf(t *testing.T, files map[string]string) snapshot.Snapshot {
+	t.Helper()
+	root := t.TempDir()
+	for relativePath, fixturePath := range files {
+		dir := filepath.Join(root, "chrome", filepath.Dir(filepath.FromSlash(relativePath)))
+		require.NoError(t, os.MkdirAll(dir, 0o700))
+		installFile(t, dir, fixturePath, filepath.Base(relativePath))
+	}
+	return snapshot.Open(root).Snapshot("chrome")
 }
 
 func installFile(t *testing.T, profileDir, srcPath, dstName string) {

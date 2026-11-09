@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"archive/zip"
 	"context"
 	"io/fs"
 	"os"
@@ -160,12 +161,60 @@ func TestCapture_ALaterCaptureReplacesAnEarlierFailure(t *testing.T) {
 	require.NoError(t, err)
 	defer snapshotDir.Close()
 
+	history := filepath.Join(from, "Default", "History")
+	require.NoError(t, os.MkdirAll(history, 0o700)) // a directory read as a file, so the copy fails
 	require.NoError(t, snapshotDir.Capture(context.Background(), []File{{UserDataDirID: "chrome", UserDataDirPath: from, RelativePath: "Default/History"}}))
 	_, err = snapshotDir.Snapshot("chrome").Path("Default/./History")
-	require.ErrorIs(t, err, fs.ErrNotExist, "a failure is found under any spelling of the path")
+	require.Error(t, err)
+	require.NotErrorIs(t, err, fs.ErrNotExist, "a failure is found under any spelling of the path")
 
-	writeFile(t, filepath.Join(from, "Default", "History"), []byte("history"))
+	require.NoError(t, os.Remove(history))
+	writeFile(t, history, []byte("history"))
 	require.NoError(t, snapshotDir.Capture(context.Background(), []File{{UserDataDirID: "chrome", UserDataDirPath: from, RelativePath: "Default/./History"}}))
 	_, err = snapshotDir.Snapshot("chrome").Path("Default/History")
 	require.NoError(t, err)
+}
+
+func TestUnzip_RejectsZipSlipAndCleansUp(t *testing.T) {
+	tempRoot := privateTempRoot(t)
+	archive := zipWith(t, "../escape.txt")
+
+	_, err := Unzip(archive)
+	require.Error(t, err)
+	entries, err := os.ReadDir(tempRoot)
+	require.NoError(t, err)
+	assert.Empty(t, entries, "a rejected archive leaves neither the escaped file nor the snapshot directory behind")
+}
+
+// privateTempRoot points os.TempDir at a fresh directory, so a test can see everything Temp leaves behind.
+func privateTempRoot(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	for _, variable := range []string{"TMPDIR", "TMP", "TEMP"} {
+		t.Setenv(variable, dir)
+	}
+	return dir
+}
+
+func zipWith(t *testing.T, names ...string) string {
+	t.Helper()
+	archive := filepath.Join(t.TempDir(), "test.zip")
+	file, err := os.Create(archive)
+	require.NoError(t, err)
+	zipWriter := zip.NewWriter(file)
+	for _, name := range names {
+		writer, err := zipWriter.Create(name)
+		require.NoError(t, err)
+		_, err = writer.Write([]byte(name))
+		require.NoError(t, err)
+	}
+	require.NoError(t, zipWriter.Close())
+	require.NoError(t, file.Close())
+	return archive
+}
+
+func writeFile(t *testing.T, path string, data []byte) {
+	t.Helper()
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+	require.NoError(t, os.WriteFile(path, data, 0o600))
 }

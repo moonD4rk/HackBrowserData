@@ -72,3 +72,10 @@ func TestCopyChildren_VanishedDirectoryCopiesAsEmpty(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, entries)
 }
+
+// TestCopyRegular_VanishedFileIsSkipped covers a live LevelDB, which deletes files while its directory is copied.
+func TestCopyRegular_VanishedFileIsSkipped(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, copyRegular(filepath.Join(dir, "000005.ldb"), filepath.Join(dir, "copy")))
+	assert.NoFileExists(t, filepath.Join(dir, "copy"))
+}

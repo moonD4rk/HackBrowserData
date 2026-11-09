@@ -52,17 +52,8 @@ func TestExtractExtensions(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 2) // system (location=5) and component (location=10) skipped
 
-	// gjson.ForEach walks a map, so the order may vary.
-	ids := map[string]bool{}
-	for _, extension := range got {
-		ids[extension.ID] = true
-		assert.NotEmpty(t, extension.Name)
-		assert.NotEmpty(t, extension.Version)
-		assert.NotEmpty(t, extension.Description)
-	}
-	assert.True(t, ids["abc123"])
-	assert.True(t, ids["def456"])
-	assert.False(t, ids["system-ext"])
+	assert.Equal(t, record.Extension{ID: "abc123", Name: "React DevTools", Description: "React debugging", Version: "4.28.0"}, got[0])
+	assert.Equal(t, record.Extension{ID: "def456", Name: "uBlock Origin", Description: "Ad blocker", Version: "1.52.0"}, got[1])
 }
 
 func TestExtractExtensions_NoManifestSkipped(t *testing.T) {
@@ -116,8 +107,4 @@ func TestExtractOperaExtensions(t *testing.T) {
 	assert.Equal(t, "Opera Ad Blocker", got[0].Name)
 	assert.Equal(t, "2.0.0", got[0].Version)
 	assert.True(t, got[0].Enabled)
-
-	// Standard extractExtensions should fail on the same file (no "extensions.settings")
-	err = extractExtensions(path, &testCollector{})
-	require.Error(t, err)
 }

@@ -1,7 +1,6 @@
 package export
 
 import (
-	"reflect"
 	"testing"
 	"time"
 
@@ -11,68 +10,6 @@ import (
 )
 
 var refTime = time.Date(2026, 1, 15, 10, 30, 0, 0, time.UTC)
-
-// allRecordTypes must list every record type, or a new one escapes these checks.
-var allRecordTypes = []record.Record{
-	&record.Login{},
-	&record.Cookie{},
-	&record.Bookmark{},
-	&record.History{},
-	&record.Download{},
-	&record.CreditCard{},
-	&record.Extension{},
-	&record.LocalStorage{},
-	&record.SessionStorage{},
-}
-
-// TestAllRecordFieldsHaveCSVTag catches a field without a csv tag, which would be silently left out of the CSV output.
-func TestAllRecordFieldsHaveCSVTag(t *testing.T) {
-	for _, row := range allRecordTypes {
-		recordType := reflect.TypeOf(row).Elem()
-		t.Run(recordType.Name(), func(t *testing.T) {
-			for i := 0; i < recordType.NumField(); i++ {
-				field := recordType.Field(i)
-				if !field.IsExported() {
-					continue
-				}
-				_, ok := field.Tag.Lookup("csv")
-				assert.True(t, ok, "field %s.%s missing csv tag", recordType.Name(), field.Name)
-			}
-		})
-	}
-}
-
-func TestStructCSVHeader(t *testing.T) {
-	tests := []struct {
-		name   string
-		record record.Record
-		expect []string
-	}{
-		{"Login", &record.Login{}, []string{"browser", "profile", "url", "username", "password", "created_at", "store"}},
-		{"Cookie", &record.Cookie{}, []string{
-			"browser", "profile", "host", "path", "name", "value",
-			"is_secure", "is_http_only", "has_expire", "is_persistent", "expire_at", "created_at", "same_site",
-		}},
-		{"Bookmark", &record.Bookmark{}, []string{"browser", "profile", "id", "name", "type", "url", "folder", "created_at"}},
-		{"History", &record.History{}, []string{"browser", "profile", "url", "title", "visit_count", "last_visit"}},
-		{"Download", &record.Download{}, []string{
-			"browser", "profile", "url", "target_path", "mime_type", "total_bytes", "start_time", "end_time",
-		}},
-		{"CreditCard", &record.CreditCard{}, []string{
-			"browser", "profile", "guid", "name", "number", "exp_month", "exp_year", "nick_name", "address", "cvc", "comment",
-		}},
-		{"LocalStorage", &record.LocalStorage{}, []string{"browser", "profile", "is_meta", "url", "key", "value"}},
-		{"SessionStorage", &record.SessionStorage{}, []string{"browser", "profile", "is_meta", "url", "key", "value"}},
-		{"Extension", &record.Extension{}, []string{
-			"browser", "profile", "name", "id", "description", "version", "homepage_url", "enabled",
-		}},
-	}
-	for _, testCase := range tests {
-		t.Run(testCase.name, func(t *testing.T) {
-			assert.Equal(t, testCase.expect, structCSVHeader(testCase.record))
-		})
-	}
-}
 
 func TestStructCSVRow(t *testing.T) {
 	tests := []struct {

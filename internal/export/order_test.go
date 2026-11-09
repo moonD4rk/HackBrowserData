@@ -29,9 +29,21 @@ func TestSortRecords_NewestFirst(t *testing.T) {
 	}
 	sortRecords(downloads)
 	assert.Equal(t, []string{"newer", "older"}, urlsOf(t, downloads))
+
+	olderCookie := &record.Cookie{Name: "older", CreatedAt: day(1)}
+	newerCookie := &record.Cookie{Name: "newer", CreatedAt: day(2)}
+	cookies := []record.Record{olderCookie, newerCookie}
+	sortRecords(cookies)
+	assert.Equal(t, []record.Record{newerCookie, olderCookie}, cookies)
+
+	olderBookmark := &record.Bookmark{Name: "older", CreatedAt: day(1)}
+	newerBookmark := &record.Bookmark{Name: "newer", CreatedAt: day(2)}
+	bookmarks := []record.Record{olderBookmark, newerBookmark}
+	sortRecords(bookmarks)
+	assert.Equal(t, []record.Record{newerBookmark, olderBookmark}, bookmarks)
 }
 
-// TestSortRecords_HistoryMostVisitedFirst orders history alike for every browser; Firefox wrote it least visited first.
+// TestSortRecords_HistoryMostVisitedFirst orders history alike for every browser, whatever order its database returns.
 func TestSortRecords_HistoryMostVisitedFirst(t *testing.T) {
 	histories := []record.Record{
 		&record.History{URL: "once", VisitCount: 1},

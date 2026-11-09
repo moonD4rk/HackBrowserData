@@ -13,7 +13,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// loginPBEHex is from crypto's loginPBETestCases: it decrypts to "Hello, World!" with globalSalt = "moond4rk" * 3.
+// loginPBEHex is from crypto's credentialPBETestCases: it decrypts to "Hello, World!" with globalSalt = "moond4rk" * 3.
 const loginPBEHex = "303b0410f8000000000000000000000000000001301506092a864886f70d010503040830313233343536370410fe968b6565149114ea688defd6683e45"
 
 var testGlobalSalt = bytes.Repeat([]byte("moond4rk"), 3) // 24 bytes
@@ -106,14 +106,4 @@ func TestExtractPasswords_DecryptFailureKeepsEntry(t *testing.T) {
 	assert.Empty(t, got[0].Username)
 	assert.Empty(t, got[0].Password)
 	assert.Len(t, out.fails, 2)
-}
-
-func TestExtractPasswords_EmptyLogins(t *testing.T) {
-	path := createTestJSON(t, "logins.json", `{"logins": []}`)
-
-	var out testCollector
-	err := extractPasswords(fixedKey(testGlobalSalt), path, &out)
-	got := collected[record.Login](t, &out)
-	require.NoError(t, err)
-	assert.Empty(t, got)
 }

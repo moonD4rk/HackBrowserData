@@ -33,9 +33,9 @@ func TestExtractPasswords(t *testing.T) {
 
 	assert.Equal(t, "bob", got[1].Username)
 	assert.False(t, got[1].CreatedAt.IsZero())
-	// Password is empty because masterKey is nil (decrypt returns empty)
 	assert.Empty(t, got[1].Password)
 	assert.Equal(t, record.StoreLocal, got[1].Store)
+	assert.Empty(t, out.fails, "an empty stored password is not a failure")
 }
 
 // TestExtractPasswords_UndecryptableBlobStillListed keeps such a login, or a missing key would shrink the export.

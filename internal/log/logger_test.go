@@ -3,6 +3,7 @@ package log
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,7 +13,6 @@ type baseTestCase struct {
 	description   string
 	message       string
 	suffix        string
-	level         logLevel
 	wantedPattern string
 }
 
@@ -29,10 +29,9 @@ var baseTestCases = []baseTestCase{
 	},
 }
 
-func TestLoggerDebug(t *testing.T) {
+func TestLoggerDebugf(t *testing.T) {
 	for _, testCase := range baseTestCases {
 		testCase := testCase
-		testCase.level = debugLevel
 		message := testCase.message + testCase.suffix
 		testCase.wantedPattern = fmt.Sprintf(`^\[DBG\] \w+\.go:\d+: %s\n$`, testCase.message)
 		t.Run(testCase.description, func(t *testing.T) {
@@ -46,10 +45,9 @@ func TestLoggerDebug(t *testing.T) {
 	}
 }
 
-func TestLoggerInfo(t *testing.T) {
+func TestLoggerInfof(t *testing.T) {
 	for _, testCase := range baseTestCases {
 		testCase := testCase
-		testCase.level = infoLevel
 		message := testCase.message + testCase.suffix
 		testCase.wantedPattern = fmt.Sprintf(`^\[INF\] %s\n$`, testCase.message)
 		t.Run(testCase.description, func(t *testing.T) {
@@ -62,91 +60,15 @@ func TestLoggerInfo(t *testing.T) {
 	}
 }
 
-func TestLoggerWarn(t *testing.T) {
+func TestLoggerWarnf(t *testing.T) {
 	for _, testCase := range baseTestCases {
 		testCase := testCase
-		testCase.level = warnLevel
 		message := testCase.message + testCase.suffix
 		testCase.wantedPattern = fmt.Sprintf(`^\[WRN\] %s\n$`, testCase.message)
 		t.Run(testCase.description, func(t *testing.T) {
 			var buffer bytes.Buffer
 			testLogger := newLogger(&buffer)
 			testLogger.Warnf("%s", message)
-			got := buffer.String()
-			assert.Regexp(t, testCase.wantedPattern, got)
-		})
-	}
-}
-
-type formatTestCase struct {
-	description   string
-	format        string
-	args          []interface{}
-	level         logLevel
-	wantedPattern string
-}
-
-var formatTestCases = []formatTestCase{
-	{
-		description: "message with string format",
-		format:      "hello, %s!",
-		args:        []any{"Hacker"},
-	},
-	{
-		description: "message with int format",
-		format:      "hello, %d,%d,%d!",
-		args:        []any{1, 2, 3},
-	},
-	{
-		description: "message with mixed format",
-		format:      "hello, %s,%d,%d!",
-		args:        []any{"Hacker", 2, 3},
-	},
-}
-
-func TestLoggerDebugf(t *testing.T) {
-	for _, testCase := range formatTestCases {
-		testCase := testCase
-		testCase.level = debugLevel
-		message := fmt.Sprintf(testCase.format, testCase.args...)
-		testCase.wantedPattern = fmt.Sprintf(`^\[DBG\] \w+\.go:\d+: %s\n$`, message)
-		t.Run(testCase.description, func(t *testing.T) {
-			var buffer bytes.Buffer
-			testLogger := newLogger(&buffer)
-			testLogger.setLevel(debugLevel)
-			testLogger.Debugf(testCase.format, testCase.args...)
-			got := buffer.String()
-			assert.Regexp(t, testCase.wantedPattern, got)
-		})
-	}
-}
-
-func TestLoggerInfof(t *testing.T) {
-	for _, testCase := range formatTestCases {
-		testCase := testCase
-		testCase.level = infoLevel
-		message := fmt.Sprintf(testCase.format, testCase.args...)
-		testCase.wantedPattern = fmt.Sprintf(`^\[INF\] %s\n$`, message)
-		t.Run(testCase.description, func(t *testing.T) {
-			var buffer bytes.Buffer
-			testLogger := newLogger(&buffer)
-			testLogger.Infof(testCase.format, testCase.args...)
-			got := buffer.String()
-			assert.Regexp(t, testCase.wantedPattern, got)
-		})
-	}
-}
-
-func TestLoggerWarnf(t *testing.T) {
-	for _, testCase := range formatTestCases {
-		testCase := testCase
-		testCase.level = warnLevel
-		message := fmt.Sprintf(testCase.format, testCase.args...)
-		testCase.wantedPattern = fmt.Sprintf(`^\[WRN\] %s\n$`, message)
-		t.Run(testCase.description, func(t *testing.T) {
-			var buffer bytes.Buffer
-			testLogger := newLogger(&buffer)
-			testLogger.Warnf(testCase.format, testCase.args...)
 			got := buffer.String()
 			assert.Regexp(t, testCase.wantedPattern, got)
 		})
@@ -204,17 +126,16 @@ func TestDebugIncludesFileLine(t *testing.T) {
 	assert.Regexp(t, `^\[DBG\] logger_test\.go:\d+: test location\n$`, got)
 }
 
-func TestInfoHasLabel(t *testing.T) {
-	var buffer bytes.Buffer
-	testLogger := newLogger(&buffer)
-	testLogger.Infof("clean message")
-	assert.Equal(t, "[INF] clean message\n", buffer.String())
-}
-
 func TestMultilineMessageIndented(t *testing.T) {
 	var buffer bytes.Buffer
 	testLogger := newLogger(&buffer)
 	testLogger.Warnf("line1\nline2\nline3")
 	got := buffer.String()
 	assert.Equal(t, "[WRN] line1\n      line2\n      line3\n", got)
+}
+
+func TestSetLevelInvalidPanics(t *testing.T) {
+	testLogger := newLogger(io.Discard)
+	assert.Panics(t, func() { testLogger.setLevel(debugLevel - 1) })
+	assert.Panics(t, func() { testLogger.setLevel(warnLevel + 1) })
 }

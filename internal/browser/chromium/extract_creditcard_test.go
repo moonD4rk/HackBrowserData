@@ -28,13 +28,16 @@ func TestExtractCreditCards(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
+	assert.Equal(t, "John Doe-12-2025", got[0].GUID)
 	assert.Equal(t, "John Doe", got[0].Name)
 	assert.Equal(t, "12", got[0].ExpMonth)
 	assert.Equal(t, "2025", got[0].ExpYear)
-	// Card number is empty because masterKey is nil (decrypt returns empty)
 	assert.Empty(t, got[0].Number)
+	assert.Equal(t, "Johnny", got[0].NickName)
+	assert.Equal(t, "addr-1", got[0].Address)
 
 	assert.Equal(t, "Jane Smith", got[1].Name)
 	assert.Equal(t, "6", got[1].ExpMonth)
 	assert.Equal(t, "2027", got[1].ExpYear)
+	assert.Empty(t, out.fails, "an empty stored number is not a failure")
 }

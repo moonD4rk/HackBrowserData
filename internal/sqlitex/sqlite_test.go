@@ -39,8 +39,13 @@ func TestOpen(t *testing.T) {
 }
 
 func TestOpen_JournalOff(t *testing.T) {
-	path := createDB(t, "CREATE TABLE t (v TEXT)", "INSERT INTO t VALUES ('x')")
-	assert.Equal(t, "x", readValue(t, path, JournalOff))
+	database, err := Open(createDB(t, "CREATE TABLE t (v TEXT)"), JournalOff)
+	require.NoError(t, err)
+	defer database.Close()
+
+	var mode string
+	require.NoError(t, database.QueryRow("PRAGMA journal_mode").Scan(&mode))
+	assert.Equal(t, "off", mode)
 }
 
 func TestOpen_ReadOnlyImmutable(t *testing.T) {

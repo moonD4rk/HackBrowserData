@@ -2,6 +2,7 @@ package firefox
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -60,7 +61,9 @@ func TestExtractBookmarks_FolderTypeAndIDFromTheTree(t *testing.T) {
 		byID[bookmark.ID] = bookmark
 	}
 	require.Len(t, byID, 2, "folders and separators are not bookmarks")
-	want := record.Bookmark{ID: 7, Name: "Go", Type: "url", URL: "https://go.dev", Folder: "toolbar", CreatedAt: byID[7].CreatedAt}
+	want := record.Bookmark{
+		ID: 7, Name: "Go", Type: "url", URL: "https://go.dev", Folder: "toolbar", CreatedAt: time.Date(2024, 3, 9, 16, 0, 0, 0, time.UTC),
+	}
 	assert.Equal(t, want, byID[7])
 	assert.Equal(t, "Reading", byID[9].Folder)
 	assert.Equal(t, "url", byID[9].Type)

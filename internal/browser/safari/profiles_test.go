@@ -1,8 +1,10 @@
 package safari
 
 import (
+	"database/sql"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,6 +49,22 @@ func TestDiscover_DefaultOnly(t *testing.T) {
 func TestDiscover_MissingSafariYieldsNothing(t *testing.T) {
 	dirs, err := Discover(testBrowser(), browser.DiscoverOptions{HomeDir: t.TempDir()})
 	require.NoError(t, err)
+	assert.Empty(t, dirs)
+}
+
+// TestDiscover_UnreadableSafariDirIsAnError keeps an unreadable dir from looking like Safari not installed.
+func TestDiscover_UnreadableSafariDirIsAnError(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("directory permissions do not deny reads here")
+	}
+	home := t.TempDir()
+	libraryAt(t, home)
+	library := filepath.Join(home, "Library")
+	require.NoError(t, os.Chmod(library, 0o000))
+	defer func() { require.NoError(t, os.Chmod(library, 0o700)) }()
+
+	dirs, err := Discover(testBrowser(), browser.DiscoverOptions{HomeDir: home})
+	require.Error(t, err)
 	assert.Empty(t, dirs)
 }
 
@@ -166,4 +184,39 @@ func TestResolveProfileName(t *testing.T) {
 			assert.Equal(t, testCase.want, resolveProfileName(testCase.title, testCase.uuid))
 		})
 	}
+}
+
+type tabRow struct {
+	uuid  string
+	title string
+}
+
+// writeSafariTabsDB gives every row subtype=2, the profile record the production query selects.
+func writeSafariTabsDB(t *testing.T, path string, rows []tabRow) {
+	t.Helper()
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+
+	database, err := sql.Open("sqlite", path)
+	require.NoError(t, err)
+	defer database.Close()
+
+	_, err = database.Exec(`CREATE TABLE bookmarks (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		external_uuid TEXT,
+		title TEXT,
+		subtype INTEGER DEFAULT 0
+	)`)
+	require.NoError(t, err)
+
+	for _, row := range rows {
+		_, err = database.Exec(`INSERT INTO bookmarks (external_uuid, title, subtype) VALUES (?, ?, 2)`, row.uuid, row.title)
+		require.NoError(t, err)
+	}
+}
+
+func mkFile(t *testing.T, parts ...string) {
+	t.Helper()
+	path := filepath.Join(parts...)
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+	require.NoError(t, os.WriteFile(path, []byte("test"), 0o644))
 }

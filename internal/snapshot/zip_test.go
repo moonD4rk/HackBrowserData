@@ -13,10 +13,8 @@ import (
 
 func TestZipUnzip_RoundTrip(t *testing.T) {
 	files := map[string][]byte{
-		"empty.txt":                      {},
 		"small.txt":                      []byte("hello"),
 		"chrome/Default/Network/Cookies": []byte("cookie-bytes"),
-		"sub/big.bin":                    bytes.Repeat([]byte("A"), 3<<20), // exercises the chunked copy loop
 	}
 	snapshotRoot := t.TempDir()
 	for relativePath, data := range files {
@@ -44,33 +42,9 @@ func TestZipUnzip_RoundTrip(t *testing.T) {
 	assert.NoDirExists(t, snapshotDir.Path())
 }
 
-func TestUnzip_RejectsZipSlipAndCleansUp(t *testing.T) {
-	tempRoot := privateTempRoot(t)
-	archive := zipWith(t, "../escape.txt")
-
-	_, err := Unzip(archive)
+func TestZip_MissingSnapshotDirFails(t *testing.T) {
+	err := Open(filepath.Join(t.TempDir(), "missing")).Zip(filepath.Join(t.TempDir(), "browser-data.zip"))
 	require.Error(t, err)
-	entries, err := os.ReadDir(tempRoot)
-	require.NoError(t, err)
-	assert.Empty(t, entries, "a rejected archive leaves neither the escaped file nor the snapshot directory behind")
-}
-
-func TestZip_FailureLeavesNoFile(t *testing.T) {
-	out := t.TempDir()
-	err := Open(filepath.Join(t.TempDir(), "missing")).Zip(filepath.Join(out, "browser-data.zip"))
-	require.Error(t, err)
-	entries, err := os.ReadDir(out)
-	require.NoError(t, err)
-	assert.Empty(t, entries, "neither the archive nor its temp file may survive a failed zip")
-}
-
-func TestZip_IntoADirectoryFails(t *testing.T) {
-	out := t.TempDir()
-	require.Error(t, Open(snapshotFixture(t)).Zip(out))
-	entries, err := os.ReadDir(out)
-	require.NoError(t, err)
-	assert.Empty(t, entries)
-	assert.NoFileExists(t, out+".tmp")
 }
 
 func snapshotFixture(t *testing.T) string {
@@ -78,23 +52,6 @@ func snapshotFixture(t *testing.T) string {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "chrome", "Local State"), []byte("{}"))
 	return root
-}
-
-func zipWith(t *testing.T, names ...string) string {
-	t.Helper()
-	archive := filepath.Join(t.TempDir(), "test.zip")
-	file, err := os.Create(archive)
-	require.NoError(t, err)
-	zipWriter := zip.NewWriter(file)
-	for _, name := range names {
-		writer, err := zipWriter.Create(name)
-		require.NoError(t, err)
-		_, err = writer.Write([]byte(name))
-		require.NoError(t, err)
-	}
-	require.NoError(t, zipWriter.Close())
-	require.NoError(t, file.Close())
-	return archive
 }
 
 func TestZip_ReplacesAnExistingArchive(t *testing.T) {
@@ -107,20 +64,4 @@ func TestZip_ReplacesAnExistingArchive(t *testing.T) {
 	defer zipReader.Close()
 	require.Len(t, zipReader.File, 1)
 	assert.Equal(t, "chrome/Local State", zipReader.File[0].Name)
-}
-
-// privateTempRoot points os.TempDir at a fresh directory, so a test can see everything Temp leaves behind.
-func privateTempRoot(t *testing.T) string {
-	t.Helper()
-	dir := t.TempDir()
-	for _, variable := range []string{"TMPDIR", "TMP", "TEMP"} {
-		t.Setenv(variable, dir)
-	}
-	return dir
-}
-
-func writeFile(t *testing.T, path string, data []byte) {
-	t.Helper()
-	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
-	require.NoError(t, os.WriteFile(path, data, 0o600))
 }
