@@ -36,18 +36,16 @@ func extractDownloads(path, profileUUID string, out browser.Collector) error {
 		return fmt.Errorf("decode downloads: %w", err)
 	}
 
-	var downloads []record.Download
 	for _, entry := range decoded.DownloadHistory {
 		if !belongsToProfile(entry.ProfileUUID, profileUUID) {
 			continue
 		}
-		downloads = append(downloads, record.Download{
+		out.Add(&record.Download{
 			URL:        entry.URL,
 			TargetPath: entry.Path,
 			TotalBytes: entry.TotalBytes,
 		})
 	}
-	browser.AddAll(out, downloads)
 	return nil
 }
 

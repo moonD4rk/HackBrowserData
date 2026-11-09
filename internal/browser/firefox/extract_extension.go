@@ -15,7 +15,6 @@ func extractExtensions(path string, out browser.Collector) error {
 		return err
 	}
 
-	var extensions []record.Extension
 	for _, value := range gjson.GetBytes(data, "addons").Array() {
 		// Only include user-installed extensions
 		// https://searchfox.org/mozilla-central/source/toolkit/mozapps/extensions/internal/XPIDatabase.jsm#157
@@ -23,7 +22,7 @@ func extractExtensions(path string, out browser.Collector) error {
 			continue
 		}
 
-		extensions = append(extensions, record.Extension{
+		out.Add(&record.Extension{
 			Name:        value.Get("defaultLocale.name").String(),
 			ID:          value.Get("id").String(),
 			Description: value.Get("defaultLocale.description").String(),
@@ -32,6 +31,5 @@ func extractExtensions(path string, out browser.Collector) error {
 			Enabled:     value.Get("active").Bool(),
 		})
 	}
-	browser.AddAll(out, extensions)
 	return nil
 }

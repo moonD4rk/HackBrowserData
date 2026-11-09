@@ -29,20 +29,27 @@ func decryptPBE(encoded string, masterKey []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
-func extractPasswords(masterKey func() []byte, path string, out browser.Collector) error {
+// extractPasswords derives the key only when there is a login; without one the logins export with empty secrets.
+func extractPasswords(masterKey func() ([]byte, error), path string, out browser.Collector) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
+	logins := gjson.GetBytes(data, "logins").Array()
+	if len(logins) == 0 {
+		return nil
+	}
+	key, err := masterKey()
+	if err != nil {
+		out.Fail(fmt.Errorf("master key: %w", err))
+	}
 
-	var logins []record.Login
-	for _, value := range gjson.GetBytes(data, "logins").Array() {
+	for _, value := range logins {
 		url := value.Get("formSubmitURL").String()
 		if url == "" {
 			url = value.Get("hostname").String()
 		}
 
-		key := masterKey()
 		user, err := decryptPBE(value.Get("encryptedUsername").String(), key)
 		if err != nil {
 			out.Fail(fmt.Errorf("decrypt username for %s: %w", url, err))
@@ -52,7 +59,7 @@ func extractPasswords(masterKey func() []byte, path string, out browser.Collecto
 			out.Fail(fmt.Errorf("decrypt password for %s: %w", url, err))
 		}
 
-		logins = append(logins, record.Login{
+		out.Add(&record.Login{
 			URL:       url,
 			Username:  string(user),
 			Password:  string(password),
@@ -60,6 +67,5 @@ func extractPasswords(masterKey func() []byte, path string, out browser.Collecto
 			Store:     record.StoreLocal,
 		})
 	}
-	browser.AddAll(out, logins)
 	return nil
 }

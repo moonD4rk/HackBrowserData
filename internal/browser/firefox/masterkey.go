@@ -2,17 +2,16 @@ package firefox
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
 
 	"github.com/tidwall/gjson"
-	_ "modernc.org/sqlite"
 
 	"github.com/moond4rk/hackbrowserdata/internal/crypto"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
+	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 )
 
 // retrieveMasterKey derives the key candidates in key4.db and returns the one that opens the logins in loginsPath.
@@ -53,7 +52,7 @@ type privateKey struct {
 var nssKeyTypeTag = []byte{248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 
 func readKey4DB(path string) (*key4DB, error) {
-	database, err := sql.Open("sqlite", path)
+	database, err := sqlitex.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("open key4.db: %w", err)
 	}

@@ -1,45 +1,54 @@
+// Package sqlitex opens the copied SQLite databases that extractors read.
 package sqlitex
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"net/url"
 	"os"
 
-	// sqlite3 driver for database/sql
-	_ "modernc.org/sqlite"
-
-	"github.com/moond4rk/hackbrowserdata/internal/log"
+	_ "modernc.org/sqlite" // registers the "sqlite" driver for database/sql
 )
 
-// eachRow takes journalOff for Firefox databases; the file is checked first so sql.Open never creates an empty one.
-// A row whose scanFn returns an error is skipped and logged at debug level.
-func eachRow(dbPath string, journalOff bool, query string, scanFn func(*sql.Rows) error) error {
-	if _, err := os.Stat(dbPath); err != nil {
-		return fmt.Errorf("database file: %w", err)
-	}
-	database, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		return err
-	}
-	defer database.Close()
+// Option changes how Open opens a database.
+type Option func(*settings)
 
-	if journalOff {
-		if _, err := database.Exec("PRAGMA journal_mode=off"); err != nil {
-			return err
+type settings struct {
+	parameters url.Values
+	pragmas    []string
+}
+
+// ReadOnly opens the file without write access.
+func ReadOnly(s *settings) { s.parameters.Set("mode", "ro") }
+
+// Immutable promises SQLite the file never changes, so it takes no lock and reads no journal.
+func Immutable(s *settings) { s.parameters.Set("immutable", "1") }
+
+// JournalOff stops SQLite journaling the copy, the mode the Firefox and Safari extractors have always read in.
+func JournalOff(s *settings) { s.pragmas = append(s.pragmas, "PRAGMA journal_mode=off") }
+
+// Open checks the file first, so a missing database is an error rather than a new empty one.
+func Open(path string, options ...Option) (*sql.DB, error) {
+	if _, err := os.Stat(path); err != nil {
+		return nil, fmt.Errorf("database file: %w", err)
+	}
+	opened := settings{parameters: url.Values{}}
+	for _, option := range options {
+		option(&opened)
+	}
+	dataSource := path
+	if len(opened.parameters) > 0 {
+		dataSource = "file:" + path + "?" + opened.parameters.Encode()
+	}
+	database, err := sql.Open("sqlite", dataSource)
+	if err != nil {
+		return nil, err
+	}
+	for _, pragma := range opened.pragmas {
+		if _, err := database.Exec(pragma); err != nil {
+			return nil, errors.Join(fmt.Errorf("%s: %w", pragma, err), database.Close())
 		}
 	}
-
-	rows, err := database.Query(query)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		if err := scanFn(rows); err != nil {
-			log.Debugf("scan row error: %v", err)
-			continue
-		}
-	}
-	return rows.Err()
+	return database, nil
 }

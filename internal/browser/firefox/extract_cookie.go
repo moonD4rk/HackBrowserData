@@ -1,8 +1,6 @@
 package firefox
 
 import (
-	"database/sql"
-
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
@@ -13,47 +11,55 @@ const cookieQuery = `SELECT name, value, host, path,
 	creationTime, expiry, isSecure, isHttpOnly, sameSite FROM moz_cookies`
 
 func extractCookies(path string, out browser.Collector) error {
-	cookies, err := sqlitex.QueryRows(path, true, cookieQuery,
-		func(rows *sql.Rows) (record.Cookie, error) {
-			var (
-				name, value, host, cookiePath string
-				isSecure, isHTTPOnly          int
-				createdAt, expiry             int64
-				sameSite                      int
-			)
-			if err := rows.Scan(&name, &value, &host, &cookiePath,
-				&createdAt, &expiry, &isSecure, &isHTTPOnly, &sameSite); err != nil {
-				return record.Cookie{}, err
-			}
-			hasExpire := expiry > 0
-			sameSiteStr := "unspecified"
-			switch sameSite {
-			case 0:
-				sameSiteStr = "none"
-			case 1:
-				sameSiteStr = "lax"
-			case 2:
-				sameSiteStr = "strict"
-			case 256:
-				// not specified by Set-Cookie
-			}
-			return record.Cookie{
-				Name:         name,
-				Host:         host,
-				Path:         cookiePath,
-				Value:        value, // Firefox cookies are not encrypted
-				IsSecure:     isSecure != 0,
-				IsHTTPOnly:   isHTTPOnly != 0,
-				HasExpire:    hasExpire,
-				IsPersistent: hasExpire,
-				ExpireAt:     timeconv.Unix(expiry),
-				CreatedAt:    timeconv.UnixMicro(createdAt),
-				SameSite:     sameSiteStr,
-			}, nil
-		})
+	database, err := sqlitex.Open(path, sqlitex.JournalOff)
 	if err != nil {
 		return err
 	}
-	browser.AddAll(out, cookies)
-	return nil
+	defer database.Close()
+
+	rows, err := database.Query(cookieQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			name, value, host, cookiePath string
+			isSecure, isHTTPOnly          int
+			createdAt, expiry             int64
+			sameSite                      int
+		)
+		if err := rows.Scan(&name, &value, &host, &cookiePath,
+			&createdAt, &expiry, &isSecure, &isHTTPOnly, &sameSite); err != nil {
+			out.Fail(err)
+			continue
+		}
+		hasExpire := expiry > 0
+		sameSiteStr := "unspecified"
+		switch sameSite {
+		case 0:
+			sameSiteStr = "none"
+		case 1:
+			sameSiteStr = "lax"
+		case 2:
+			sameSiteStr = "strict"
+		case 256:
+			// not specified by Set-Cookie
+		}
+		out.Add(&record.Cookie{
+			Name:         name,
+			Host:         host,
+			Path:         cookiePath,
+			Value:        value, // Firefox cookies are not encrypted
+			IsSecure:     isSecure != 0,
+			IsHTTPOnly:   isHTTPOnly != 0,
+			HasExpire:    hasExpire,
+			IsPersistent: hasExpire,
+			ExpireAt:     timeconv.Unix(expiry),
+			CreatedAt:    timeconv.UnixMicro(createdAt),
+			SameSite:     sameSiteStr,
+		})
+	}
+	return rows.Err()
 }

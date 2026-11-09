@@ -1,7 +1,6 @@
 package chromium
 
 import (
-	"database/sql"
 	"fmt"
 	"path/filepath"
 
@@ -23,29 +22,37 @@ func extractPasswords(masterKeys masterKeysFunc, path string, out browser.Collec
 	if filepath.Base(path) == accountLoginData {
 		store = record.StoreAccount
 	}
-	logins, err := sqlitex.QueryRows(path, false, defaultLoginQuery,
-		func(rows *sql.Rows) (record.Login, error) {
-			var url, username string
-			var encryptedPassword []byte
-			var created int64
-			if err := rows.Scan(&url, &username, &encryptedPassword, &created); err != nil {
-				return record.Login{}, err
-			}
-			password, err := masterKeys.decrypt(encryptedPassword)
-			if err != nil {
-				out.Fail(fmt.Errorf("decrypt password for %s: %w", url, err))
-			}
-			return record.Login{
-				URL:       url,
-				Username:  username,
-				Password:  string(password),
-				CreatedAt: timeconv.Chromium(created),
-				Store:     store,
-			}, nil
-		})
+	database, err := sqlitex.Open(path)
 	if err != nil {
 		return err
 	}
-	browser.AddAll(out, logins)
-	return nil
+	defer database.Close()
+
+	rows, err := database.Query(defaultLoginQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var url, username string
+		var encryptedPassword []byte
+		var created int64
+		if err := rows.Scan(&url, &username, &encryptedPassword, &created); err != nil {
+			out.Fail(err)
+			continue
+		}
+		password, err := masterKeys.decrypt(encryptedPassword)
+		if err != nil {
+			out.Fail(fmt.Errorf("decrypt password for %s: %w", url, err))
+		}
+		out.Add(&record.Login{
+			URL:       url,
+			Username:  username,
+			Password:  string(password),
+			CreatedAt: timeconv.Chromium(created),
+			Store:     store,
+		})
+	}
+	return rows.Err()
 }

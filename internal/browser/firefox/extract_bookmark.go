@@ -1,8 +1,6 @@
 package firefox
 
 import (
-	"database/sql"
-
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
@@ -16,28 +14,36 @@ const bookmarkQuery = `SELECT b.id, p.url, b.type, b.dateAdded, COALESCE(b.title
 	LEFT JOIN moz_bookmarks f ON b.parent = f.id`
 
 func extractBookmarks(path string, out browser.Collector) error {
-	bookmarks, err := sqlitex.QueryRows(path, true, bookmarkQuery,
-		func(rows *sql.Rows) (record.Bookmark, error) {
-			var id, dateAdded int64
-			var url, title, folder string
-			var typeCode int64
-			if err := rows.Scan(&id, &url, &typeCode, &dateAdded, &title, &folder); err != nil {
-				return record.Bookmark{}, err
-			}
-			return record.Bookmark{
-				ID:        id,
-				Name:      title,
-				Type:      bookmarkType(typeCode),
-				URL:       url,
-				Folder:    folder,
-				CreatedAt: timeconv.UnixMicro(dateAdded),
-			}, nil
-		})
+	database, err := sqlitex.Open(path, sqlitex.JournalOff)
 	if err != nil {
 		return err
 	}
-	browser.AddAll(out, bookmarks)
-	return nil
+	defer database.Close()
+
+	rows, err := database.Query(bookmarkQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id, dateAdded int64
+		var url, title, folder string
+		var typeCode int64
+		if err := rows.Scan(&id, &url, &typeCode, &dateAdded, &title, &folder); err != nil {
+			out.Fail(err)
+			continue
+		}
+		out.Add(&record.Bookmark{
+			ID:        id,
+			Name:      title,
+			Type:      bookmarkType(typeCode),
+			URL:       url,
+			Folder:    folder,
+			CreatedAt: timeconv.UnixMicro(dateAdded),
+		})
+	}
+	return rows.Err()
 }
 
 func bookmarkType(typeCode int64) string {

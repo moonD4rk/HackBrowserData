@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
@@ -16,8 +15,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
-
-	_ "modernc.org/sqlite"
 )
 
 func yandexLoginAAD(originURL, usernameElement, usernameValue, passwordElement, signonRealm string, keyID []byte) []byte {
@@ -58,12 +55,9 @@ func loadYandexDataKey(dbPath string, masterKey []byte) ([]byte, error) {
 	if len(masterKey) == 0 {
 		return nil, fmt.Errorf("yandex: master key not available")
 	}
-	if _, err := os.Stat(dbPath); err != nil {
-		return nil, fmt.Errorf("yandex db file: %w", err)
-	}
-	database, err := sql.Open("sqlite", dbPath)
+	database, err := sqlitex.Open(dbPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("yandex db: %w", err)
 	}
 	defer database.Close()
 
@@ -138,41 +132,56 @@ const yandexLoginQuery = `SELECT origin_url, username_element, username_value,
 
 // extractYandexPasswords reads origin_url, which the per-row AAD covers, not action_url.
 func extractYandexPasswords(masterKeys masterKeysFunc, path string, out browser.Collector) error {
-	loadDataKey := yandexDataKeyLoader(path, masterKeys)
-
-	logins, err := sqlitex.QueryRows(path, false, yandexLoginQuery,
-		func(rows *sql.Rows) (record.Login, error) {
-			var originURL, usernameElement, usernameValue, passwordElement, signonRealm string
-			var passwordValue []byte
-			var created int64
-			if err := rows.Scan(&originURL, &usernameElement, &usernameValue, &passwordElement, &passwordValue, &signonRealm, &created); err != nil {
-				return record.Login{}, err
-			}
-			entry := record.Login{
-				URL:       originURL,
-				Username:  usernameValue,
-				CreatedAt: timeconv.Chromium(created),
-				Store:     record.StoreLocal,
-			}
-			dataKey, keyErr := loadDataKey()
-			if dataKey == nil {
-				out.Fail(fmt.Errorf("yandex: password for %s: %w", originURL, keyErr))
-				return entry, nil
-			}
-			aad := yandexLoginAAD(originURL, usernameElement, usernameValue, passwordElement, signonRealm, nil)
-			plaintext, err := crypto.AESGCMDecryptBlob(dataKey, passwordValue, aad)
-			if err != nil {
-				out.Fail(fmt.Errorf("yandex: decrypt password for %s: %w", originURL, err))
-				return entry, nil
-			}
-			entry.Password = string(plaintext)
-			return entry, nil
-		})
+	database, err := sqlitex.Open(path)
 	if err != nil {
 		return err
 	}
-	browser.AddAll(out, logins)
-	return nil
+	defer database.Close()
+
+	rows, err := database.Query(yandexLoginQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	// The data key is loaded by the first row, so an empty table fetches no key.
+	var (
+		dataKey []byte
+		keyErr  error
+	)
+	for rows.Next() {
+		var originURL, usernameElement, usernameValue, passwordElement, signonRealm string
+		var passwordValue []byte
+		var created int64
+		if err := rows.Scan(&originURL, &usernameElement, &usernameValue, &passwordElement, &passwordValue, &signonRealm, &created); err != nil {
+			out.Fail(err)
+			continue
+		}
+		entry := record.Login{
+			URL:       originURL,
+			Username:  usernameValue,
+			CreatedAt: timeconv.Chromium(created),
+			Store:     record.StoreLocal,
+		}
+		if dataKey == nil && keyErr == nil {
+			dataKey, keyErr = loadYandexDataKey(path, masterKeys()[masterkey.V10])
+		}
+		if dataKey == nil {
+			out.Fail(fmt.Errorf("yandex: password for %s: %w", originURL, keyErr))
+			out.Add(&entry)
+			continue
+		}
+		aad := yandexLoginAAD(originURL, usernameElement, usernameValue, passwordElement, signonRealm, nil)
+		plaintext, err := crypto.AESGCMDecryptBlob(dataKey, passwordValue, aad)
+		if err != nil {
+			out.Fail(fmt.Errorf("yandex: decrypt password for %s: %w", originURL, err))
+			out.Add(&entry)
+			continue
+		}
+		entry.Password = string(plaintext)
+		out.Add(&entry)
+	}
+	return rows.Err()
 }
 
 const yandexCreditCardQuery = `SELECT guid, public_data, private_data FROM records`
@@ -192,70 +201,70 @@ type yandexPrivateData struct {
 
 // extractYandexCreditCards reads the records table (not Chromium's credit_cards). AAD = guid.
 func extractYandexCreditCards(masterKeys masterKeysFunc, path string, out browser.Collector) error {
-	loadDataKey := yandexDataKeyLoader(path, masterKeys)
-
-	cards, err := sqlitex.QueryRows(path, false, yandexCreditCardQuery,
-		func(rows *sql.Rows) (record.CreditCard, error) {
-			var guid, publicData string
-			var privateData []byte
-			if err := rows.Scan(&guid, &publicData, &privateData); err != nil {
-				return record.CreditCard{}, err
-			}
-
-			var public yandexPublicData
-			if publicData != "" {
-				if err := json.Unmarshal([]byte(publicData), &public); err != nil {
-					out.Fail(fmt.Errorf("yandex: parse public_data for %s: %w", guid, err))
-				}
-			}
-			entry := record.CreditCard{
-				GUID:     guid,
-				Name:     public.CardHolder,
-				ExpMonth: public.ExpireDateMonth,
-				ExpYear:  public.ExpireDateYear,
-				NickName: public.CardTitle,
-			}
-			dataKey, keyErr := loadDataKey()
-			if dataKey == nil {
-				out.Fail(fmt.Errorf("yandex: card %s: %w", guid, keyErr))
-				return entry, nil
-			}
-
-			plaintext, err := crypto.AESGCMDecryptBlob(dataKey, privateData, yandexCardAAD(guid, nil))
-			if err != nil {
-				out.Fail(fmt.Errorf("yandex: decrypt card %s: %w", guid, err))
-				return entry, nil
-			}
-
-			var private yandexPrivateData
-			if err := json.Unmarshal(plaintext, &private); err != nil {
-				out.Fail(fmt.Errorf("yandex: parse private_data for %s: %w", guid, err))
-				return entry, nil
-			}
-			entry.Number = private.FullCardNumber
-			entry.CVC = private.PinCode
-			entry.Comment = private.SecretComment
-			return entry, nil
-		})
+	database, err := sqlitex.Open(path)
 	if err != nil {
 		return err
 	}
-	browser.AddAll(out, cards)
-	return nil
-}
+	defer database.Close()
 
-// yandexDataKeyLoader loads the profile's data key for the first row that needs it, so an empty table fetches no key.
-func yandexDataKeyLoader(path string, masterKeys masterKeysFunc) func() ([]byte, error) {
+	rows, err := database.Query(yandexCreditCardQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	// The data key is loaded by the first row, so an empty table fetches no key.
 	var (
 		dataKey []byte
-		err     error
-		loaded  bool
+		keyErr  error
 	)
-	return func() ([]byte, error) {
-		if !loaded {
-			loaded = true
-			dataKey, err = loadYandexDataKey(path, masterKeys()[masterkey.V10])
+	for rows.Next() {
+		var guid, publicData string
+		var privateData []byte
+		if err := rows.Scan(&guid, &publicData, &privateData); err != nil {
+			out.Fail(err)
+			continue
 		}
-		return dataKey, err
+
+		var public yandexPublicData
+		if publicData != "" {
+			if err := json.Unmarshal([]byte(publicData), &public); err != nil {
+				out.Fail(fmt.Errorf("yandex: parse public_data for %s: %w", guid, err))
+			}
+		}
+		entry := record.CreditCard{
+			GUID:     guid,
+			Name:     public.CardHolder,
+			ExpMonth: public.ExpireDateMonth,
+			ExpYear:  public.ExpireDateYear,
+			NickName: public.CardTitle,
+		}
+		if dataKey == nil && keyErr == nil {
+			dataKey, keyErr = loadYandexDataKey(path, masterKeys()[masterkey.V10])
+		}
+		if dataKey == nil {
+			out.Fail(fmt.Errorf("yandex: card %s: %w", guid, keyErr))
+			out.Add(&entry)
+			continue
+		}
+
+		plaintext, err := crypto.AESGCMDecryptBlob(dataKey, privateData, yandexCardAAD(guid, nil))
+		if err != nil {
+			out.Fail(fmt.Errorf("yandex: decrypt card %s: %w", guid, err))
+			out.Add(&entry)
+			continue
+		}
+
+		var private yandexPrivateData
+		if err := json.Unmarshal(plaintext, &private); err != nil {
+			out.Fail(fmt.Errorf("yandex: parse private_data for %s: %w", guid, err))
+			out.Add(&entry)
+			continue
+		}
+		entry.Number = private.FullCardNumber
+		entry.CVC = private.PinCode
+		entry.Comment = private.SecretComment
+		out.Add(&entry)
 	}
+	return rows.Err()
 }

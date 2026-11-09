@@ -1,8 +1,6 @@
 package chromium
 
 import (
-	"database/sql"
-
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
@@ -12,24 +10,32 @@ import (
 const historyQuery = `SELECT url, title, visit_count, last_visit_time FROM urls`
 
 func extractHistories(path string, out browser.Collector) error {
-	histories, err := sqlitex.QueryRows(path, false, historyQuery,
-		func(rows *sql.Rows) (record.History, error) {
-			var url, title string
-			var visitCount int
-			var lastVisit int64
-			if err := rows.Scan(&url, &title, &visitCount, &lastVisit); err != nil {
-				return record.History{}, err
-			}
-			return record.History{
-				URL:        url,
-				Title:      title,
-				VisitCount: visitCount,
-				LastVisit:  timeconv.Chromium(lastVisit),
-			}, nil
-		})
+	database, err := sqlitex.Open(path)
 	if err != nil {
 		return err
 	}
-	browser.AddAll(out, histories)
-	return nil
+	defer database.Close()
+
+	rows, err := database.Query(historyQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var url, title string
+		var visitCount int
+		var lastVisit int64
+		if err := rows.Scan(&url, &title, &visitCount, &lastVisit); err != nil {
+			out.Fail(err)
+			continue
+		}
+		out.Add(&record.History{
+			URL:        url,
+			Title:      title,
+			VisitCount: visitCount,
+			LastVisit:  timeconv.Chromium(lastVisit),
+		})
+	}
+	return rows.Err()
 }

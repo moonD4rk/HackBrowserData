@@ -15,13 +15,12 @@ func extractPasswords(ctx context.Context, loginKeychain LoginKeychain, out brow
 		return err
 	}
 
-	var logins []record.Login
 	for _, internetPassword := range passwords {
 		url := buildURL(internetPassword.Protocol, internetPassword.Server, internetPassword.Port, internetPassword.Path)
 		if url == "" || internetPassword.Account == "" {
 			continue
 		}
-		logins = append(logins, record.Login{
+		out.Add(&record.Login{
 			URL:       url,
 			Username:  internetPassword.Account,
 			Password:  internetPassword.PlainPassword,
@@ -29,7 +28,6 @@ func extractPasswords(ctx context.Context, loginKeychain LoginKeychain, out brow
 			Store:     record.StoreLocal,
 		})
 	}
-	browser.AddAll(out, logins)
 	return nil
 }
 

@@ -3,7 +3,6 @@ package chromium
 import (
 	"bytes"
 	"crypto/sha256"
-	"database/sql"
 	"fmt"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
@@ -17,57 +16,65 @@ const cookieQuery = `SELECT name, encrypted_value, host_key, path,
 	has_expires, is_persistent, samesite FROM cookies`
 
 func extractCookies(masterKeys masterKeysFunc, path string, out browser.Collector) error {
-	cookies, err := sqlitex.QueryRows(path, false, cookieQuery,
-		func(rows *sql.Rows) (record.Cookie, error) {
-			var (
-				name, host, cookiePath  string
-				isSecure, isHTTPOnly    int
-				hasExpire, isPersistent int
-				createdAt, expireAt     int64
-				encryptedValue          []byte
-				sameSite                int
-			)
-			if err := rows.Scan(&name, &encryptedValue, &host, &cookiePath,
-				&createdAt, &expireAt, &isSecure, &isHTTPOnly,
-				&hasExpire, &isPersistent, &sameSite); err != nil {
-				return record.Cookie{}, err
-			}
-
-			value, err := masterKeys.decrypt(encryptedValue)
-			if err != nil {
-				out.Fail(fmt.Errorf("decrypt cookie %s on %s: %w", name, host, err))
-			}
-			value = stripCookieHash(value, host)
-			sameSiteName := "unspecified"
-			switch sameSite {
-			case 0:
-				sameSiteName = "none"
-			case 1:
-				sameSiteName = "lax"
-			case 2:
-				sameSiteName = "strict"
-			case -1:
-				// not specified by Set-Cookie
-			}
-			return record.Cookie{
-				Name:         name,
-				Host:         host,
-				Path:         cookiePath,
-				Value:        string(value),
-				IsSecure:     isSecure != 0,
-				IsHTTPOnly:   isHTTPOnly != 0,
-				HasExpire:    hasExpire != 0,
-				IsPersistent: isPersistent != 0,
-				ExpireAt:     timeconv.Chromium(expireAt),
-				CreatedAt:    timeconv.Chromium(createdAt),
-				SameSite:     sameSiteName,
-			}, nil
-		})
+	database, err := sqlitex.Open(path)
 	if err != nil {
 		return err
 	}
-	browser.AddAll(out, cookies)
-	return nil
+	defer database.Close()
+
+	rows, err := database.Query(cookieQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			name, host, cookiePath  string
+			isSecure, isHTTPOnly    int
+			hasExpire, isPersistent int
+			createdAt, expireAt     int64
+			encryptedValue          []byte
+			sameSite                int
+		)
+		if err := rows.Scan(&name, &encryptedValue, &host, &cookiePath,
+			&createdAt, &expireAt, &isSecure, &isHTTPOnly,
+			&hasExpire, &isPersistent, &sameSite); err != nil {
+			out.Fail(err)
+			continue
+		}
+
+		value, err := masterKeys.decrypt(encryptedValue)
+		if err != nil {
+			out.Fail(fmt.Errorf("decrypt cookie %s on %s: %w", name, host, err))
+		}
+		value = stripCookieHash(value, host)
+		sameSiteName := "unspecified"
+		switch sameSite {
+		case 0:
+			sameSiteName = "none"
+		case 1:
+			sameSiteName = "lax"
+		case 2:
+			sameSiteName = "strict"
+		case -1:
+			// not specified by Set-Cookie
+		}
+		out.Add(&record.Cookie{
+			Name:         name,
+			Host:         host,
+			Path:         cookiePath,
+			Value:        string(value),
+			IsSecure:     isSecure != 0,
+			IsHTTPOnly:   isHTTPOnly != 0,
+			HasExpire:    hasExpire != 0,
+			IsPersistent: isPersistent != 0,
+			ExpireAt:     timeconv.Chromium(expireAt),
+			CreatedAt:    timeconv.Chromium(createdAt),
+			SameSite:     sameSiteName,
+		})
+	}
+	return rows.Err()
 }
 
 // stripCookieHash removes the SHA256(host_key) Chrome 130+ prepends; a value without that prefix is returned as is.
