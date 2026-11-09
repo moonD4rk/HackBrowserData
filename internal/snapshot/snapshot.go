@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/moond4rk/hackbrowserdata/internal/zipfile"
 )
 
 type File struct {
@@ -44,7 +46,7 @@ func Unzip(archivePath string) (*Dir, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := unzip(archivePath, snapshotDir.path); err != nil {
+	if err := zipfile.Extract(archivePath, snapshotDir.path); err != nil {
 		return nil, errors.Join(err, snapshotDir.Close())
 	}
 	return snapshotDir, nil

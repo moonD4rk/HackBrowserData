@@ -3,7 +3,9 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
 
+	"github.com/moond4rk/hackbrowserdata/internal/atomicfile"
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/chromium"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
@@ -11,12 +13,32 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// DumpKeys keeps the keys that worked when a dir's others fail, and leaves out a dir with none.
-// It fails only when the run is stopped, so a stopped run writes no keys.json.
-func DumpKeys(ctx context.Context, discovery Discovery, options Options) (masterkey.KeyFile, error) {
-	return dumpKeysWith(ctx, discovery, keysFromMachine(newLoginKeychain(options)))
+// DumpKeys writes the key file to outputPath, or to stdout when it is "", and returns how many vaults it holds.
+// A stopped run writes nothing, so it never leaves a keys.json behind.
+func DumpKeys(ctx context.Context, discovery Discovery, options Options, outputPath string) (int, error) {
+	keyFile, err := dumpKeysWith(ctx, discovery, keysFromMachine(newLoginKeychain(options)))
+	if err != nil {
+		return 0, err
+	}
+	if outputPath == "" {
+		return len(keyFile.Vaults), keyFile.Write(os.Stdout)
+	}
+	if err := writeKeyFile(outputPath, keyFile); err != nil {
+		return 0, err
+	}
+	return len(keyFile.Vaults), nil
 }
 
+// writeKeyFile replaces outputPath only once the file is complete, so a failure keeps the old keys.json.
+func writeKeyFile(outputPath string, keyFile masterkey.KeyFile) error {
+	if err := atomicfile.Write(outputPath, keyFile.Write); err != nil {
+		return fmt.Errorf("write %s: %w", outputPath, err)
+	}
+	return nil
+}
+
+// dumpKeysWith keeps the keys that worked when a dir's others fail, and leaves out a dir with none.
+// It fails only when the run is stopped.
 func dumpKeysWith(ctx context.Context, discovery Discovery, keys dirKeysFunc) (masterkey.KeyFile, error) {
 	keyFile := masterkey.NewKeyFile()
 	for _, dir := range discovery.Dirs {

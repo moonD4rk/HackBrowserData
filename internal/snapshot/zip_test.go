@@ -55,14 +55,6 @@ func TestUnzip_RejectsZipSlipAndCleansUp(t *testing.T) {
 	assert.Empty(t, entries, "a rejected archive leaves neither the escaped file nor the snapshot directory behind")
 }
 
-func TestUnzip_RejectsASiblingSharingTheRootPrefix(t *testing.T) {
-	parent := t.TempDir()
-	root := filepath.Join(parent, "snap")
-
-	require.Error(t, unzip(zipWith(t, "../snapx/evil.txt"), root))
-	assert.NoFileExists(t, filepath.Join(parent, "snapx", "evil.txt"))
-}
-
 func TestZip_FailureLeavesNoFile(t *testing.T) {
 	out := t.TempDir()
 	err := Open(filepath.Join(t.TempDir(), "missing")).Zip(filepath.Join(out, "browser-data.zip"))
