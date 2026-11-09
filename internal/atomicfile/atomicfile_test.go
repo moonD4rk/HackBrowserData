@@ -89,6 +89,15 @@ func TestWrite_DoesNotFollowAPlantedSymlink(t *testing.T) {
 	assert.True(t, info.Mode().IsRegular(), "the written file must be a file, not the planted symlink")
 }
 
+func TestWrite_FailedRenameRemovesTheTempFile(t *testing.T) {
+	out := t.TempDir()
+	path := filepath.Join(out, "out.zip")
+	require.NoError(t, os.Mkdir(path, 0o700))
+
+	require.Error(t, Write(path, writeString("")))
+	assert.Equal(t, []string{"out.zip"}, filesIn(t, out), "no temp file may survive a failed rename")
+}
+
 func writeString(content string) func(io.Writer) error {
 	return func(writer io.Writer) error {
 		_, err := io.WriteString(writer, content)

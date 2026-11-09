@@ -122,7 +122,7 @@ func TestExtractors_CoverFirefoxCategories(t *testing.T) {
 }
 
 // TestPasswordExtractor_WithoutKeyStore exports empty secrets without key4.db; a legacy-cipher login once panicked.
-func TestPasswordExtractor_WithoutKeyStore(t *testing.T) {
+func TestDecryptingExtractor_WithoutKeyStore(t *testing.T) {
 	encodedLogin := loginPBEBase64(t)
 	logins := createTestJSON(t, "logins.json", fmt.Sprintf(`{"logins": [{"hostname": "https://a.test",
 		"encryptedUsername": %q, "encryptedPassword": %q, "timeCreated": 1700000000000}]}`, encodedLogin, encodedLogin))
@@ -141,7 +141,7 @@ func TestPasswordExtractor_WithoutKeyStore(t *testing.T) {
 }
 
 // TestPasswordExtractor_NoLoginsNeverReadsTheKey leaves key4.db unread without logins, so an unreadable one is harmless.
-func TestPasswordExtractor_NoLoginsNeverReadsTheKey(t *testing.T) {
+func TestDecryptingExtractor_NoLoginsNeverReadsTheKey(t *testing.T) {
 	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{
 		"p/logins.json": createTestJSON(t, "logins.json", `{"logins": []}`),
 		"p/key4.db":     createTestJSON(t, "key4.db", "not a database"),

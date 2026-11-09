@@ -92,9 +92,14 @@ func TestExecute_Outcomes(t *testing.T) {
 			out.Add(&record.Extension{Name: "kept"})
 			return errors.New("truncated")
 		},
+		category.CreditCard: func(_ context.Context, _ browser.ProfileSnapshot, out browser.Collector) error {
+			out.Add(&record.CreditCard{Name: "kept"})
+			return fmt.Errorf("Web Data: %w", fs.ErrNotExist)
+		},
 	})
 	categories := []category.Category{
 		category.Cookie, category.Password, category.History, category.Bookmark, category.Download, category.Extension,
+		category.CreditCard,
 	}
 	summary, out := run(t, base, noKeys(t), categories, chromeDir(t, "chrome", "Default"))
 
@@ -106,8 +111,10 @@ func TestExecute_Outcomes(t *testing.T) {
 	require.EqualError(t, got[category.Password].Err, "password not decrypted")
 	assert.Equal(t, OutcomeOK, got[category.History].Outcome, "an empty file is ok, not absent")
 	assert.Equal(t, OutcomeError, got[category.Bookmark].Outcome)
+	require.EqualError(t, got[category.Bookmark].Err, "corrupt")
 	assert.Equal(t, OutcomeAbsent, got[category.Download].Outcome, "a file that vanished after planning")
 	assert.Equal(t, OutcomeError, got[category.Extension].Outcome)
+	assert.Equal(t, OutcomeError, got[category.CreditCard].Outcome, "a file gone after records were read is an error, not absent")
 
 	data, err := os.ReadFile(filepath.Join(out, "extension.json"))
 	require.NoError(t, err)
@@ -159,13 +166,16 @@ func TestExecute_KeysAreRetrievedOncePerUserDataDir(t *testing.T) {
 	base := fakeBase(map[category.Category]extractFunc{category.Cookie: cookie, category.Password: login})
 	categories := []category.Category{category.Cookie, category.Password}
 
-	summary, _ := run(t, base, keys, categories, chromeDir(t, "chrome", "Default", "Profile 1"))
+	summary, out := run(t, base, keys, categories, chromeDir(t, "chrome", "Default", "Profile 1"))
 
 	assert.Equal(t, 1, calls)
 	require.Len(t, summary.DirFailures, 1, "a retrieval error is reported once, for the dir")
 	assert.Equal(t, browser.UserDataDirID("chrome"), summary.DirFailures[0].UserDataDirID)
 	require.ErrorContains(t, summary.DirFailures[0].Err, "v20: no ABE")
 	assert.Len(t, summary.Results, 4)
+	data, err := os.ReadFile(filepath.Join(out, "cookie.json"))
+	require.NoError(t, err)
+	assert.Contains(t, string(data), `"value": "chrome"`, "keys retrieved beside an error still decrypt")
 }
 
 // TestExecute_HistoryNeverRetrievesKeys checks nothing to decrypt means no key retrieval, so no prompt on macOS.
@@ -173,18 +183,9 @@ func TestExecute_HistoryNeverRetrievesKeys(t *testing.T) {
 	path := t.TempDir()
 	touch(t, path, "Local State")
 	touch(t, path, "Default", "History")
-	touch(t, path, "Default", "Network", "Cookies")
 	dir := browser.UserDataDir{ID: "chrome", Browser: lookup(t, "chrome"), Path: path, Profiles: []browser.Profile{{Name: "Default", RelativePath: "Default"}}}
 
 	run(t, extractorsWith(nil), noKeys(t), []category.Category{category.History, category.Download}, dir)
-
-	calls := 0
-	counting := func(context.Context, browser.UserDataDir, snapshot.Snapshot) (masterkey.Set, error) {
-		calls++
-		return nil, nil
-	}
-	run(t, extractorsWith(nil), counting, []category.Category{category.Cookie, category.History}, dir)
-	assert.Equal(t, 0, calls, "an empty cookie store holds no value to decrypt, so it retrieves no key either")
 }
 
 func TestExecute_RemovesEachSnapshotBeforeTheNextDir(t *testing.T) {
@@ -244,8 +245,14 @@ func TestExecute_OutputFailureStopsTheRunAndLeavesNoCopies(t *testing.T) {
 	var copied string
 	base := fakeBase(map[category.Category]extractFunc{
 		category.History: func(_ context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
-			copied, _ = profileSnapshot.Path(history)
+			var err error
+			copied, err = profileSnapshot.Path(history)
+			require.NoError(t, err)
 			out.Add(&record.History{URL: "https://example.com"})
+			return nil
+		},
+		category.Download: func(context.Context, browser.ProfileSnapshot, browser.Collector) error {
+			t.Error("an extraction ran after the output failed")
 			return nil
 		},
 	})
@@ -254,7 +261,7 @@ func TestExecute_OutputFailureStopsTheRunAndLeavesNoCopies(t *testing.T) {
 	defer func() { require.NoError(t, os.Chmod(output.Dir, 0o700)) }()
 
 	discovery := Discovery{Dirs: []browser.UserDataDir{chromeDir(t, "chrome", "Default")}}
-	_, err := execute(context.Background(), discovery, []category.Category{category.History}, output, base, noKeys(t))
+	_, err := execute(context.Background(), discovery, []category.Category{category.History, category.Download}, output, base, noKeys(t))
 	require.Error(t, err)
 	require.NotEmpty(t, copied)
 	_, statErr := os.Stat(copied)

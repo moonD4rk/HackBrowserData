@@ -21,5 +21,5 @@ func TestKeysFromFile(t *testing.T) {
 
 	got, err = keys(context.Background(), browser.UserDataDir{ID: "edge"}, snapshot.Snapshot{})
 	require.NoError(t, err)
-	assert.Empty(t, got, "a dump without the dir's keys decrypts nothing")
+	assert.Empty(t, got, "a key file without the dir's keys decrypts nothing")
 }

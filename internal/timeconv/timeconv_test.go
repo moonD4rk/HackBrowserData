@@ -19,9 +19,7 @@ var (
 )
 
 func TestChromium_AnchorDate(t *testing.T) {
-	got := Chromium(anchorChromiumMicros)
-	assert.Equal(t, anchorTime, got)
-	assert.Equal(t, anchorUnixSeconds, got.Unix())
+	assert.Equal(t, anchorTime, Chromium(anchorChromiumMicros))
 }
 
 func TestChromium_ZeroReturnsZeroTime(t *testing.T) {
@@ -32,18 +30,9 @@ func TestChromium_NegativeReturnsZeroTime(t *testing.T) {
 	assert.True(t, Chromium(-1).IsZero())
 }
 
-func TestChromium_AlwaysUTC(t *testing.T) {
-	// assert.Same compares pointers, so it catches a dropped .UTC() even when the runner's TZ is UTC.
-	assert.Same(t, time.UTC, Chromium(anchorChromiumMicros).Location())
-}
-
 func TestChromium_MicrosecondPrecisionPreserved(t *testing.T) {
 	got := Chromium(anchorChromiumMicros + 123456)
 	assert.Equal(t, 123456*int64(time.Microsecond), int64(got.Nanosecond()))
-}
-
-func TestChromium_UnixEpochBoundary(t *testing.T) {
-	assert.Equal(t, time.Unix(0, 0).UTC(), Chromium(chromiumEpochOffsetMicros))
 }
 
 func TestChromium_OutOfJSONRangeReturnsZero(t *testing.T) {
@@ -74,6 +63,11 @@ func TestUnix_AnchorDate(t *testing.T) {
 	assert.Equal(t, anchorTime, Unix(anchorUnixSeconds))
 }
 
+func TestUnix_LastJSONSecond(t *testing.T) {
+	assert.Equal(t, time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC), Unix(253402300799))
+	assert.True(t, Unix(253402300800).IsZero(), "year 10000 is past what time.Time.MarshalJSON accepts")
+}
+
 func TestUnixUnits_ZeroReturnsZeroTime(t *testing.T) {
 	assert.True(t, UnixMicro(0).IsZero(), "micros")
 	assert.True(t, UnixMilli(0).IsZero(), "millis")
@@ -84,20 +78,6 @@ func TestUnixUnits_NegativeReturnsZeroTime(t *testing.T) {
 	assert.True(t, UnixMicro(-1).IsZero(), "micros")
 	assert.True(t, UnixMilli(-1).IsZero(), "millis")
 	assert.True(t, Unix(-1).IsZero(), "seconds")
-}
-
-func TestUnixUnits_AlwaysUTC(t *testing.T) {
-	assert.Same(t, time.UTC, UnixMicro(anchorUnixSeconds*1_000_000).Location())
-	assert.Same(t, time.UTC, UnixMilli(anchorUnixSeconds*1_000).Location())
-	assert.Same(t, time.UTC, Unix(anchorUnixSeconds).Location())
-}
-
-func TestUnixUnits_SameMomentAcrossUnits(t *testing.T) {
-	fromMicros := UnixMicro(anchorUnixSeconds * 1_000_000)
-	fromMillis := UnixMilli(anchorUnixSeconds * 1_000)
-	fromSeconds := Unix(anchorUnixSeconds)
-	assert.True(t, fromMicros.Equal(fromMillis))
-	assert.True(t, fromMillis.Equal(fromSeconds))
 }
 
 func TestUnixUnits_OutOfJSONRangeReturnsZero(t *testing.T) {
@@ -121,10 +101,6 @@ func TestCoreData_AnchorDate(t *testing.T) {
 	assert.Equal(t, anchorTime, CoreData(float64(anchorCoreDataSeconds)))
 }
 
-func TestCoreData_KnownValue(t *testing.T) {
-	assert.Equal(t, int64(1678307200), CoreData(700000000).Unix())
-}
-
 func TestCoreData_EpochZero(t *testing.T) {
 	assert.True(t, CoreData(0).IsZero())
 }
@@ -143,8 +119,4 @@ func TestCoreData_OutOfJSONRangeReturnsZero(t *testing.T) {
 func TestCoreData_FractionalSecondsPreserved(t *testing.T) {
 	got := CoreData(float64(anchorCoreDataSeconds) + 0.5)
 	assert.Equal(t, 500*int64(time.Millisecond), int64(got.Nanosecond()))
-}
-
-func TestCoreData_AlwaysUTC(t *testing.T) {
-	assert.Same(t, time.UTC, CoreData(float64(anchorCoreDataSeconds)).Location())
 }

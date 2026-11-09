@@ -85,7 +85,7 @@ func TestProfileSnapshotMasterKeys(t *testing.T) {
 	assert.Equal(t, 1, calls)
 }
 
-func TestFileSpec_CandidatePaths(t *testing.T) {
+func TestSourceCandidatePaths(t *testing.T) {
 	profile := Profile{Name: "Default", RelativePath: "Default"}
 	assert.Equal(t, []string{"Default/Network/Cookies", "Default/Cookies"}, Source{Path: "Network/Cookies", Fallbacks: []string{"Cookies"}}.CandidatePaths(profile))
 	assert.Equal(t, []string{"Local State"}, Source{Path: "Local State", Shared: true}.CandidatePaths(profile))

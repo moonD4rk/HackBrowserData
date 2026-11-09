@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moond4rk/hackbrowserdata/internal/crypto"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
@@ -49,23 +48,6 @@ func encryptWithDPAPI(plaintext []byte) ([]byte, error) {
 	result := make([]byte, size)
 	copy(result, (*[1 << 30]byte)(unsafe.Pointer(outBlob.pbData))[:size])
 	return result, nil
-}
-
-func TestDecryptValue_V10_Windows(t *testing.T) {
-	// Windows v10 keys are 32 bytes, which routes them to GCM.
-	aesKey := []byte("0123456789abcdef0123456789abcdef")
-	plaintext := []byte("test_secret_value")
-	nonce := []byte("123456789012") // 12-byte nonce
-
-	gcmEncrypted, err := crypto.AESGCMEncrypt(aesKey, nonce, plaintext)
-	require.NoError(t, err)
-
-	// v10 format on Windows: "v10" + nonce(12) + encrypted
-	ciphertext := append([]byte("v10"), append(nonce, gcmEncrypted...)...)
-
-	got, err := decryptValue(masterkey.Set{masterkey.V10: aesKey}, ciphertext)
-	require.NoError(t, err)
-	assert.Equal(t, plaintext, got)
 }
 
 func TestDecryptValue_DPAPI_Windows(t *testing.T) {

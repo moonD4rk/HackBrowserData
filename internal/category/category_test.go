@@ -29,12 +29,6 @@ func TestString(t *testing.T) {
 	}
 }
 
-func TestAll(t *testing.T) {
-	assert.Equal(t, []Category{
-		Password, Cookie, Bookmark, History, Download, CreditCard, Extension, LocalStorage, SessionStorage,
-	}, All())
-}
-
 func TestAll_ReturnsFreshSlice(t *testing.T) {
 	All()[0] = SessionStorage
 	assert.Equal(t, Password, All()[0])

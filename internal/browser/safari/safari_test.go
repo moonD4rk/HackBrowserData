@@ -67,6 +67,10 @@ func TestExtractors_NamedProfileSources(t *testing.T) {
 		category.Download:     {"Safari/Downloads.plist"},
 		category.LocalStorage: {store + "/Origins"},
 	}, sourcePaths(workProfile, Extractors(libraryDir, workProfile, nil)))
+
+	copied := browser.UserDataDir{Profiles: []browser.Profile{{Name: "default", RelativePath: "SafariCopy"}, workProfile}}
+	assert.Equal(t, []string{"SafariCopy/Downloads.plist"}, sourcePaths(workProfile, Extractors(copied, workProfile, nil))[category.Download],
+		"a named profile's downloads sit in the default profile's dir, whatever -p named it")
 }
 
 func snapshotOf(t *testing.T, files map[string]string) snapshot.Snapshot {
@@ -101,7 +105,7 @@ func extract(t *testing.T, dirSnapshot snapshot.Snapshot, profile browser.Profil
 	return &out, err
 }
 
-// TestExtractors_DownloadsBelongToTheirProfile splits the shared Downloads.plist; an unowned entry is the default's.
+// TestExtractors_DownloadsBelongToTheirProfile splits the shared Downloads.plist; an untagged entry is the default's.
 func TestExtractors_DownloadsBelongToTheirProfile(t *testing.T) {
 	dirSnapshot := snapshotOf(t, map[string]string{"Safari/Downloads.plist": writeTestPlist(t, map[string]any{
 		"DownloadHistory": []any{

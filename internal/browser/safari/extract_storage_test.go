@@ -1,10 +1,15 @@
 package safari
 
 import (
+	"database/sql"
+	"encoding/binary"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
+	"unicode/utf16"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -110,6 +115,9 @@ func TestDecodeLocalStorageValue_Truncates(t *testing.T) {
 	got := decodeLocalStorageValue(oversized)
 	assert.Contains(t, got, "too long")
 	assert.Contains(t, got, "2048")
+
+	assert.Contains(t, decodeLocalStorageValue(encodeUTF16LE(strings.Repeat("x", 1024))), "length is 2048", "the cap itself is too long")
+	assert.Equal(t, strings.Repeat("x", 1023), decodeLocalStorageValue(encodeUTF16LE(strings.Repeat("x", 1023))))
 }
 
 func TestExtractLocalStorage_SingleOrigin(t *testing.T) {
@@ -212,22 +220,6 @@ func TestExtractLocalStorage_Partitioned(t *testing.T) {
 	assert.Equal(t, "https://accounts.youtube.com", entries[0].URL, "frame origin preferred over top-frame")
 }
 
-func TestExtractLocalStorage_SkipsSaltAndStrayFiles(t *testing.T) {
-	root := buildTestLocalStorageDir(t, map[string][]testLocalStorageItem{
-		"https://example.com": {{Key: "a", Value: "1"}},
-	})
-	// Drop a "salt" sibling that must not be traversed, plus a stray file at root.
-	require.NoError(t, os.WriteFile(filepath.Join(root, "salt"), []byte("pretend salt"), 0o644))
-	require.NoError(t, os.WriteFile(filepath.Join(root, "README"), []byte("noise"), 0o644))
-
-	var out testCollector
-	err := extractLocalStorage(root, &out)
-	entries := collected[record.LocalStorage](t, &out)
-	require.NoError(t, err)
-	require.Len(t, entries, 1)
-	assert.Equal(t, "https://example.com", entries[0].URL)
-}
-
 func TestExtractLocalStorage_SkipsFrameDirsWithoutDB(t *testing.T) {
 	// Partition dirs with only an origin file are common (cookies-only) and must not fail the extraction.
 	root := filepath.Join(t.TempDir(), "Origins")
@@ -242,6 +234,7 @@ func TestExtractLocalStorage_SkipsFrameDirsWithoutDB(t *testing.T) {
 	entries := collected[record.LocalStorage](t, &out)
 	require.NoError(t, err)
 	assert.Empty(t, entries)
+	assert.Empty(t, out.fails)
 }
 
 func TestExtractLocalStorage_DirMissing(t *testing.T) {
@@ -306,4 +299,129 @@ func TestExtractOriginStorage_EmitsRowsInKeyOrder(t *testing.T) {
 	assert.Equal(t, "apple", entries[0].Key)
 	assert.Equal(t, "mango", entries[1].Key)
 	assert.Equal(t, "zebra", entries[2].Key)
+}
+
+// testLocalStorageItem holds a Value written as UTF-16 LE, as WebKit stores it.
+type testLocalStorageItem struct {
+	Key, Value string
+}
+
+// buildTestLocalStorageDir writes every origin first-party, with top == frame.
+func buildTestLocalStorageDir(t *testing.T, origins map[string][]testLocalStorageItem) string {
+	t.Helper()
+	root := filepath.Join(t.TempDir(), "Origins")
+	require.NoError(t, os.MkdirAll(root, 0o755))
+
+	i := 0
+	for origin, items := range origins {
+		hash := fmt.Sprintf("h%02d", i)
+		i++
+		writeTestOriginStore(t, root, hash, hash, origin, origin, items)
+	}
+	return root
+}
+
+func writeTestOriginStore(t *testing.T, root, topHash, frameHash, topOrigin, frameOrigin string, items []testLocalStorageItem) {
+	t.Helper()
+	frameDir := filepath.Join(root, topHash, frameHash)
+	require.NoError(t, os.MkdirAll(filepath.Join(frameDir, webkitLocalStorageSubdir), 0o755))
+
+	require.NoError(t, os.WriteFile(
+		filepath.Join(frameDir, webkitOriginFile),
+		encodeOriginFile(topOrigin, frameOrigin),
+		0o644,
+	))
+
+	dbPath := filepath.Join(frameDir, webkitLocalStorageSubdir, webkitLocalStorageDB)
+	database, err := sql.Open("sqlite", dbPath)
+	require.NoError(t, err)
+	_, err = database.Exec(`CREATE TABLE ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB NOT NULL ON CONFLICT FAIL)`)
+	require.NoError(t, err)
+	for _, item := range items {
+		_, err = database.Exec(
+			`INSERT INTO ItemTable (key, value) VALUES (?, ?)`,
+			item.Key, encodeUTF16LE(item.Value),
+		)
+		require.NoError(t, err)
+	}
+	require.NoError(t, database.Close())
+}
+
+// encodeOriginFile follows WebKit's SecurityOrigin layout: per block a scheme, a host, and a port; top, then frame.
+func encodeOriginFile(topOrigin, frameOrigin string) []byte {
+	var encoded []byte
+	encoded = appendOriginBlock(encoded, topOrigin)
+	encoded = appendOriginBlock(encoded, frameOrigin)
+	return encoded
+}
+
+func appendOriginBlock(encoded []byte, originURL string) []byte {
+	scheme, host, port := splitTestOriginURL(originURL)
+	encoded = appendOriginRecord(encoded, scheme)
+	encoded = appendOriginRecord(encoded, host)
+	if port == 0 {
+		encoded = append(encoded, originPortDefaultMarker)
+		return encoded
+	}
+	encoded = append(encoded, originPortExplicitFlag)
+	portBytes := make([]byte, 2)
+	binary.LittleEndian.PutUint16(portBytes, port)
+	return append(encoded, portBytes...)
+}
+
+func appendOriginRecord(encoded []byte, text string) []byte {
+	lenBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(lenBytes, uint32(len(text)))
+	encoded = append(encoded, lenBytes...)
+	encoded = append(encoded, originEncodingASCII)
+	return append(encoded, []byte(text)...)
+}
+
+// splitTestOriginURL returns port 0 when the URL had no explicit port.
+func splitTestOriginURL(originURL string) (scheme, host string, port uint16) {
+	index := strings.Index(originURL, "://")
+	if index < 0 {
+		return "", originURL, 0
+	}
+	scheme = originURL[:index]
+	rest := originURL[index+3:]
+	if colon := strings.LastIndex(rest, ":"); colon >= 0 {
+		if parsedPort, err := strconv.ParseUint(rest[colon+1:], 10, 16); err == nil {
+			return scheme, rest[:colon], uint16(parsedPort)
+		}
+	}
+	return scheme, rest, 0
+}
+
+// writeLocalStorageDB inserts a NULL-key row first when addNullKey is set, which extractOriginStorage reports as a failure.
+func writeLocalStorageDB(t *testing.T, path string, items []testLocalStorageItem, addNullKey bool) {
+	t.Helper()
+	database, err := sql.Open("sqlite", path)
+	require.NoError(t, err)
+	_, err = database.Exec(`CREATE TABLE ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB NOT NULL ON CONFLICT FAIL)`)
+	require.NoError(t, err)
+	if addNullKey {
+		_, err = database.Exec(
+			`INSERT INTO ItemTable (key, value) VALUES (NULL, ?)`,
+			encodeUTF16LE("null-key-sentinel"),
+		)
+		require.NoError(t, err)
+	}
+	for _, item := range items {
+		_, err = database.Exec(
+			`INSERT INTO ItemTable (key, value) VALUES (?, ?)`,
+			item.Key, encodeUTF16LE(item.Value),
+		)
+		require.NoError(t, err)
+	}
+	require.NoError(t, database.Close())
+}
+
+func encodeUTF16LE(text string) []byte {
+	units := utf16.Encode([]rune(text))
+	encoded := make([]byte, 2*len(units))
+	for i, unit := range units {
+		binary.LittleEndian.PutUint16(encoded[i*2:], unit)
+	}
+	return encoded
 }

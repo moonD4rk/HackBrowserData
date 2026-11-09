@@ -22,7 +22,7 @@ func dirOf(t *testing.T, userDataDirID browser.UserDataDirID, browserName string
 	return dir
 }
 
-func TestDumpKeys(t *testing.T) {
+func TestDumpKeysWith(t *testing.T) {
 	chrome := chromeDir(t, "chrome", "Default", "Profile 1")
 	touch(t, chrome.Path, "Local State")
 	arc2, opera, vivaldi, brave := dirOf(t, "arc-2", "arc"), dirOf(t, "opera", "opera"), dirOf(t, "vivaldi", "vivaldi"), dirOf(t, "brave", "brave")
@@ -66,7 +66,7 @@ func TestDumpKeys(t *testing.T) {
 	}, keyFile.Vaults, "a failed dir is left out, a partly failed one keeps what it has")
 }
 
-func TestDumpKeys_StoppedRunReturnsNoKeyFile(t *testing.T) {
+func TestDumpKeysWith_StoppedRunReturnsNoKeyFile(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	chrome, brave := chromeDir(t, "chrome", "Default"), dirOf(t, "brave", "brave")
@@ -97,12 +97,4 @@ func TestWriteKeyFile_ReplacesTheFileWhole(t *testing.T) {
 	written, err := masterkey.ReadKeyFile(file)
 	require.NoError(t, err)
 	assert.Equal(t, keyFile.Vaults, written.Vaults)
-}
-
-func TestWriteKeyFile_FailureLeavesNoFile(t *testing.T) {
-	dir := t.TempDir()
-	require.Error(t, writeKeyFile(filepath.Join(dir, "missing", "keys.json"), masterkey.NewKeyFile()))
-	entries, err := os.ReadDir(dir)
-	require.NoError(t, err)
-	assert.Empty(t, entries)
 }
