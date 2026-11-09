@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
-	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
@@ -17,7 +16,7 @@ const cookieQuery = `SELECT name, encrypted_value, host_key, path,
 	creation_utc, expires_utc, is_secure, is_httponly,
 	has_expires, is_persistent, samesite FROM cookies`
 
-func extractCookies(masterKeys masterkey.Set, path string, out browser.Collector) error {
+func extractCookies(masterKeys masterKeysFunc, path string, out browser.Collector) error {
 	cookies, err := sqlitex.QueryRows(path, false, cookieQuery,
 		func(rows *sql.Rows) (record.Cookie, error) {
 			var (
@@ -34,7 +33,7 @@ func extractCookies(masterKeys masterkey.Set, path string, out browser.Collector
 				return record.Cookie{}, err
 			}
 
-			value, err := decryptValue(masterKeys, encryptedValue)
+			value, err := masterKeys.decrypt(encryptedValue)
 			if err != nil {
 				out.Fail(fmt.Errorf("decrypt cookie %s on %s: %w", name, host, err))
 			}

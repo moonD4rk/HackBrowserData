@@ -171,34 +171,53 @@ func TestExtractors_CoverEveryCategory(t *testing.T) {
 		extractor, ok := extractors[dataCategory]
 		if assert.Truef(t, ok, "no extractor for %s", dataCategory) {
 			assert.NotNil(t, extractor.Extract, dataCategory)
-			assert.NotEmpty(t, extractor.FileSpecs, dataCategory)
+			assert.NotEmpty(t, extractor.Sources, dataCategory)
 		}
 	}
 }
 
-func TestOverrides_KeysAreChromiumBrowsers(t *testing.T) {
-	for name := range overrides {
-		chromiumBrowser, ok := browser.Lookup(name)
-		if assert.Truef(t, ok, "override %q names no browser", name) {
-			assert.Equalf(t, browser.Chromium, chromiumBrowser.Base, "override %q is not a Chromium browser", name)
+func TestOverrides_NameChromiumBrowsers(t *testing.T) {
+	for _, fork := range overrides {
+		for _, name := range fork.browserNames {
+			chromiumBrowser, ok := browser.Lookup(name)
+			if assert.Truef(t, ok, "override %q names no browser", name) {
+				assert.Equalf(t, browser.Chromium, chromiumBrowser.Base, "override %q is not a Chromium browser", name)
+			}
+		}
+	}
+}
+
+// TestOverrides_KindsAndNamesAreUnique keeps BrowserNameForKind and overrideFor from depending on table order.
+func TestOverrides_KindsAndNamesAreUnique(t *testing.T) {
+	kinds := map[string]bool{kindChromium: true}
+	names := map[string]bool{}
+	for _, fork := range overrides {
+		assert.Falsef(t, kinds[fork.kind], "kind %q is used twice", fork.kind)
+		kinds[fork.kind] = true
+		for _, name := range fork.browserNames {
+			assert.Falsef(t, names[name], "browser %q is in two overrides", name)
+			names[name] = true
 		}
 	}
 }
 
 // TestVaultKind_RoundTripsEveryFork checks a kind leads back to its fork, or restore would parse it as plain Chromium.
 func TestVaultKind_RoundTripsEveryFork(t *testing.T) {
-	assert.Len(t, kinds, len(overrides))
-	for name := range overrides {
-		kind := VaultKind(browser.Browser{Name: name})
-		require.NotEqualf(t, kindChromium, kind, "override %q has no keys.json kind", name)
-		forkFormatName, err := BrowserNameForKind(kind, "unknown")
-		require.NoError(t, err)
-		assert.Equalf(t, categoriesOf(overrides[name]), categoriesOf(overrides[forkFormatName]), "kind %s of %q", kind, name)
+	for _, fork := range overrides {
+		for _, name := range fork.browserNames {
+			kind := VaultKind(browser.Browser{Name: name})
+			require.Equalf(t, fork.kind, kind, "override %q", name)
+			forkBrowserName, err := BrowserNameForKind(kind, "unknown")
+			require.NoError(t, err)
+			restored, ok := overrideFor(forkBrowserName)
+			require.True(t, ok, forkBrowserName)
+			assert.Equalf(t, categoriesOf(fork.extractors), categoriesOf(restored.extractors), "kind %s of %q", kind, name)
+		}
 	}
 	assert.Equal(t, kindChromium, VaultKind(browser.Browser{Name: "chrome"}))
-	plainFormatName, err := BrowserNameForKind(kindChromium, "unknown")
+	plainBrowserName, err := BrowserNameForKind(kindChromium, "unknown")
 	require.NoError(t, err)
-	assert.Equal(t, "unknown", plainFormatName)
+	assert.Equal(t, "unknown", plainBrowserName)
 	_, err = BrowserNameForKind("bogus", "unknown")
 	assert.Error(t, err)
 }
@@ -217,8 +236,8 @@ func TestExtractors_OverridesFollowTheBrowserNotTheDirectory(t *testing.T) {
 	yandex, ok := browser.Lookup("yandex")
 	require.True(t, ok)
 	extractors := Extractors(browser.UserDataDir{ID: "yandex-2", Browser: yandex}, browser.Profile{})
-	assert.Equal(t, []string{"Ya Passman Data"}, extractors[category.Password].FileSpecs[0].Paths)
-	assert.Equal(t, []string{"Ya Credit Cards"}, extractors[category.CreditCard].FileSpecs[0].Paths)
+	assert.Equal(t, "Ya Passman Data", extractors[category.Password].Sources[0].Path)
+	assert.Equal(t, "Ya Credit Cards", extractors[category.CreditCard].Sources[0].Path)
 }
 
 func TestExtractors_OperaReadsOpsettings(t *testing.T) {
@@ -244,7 +263,7 @@ func TestExtractors_OperaReadsOpsettings(t *testing.T) {
 	require.Error(t, err, "Chrome has no opsettings fallback")
 }
 
-func TestExtractPasswordStores_LocalBeforeAccount(t *testing.T) {
+func TestPasswordExtractor_LocalBeforeAccount(t *testing.T) {
 	local := createTestDB(t, "Login Data", loginsSchema, insertLogin("https://local.example", "", "local-user", "", 13340000000000000))
 	account := createTestDB(t, "Login Data For Account", loginsSchema,
 		insertLogin("https://account.example", "", "account-user", "", 13360000000000000))
@@ -254,7 +273,7 @@ func TestExtractPasswordStores_LocalBeforeAccount(t *testing.T) {
 	}), browser.Profile{Name: "Default", RelativePath: "Default"}, nil)
 
 	var out testCollector
-	require.NoError(t, extractPasswordStores(context.Background(), profileSnapshot, &out))
+	require.NoError(t, defaultExtractors[category.Password].Extract(context.Background(), profileSnapshot, &out))
 	got := collected[record.Login](t, &out)
 	require.Len(t, got, 2)
 	assert.Equal(t, "local-user", got[0].Username)
@@ -263,20 +282,20 @@ func TestExtractPasswordStores_LocalBeforeAccount(t *testing.T) {
 	assert.Equal(t, record.StoreAccount, got[1].Store)
 }
 
-func TestExtractPasswordStores_AccountOnly(t *testing.T) {
+func TestPasswordExtractor_AccountOnly(t *testing.T) {
 	account := createTestDB(t, "Login Data For Account", loginsSchema,
 		insertLogin("https://account.example", "", "account-user", "", 13360000000000000))
 	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{"Default/Login Data For Account": account}),
 		browser.Profile{Name: "Default", RelativePath: "Default"}, nil)
 
 	var out testCollector
-	require.NoError(t, extractPasswordStores(context.Background(), profileSnapshot, &out))
+	require.NoError(t, defaultExtractors[category.Password].Extract(context.Background(), profileSnapshot, &out))
 	got := collected[record.Login](t, &out)
 	require.Len(t, got, 1)
 	assert.Equal(t, record.StoreAccount, got[0].Store)
 }
 
-func TestExtractPasswordStores_OneBrokenDatabaseKeepsTheOther(t *testing.T) {
+func TestPasswordExtractor_OneBrokenDatabaseKeepsTheOther(t *testing.T) {
 	broken := createTestJSON(t, "Login Data", "not a database")
 	account := createTestDB(t, "Login Data For Account", loginsSchema,
 		insertLogin("https://account.example", "", "account-user", "", 13360000000000000))
@@ -286,7 +305,7 @@ func TestExtractPasswordStores_OneBrokenDatabaseKeepsTheOther(t *testing.T) {
 	}), browser.Profile{Name: "Default", RelativePath: "Default"}, nil)
 
 	var out testCollector
-	require.Error(t, extractPasswordStores(context.Background(), profileSnapshot, &out))
+	require.Error(t, defaultExtractors[category.Password].Extract(context.Background(), profileSnapshot, &out))
 	assert.Len(t, collected[record.Login](t, &out), 1)
 }
 
@@ -324,10 +343,10 @@ func TestKeyLocator(t *testing.T) {
 	assert.Empty(t, locator.LocalState)
 }
 
-func TestArchiveFileSpecs(t *testing.T) {
-	assert.Equal(t, []browser.FileSpec{
+func TestArchiveSources(t *testing.T) {
+	assert.Equal(t, []browser.Source{
 		localState,
-		{Paths: []string{"Preferences"}, Optional: true},
-		{Paths: []string{"Preferences_02"}, Optional: true},
-	}, ArchiveFileSpecs())
+		{Path: "Preferences", Optional: true},
+		{Path: "Preferences_02", Optional: true},
+	}, ArchiveSources())
 }

@@ -31,8 +31,8 @@ var (
 func sourcePaths(profile browser.Profile, extractors browser.Extractors) map[category.Category][]string {
 	got := make(map[category.Category][]string, len(extractors))
 	for dataCategory, extractor := range extractors {
-		for _, fileSpec := range extractor.FileSpecs {
-			for _, relativePath := range fileSpec.Paths {
+		for _, source := range extractor.Sources {
+			for _, relativePath := range source.Paths() {
 				got[dataCategory] = append(got[dataCategory], path.Join(profile.RelativePath, relativePath))
 			}
 		}
@@ -40,7 +40,7 @@ func sourcePaths(profile browser.Profile, extractors browser.Extractors) map[cat
 	return got
 }
 
-func TestExtractors_DefaultProfileFileSpecs(t *testing.T) {
+func TestExtractors_DefaultProfileSources(t *testing.T) {
 	extractors := Extractors(libraryDir, defaultProfile, nil)
 	assert.Equal(t, map[category.Category][]string{
 		category.History:  {"Safari/History.db"},
@@ -56,10 +56,10 @@ func TestExtractors_DefaultProfileFileSpecs(t *testing.T) {
 		},
 	}, sourcePaths(defaultProfile, extractors))
 	require.Contains(t, extractors, category.Password)
-	assert.Empty(t, extractors[category.Password].FileSpecs, "passwords come from the keychain, not a file")
+	assert.Empty(t, extractors[category.Password].Sources, "passwords come from the keychain, not a file")
 }
 
-func TestExtractors_NamedProfileFileSpecs(t *testing.T) {
+func TestExtractors_NamedProfileSources(t *testing.T) {
 	store := containerDir + "/WebKit/WebsiteDataStore/" + strings.ToLower(workUUID)
 	assert.Equal(t, map[category.Category][]string{
 		category.History:      {namedProfilesDir + "/" + workUUID + "/History.db"},
@@ -175,8 +175,8 @@ func TestExtractors_PasswordsWithoutAKeychain(t *testing.T) {
 	require.ErrorIs(t, err, broken)
 }
 
-// TestExtractors_NamedProfileSkipsUserWideFileSpecs leaves the keychain and the untagged plists to the default profile.
-func TestExtractors_NamedProfileSkipsUserWideFileSpecs(t *testing.T) {
+// TestExtractors_NamedProfileSkipsUserWideSources leaves the keychain and the untagged plists to the default profile.
+func TestExtractors_NamedProfileSkipsUserWideSources(t *testing.T) {
 	extractors := Extractors(libraryDir, workProfile, &fakeKeychain{})
 	for _, dataCategory := range []category.Category{category.Password, category.Bookmark, category.Extension} {
 		assert.NotContains(t, extractors, dataCategory)

@@ -116,13 +116,13 @@ func TestExtractors_CoverFirefoxCategories(t *testing.T) {
 		}
 		if assert.Truef(t, ok, "no extractor for %s", dataCategory) {
 			assert.NotNil(t, extractor.Extract, dataCategory)
-			assert.NotEmpty(t, extractor.FileSpecs, dataCategory)
+			assert.NotEmpty(t, extractor.Sources, dataCategory)
 		}
 	}
 }
 
-// TestExtractLogins_WithoutKeyStore exports empty secrets without key4.db; a legacy-cipher login once panicked.
-func TestExtractLogins_WithoutKeyStore(t *testing.T) {
+// TestPasswordExtractor_WithoutKeyStore exports empty secrets without key4.db; a legacy-cipher login once panicked.
+func TestPasswordExtractor_WithoutKeyStore(t *testing.T) {
 	encodedLogin := loginPBEBase64(t)
 	logins := createTestJSON(t, "logins.json", fmt.Sprintf(`{"logins": [{"hostname": "https://a.test",
 		"encryptedUsername": %q, "encryptedPassword": %q, "timeCreated": 1700000000000}]}`, encodedLogin, encodedLogin))
@@ -130,7 +130,7 @@ func TestExtractLogins_WithoutKeyStore(t *testing.T) {
 		browser.Profile{Name: "p", RelativePath: "p"}, nil)
 
 	var out testCollector
-	require.NoError(t, extractLogins(context.Background(), profileSnapshot, &out))
+	require.NoError(t, defaultExtractors[category.Password].Extract(context.Background(), profileSnapshot, &out))
 	got := collected[record.Login](t, &out)
 	require.Len(t, got, 1)
 	assert.Equal(t, "https://a.test", got[0].URL)
@@ -140,15 +140,15 @@ func TestExtractLogins_WithoutKeyStore(t *testing.T) {
 	assert.ErrorIs(t, out.fails[0], fs.ErrNotExist)
 }
 
-// TestExtractLogins_NoLoginsNeverReadsTheKey leaves key4.db unread without logins, so an unreadable one is harmless.
-func TestExtractLogins_NoLoginsNeverReadsTheKey(t *testing.T) {
+// TestPasswordExtractor_NoLoginsNeverReadsTheKey leaves key4.db unread without logins, so an unreadable one is harmless.
+func TestPasswordExtractor_NoLoginsNeverReadsTheKey(t *testing.T) {
 	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{
 		"p/logins.json": createTestJSON(t, "logins.json", `{"logins": []}`),
 		"p/key4.db":     createTestJSON(t, "key4.db", "not a database"),
 	}), browser.Profile{Name: "p", RelativePath: "p"}, nil)
 
 	var out testCollector
-	require.NoError(t, extractLogins(context.Background(), profileSnapshot, &out))
+	require.NoError(t, defaultExtractors[category.Password].Extract(context.Background(), profileSnapshot, &out))
 	assert.Empty(t, out.records)
 	assert.Empty(t, out.fails)
 }
