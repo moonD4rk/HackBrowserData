@@ -48,7 +48,7 @@ func newEncoder(writer io.Writer, format Format, dataCategory category.Category)
 	case format == CSV:
 		return newCSVEncoder(writer)
 	case format == CookieEditor && dataCategory == category.Cookie:
-		return &jsonEncoder{writer: writer, value: cookieEditorValue}
+		return &jsonEncoder{writer: writer, convert: toCookieEditor}
 	default:
 		return &jsonEncoder{writer: writer, escapeHTML: true}
 	}

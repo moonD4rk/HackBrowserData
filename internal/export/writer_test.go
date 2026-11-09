@@ -373,7 +373,7 @@ func TestClose_ZipOutputNamesTheArchive(t *testing.T) {
 	require.NoError(t, writer.Write(category.Password, []record.Record{&record.Login{URL: "https://a.example"}}))
 	require.NoError(t, writer.Close())
 
-	assert.Equal(t, Output{Dir: dir, Files: []File{{Name: "password.csv", Count: 1}}, Zip: "results.zip"}, writer.Output())
+	assert.Equal(t, Output{Dir: dir, Files: []File{{Name: "password.csv", Count: 1}}, ZipName: "results.zip"}, writer.Output())
 }
 
 // TestClose_ZipIsOwnerOnly gives the zip the category files' owner-only mode, since it holds the same records.

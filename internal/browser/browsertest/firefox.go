@@ -14,8 +14,8 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/crypto"
 )
 
-// firefoxFixtureProfiles cover both key paths: home opens with its second key candidate, work with its only one.
-var firefoxFixtureProfiles = []struct {
+// firefoxProfiles cover both key paths: home opens with its second key candidate, work with its only one.
+var firefoxProfiles = []struct {
 	dir        string
 	label      string
 	start      time.Time
@@ -34,7 +34,7 @@ var firefoxFixtureProfiles = []struct {
 	},
 }
 
-var firefoxFixtureKeyID = []byte{0xf8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+var firefoxKeyID = []byte{0xf8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 
 var (
 	oidPBES2          = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 5, 13}
@@ -44,16 +44,16 @@ var (
 	oidDESEDE3CBC     = asn1.ObjectIdentifier{1, 2, 840, 113549, 3, 7}
 )
 
-func FirefoxUserData(t *testing.T, profilesDir string) {
+func WriteFirefoxUserDataDir(t *testing.T, profilesDir string) {
 	t.Helper()
-	fixtureWrite(t, filepath.Join(profilesDir, "profiles.ini"), "[General]\nStartWithLastProfile=1\n")
-	fixtureWrite(t, filepath.Join(profilesDir, "Crash Reports", "InstallTime20240101000000"), "1704067200")
-	for _, fixtureProfile := range firefoxFixtureProfiles {
-		firefoxFixtureProfile(t, filepath.Join(profilesDir, fixtureProfile.dir), fixtureProfile.label+".firefox.test", fixtureProfile.start, fixtureProfile.globalSalt, fixtureProfile.keys)
+	writeFile(t, filepath.Join(profilesDir, "profiles.ini"), "[General]\nStartWithLastProfile=1\n")
+	writeFile(t, filepath.Join(profilesDir, "Crash Reports", "InstallTime20240101000000"), "1704067200")
+	for _, fixtureProfile := range firefoxProfiles {
+		writeFirefoxProfile(t, filepath.Join(profilesDir, fixtureProfile.dir), fixtureProfile.label+".firefox.test", fixtureProfile.start, fixtureProfile.globalSalt, fixtureProfile.keys)
 	}
 }
 
-func firefoxFixtureProfile(t *testing.T, dir, site string, start time.Time, globalSalt []byte, keys [][]byte) {
+func writeFirefoxProfile(t *testing.T, dir, site string, start time.Time, globalSalt []byte, keys [][]byte) {
 	t.Helper()
 	micros := func(offset time.Duration) int64 { return start.Add(offset).UnixMicro() }
 	millis := func(offset time.Duration) int64 { return start.Add(offset).UnixMilli() }
@@ -62,81 +62,81 @@ func firefoxFixtureProfile(t *testing.T, dir, site string, start time.Time, glob
 	day := 24 * time.Hour
 
 	key4Statements := []string{
-		firefoxFixtureMetaDataSchema,
-		firefoxFixtureNSSPrivateSchema,
+		firefoxMetaDataSchema,
+		firefoxNSSPrivateSchema,
 		fmt.Sprintf(`INSERT INTO metaData (id, item1, item2) VALUES ('password', x'%x', x'%x')`,
-			globalSalt, firefoxFixturePBES2Seal(t, globalSalt, site+"/password-check", []byte("password-check"))),
+			globalSalt, sealFirefoxPBES2(t, globalSalt, site+"/password-check", []byte("password-check"))),
 	}
 	for i, key := range keys {
 		key4Statements = append(key4Statements, fmt.Sprintf(`INSERT INTO nssPrivate (id, a11, a102) VALUES (%d, x'%x', x'%x')`,
-			i+1, firefoxFixturePBES2Seal(t, globalSalt, fmt.Sprintf("%s/key-%d", site, i), key), firefoxFixtureKeyID))
+			i+1, sealFirefoxPBES2(t, globalSalt, fmt.Sprintf("%s/key-%d", site, i), key), firefoxKeyID))
 	}
-	fixtureSQLite(t, filepath.Join(dir, "key4.db"), key4Statements...)
+	writeSQLite(t, filepath.Join(dir, "key4.db"), key4Statements...)
 
 	loginKey := keys[len(keys)-1]
 	seal := func(field, plaintext string) string {
-		return firefoxFixtureLoginSeal(t, loginKey, site+"/"+field, plaintext)
+		return sealFirefoxLogin(t, loginKey, site+"/"+field, plaintext)
 	}
-	fixtureWrite(t, filepath.Join(dir, "logins.json"), fmt.Sprintf(firefoxFixtureLogins, site,
+	writeFile(t, filepath.Join(dir, "logins.json"), fmt.Sprintf(firefoxLoginsJSON, site,
 		seal("1/username", "alice"), seal("1/password", "correct-horse-battery-staple"), millis(time.Hour+250*time.Millisecond),
 		seal("2/username", "alice@"+site), seal("2/password", `pa,ss"word`), millis(2*time.Hour),
 		seal("3/username", "alice"), seal("3/password", "pässwörd"), millis(90*time.Minute),
 	))
 
 	domain := "." + site
-	fixtureSQLite(t, filepath.Join(dir, "cookies.sqlite"), firefoxFixtureCookiesSchema,
-		firefoxFixtureInsertCookie("SID", "sid-"+site, domain, "/", seconds(365*day), micros(10*time.Minute+123456*time.Microsecond), 1, 1, 1),
-		firefoxFixtureInsertCookie("prefs", "theme=dark", "www."+site, "/settings", seconds(30*day), micros(20*time.Minute), 0, 0, 2),
-		firefoxFixtureInsertCookie("tracker", "opt-out", domain, "/", seconds(730*day), micros(30*time.Minute), 1, 0, 0),
-		firefoxFixtureInsertCookie("session", "ephemeral", "app."+site, "/", 0, micros(40*time.Minute), 1, 1, 256),
+	writeSQLite(t, filepath.Join(dir, "cookies.sqlite"), firefoxCookiesSchema,
+		insertFirefoxCookie("SID", "sid-"+site, domain, "/", seconds(365*day), micros(10*time.Minute+123456*time.Microsecond), 1, 1, 1),
+		insertFirefoxCookie("prefs", "theme=dark", "www."+site, "/settings", seconds(30*day), micros(20*time.Minute), 0, 0, 2),
+		insertFirefoxCookie("tracker", "opt-out", domain, "/", seconds(730*day), micros(30*time.Minute), 1, 0, 0),
+		insertFirefoxCookie("session", "ephemeral", "app."+site, "/", 0, micros(40*time.Minute), 1, 1, 256),
 	)
 
-	fixtureSQLite(t, filepath.Join(dir, "places.sqlite"),
-		firefoxFixturePlacesSchema, firefoxFixtureBookmarksSchema, firefoxFixtureAnnoAttributesSchema, firefoxFixtureAnnosSchema,
-		firefoxFixtureInsertPlace(1, link("www", "/"), "Home", 42, micros(3*time.Hour)),
-		firefoxFixtureInsertPlace(2, link("docs", "/guide?q=go&lang=en"), `Guide, "quoted" & <b>bold</b>`, 7, micros(4*time.Hour)),
-		firefoxFixtureInsertPlace(3, link("news", "/ja"), "ニュース", 3, micros(5*time.Hour)),
-		firefoxFixtureInsertPlace(4, link("docs", "/"), "Docs", 0, 0),
-		firefoxFixtureInsertPlace(5, link("news", "/long-read"), "Long read", 1, micros(9*time.Hour)),
-		firefoxFixtureInsertPlace(6, link("files", "/report.pdf"), "", 1, micros(6*time.Hour)),
-		firefoxFixtureInsertPlace(7, link("files", "/archive.tar.gz"), "", 1, micros(7*time.Hour)),
-		firefoxFixtureInsertPlace(8, link("shop", "/menu"), "Café menu", 2, micros(10*time.Hour)),
-		firefoxFixtureInsertPlace(9, link("files", "/setup.exe"), "", 1, micros(7*time.Hour+30*time.Minute)),
+	writeSQLite(t, filepath.Join(dir, "places.sqlite"),
+		firefoxPlacesSchema, firefoxBookmarksSchema, firefoxAnnoAttributesSchema, firefoxAnnosSchema,
+		insertFirefoxPlace(1, link("www", "/"), "Home", 42, micros(3*time.Hour)),
+		insertFirefoxPlace(2, link("docs", "/guide?q=go&lang=en"), `Guide, "quoted" & <b>bold</b>`, 7, micros(4*time.Hour)),
+		insertFirefoxPlace(3, link("news", "/ja"), "ニュース", 3, micros(5*time.Hour)),
+		insertFirefoxPlace(4, link("docs", "/"), "Docs", 0, 0),
+		insertFirefoxPlace(5, link("news", "/long-read"), "Long read", 1, micros(9*time.Hour)),
+		insertFirefoxPlace(6, link("files", "/report.pdf"), "", 1, micros(6*time.Hour)),
+		insertFirefoxPlace(7, link("files", "/archive.tar.gz"), "", 1, micros(7*time.Hour)),
+		insertFirefoxPlace(8, link("shop", "/menu"), "Café menu", 2, micros(10*time.Hour)),
+		insertFirefoxPlace(9, link("files", "/setup.exe"), "", 1, micros(7*time.Hour+30*time.Minute)),
 
-		firefoxFixtureInsertBookmark(1, 2, 0, 0, 0, "", "root________", micros(0)),
-		firefoxFixtureInsertBookmark(2, 2, 0, 1, 0, "menu", "menu________", micros(0)),
-		firefoxFixtureInsertBookmark(3, 2, 0, 1, 1, "toolbar", "toolbar_____", micros(0)),
-		firefoxFixtureInsertBookmark(4, 2, 0, 1, 2, "tags", "tags________", micros(0)),
-		firefoxFixtureInsertBookmark(5, 2, 0, 1, 3, "unfiled", "unfiled_____", micros(0)),
-		firefoxFixtureInsertBookmark(6, 2, 0, 1, 4, "mobile", "mobile______", micros(0)),
-		firefoxFixtureInsertBookmark(7, 1, 4, 3, 0, "Docs", "bookmark0007", micros(8*time.Hour)),
-		firefoxFixtureInsertBookmark(8, 2, 0, 3, 1, "Reading", "folder000008", micros(0)),
-		firefoxFixtureInsertBookmark(9, 1, 5, 8, 0, "Long read <with> & tags", "bookmark0009", micros(9*time.Hour)),
-		firefoxFixtureInsertBookmark(10, 3, 0, 3, 2, "", "separator010", micros(0)),
-		firefoxFixtureInsertBookmark(11, 1, 8, 2, 0, "Café menu", "bookmark0011", micros(10*time.Hour)),
-		firefoxFixtureInsertBookmark(12, 1, 1, 5, 0, "", "bookmark0012", micros(11*time.Hour)),
+		insertFirefoxBookmark(1, 2, 0, 0, 0, "", "root________", micros(0)),
+		insertFirefoxBookmark(2, 2, 0, 1, 0, "menu", "menu________", micros(0)),
+		insertFirefoxBookmark(3, 2, 0, 1, 1, "toolbar", "toolbar_____", micros(0)),
+		insertFirefoxBookmark(4, 2, 0, 1, 2, "tags", "tags________", micros(0)),
+		insertFirefoxBookmark(5, 2, 0, 1, 3, "unfiled", "unfiled_____", micros(0)),
+		insertFirefoxBookmark(6, 2, 0, 1, 4, "mobile", "mobile______", micros(0)),
+		insertFirefoxBookmark(7, 1, 4, 3, 0, "Docs", "bookmark0007", micros(8*time.Hour)),
+		insertFirefoxBookmark(8, 2, 0, 3, 1, "Reading", "folder000008", micros(0)),
+		insertFirefoxBookmark(9, 1, 5, 8, 0, "Long read <with> & tags", "bookmark0009", micros(9*time.Hour)),
+		insertFirefoxBookmark(10, 3, 0, 3, 2, "", "separator010", micros(0)),
+		insertFirefoxBookmark(11, 1, 8, 2, 0, "Café menu", "bookmark0011", micros(10*time.Hour)),
+		insertFirefoxBookmark(12, 1, 1, 5, 0, "", "bookmark0012", micros(11*time.Hour)),
 
 		`INSERT INTO moz_anno_attributes (id, name) VALUES (1, 'downloads/destinationFileURI'), (2, 'downloads/metaData')`,
-		firefoxFixtureInsertAnno(6, 1, "file:///C:/Users/alice/Downloads/report.pdf", micros(6*time.Hour)),
-		firefoxFixtureInsertAnno(6, 2, fmt.Sprintf(`{"state":1,"deleted":false,"endTime":%d,"fileSize":52344}`,
+		insertFirefoxAnno(6, 1, "file:///C:/Users/alice/Downloads/report.pdf", micros(6*time.Hour)),
+		insertFirefoxAnno(6, 2, fmt.Sprintf(`{"state":1,"deleted":false,"endTime":%d,"fileSize":52344}`,
 			millis(6*time.Hour+3*time.Second)), micros(6*time.Hour)),
-		firefoxFixtureInsertAnno(7, 1, "file:///home/alice/Downloads/archive.tar.gz", micros(7*time.Hour)),
-		firefoxFixtureInsertAnno(7, 2, fmt.Sprintf(`{"state":1,"deleted":false,"endTime":%d,"fileSize":1048576}`,
+		insertFirefoxAnno(7, 1, "file:///home/alice/Downloads/archive.tar.gz", micros(7*time.Hour)),
+		insertFirefoxAnno(7, 2, fmt.Sprintf(`{"state":1,"deleted":false,"endTime":%d,"fileSize":1048576}`,
 			millis(7*time.Hour+time.Minute)), micros(7*time.Hour)),
-		firefoxFixtureInsertAnno(9, 1, "file:///Users/alice/Downloads/setup.exe", micros(7*time.Hour+30*time.Minute)),
+		insertFirefoxAnno(9, 1, "file:///Users/alice/Downloads/setup.exe", micros(7*time.Hour+30*time.Minute)),
 	)
 
-	fixtureWrite(t, filepath.Join(dir, "extensions.json"), firefoxFixtureExtensions)
+	writeFile(t, filepath.Join(dir, "extensions.json"), firefoxExtensionsJSON)
 
-	fixtureSQLite(t, filepath.Join(dir, "webappsstore.sqlite"), firefoxFixtureWebappsstoreSchema,
-		firefoxFixtureInsertStorage(firefoxFixtureOriginKey("https", "app."+site, 443), "greeting", "café"),
-		firefoxFixtureInsertStorage(firefoxFixtureOriginKey("https", "app."+site, 443), "言語", "日本語"),
-		firefoxFixtureInsertStorage(firefoxFixtureOriginKey("http", "shop."+site, 8080), "cart", `{"items":2}`),
+	writeSQLite(t, filepath.Join(dir, "webappsstore.sqlite"), firefoxWebappsstoreSchema,
+		insertFirefoxStorage(firefoxOriginKey("https", "app."+site, 443), "greeting", "café"),
+		insertFirefoxStorage(firefoxOriginKey("https", "app."+site, 443), "言語", "日本語"),
+		insertFirefoxStorage(firefoxOriginKey("http", "shop."+site, 8080), "cart", `{"items":2}`),
 	)
 }
 
-// firefoxFixtureSeal goes through the decoder's own parser and Encrypt, so only the ASN.1 layout is spelled out here.
-func firefoxFixtureSeal(t *testing.T, marshal func() ([]byte, error), ciphertext *[]byte, key, plaintext []byte) []byte {
+// sealFirefoxValue goes through the decoder's own parser and Encrypt, so only the ASN.1 layout is spelled out here.
+func sealFirefoxValue(t *testing.T, marshal func() ([]byte, error), ciphertext *[]byte, key, plaintext []byte) []byte {
 	t.Helper()
 	template, err := marshal()
 	require.NoError(t, err)
@@ -149,7 +149,7 @@ func firefoxFixtureSeal(t *testing.T, marshal func() ([]byte, error), ciphertext
 	return sealed
 }
 
-type firefoxFixturePBES2 struct {
+type firefoxPBES2 struct {
 	Algorithm struct {
 		OID    asn1.ObjectIdentifier
 		Params struct {
@@ -171,22 +171,22 @@ type firefoxFixturePBES2 struct {
 	Ciphertext []byte
 }
 
-func firefoxFixturePBES2Seal(t *testing.T, globalSalt []byte, seed string, plaintext []byte) []byte {
+func sealFirefoxPBES2(t *testing.T, globalSalt []byte, seed string, plaintext []byte) []byte {
 	t.Helper()
-	var pbe firefoxFixturePBES2
+	var pbe firefoxPBES2
 	pbe.Algorithm.OID = oidPBES2
 	kdf := &pbe.Algorithm.Params.KDF
 	kdf.OID = oidPBKDF2
-	kdf.Params.Salt = firefoxFixtureBytes(seed+"/salt", 32)
+	kdf.Params.Salt = firefoxBytes(seed+"/salt", 32)
 	kdf.Params.Iterations = 1
 	kdf.Params.KeyLength = 32
 	kdf.Params.PRF.OID = oidHMACWithSHA256
 	pbe.Algorithm.Params.Cipher.OID = oidAES256CBC
-	pbe.Algorithm.Params.Cipher.IV = firefoxFixtureBytes(seed+"/iv", 14)
-	return firefoxFixtureSeal(t, func() ([]byte, error) { return asn1.Marshal(pbe) }, &pbe.Ciphertext, globalSalt, plaintext)
+	pbe.Algorithm.Params.Cipher.IV = firefoxBytes(seed+"/iv", 14)
+	return sealFirefoxValue(t, func() ([]byte, error) { return asn1.Marshal(pbe) }, &pbe.Ciphertext, globalSalt, plaintext)
 }
 
-type firefoxFixtureLoginPBE struct {
+type firefoxLoginPBE struct {
 	KeyID  []byte
 	Cipher struct {
 		OID asn1.ObjectIdentifier
@@ -195,27 +195,27 @@ type firefoxFixtureLoginPBE struct {
 	Ciphertext []byte
 }
 
-func firefoxFixtureLoginSeal(t *testing.T, key []byte, seed, plaintext string) string {
+func sealFirefoxLogin(t *testing.T, key []byte, seed, plaintext string) string {
 	t.Helper()
-	pbe := firefoxFixtureLoginPBE{KeyID: firefoxFixtureKeyID}
+	pbe := firefoxLoginPBE{KeyID: firefoxKeyID}
 	if len(key) == 24 {
 		pbe.Cipher.OID = oidDESEDE3CBC
-		pbe.Cipher.IV = firefoxFixtureBytes(seed, 8)
+		pbe.Cipher.IV = firefoxBytes(seed, 8)
 	} else {
 		pbe.Cipher.OID = oidAES256CBC
-		pbe.Cipher.IV = firefoxFixtureBytes(seed, 16)
+		pbe.Cipher.IV = firefoxBytes(seed, 16)
 	}
-	sealed := firefoxFixtureSeal(t, func() ([]byte, error) { return asn1.Marshal(pbe) }, &pbe.Ciphertext, key, []byte(plaintext))
+	sealed := sealFirefoxValue(t, func() ([]byte, error) { return asn1.Marshal(pbe) }, &pbe.Ciphertext, key, []byte(plaintext))
 	return base64.StdEncoding.EncodeToString(sealed)
 }
 
-func firefoxFixtureBytes(seed string, length int) []byte {
+func firefoxBytes(seed string, length int) []byte {
 	sum := sha256.Sum256([]byte(seed))
 	return sum[:length]
 }
 
-// firefoxFixtureOriginKey reverses the host, as webappsstore2 does, so a domain and its subdomains share a key prefix.
-func firefoxFixtureOriginKey(scheme, host string, port int) string {
+// firefoxOriginKey reverses the host, as webappsstore2 does, so a domain and its subdomains share a key prefix.
+func firefoxOriginKey(scheme, host string, port int) string {
 	reversed := []byte(host)
 	for i, j := 0, len(reversed)-1; i < j; i, j = i+1, j-1 {
 		reversed[i], reversed[j] = reversed[j], reversed[i]
@@ -223,14 +223,14 @@ func firefoxFixtureOriginKey(scheme, host string, port int) string {
 	return fmt.Sprintf("%s.:%s:%d", reversed, scheme, port)
 }
 
-func firefoxFixtureText(text string) string {
+func firefoxText(text string) string {
 	if text == "" {
 		return "NULL"
 	}
 	return "'" + text + "'"
 }
 
-func firefoxFixtureInsertCookie(name, value, host, path string, expiry, creationTime int64, secure, httpOnly, sameSite int) string {
+func insertFirefoxCookie(name, value, host, path string, expiry, creationTime int64, secure, httpOnly, sameSite int) string {
 	return fmt.Sprintf(
 		`INSERT INTO moz_cookies (originAttributes, name, value, host, path, expiry, lastAccessed, creationTime,
 		 isSecure, isHttpOnly, sameSite, rawSameSite, schemeMap)
@@ -239,7 +239,7 @@ func firefoxFixtureInsertCookie(name, value, host, path string, expiry, creation
 	)
 }
 
-func firefoxFixtureInsertPlace(id int, url, title string, visitCount int, lastVisitDate int64) string {
+func insertFirefoxPlace(id int, url, title string, visitCount int, lastVisitDate int64) string {
 	lastVisit := "NULL"
 	if lastVisitDate != 0 {
 		lastVisit = fmt.Sprint(lastVisitDate)
@@ -247,11 +247,11 @@ func firefoxFixtureInsertPlace(id int, url, title string, visitCount int, lastVi
 	return fmt.Sprintf(
 		`INSERT INTO moz_places (id, url, title, rev_host, visit_count, last_visit_date, guid, url_hash)
 		 VALUES (%d, '%s', %s, '', %d, %s, 'place%07d', 0)`,
-		id, url, firefoxFixtureText(title), visitCount, lastVisit, id,
+		id, url, firefoxText(title), visitCount, lastVisit, id,
 	)
 }
 
-func firefoxFixtureInsertBookmark(id, bookmarkType, foreignKey, parent, position int, title, guid string, dateAdded int64) string {
+func insertFirefoxBookmark(id, bookmarkType, foreignKey, parent, position int, title, guid string, dateAdded int64) string {
 	fkValue := "NULL"
 	if foreignKey != 0 {
 		fkValue = fmt.Sprint(foreignKey)
@@ -259,11 +259,11 @@ func firefoxFixtureInsertBookmark(id, bookmarkType, foreignKey, parent, position
 	return fmt.Sprintf(
 		`INSERT INTO moz_bookmarks (id, type, fk, parent, position, title, dateAdded, lastModified, guid)
 		 VALUES (%d, %d, %s, %d, %d, %s, %d, %d, '%s')`,
-		id, bookmarkType, fkValue, parent, position, firefoxFixtureText(title), dateAdded, dateAdded, guid,
+		id, bookmarkType, fkValue, parent, position, firefoxText(title), dateAdded, dateAdded, guid,
 	)
 }
 
-func firefoxFixtureInsertAnno(placeID, attributeID int, content string, dateAdded int64) string {
+func insertFirefoxAnno(placeID, attributeID int, content string, dateAdded int64) string {
 	return fmt.Sprintf(
 		`INSERT INTO moz_annos (place_id, anno_attribute_id, content, flags, expiration, type, dateAdded, lastModified)
 		 VALUES (%d, %d, '%s', 0, 4, 3, %d, %d)`,
@@ -271,18 +271,18 @@ func firefoxFixtureInsertAnno(placeID, attributeID int, content string, dateAdde
 	)
 }
 
-func firefoxFixtureInsertStorage(originKey, key, value string) string {
+func insertFirefoxStorage(originKey, key, value string) string {
 	return fmt.Sprintf(
 		`INSERT INTO webappsstore2 (originAttributes, originKey, scope, key, value) VALUES ('', '%s', '', '%s', '%s')`,
 		originKey, key, value,
 	)
 }
 
-const firefoxFixtureMetaDataSchema = `CREATE TABLE metaData (id PRIMARY KEY UNIQUE ON CONFLICT REPLACE, item1, item2)`
+const firefoxMetaDataSchema = `CREATE TABLE metaData (id PRIMARY KEY UNIQUE ON CONFLICT REPLACE, item1, item2)`
 
-const firefoxFixtureNSSPrivateSchema = `CREATE TABLE nssPrivate (id PRIMARY KEY UNIQUE ON CONFLICT ABORT, a11, a102)`
+const firefoxNSSPrivateSchema = `CREATE TABLE nssPrivate (id PRIMARY KEY UNIQUE ON CONFLICT ABORT, a11, a102)`
 
-const firefoxFixtureCookiesSchema = `CREATE TABLE moz_cookies (
+const firefoxCookiesSchema = `CREATE TABLE moz_cookies (
 	id INTEGER PRIMARY KEY,
 	originAttributes TEXT NOT NULL DEFAULT '',
 	name TEXT,
@@ -302,7 +302,7 @@ const firefoxFixtureCookiesSchema = `CREATE TABLE moz_cookies (
 	CONSTRAINT moz_uniqueid UNIQUE (name, host, path, originAttributes)
 )`
 
-const firefoxFixturePlacesSchema = `CREATE TABLE moz_places (
+const firefoxPlacesSchema = `CREATE TABLE moz_places (
 	id INTEGER PRIMARY KEY,
 	url LONGVARCHAR,
 	title LONGVARCHAR,
@@ -324,7 +324,7 @@ const firefoxFixturePlacesSchema = `CREATE TABLE moz_places (
 	recalc_alt_frecency INTEGER NOT NULL DEFAULT 0
 )`
 
-const firefoxFixtureBookmarksSchema = `CREATE TABLE moz_bookmarks (
+const firefoxBookmarksSchema = `CREATE TABLE moz_bookmarks (
 	id INTEGER PRIMARY KEY,
 	type INTEGER,
 	fk INTEGER DEFAULT NULL,
@@ -340,12 +340,12 @@ const firefoxFixtureBookmarksSchema = `CREATE TABLE moz_bookmarks (
 	syncChangeCounter INTEGER NOT NULL DEFAULT 1
 )`
 
-const firefoxFixtureAnnoAttributesSchema = `CREATE TABLE moz_anno_attributes (
+const firefoxAnnoAttributesSchema = `CREATE TABLE moz_anno_attributes (
 	id INTEGER PRIMARY KEY,
 	name VARCHAR(32) UNIQUE NOT NULL
 )`
 
-const firefoxFixtureAnnosSchema = `CREATE TABLE moz_annos (
+const firefoxAnnosSchema = `CREATE TABLE moz_annos (
 	id INTEGER PRIMARY KEY,
 	place_id INTEGER NOT NULL,
 	anno_attribute_id INTEGER,
@@ -357,7 +357,7 @@ const firefoxFixtureAnnosSchema = `CREATE TABLE moz_annos (
 	lastModified INTEGER DEFAULT 0
 )`
 
-const firefoxFixtureWebappsstoreSchema = `CREATE TABLE webappsstore2 (
+const firefoxWebappsstoreSchema = `CREATE TABLE webappsstore2 (
 	originAttributes TEXT,
 	originKey TEXT,
 	scope TEXT,
@@ -365,7 +365,7 @@ const firefoxFixtureWebappsstoreSchema = `CREATE TABLE webappsstore2 (
 	value TEXT
 )`
 
-const firefoxFixtureLogins = `{
+const firefoxLoginsJSON = `{
   "nextId": 4,
   "logins": [
     {
@@ -413,7 +413,7 @@ const firefoxFixtureLogins = `{
   "version": 3
 }`
 
-const firefoxFixtureExtensions = `{
+const firefoxExtensionsJSON = `{
   "schemaVersion": 36,
   "addons": [
     {

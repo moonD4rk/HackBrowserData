@@ -46,7 +46,7 @@ func (abeRetriever) Retrieve(_ context.Context, loc Locator) ([]byte, error) {
 		return nil, fmt.Errorf("abe: %w", err)
 	}
 
-	exePath, err := winapi.ExecutablePath(loc.Exe, loc.ExeFallbacks)
+	exePath, err := winapi.ExecutablePath(loc.Executable, loc.ExecutableFallbacks)
 	if err != nil {
 		return nil, fmt.Errorf("abe: %w", err)
 	}
@@ -63,7 +63,7 @@ func (abeRetriever) Retrieve(_ context.Context, loc Locator) ([]byte, error) {
 	if len(key) != 32 {
 		return nil, fmt.Errorf("abe: unexpected key length %d (want 32)", len(key))
 	}
-	log.Infof("abe: retrieved %s master key via reflective injection", loc.Exe)
+	log.Infof("abe: retrieved %s master key via reflective injection", loc.Executable)
 	return key, nil
 }
 

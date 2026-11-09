@@ -35,7 +35,7 @@ func fakeBase(extractFuncs map[category.Category]extractFunc) extractorsFunc {
 	}
 }
 
-func noKeys(t *testing.T) masterKeyRetriever {
+func noKeys(t *testing.T) dirKeysFunc {
 	return func(context.Context, browser.UserDataDir, snapshot.Snapshot) (masterkey.Set, error) {
 		t.Error("keys were retrieved")
 		return nil, nil
@@ -47,17 +47,17 @@ func chromeDir(t *testing.T, id browser.UserDataDirID, profiles ...string) brows
 	dir := browser.UserDataDir{ID: id, Browser: lookup(t, "chrome"), Path: t.TempDir()}
 	for _, name := range profiles {
 		touch(t, dir.Path, name, "History")
-		dir.Profiles = append(dir.Profiles, browser.Profile{Name: name, Dir: name})
+		dir.Profiles = append(dir.Profiles, browser.Profile{Name: name, RelativePath: name})
 	}
 	return dir
 }
 
-func run(t *testing.T, base extractorsFunc, keys masterKeyRetriever, categories []category.Category, dirs ...browser.UserDataDir) (Summary, string) {
+func run(t *testing.T, base extractorsFunc, keys dirKeysFunc, categories []category.Category, dirs ...browser.UserDataDir) (Summary, string) {
 	t.Helper()
-	options := Options{Categories: categories, Dir: t.TempDir()}
+	options := Options{Categories: categories, OutputDir: t.TempDir()}
 	summary, err := execute(context.Background(), newPlan(Discovery{Dirs: dirs}, options, base), options, base, keys)
 	require.NoError(t, err)
-	return summary, options.Dir
+	return summary, options.OutputDir
 }
 
 func outcomes(summary Summary) map[category.Category]Result {
@@ -100,8 +100,8 @@ func TestExecute_Outcomes(t *testing.T) {
 
 	got := outcomes(summary)
 	assert.Equal(t, OutcomePartial, got[category.Cookie].Outcome)
-	assert.Equal(t, 2, got[category.Cookie].Count)
-	assert.Equal(t, 1, got[category.Cookie].Failed)
+	assert.Equal(t, 2, got[category.Cookie].Records)
+	assert.Equal(t, 1, got[category.Cookie].Failures)
 	assert.Equal(t, OutcomeError, got[category.Password].Outcome, "problems and no record")
 	require.EqualError(t, got[category.Password].Err, "password not decrypted")
 	assert.Equal(t, OutcomeOK, got[category.History].Outcome, "an empty file is ok, not absent")
@@ -153,7 +153,7 @@ func TestExecute_HistoryNeverRetrievesKeys(t *testing.T) {
 	touch(t, path, "Local State")
 	touch(t, path, "Default", "History")
 	touch(t, path, "Default", "Network", "Cookies")
-	dir := browser.UserDataDir{ID: "chrome", Browser: lookup(t, "chrome"), Path: path, Profiles: []browser.Profile{{Name: "Default", Dir: "Default"}}}
+	dir := browser.UserDataDir{ID: "chrome", Browser: lookup(t, "chrome"), Path: path, Profiles: []browser.Profile{{Name: "Default", RelativePath: "Default"}}}
 
 	run(t, extractorsWith(nil), noKeys(t), []category.Category{category.History, category.Download}, dir)
 
@@ -206,7 +206,7 @@ func TestExecute_StopEndsTheRunBeforeTheNextExtractionAndRemovesTheCopy(t *testi
 			return nil
 		},
 	})
-	options := Options{Categories: []category.Category{category.History, category.Download}, Dir: t.TempDir()}
+	options := Options{Categories: []category.Category{category.History, category.Download}, OutputDir: t.TempDir()}
 	discovery := Discovery{Dirs: []browser.UserDataDir{chromeDir(t, "chrome", "Default"), chromeDir(t, "chrome-2", "Default")}}
 
 	_, err := execute(ctx, newPlan(discovery, options, base), options, base, noKeys(t))
@@ -228,9 +228,9 @@ func TestExecute_OutputFailureStopsTheRunAndLeavesNoCopies(t *testing.T) {
 			return nil
 		},
 	})
-	options := Options{Categories: []category.Category{category.History}, Dir: t.TempDir()}
-	require.NoError(t, os.Chmod(options.Dir, 0o500))
-	defer func() { require.NoError(t, os.Chmod(options.Dir, 0o700)) }()
+	options := Options{Categories: []category.Category{category.History}, OutputDir: t.TempDir()}
+	require.NoError(t, os.Chmod(options.OutputDir, 0o500))
+	defer func() { require.NoError(t, os.Chmod(options.OutputDir, 0o700)) }()
 
 	plan := newPlan(Discovery{Dirs: []browser.UserDataDir{chromeDir(t, "chrome", "Default")}}, options, base)
 	_, err := execute(context.Background(), plan, options, base, noKeys(t))
@@ -240,9 +240,9 @@ func TestExecute_OutputFailureStopsTheRunAndLeavesNoCopies(t *testing.T) {
 	assert.ErrorIs(t, statErr, fs.ErrNotExist)
 }
 
-func TestExecute_DumpKeys(t *testing.T) {
+func TestExecute_ImportedKeys(t *testing.T) {
 	want := masterkey.Set{masterkey.V10: []byte("dumped")}
-	keys := dumpKeys(map[browser.UserDataDirID]masterkey.Set{"chrome": want})
+	keys := keysFromFile(map[browser.UserDataDirID]masterkey.Set{"chrome": want})
 	got, err := keys(context.Background(), browser.UserDataDir{ID: "chrome"}, snapshot.Snapshot{})
 	require.NoError(t, err)
 	assert.Equal(t, want, got)

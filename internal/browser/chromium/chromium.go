@@ -62,7 +62,7 @@ func profileAt(chromiumBrowser browser.Browser, path string) (browser.UserDataDi
 		ID:       chromiumBrowser.UserDataDirID(0),
 		Browser:  chromiumBrowser,
 		Path:     filepath.Dir(clean),
-		Profiles: []browser.Profile{{Name: name, Dir: name}},
+		Profiles: []browser.Profile{{Name: name, RelativePath: name}},
 	}, true
 }
 
@@ -76,7 +76,7 @@ func userDataDirPaths(chromiumBrowser browser.Browser, options browser.DiscoverO
 		errs  []error
 	)
 	for _, relativePath := range chromiumBrowser.Platform().UserDataDirs {
-		matches, err := filepath.Glob(options.Home + "/" + relativePath)
+		matches, err := filepath.Glob(options.HomeDir + "/" + relativePath)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("user data dir %q: %w", relativePath, err))
 			continue
@@ -95,7 +95,7 @@ func discoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
 	var profiles []browser.Profile
 	for _, entry := range entries {
 		if entry.IsDir() && !isSkippedDir(entry.Name()) && isProfileDir(filepath.Join(dir.Path, entry.Name())) {
-			profiles = append(profiles, browser.Profile{Name: entry.Name(), Dir: entry.Name()})
+			profiles = append(profiles, browser.Profile{Name: entry.Name(), RelativePath: entry.Name()})
 		}
 	}
 	if len(profiles) > 0 {
@@ -111,7 +111,7 @@ func discoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
 	// Copied or restored trees may lack the marker, which no category reads, so a subdir with profile files is one too.
 	for _, entry := range entries {
 		if entry.IsDir() && !isSkippedDir(entry.Name()) && hasAnyFile(filepath.Join(dir.Path, entry.Name()), profileFiles) {
-			profiles = append(profiles, browser.Profile{Name: entry.Name(), Dir: entry.Name()})
+			profiles = append(profiles, browser.Profile{Name: entry.Name(), RelativePath: entry.Name()})
 		}
 	}
 	return profiles, nil
@@ -159,7 +159,7 @@ func hasAnyFile(dir string, paths []string) bool {
 func KeyLocator(dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterkey.Locator, error) {
 	platform := dir.Browser.Platform()
 	locator := masterkey.Locator{
-		KeychainLabel: platform.KeychainLabel, Exe: platform.Exe, ExeFallbacks: platform.ExeFallbacks, ABE: platform.ABE,
+		SecretLabel: platform.SecretLabel, Executable: platform.Executable, ExecutableFallbacks: platform.ExecutableFallbacks, ABE: platform.ABE,
 	}
 	path, err := dirSnapshot.Path(localState.Paths[0])
 	switch {

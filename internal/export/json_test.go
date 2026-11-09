@@ -50,9 +50,9 @@ func TestJSONEncoder_MatchesOneEncodeOfTheSlice(t *testing.T) {
 	t.Run("cookie-editor does not", func(t *testing.T) {
 		entries := make([]any, 0, len(cookies))
 		for _, cookie := range cookies {
-			entries = append(entries, cookieEditorValue(cookie))
+			entries = append(entries, toCookieEditor(cookie))
 		}
-		got := encodeFramed(t, &jsonEncoder{value: cookieEditorValue}, cookies)
+		got := encodeFramed(t, &jsonEncoder{convert: toCookieEditor}, cookies)
 		assert.Equal(t, encodeOnce(t, entries, false), got)
 		assert.Contains(t, got, `&qty=<3>`)
 	})

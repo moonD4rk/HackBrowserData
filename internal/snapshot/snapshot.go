@@ -81,7 +81,7 @@ func (d *Dir) capture(local string, file File) error {
 	if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
 		return fmt.Errorf("create %s: %w", filepath.Dir(target), err)
 	}
-	return Copy(filepath.Join(file.UserDataDirPath, filepath.FromSlash(file.RelativePath)), target, file.IsDir)
+	return copyPath(filepath.Join(file.UserDataDirPath, filepath.FromSlash(file.RelativePath)), target, file.IsDir)
 }
 
 func (d *Dir) Snapshot(userDataDirID string) Snapshot {

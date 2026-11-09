@@ -12,13 +12,13 @@ func Report(writer io.Writer, summary Summary) error {
 	fmt.Fprintln(table, "Browser\tProfile\tCategory\tResult\tRecords\tDetail")
 	for _, result := range summary.Results {
 		profile, cat := "-", "-"
-		if result.Profile != "" {
-			profile = result.Profile
+		if result.ProfileName != "" {
+			profile = result.ProfileName
 		}
 		if result.Category != 0 {
 			cat = result.Category.String()
 		}
-		fmt.Fprintf(table, "%s\t%s\t%s\t%s\t%d\t%s\n", result.UserDataDirID, profile, cat, result.Outcome, result.Count, detail(result))
+		fmt.Fprintf(table, "%s\t%s\t%s\t%s\t%d\t%s\n", result.UserDataDirID, profile, cat, result.Outcome, result.Records, detail(result))
 	}
 	return table.Flush()
 }
@@ -27,8 +27,8 @@ func detail(result Result) string {
 	switch {
 	case result.Err != nil:
 		return result.Err.Error()
-	case result.Failed > 0:
-		return fmt.Sprintf("%d not recovered", result.Failed)
+	case result.Failures > 0:
+		return fmt.Sprintf("%d not recovered", result.Failures)
 	default:
 		return ""
 	}

@@ -13,8 +13,8 @@ var yandexSignature = []byte{0x08, 0x01, 0x12, 0x20}
 var localEncryptorPrefix = []byte("v10")
 
 const (
-	yandexIntKeyBlobLen = 96 // 12B nonce + 68B ciphertext + 16B GCM tag
-	yandexDataKeyLen    = 32
+	yandexIntermediateKeyBlobLength = 96 // 12B nonce + 68B ciphertext + 16B GCM tag
+	yandexDataKeyLength             = 32
 )
 
 var (
@@ -30,11 +30,11 @@ func decryptYandexIntermediateKey(masterKey, blob []byte) ([]byte, error) {
 		return nil, errYandexMarkerNotFound
 	}
 	payload := blob[index+len(localEncryptorPrefix):]
-	if len(payload) < yandexIntKeyBlobLen {
+	if len(payload) < yandexIntermediateKeyBlobLength {
 		return nil, errYandexBlobShort
 	}
 
-	plaintext, err := crypto.AESGCMDecryptBlob(masterKey, payload[:yandexIntKeyBlobLen], nil)
+	plaintext, err := crypto.AESGCMDecryptBlob(masterKey, payload[:yandexIntermediateKeyBlobLength], nil)
 	if err != nil {
 		return nil, err
 	}
@@ -42,8 +42,8 @@ func decryptYandexIntermediateKey(masterKey, blob []byte) ([]byte, error) {
 		return nil, errYandexBadSignature
 	}
 	plaintext = plaintext[len(yandexSignature):]
-	if len(plaintext) < yandexDataKeyLen {
+	if len(plaintext) < yandexDataKeyLength {
 		return nil, errYandexKeyTooShort
 	}
-	return plaintext[:yandexDataKeyLen], nil
+	return plaintext[:yandexDataKeyLength], nil
 }

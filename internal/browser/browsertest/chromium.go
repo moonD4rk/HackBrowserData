@@ -26,7 +26,7 @@ var ChromiumKeys = masterkey.Set{
 	masterkey.V20: []byte("0123456789abcdef"),
 }
 
-var ChromiumInstalls = []struct {
+var ChromiumUserDataDirs = []struct {
 	Name        string
 	DisplayName string
 }{
@@ -44,31 +44,31 @@ var ChromiumProfiles = []struct {
 	{Dir: "Profile 1", label: "work", start: time.Date(2024, 6, 1, 9, 0, 0, 0, time.UTC)},
 }
 
-func ChromiumInstallations(t *testing.T, root string) {
+func WriteChromiumUserDataDirs(t *testing.T, root string) {
 	t.Helper()
-	for _, fixture := range ChromiumInstalls {
-		ChromiumUserData(t, filepath.Join(root, fixture.Name), fixture.Name)
+	for _, fixture := range ChromiumUserDataDirs {
+		WriteChromiumUserDataDir(t, filepath.Join(root, fixture.Name), fixture.Name)
 	}
 }
 
-func ChromiumUserData(t *testing.T, userDataDir, browserName string) {
+func WriteChromiumUserDataDir(t *testing.T, userDataDir, browserName string) {
 	t.Helper()
-	fixtureWrite(t, filepath.Join(userDataDir, "Local State"), "{}")
+	writeFile(t, filepath.Join(userDataDir, "Local State"), "{}")
 	for _, fixtureProfile := range ChromiumProfiles {
 		site := fixtureProfile.label + "." + browserName + ".test"
-		chromiumFixtureProfile(t, filepath.Join(userDataDir, fixtureProfile.Dir), site, fixtureProfile.start, fixtureProfile.accountLogins)
+		writeChromiumProfile(t, filepath.Join(userDataDir, fixtureProfile.Dir), site, fixtureProfile.start, fixtureProfile.accountLogins)
 	}
 }
 
-func chromiumFixtureProfile(t *testing.T, dir, site string, start time.Time, accountLogins bool) {
+func writeChromiumProfile(t *testing.T, dir, site string, start time.Time, accountLogins bool) {
 	t.Helper()
-	chromiumTimeAt := func(offset time.Duration) int64 { return chromiumFixtureMicros(start.Add(offset)) }
+	chromiumTimeAt := func(offset time.Duration) int64 { return chromiumMicros(start.Add(offset)) }
 	link := func(host, path string) string { return "https://" + host + "." + site + path }
 	sealV10 := func(plaintext string) string {
-		return chromiumFixtureSeal(t, "v10", ChromiumKeys[masterkey.V10], plaintext)
+		return sealChromiumValue(t, "v10", ChromiumKeys[masterkey.V10], plaintext)
 	}
 	sealV20 := func(plaintext string) string {
-		return chromiumFixtureSeal(t, "v20", ChromiumKeys[masterkey.V20], plaintext)
+		return sealChromiumValue(t, "v20", ChromiumKeys[masterkey.V20], plaintext)
 	}
 	// Chrome 130+ seals SHA256(host_key) ahead of the cookie value, which extraction must strip again.
 	hostBound := func(host, value string) string {
@@ -77,72 +77,72 @@ func chromiumFixtureProfile(t *testing.T, dir, site string, start time.Time, acc
 	}
 	day := 24 * time.Hour
 
-	fixtureWrite(t, filepath.Join(dir, "Preferences"), "{}")
+	writeFile(t, filepath.Join(dir, "Preferences"), "{}")
 
-	fixtureSQLite(t, filepath.Join(dir, "Login Data"), chromiumFixtureLoginsSchema,
-		chromiumFixtureInsertLogin(link("accounts", "/"), link("accounts", "/login"), "alice",
+	writeSQLite(t, filepath.Join(dir, "Login Data"), chromiumLoginsSchema,
+		insertChromiumLogin(link("accounts", "/"), link("accounts", "/login"), "alice",
 			sealV10("correct-horse-battery-staple"), chromiumTimeAt(time.Hour)),
-		chromiumFixtureInsertLogin(link("shop", "/"), link("shop", "/signin"), "alice@"+site, sealV10(`pa,ss"word`), chromiumTimeAt(2*time.Hour)),
+		insertChromiumLogin(link("shop", "/"), link("shop", "/signin"), "alice@"+site, sealV10(`pa,ss"word`), chromiumTimeAt(2*time.Hour)),
 	)
 	if accountLogins {
-		fixtureSQLite(t, filepath.Join(dir, "Login Data For Account"), chromiumFixtureLoginsSchema,
-			chromiumFixtureInsertLogin(link("sync", "/"), link("sync", "/auth"), "alice", sealV10("synced-secret"), chromiumTimeAt(90*time.Minute)),
+		writeSQLite(t, filepath.Join(dir, "Login Data For Account"), chromiumLoginsSchema,
+			insertChromiumLogin(link("sync", "/"), link("sync", "/auth"), "alice", sealV10("synced-secret"), chromiumTimeAt(90*time.Minute)),
 		)
 	}
 
 	domain, www, app := "."+site, "www."+site, "app."+site
-	fixtureSQLite(t, filepath.Join(dir, "Network", "Cookies"), chromiumFixtureCookiesSchema,
-		chromiumFixtureInsertCookie("SID", domain, "/", sealV20(hostBound(domain, "sid-"+site)),
+	writeSQLite(t, filepath.Join(dir, "Network", "Cookies"), chromiumCookiesSchema,
+		insertChromiumCookie("SID", domain, "/", sealV20(hostBound(domain, "sid-"+site)),
 			chromiumTimeAt(10*time.Minute+123456*time.Microsecond), chromiumTimeAt(365*day), 1, 1, 1),
-		chromiumFixtureInsertCookie("prefs", www, "/settings", sealV10("theme=dark"), chromiumTimeAt(20*time.Minute), chromiumTimeAt(30*day), 0, 0, 2),
-		chromiumFixtureInsertCookie("tracker", domain, "/", sealV20(hostBound(domain, "opt-out")), chromiumTimeAt(30*time.Minute), chromiumTimeAt(730*day), 1, 0, 0),
-		chromiumFixtureInsertCookie("session", app, "/", sealV20("ephemeral"), chromiumTimeAt(40*time.Minute), 0, 1, 1, -1),
+		insertChromiumCookie("prefs", www, "/settings", sealV10("theme=dark"), chromiumTimeAt(20*time.Minute), chromiumTimeAt(30*day), 0, 0, 2),
+		insertChromiumCookie("tracker", domain, "/", sealV20(hostBound(domain, "opt-out")), chromiumTimeAt(30*time.Minute), chromiumTimeAt(730*day), 1, 0, 0),
+		insertChromiumCookie("session", app, "/", sealV20("ephemeral"), chromiumTimeAt(40*time.Minute), 0, 1, 1, -1),
 	)
 
-	fixtureSQLite(t, filepath.Join(dir, "History"), chromiumFixtureURLsSchema, chromiumFixtureDownloadsSchema,
-		chromiumFixtureInsertURL(link("www", "/"), "Home", 42, chromiumTimeAt(3*time.Hour)),
-		chromiumFixtureInsertURL(link("docs", "/guide?q=go&lang=en"), `Guide, "quoted" & <b>bold</b>`, 7, chromiumTimeAt(4*time.Hour)),
-		chromiumFixtureInsertURL(link("news", "/ja"), "ニュース", 3, chromiumTimeAt(5*time.Hour)),
-		chromiumFixtureInsertDownload(`C:\Users\alice\Downloads\report.pdf`, link("files", "/report.pdf"), "application/pdf",
+	writeSQLite(t, filepath.Join(dir, "History"), chromiumURLsSchema, chromiumDownloadsSchema,
+		insertChromiumURL(link("www", "/"), "Home", 42, chromiumTimeAt(3*time.Hour)),
+		insertChromiumURL(link("docs", "/guide?q=go&lang=en"), `Guide, "quoted" & <b>bold</b>`, 7, chromiumTimeAt(4*time.Hour)),
+		insertChromiumURL(link("news", "/ja"), "ニュース", 3, chromiumTimeAt(5*time.Hour)),
+		insertChromiumDownload(`C:\Users\alice\Downloads\report.pdf`, link("files", "/report.pdf"), "application/pdf",
 			52344, chromiumTimeAt(6*time.Hour), chromiumTimeAt(6*time.Hour+3*time.Second)),
-		chromiumFixtureInsertDownload("/home/alice/Downloads/archive.tar.gz", link("files", "/archive.tar.gz"), "application/gzip",
+		insertChromiumDownload("/home/alice/Downloads/archive.tar.gz", link("files", "/archive.tar.gz"), "application/gzip",
 			1048576, chromiumTimeAt(7*time.Hour), 0),
 	)
 
-	fixtureWrite(t, filepath.Join(dir, "Bookmarks"),
-		fmt.Sprintf(chromiumFixtureBookmarks, site, chromiumTimeAt(0), chromiumTimeAt(8*time.Hour), chromiumTimeAt(9*time.Hour), chromiumTimeAt(10*time.Hour)))
+	writeFile(t, filepath.Join(dir, "Bookmarks"),
+		fmt.Sprintf(chromiumBookmarksJSON, site, chromiumTimeAt(0), chromiumTimeAt(8*time.Hour), chromiumTimeAt(9*time.Hour), chromiumTimeAt(10*time.Hour)))
 
-	fixtureSQLite(t, filepath.Join(dir, "Web Data"), chromiumFixtureCreditCardsSchema,
-		chromiumFixtureInsertCreditCard("Alice Example", 4, 2031, sealV10("4111111111111111"), "Travel", "billing-home"),
-		chromiumFixtureInsertCreditCard("Bob Example", 11, 2029, sealV10("5500005555555559"), "", ""),
+	writeSQLite(t, filepath.Join(dir, "Web Data"), chromiumCreditCardsSchema,
+		insertChromiumCreditCard("Alice Example", 4, 2031, sealV10("4111111111111111"), "Travel", "billing-home"),
+		insertChromiumCreditCard("Bob Example", 11, 2029, sealV10("5500005555555559"), "", ""),
 	)
 
-	fixtureWrite(t, filepath.Join(dir, "Secure Preferences"), chromiumFixtureSecurePreferences)
+	writeFile(t, filepath.Join(dir, "Secure Preferences"), chromiumSecurePreferencesJSON)
 
 	origin := link("app", "")
 	dataKey := "_" + origin + "\x00"
-	chromiumFixtureLevelDB(t, filepath.Join(dir, "Local Storage", "leveldb"), map[string]string{
-		"VERSION":              "1",
-		"META:" + origin:       "\x08\x96\x01",
-		"METAACCESS:" + origin: "\x10\x20",
-		dataKey + chromiumFixtureLatin1("greeting"): chromiumFixtureLatin1("caf\xe9"),
-		dataKey + chromiumFixtureUTF16("言語"):        chromiumFixtureUTF16("日本語"),
-		dataKey + chromiumFixtureLatin1("blob"):     chromiumFixtureLatin1(strings.Repeat("x", 2100)),
+	writeChromiumLevelDB(t, filepath.Join(dir, "Local Storage", "leveldb"), map[string]string{
+		"VERSION":                            "1",
+		"META:" + origin:                     "\x08\x96\x01",
+		"METAACCESS:" + origin:               "\x10\x20",
+		dataKey + chromiumLatin1("greeting"): chromiumLatin1("caf\xe9"),
+		dataKey + chromiumUTF16("言語"):        chromiumUTF16("日本語"),
+		dataKey + chromiumLatin1("blob"):     chromiumLatin1(strings.Repeat("x", 2100)),
 	})
 
 	namespace := "namespace-0a1b2c3d_4e5f_6a7b_8c9d_0e1f2a3b4c5d-"
-	chromiumFixtureLevelDB(t, filepath.Join(dir, "Session Storage"), map[string]string{
+	writeChromiumLevelDB(t, filepath.Join(dir, "Session Storage"), map[string]string{
 		namespace + link("app", "/"):  "1",
 		namespace + link("shop", "/"): "2",
-		"map-1-draft":                 chromiumFixtureUTF16Raw("Hello, world"),
-		"map-1-scrollY":               chromiumFixtureUTF16Raw("640"),
-		"map-2-cart":                  chromiumFixtureUTF16Raw(`{"items":2}`),
+		"map-1-draft":                 chromiumUTF16Raw("Hello, world"),
+		"map-1-scrollY":               chromiumUTF16Raw("640"),
+		"map-2-cart":                  chromiumUTF16Raw(`{"items":2}`),
 		"next-map-id":                 "3",
 		"version":                     "1",
 	})
 }
 
-func chromiumFixtureSeal(t *testing.T, version string, key []byte, plaintext string) string {
+func sealChromiumValue(t *testing.T, version string, key []byte, plaintext string) string {
 	t.Helper()
 	nonce := []byte(version + "_nonce_12")
 	sealed, err := crypto.AESGCMEncrypt(key, nonce, []byte(plaintext))
@@ -150,16 +150,16 @@ func chromiumFixtureSeal(t *testing.T, version string, key []byte, plaintext str
 	return hex.EncodeToString(append(append([]byte(version), nonce...), sealed...))
 }
 
-func chromiumFixtureMicros(timestamp time.Time) int64 {
+func chromiumMicros(timestamp time.Time) int64 {
 	const unixToChromiumEpochMicros = 11_644_473_600_000_000
 	return timestamp.UnixMicro() + unixToChromiumEpochMicros
 }
 
-func chromiumFixtureLatin1(text string) string { return "\x01" + text }
+func chromiumLatin1(text string) string { return "\x01" + text }
 
-func chromiumFixtureUTF16(text string) string { return "\x00" + chromiumFixtureUTF16Raw(text) }
+func chromiumUTF16(text string) string { return "\x00" + chromiumUTF16Raw(text) }
 
-func chromiumFixtureUTF16Raw(text string) string {
+func chromiumUTF16Raw(text string) string {
 	units := utf16.Encode([]rune(text))
 	encoded := make([]byte, 2*len(units))
 	for i, unit := range units {
@@ -168,7 +168,7 @@ func chromiumFixtureUTF16Raw(text string) string {
 	return string(encoded)
 }
 
-func chromiumFixtureLevelDB(t *testing.T, dir string, entries map[string]string) {
+func writeChromiumLevelDB(t *testing.T, dir string, entries map[string]string) {
 	t.Helper()
 	keys := make([]string, 0, len(entries))
 	for key := range entries {
@@ -195,18 +195,18 @@ func OpenLevelDB(t *testing.T, dir string) *leveldb.DB {
 	}
 }
 
-func chromiumFixtureInsertLogin(originURL, actionURL, username, pwdHex string, dateCreated int64) string {
+func insertChromiumLogin(originURL, actionURL, username, passwordHex string, dateCreated int64) string {
 	return fmt.Sprintf(
 		`INSERT INTO logins (origin_url, action_url, username_element, username_value,
 		 password_element, password_value, submit_element, signon_realm, date_created,
 		 blacklisted_by_user, scheme)
 		 VALUES ('%s', '%s', '', '%s', '', x'%s', '', '%s', %d, 0, 0)`,
-		originURL, actionURL, username, pwdHex, originURL, dateCreated,
+		originURL, actionURL, username, passwordHex, originURL, dateCreated,
 	)
 }
 
-func chromiumFixtureInsertCookie(
-	name, host, path, encValueHex string, creationUTC, expiresUTC int64, secure, httpOnly, sameSite int,
+func insertChromiumCookie(
+	name, host, path, encryptedValueHex string, creationUTC, expiresUTC int64, secure, httpOnly, sameSite int,
 ) string {
 	persistent := 0
 	if expiresUTC != 0 {
@@ -218,12 +218,12 @@ func chromiumFixtureInsertCookie(
 		 has_expires, is_persistent, priority, samesite, source_scheme, source_port,
 		 last_update_utc, source_type, has_cross_site_ancestor)
 		 VALUES (%d, '%s', '', '%s', '', x'%s', '%s', %d, %d, %d, %d, %d, %d, 1, %d, 2, 443, %d, 0, 0)`,
-		creationUTC, host, name, encValueHex, path, expiresUTC, secure, httpOnly, creationUTC,
+		creationUTC, host, name, encryptedValueHex, path, expiresUTC, secure, httpOnly, creationUTC,
 		persistent, persistent, sameSite, creationUTC,
 	)
 }
 
-func chromiumFixtureInsertURL(url, title string, visitCount int, lastVisitTime int64) string {
+func insertChromiumURL(url, title string, visitCount int, lastVisitTime int64) string {
 	return fmt.Sprintf(
 		`INSERT INTO urls (url, title, visit_count, typed_count, last_visit_time, hidden)
 		 VALUES ('%s', '%s', %d, 0, %d, 0)`,
@@ -231,7 +231,7 @@ func chromiumFixtureInsertURL(url, title string, visitCount int, lastVisitTime i
 	)
 }
 
-func chromiumFixtureInsertDownload(targetPath, tabURL, mimeType string, totalBytes, startTime, endTime int64) string {
+func insertChromiumDownload(targetPath, tabURL, mimeType string, totalBytes, startTime, endTime int64) string {
 	return fmt.Sprintf(
 		`INSERT INTO downloads (id, guid, current_path, target_path, start_time, received_bytes,
 		 total_bytes, state, danger_type, interrupt_reason, hash, end_time, opened, last_access_time,
@@ -242,16 +242,16 @@ func chromiumFixtureInsertDownload(targetPath, tabURL, mimeType string, totalByt
 	)
 }
 
-func chromiumFixtureInsertCreditCard(name string, month, year int, encNumberHex, nickName, address string) string {
+func insertChromiumCreditCard(name string, month, year int, encryptedNumberHex, nickname, address string) string {
 	return fmt.Sprintf(
 		`INSERT INTO credit_cards (guid, name_on_card, expiration_month, expiration_year, card_number_encrypted,
 		 nickname, billing_address_id)
 		 VALUES ('%s-%d-%d', '%s', %d, %d, x'%s', '%s', '%s')`,
-		name, month, year, name, month, year, encNumberHex, nickName, address,
+		name, month, year, name, month, year, encryptedNumberHex, nickname, address,
 	)
 }
 
-const chromiumFixtureLoginsSchema = `CREATE TABLE logins (
+const chromiumLoginsSchema = `CREATE TABLE logins (
 	origin_url VARCHAR NOT NULL,
 	action_url VARCHAR,
 	username_element VARCHAR,
@@ -287,7 +287,7 @@ const chromiumFixtureLoginsSchema = `CREATE TABLE logins (
 	UNIQUE (origin_url, username_element, username_value, password_element, signon_realm)
 )`
 
-const chromiumFixtureCookiesSchema = `CREATE TABLE cookies (
+const chromiumCookiesSchema = `CREATE TABLE cookies (
 	creation_utc INTEGER NOT NULL,
 	host_key TEXT NOT NULL,
 	top_frame_site_key TEXT NOT NULL,
@@ -310,7 +310,7 @@ const chromiumFixtureCookiesSchema = `CREATE TABLE cookies (
 	has_cross_site_ancestor INTEGER NOT NULL
 )`
 
-const chromiumFixtureURLsSchema = `CREATE TABLE urls (
+const chromiumURLsSchema = `CREATE TABLE urls (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	url LONGVARCHAR,
 	title LONGVARCHAR,
@@ -320,7 +320,7 @@ const chromiumFixtureURLsSchema = `CREATE TABLE urls (
 	hidden INTEGER DEFAULT 0 NOT NULL
 )`
 
-const chromiumFixtureDownloadsSchema = `CREATE TABLE downloads (
+const chromiumDownloadsSchema = `CREATE TABLE downloads (
 	id INTEGER PRIMARY KEY,
 	guid VARCHAR NOT NULL,
 	current_path LONGVARCHAR NOT NULL,
@@ -351,7 +351,7 @@ const chromiumFixtureDownloadsSchema = `CREATE TABLE downloads (
 	original_mime_type VARCHAR(255) NOT NULL
 )`
 
-const chromiumFixtureCreditCardsSchema = `CREATE TABLE credit_cards (
+const chromiumCreditCardsSchema = `CREATE TABLE credit_cards (
 	guid VARCHAR PRIMARY KEY,
 	name_on_card VARCHAR,
 	expiration_month INTEGER,
@@ -365,7 +365,7 @@ const chromiumFixtureCreditCardsSchema = `CREATE TABLE credit_cards (
 	nickname VARCHAR
 )`
 
-const chromiumFixtureBookmarks = `{
+const chromiumBookmarksJSON = `{
   "checksum": "00000000000000000000000000000000",
   "roots": {
     "bookmark_bar": {
@@ -400,7 +400,7 @@ const chromiumFixtureBookmarks = `{
   "version": 1
 }`
 
-const chromiumFixtureSecurePreferences = `{
+const chromiumSecurePreferencesJSON = `{
   "extensions": {
     "settings": {
       "aaaabbbbccccddddeeeeffffgggghhhh": {

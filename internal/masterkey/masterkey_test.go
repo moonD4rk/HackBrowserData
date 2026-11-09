@@ -116,7 +116,7 @@ func TestRetrieveAll_NotApplicableIsSilent(t *testing.T) {
 
 func TestRetrieveAll_PassesTheLocator(t *testing.T) {
 	retriever := &fakeRetriever{version: V10, key: v10Key}
-	locator := Locator{LocalState: "/tmp/Local State", KeychainLabel: "Chrome", Exe: "chrome.exe", ABE: ABEChromeBase}
+	locator := Locator{LocalState: "/tmp/Local State", SecretLabel: "Chrome", Executable: "chrome.exe", ABE: ABEChromeBase}
 	_, err := retrieveAll(context.Background(), locator, []Retriever{retriever})
 	require.NoError(t, err)
 	assert.Equal(t, locator, retriever.gotLoc)

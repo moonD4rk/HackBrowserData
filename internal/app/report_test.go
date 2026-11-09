@@ -13,12 +13,12 @@ import (
 )
 
 func TestReport(t *testing.T) {
-	cookie := Extraction{UserDataDirID: "chrome", Profile: "Default", Category: category.Cookie}
+	cookie := Extraction{UserDataDirID: "chrome", ProfileName: "Default", Category: category.Cookie}
 	var buffer bytes.Buffer
 	require.NoError(t, Report(&buffer, Summary{Results: []Result{
-		{Extraction: cookie, Outcome: OutcomePartial, Count: 224, Failed: 4},
+		{Extraction: cookie, Outcome: OutcomePartial, Records: 224, Failures: 4},
 		dirFailure("arc-2", errors.New("permission denied")),
-		{Extraction: Extraction{UserDataDirID: "edge", Profile: "Default", Category: category.Password}},
+		{Extraction: Extraction{UserDataDirID: "edge", ProfileName: "Default", Category: category.Password}},
 	}}))
 
 	lines := strings.Split(strings.TrimSpace(buffer.String()), "\n")

@@ -51,7 +51,7 @@ func AESGCMEncrypt(key, nonce, plaintext []byte) ([]byte, error) {
 		return nil, err
 	}
 	if len(nonce) != aead.NonceSize() {
-		return nil, errInvalidNonceLen
+		return nil, errInvalidNonceLength
 	}
 	return aead.Seal(nil, nonce, plaintext, nil), nil
 }
@@ -66,7 +66,7 @@ func AESGCMDecrypt(key, nonce, ciphertext []byte) ([]byte, error) {
 		return nil, err
 	}
 	if len(nonce) != aead.NonceSize() {
-		return nil, errInvalidNonceLen
+		return nil, errInvalidNonceLength
 	}
 	return aead.Open(nil, nonce, ciphertext, nil)
 }
@@ -92,7 +92,7 @@ func cbcEncrypt(block cipher.Block, iv, plaintext []byte) ([]byte, error) {
 		return nil, errInvalidIVLength
 	}
 
-	padded := pkcs5Padding(plaintext, block.BlockSize())
+	padded := pkcs5Pad(plaintext, block.BlockSize())
 	encrypted := make([]byte, len(padded))
 	cipher.NewCBCEncrypter(block, iv).CryptBlocks(encrypted, padded)
 	return encrypted, nil
@@ -113,15 +113,15 @@ func cbcDecrypt(block cipher.Block, iv, ciphertext []byte) ([]byte, error) {
 	decrypted := make([]byte, len(ciphertext))
 	cipher.NewCBCDecrypter(block, iv).CryptBlocks(decrypted, ciphertext)
 
-	decrypted, err := pkcs5UnPadding(decrypted, blockSize)
+	decrypted, err := pkcs5Unpad(decrypted, blockSize)
 	if err != nil {
 		return nil, fmt.Errorf("decrypt: %w", err)
 	}
 	return decrypted, nil
 }
 
-// paddingZero returns data unchanged if already long enough; otherwise a zero-padded new slice.
-func paddingZero(data []byte, length int) []byte {
+// zeroPad returns data unchanged if already long enough; otherwise a zero-padded new slice.
+func zeroPad(data []byte, length int) []byte {
 	if len(data) >= length {
 		return data
 	}
@@ -130,8 +130,8 @@ func paddingZero(data []byte, length int) []byte {
 	return padded
 }
 
-// pkcs5Padding always returns a new slice and never modifies data.
-func pkcs5Padding(data []byte, blockSize int) []byte {
+// pkcs5Pad always returns a new slice and never modifies data.
+func pkcs5Pad(data []byte, blockSize int) []byte {
 	paddingLength := blockSize - (len(data) % blockSize)
 	padded := make([]byte, len(data)+paddingLength)
 	copy(padded, data)
@@ -141,7 +141,7 @@ func pkcs5Padding(data []byte, blockSize int) []byte {
 	return padded
 }
 
-func pkcs5UnPadding(data []byte, blockSize int) ([]byte, error) {
+func pkcs5Unpad(data []byte, blockSize int) ([]byte, error) {
 	length := len(data)
 	if length == 0 {
 		return nil, errInvalidPadding

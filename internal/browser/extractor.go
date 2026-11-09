@@ -27,7 +27,7 @@ func (s FileSpec) CandidatePaths(profile Profile) []string {
 	paths := make([]string, len(s.Paths))
 	for i, relativePath := range s.Paths {
 		if !s.Shared {
-			relativePath = path.Join(profile.Dir, relativePath)
+			relativePath = path.Join(profile.RelativePath, relativePath)
 		}
 		paths[i] = relativePath
 	}

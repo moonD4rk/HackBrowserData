@@ -13,34 +13,34 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
-// loginKeychain builds the run's one login keychain without opening it, so a run that never decrypts never prompts.
-func loginKeychain(options Options) runKeychain {
-	path := filepath.Join(options.Home, "Library", "Keychains", "login.keychain-db")
+// newLoginKeychain builds the run's login keychain without opening it, so a run that never decrypts never prompts.
+func newLoginKeychain(options Options) loginKeychain {
+	path := filepath.Join(options.HomeDir, "Library", "Keychains", "login.keychain-db")
 	if options.KeychainPassword == nil {
 		return keychain.New(path, func(context.Context) (string, error) { return "", nil })
 	}
-	return &reportedKeychain{Keychain: keychain.New(path, keychain.PasswordFunc(options.KeychainPassword))}
+	return &reportingKeychain{Keychain: keychain.New(path, keychain.PasswordFunc(options.KeychainPassword))}
 }
 
-// reportedKeychain says once why the keychain stayed locked, since every consumer then reads metadata only, quietly.
-type reportedKeychain struct {
+// reportingKeychain says once why the keychain stayed locked, since every consumer then reads metadata only, quietly.
+type reportingKeychain struct {
 	*keychain.Keychain
 	once sync.Once
 }
 
-func (k *reportedKeychain) GenericPassword(ctx context.Context, account string) ([]byte, error) {
+func (k *reportingKeychain) GenericPassword(ctx context.Context, account string) ([]byte, error) {
 	secret, err := k.Keychain.GenericPassword(ctx, account)
-	k.report()
+	k.warnLockedOnce()
 	return secret, err
 }
 
-func (k *reportedKeychain) InternetPasswords(ctx context.Context) ([]keychainbreaker.InternetPassword, error) {
+func (k *reportingKeychain) InternetPasswords(ctx context.Context) ([]keychainbreaker.InternetPassword, error) {
 	passwords, err := k.Keychain.InternetPasswords(ctx)
-	k.report()
+	k.warnLockedOnce()
 	return passwords, err
 }
 
-func (k *reportedKeychain) report() {
+func (k *reportingKeychain) warnLockedOnce() {
 	if err := k.Err(); err != nil {
 		k.once.Do(func() { log.Warnf("%v; keychain-protected data is exported as metadata only", err) })
 	}

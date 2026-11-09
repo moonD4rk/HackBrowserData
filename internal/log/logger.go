@@ -13,32 +13,32 @@ import (
 type logger struct {
 	out      io.Writer
 	mutex    sync.Mutex
-	minLevel Level
+	minLevel logLevel
 }
 
 func newLogger(out io.Writer) *logger {
-	return &logger{out: out, minLevel: InfoLevel}
+	return &logger{out: out, minLevel: infoLevel}
 }
 
-func (l *logger) canLogAt(level Level) bool {
-	return level >= Level(atomic.LoadInt32((*int32)(&l.minLevel)))
+func (l *logger) enabled(level logLevel) bool {
+	return level >= logLevel(atomic.LoadInt32((*int32)(&l.minLevel)))
 }
 
-func (l *logger) SetLevel(level Level) {
-	if level < DebugLevel || level > WarnLevel {
+func (l *logger) setLevel(level logLevel) {
+	if level < debugLevel || level > warnLevel {
 		panic("log: invalid log level")
 	}
 	atomic.StoreInt32((*int32)(&l.minLevel), int32(level))
 }
 
-// callerSkip skips the frames between runtime.Caller and the caller: logMsg, and Debugf/Infof/Warnf.
+// callerSkip skips the frames between runtime.Caller and the caller: write, and Debugf/Infof/Warnf.
 const callerSkip = 2
 
 // continuation lines a message's later lines up under its first, past the "[DBG] " label.
 const continuation = "      "
 
-func (l *logger) logMsg(level Level, message string) {
-	if !l.canLogAt(level) {
+func (l *logger) write(level logLevel, message string) {
+	if !l.enabled(level) {
 		return
 	}
 	message = strings.TrimRight(message, "\n")
@@ -48,7 +48,7 @@ func (l *logger) logMsg(level Level, message string) {
 
 	label := "[" + level.String() + "]"
 	var line string
-	if level == DebugLevel {
+	if level == debugLevel {
 		_, file, lineNumber, ok := runtime.Caller(callerSkip)
 		if ok {
 			file = filepath.Base(file)
@@ -67,13 +67,13 @@ func (l *logger) logMsg(level Level, message string) {
 }
 
 func (l *logger) Debugf(format string, args ...any) {
-	l.logMsg(DebugLevel, fmt.Sprintf(format, args...))
+	l.write(debugLevel, fmt.Sprintf(format, args...))
 }
 
 func (l *logger) Infof(format string, args ...any) {
-	l.logMsg(InfoLevel, fmt.Sprintf(format, args...))
+	l.write(infoLevel, fmt.Sprintf(format, args...))
 }
 
 func (l *logger) Warnf(format string, args ...any) {
-	l.logMsg(WarnLevel, fmt.Sprintf(format, args...))
+	l.write(warnLevel, fmt.Sprintf(format, args...))
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-func buildTestDownloadsPlist(t *testing.T, downloadsPlist safariDownloads) string {
+func buildTestDownloadsPlist(t *testing.T, downloadsPlist downloadHistory) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "Downloads.plist")
 	file, err := os.Create(path)
@@ -25,8 +25,8 @@ func buildTestDownloadsPlist(t *testing.T, downloadsPlist safariDownloads) strin
 func TestExtractDownloads_DefaultProfileOnly(t *testing.T) {
 	// Only DefaultProfile and untagged (pre-profile) entries surface for the default profile.
 	const namedUUID = "5604E6F5-02ED-4E40-8249-63DE7BC986C8"
-	downloadsPlist := safariDownloads{
-		DownloadHistory: []safariDownloadEntry{
+	downloadsPlist := downloadHistory{
+		DownloadHistory: []downloadEntry{
 			{URL: "https://a.com/a.zip", Path: "/tmp/a.zip", TotalBytes: 1024000, ProfileUUID: defaultProfileSentinel},
 			{URL: "https://b.com/b.zip", Path: "/tmp/b.zip", TotalBytes: 98765432, ProfileUUID: namedUUID},
 			{URL: "https://c.com/legacy.zip", Path: "/tmp/legacy.zip", TotalBytes: 500, ProfileUUID: ""}, // pre-profile Safari
@@ -45,8 +45,8 @@ func TestExtractDownloads_DefaultProfileOnly(t *testing.T) {
 
 func TestExtractDownloads_NamedProfileOnly(t *testing.T) {
 	const namedUUID = "5604E6F5-02ED-4E40-8249-63DE7BC986C8"
-	downloadsPlist := safariDownloads{
-		DownloadHistory: []safariDownloadEntry{
+	downloadsPlist := downloadHistory{
+		DownloadHistory: []downloadEntry{
 			{URL: "https://a.com/a.zip", Path: "/tmp/a.zip", TotalBytes: 100, ProfileUUID: defaultProfileSentinel},
 			{URL: "https://b.com/b.zip", Path: "/tmp/b.zip", TotalBytes: 200, ProfileUUID: namedUUID},
 		},
@@ -63,7 +63,7 @@ func TestExtractDownloads_NamedProfileOnly(t *testing.T) {
 }
 
 func TestExtractDownloads_Empty(t *testing.T) {
-	downloadsPlist := safariDownloads{}
+	downloadsPlist := downloadHistory{}
 	path := buildTestDownloadsPlist(t, downloadsPlist)
 
 	var out testCollector

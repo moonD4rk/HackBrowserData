@@ -24,7 +24,7 @@ func libraryAt(t *testing.T, home string) (container string) {
 
 func discoverProfiles(t *testing.T, home string) []browser.Profile {
 	t.Helper()
-	dirs, err := Discover(testBrowser(), browser.DiscoverOptions{Home: home})
+	dirs, err := Discover(testBrowser(), browser.DiscoverOptions{HomeDir: home})
 	require.NoError(t, err)
 	require.Len(t, dirs, 1)
 	assert.Equal(t, browser.UserDataDirID("safari"), dirs[0].ID)
@@ -33,10 +33,10 @@ func discoverProfiles(t *testing.T, home string) []browser.Profile {
 }
 
 func named(name, uuid string) browser.Profile {
-	return browser.Profile{Name: name, Dir: namedProfilesDir + "/" + uuid}
+	return browser.Profile{Name: name, RelativePath: namedProfilesDir + "/" + uuid}
 }
 
-var defaultProfile = browser.Profile{Name: "default", Dir: "Safari"}
+var defaultProfile = browser.Profile{Name: "default", RelativePath: "Safari"}
 
 func TestDiscover_DefaultOnly(t *testing.T) {
 	home := t.TempDir()
@@ -45,7 +45,7 @@ func TestDiscover_DefaultOnly(t *testing.T) {
 }
 
 func TestDiscover_MissingSafariYieldsNothing(t *testing.T) {
-	dirs, err := Discover(testBrowser(), browser.DiscoverOptions{Home: t.TempDir()})
+	dirs, err := Discover(testBrowser(), browser.DiscoverOptions{HomeDir: t.TempDir()})
 	require.NoError(t, err)
 	assert.Empty(t, dirs)
 }
@@ -60,12 +60,12 @@ func TestDiscover_ProfilePathIsTheSafariDir(t *testing.T) {
 
 	home := t.TempDir()
 	libraryAt(t, home)
-	options := browser.DiscoverOptions{Home: home, ProfilePath: filepath.Join(copied, "Library", "SafariCopy")}
+	options := browser.DiscoverOptions{HomeDir: home, ProfilePath: filepath.Join(copied, "Library", "SafariCopy")}
 	dirs, err := Discover(testBrowser(), options)
 	require.NoError(t, err)
 	require.Len(t, dirs, 1)
 	assert.Equal(t, filepath.Join(copied, "Library"), dirs[0].Path)
-	assert.Equal(t, []browser.Profile{{Name: "default", Dir: "SafariCopy"}, named("work", uuid)}, dirs[0].Profiles)
+	assert.Equal(t, []browser.Profile{{Name: "default", RelativePath: "SafariCopy"}, named("work", uuid)}, dirs[0].Profiles)
 }
 
 func TestDiscover_WithNamedProfile(t *testing.T) {

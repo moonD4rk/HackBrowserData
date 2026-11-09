@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCopy_SkipsEveryEntryEndingInLock(t *testing.T) {
+func TestCopyPath_SkipsEveryEntryEndingInLock(t *testing.T) {
 	from := t.TempDir()
 	for _, name := range []string{"LOCK", "db.lock", "Block", "LOCKED", "000003.log"} {
 		writeFile(t, filepath.Join(from, name), []byte(name))
@@ -18,7 +18,7 @@ func TestCopy_SkipsEveryEntryEndingInLock(t *testing.T) {
 	writeFile(t, filepath.Join(from, "unlock", "inner"), []byte("inner"))
 
 	into := filepath.Join(t.TempDir(), "leveldb")
-	require.NoError(t, Copy(from, into, true))
+	require.NoError(t, copyPath(from, into, true))
 
 	for _, skipped := range []string{"LOCK", "db.lock", "Block"} {
 		assert.NoFileExists(t, filepath.Join(into, skipped))
@@ -28,18 +28,18 @@ func TestCopy_SkipsEveryEntryEndingInLock(t *testing.T) {
 	assert.FileExists(t, filepath.Join(into, "000003.log"))
 }
 
-func TestCopy_MissingSourceFails(t *testing.T) {
+func TestCopyPath_MissingSourceFails(t *testing.T) {
 	dir := t.TempDir()
-	require.Error(t, Copy(filepath.Join(dir, "missing"), filepath.Join(dir, "file"), false))
-	require.Error(t, Copy(filepath.Join(dir, "missing"), filepath.Join(dir, "dir"), true))
+	require.Error(t, copyPath(filepath.Join(dir, "missing"), filepath.Join(dir, "file"), false))
+	require.Error(t, copyPath(filepath.Join(dir, "missing"), filepath.Join(dir, "dir"), true))
 }
 
-func TestCopy_FileWithoutSidecarsCopiesOnlyTheFile(t *testing.T) {
+func TestCopyPath_FileWithoutSidecarsCopiesOnlyTheFile(t *testing.T) {
 	from := filepath.Join(t.TempDir(), "History")
 	writeFile(t, from, []byte("history"))
 
 	into := filepath.Join(t.TempDir(), "History")
-	require.NoError(t, Copy(from, into, false))
+	require.NoError(t, copyPath(from, into, false))
 
 	got, err := os.ReadFile(into)
 	require.NoError(t, err)
@@ -48,7 +48,7 @@ func TestCopy_FileWithoutSidecarsCopiesOnlyTheFile(t *testing.T) {
 	assert.NoFileExists(t, into+"-shm")
 }
 
-func TestCopy_SymlinkInADirectoryStaysALink(t *testing.T) {
+func TestCopyPath_SymlinkInADirectoryStaysALink(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("creating symlinks needs extra privileges on Windows")
 	}
@@ -57,7 +57,7 @@ func TestCopy_SymlinkInADirectoryStaysALink(t *testing.T) {
 	require.NoError(t, os.Symlink("target", filepath.Join(from, "link")))
 
 	into := filepath.Join(t.TempDir(), "copy")
-	require.NoError(t, Copy(from, into, true))
+	require.NoError(t, copyPath(from, into, true))
 
 	got, err := os.Readlink(filepath.Join(into, "link"))
 	require.NoError(t, err)

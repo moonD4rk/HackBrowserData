@@ -13,12 +13,12 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 )
 
-const defaultCookieQuery = `SELECT name, encrypted_value, host_key, path,
+const cookieQuery = `SELECT name, encrypted_value, host_key, path,
 	creation_utc, expires_utc, is_secure, is_httponly,
 	has_expires, is_persistent, samesite FROM cookies`
 
 func extractCookies(masterKeys masterkey.Set, path string, out browser.Collector) error {
-	cookies, err := sqlitex.QueryRows(path, false, defaultCookieQuery,
+	cookies, err := sqlitex.QueryRows(path, false, cookieQuery,
 		func(rows *sql.Rows) (record.Cookie, error) {
 			var (
 				name, host, cookiePath  string
@@ -39,14 +39,14 @@ func extractCookies(masterKeys masterkey.Set, path string, out browser.Collector
 				out.Fail(fmt.Errorf("decrypt cookie %s on %s: %w", name, host, err))
 			}
 			value = stripCookieHash(value, host)
-			sameSiteStr := "unspecified"
+			sameSiteName := "unspecified"
 			switch sameSite {
 			case 0:
-				sameSiteStr = "none"
+				sameSiteName = "none"
 			case 1:
-				sameSiteStr = "lax"
+				sameSiteName = "lax"
 			case 2:
-				sameSiteStr = "strict"
+				sameSiteName = "strict"
 			case -1:
 				// not specified by Set-Cookie
 			}
@@ -61,7 +61,7 @@ func extractCookies(masterKeys masterkey.Set, path string, out browser.Collector
 				IsPersistent: isPersistent != 0,
 				ExpireAt:     timeconv.Chromium(expireAt),
 				CreatedAt:    timeconv.Chromium(createdAt),
-				SameSite:     sameSiteStr,
+				SameSite:     sameSiteName,
 			}, nil
 		})
 	if err != nil {

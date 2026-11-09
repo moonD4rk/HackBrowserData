@@ -18,13 +18,13 @@ func TestListGolden(t *testing.T) {
 	home := t.TempDir()
 	setHome(t, home)
 	var paths []string
-	for _, fixture := range browsertest.ChromiumInstalls {
+	for _, fixture := range browsertest.ChromiumUserDataDirs {
 		dir := userDataDirOf(t, home, fixture.Name)
-		browsertest.ChromiumUserData(t, dir, fixture.Name)
+		browsertest.WriteChromiumUserDataDir(t, dir, fixture.Name)
 		paths = append(paths, dir, "<"+fixture.Name+">")
 	}
 	dir := userDataDirOf(t, home, "firefox")
-	browsertest.FirefoxUserData(t, dir)
+	browsertest.WriteFirefoxUserDataDir(t, dir)
 	paths = append(paths, dir, "<firefox>", `\`, "/")
 	assertListGoldens(t, "list", strings.NewReplacer(paths...))
 }
@@ -36,7 +36,7 @@ func TestListGoldenSafari(t *testing.T) {
 	home := t.TempDir()
 	setHome(t, home)
 	library := filepath.Join(home, "Library")
-	browsertest.SafariLibrary(t, library)
+	browsertest.WriteSafariLibrary(t, library)
 	assertListGoldens(t, "list-safari", strings.NewReplacer(library, "<library>"))
 }
 
@@ -45,7 +45,7 @@ func assertListGoldens(t *testing.T, prefix string, paths *strings.Replacer) {
 	t.Helper()
 	for _, detail := range []bool{false, true} {
 		var out bytes.Buffer
-		command := listCmd()
+		command := newListCommand()
 		command.SetOut(&out)
 		name, args := prefix+".golden", []string{}
 		if detail {

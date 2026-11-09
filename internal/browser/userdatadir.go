@@ -2,7 +2,7 @@ package browser
 
 // DiscoverOptions is everything discovery would otherwise read from the environment.
 type DiscoverOptions struct {
-	Home        string // the user's home directory; tests pass a temp dir
+	HomeDir     string // the user's home directory; tests pass a temp dir
 	ProfilePath string // the -p value; "" when not given
 }
 
@@ -19,6 +19,6 @@ type UserDataDir struct {
 
 // Profile is one profile within a user data dir. Name is the output's profile value and never a path.
 type Profile struct {
-	Name string
-	Dir  string // slash-separated, relative to UserDataDir.Path; "" when the user data dir itself is the profile
+	Name         string
+	RelativePath string // slash-separated, relative to UserDataDir.Path; "" when the user data dir itself is the profile
 }

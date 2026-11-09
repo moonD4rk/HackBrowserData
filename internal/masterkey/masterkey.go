@@ -34,12 +34,12 @@ var errStorageNotFound = errors.New("not found in credential store") //nolint:un
 
 // Locator is where one user data dir's keys are found; each retriever reads only the fields of its OS.
 type Locator struct {
-	LocalState    string // the copied Local State; "" when the user data dir has none
-	KeychainLabel string // macOS Keychain account / Linux D-Bus Secret Service label
-	Exe           string
-	ExeFallbacks  []string
-	ABE           ABEKind
-	Keychain      LoginKeychain // macOS: the run's login keychain; nil elsewhere
+	LocalState          string // the copied Local State; "" when the user data dir has none
+	SecretLabel         string // macOS Keychain account / Linux D-Bus Secret Service label
+	Executable          string
+	ExecutableFallbacks []string
+	ABE                 ABEKind
+	Keychain            LoginKeychain // macOS: the run's login keychain; nil elsewhere
 }
 
 // LoginKeychain is the one method the macOS v10 retriever reads from the run's login keychain.

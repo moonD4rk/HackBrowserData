@@ -15,10 +15,10 @@ import (
 
 func keysFile(t *testing.T, vaults ...masterkey.Vault) string {
 	t.Helper()
-	dump := masterkey.NewDump()
-	dump.Vaults = append(dump.Vaults, vaults...)
+	keyFile := masterkey.NewKeyFile()
+	keyFile.Vaults = append(keyFile.Vaults, vaults...)
 	var buffer bytes.Buffer
-	require.NoError(t, dump.WriteJSON(&buffer))
+	require.NoError(t, keyFile.Write(&buffer))
 	path := filepath.Join(t.TempDir(), "keys.json")
 	require.NoError(t, os.WriteFile(path, buffer.Bytes(), 0o600))
 	return path
@@ -37,10 +37,10 @@ func layoutProfile(t *testing.T, root, relativePath string) {
 func TestValidateRestore_RejectsBadInput(t *testing.T) {
 	keys := keysFile(t, testVault("chrome"))
 	data := t.TempDir()
-	base := RestoreFlags{Keys: keys, DataDir: data, Categories: "all", Format: "json", Dir: t.TempDir()}
+	base := RestoreFlags{KeyFile: keys, DataDir: data, Categories: "all", Format: "json", OutputDir: t.TempDir()}
 	for name, edit := range map[string]func(flags *RestoreFlags){
-		"no keys":           func(flags *RestoreFlags) { flags.Keys = "" },
-		"unreadable keys":   func(flags *RestoreFlags) { flags.Keys = filepath.Join(data, "missing.json") },
+		"no keys":           func(flags *RestoreFlags) { flags.KeyFile = "" },
+		"unreadable keys":   func(flags *RestoreFlags) { flags.KeyFile = filepath.Join(data, "missing.json") },
 		"no data":           func(flags *RestoreFlags) { flags.DataDir = "" },
 		"both data inputs":  func(flags *RestoreFlags) { flags.DataZip = filepath.Join(data, "data.zip") },
 		"missing data dir":  func(flags *RestoreFlags) { flags.DataDir = filepath.Join(data, "missing") },
@@ -53,22 +53,22 @@ func TestValidateRestore_RejectsBadInput(t *testing.T) {
 		require.Error(t, err, name)
 	}
 
-	options, dump, err := ValidateRestore(RestoreFlags{Keys: keys, DataDir: data, Browser: "Chrome", Categories: "all", Format: "json", Dir: t.TempDir()})
+	options, keyFile, err := ValidateRestore(RestoreFlags{KeyFile: keys, DataDir: data, Browser: "Chrome", Categories: "all", Format: "json", OutputDir: t.TempDir()})
 	require.NoError(t, err)
-	assert.Equal(t, "chrome", options.Browser)
-	assert.Len(t, dump.Vaults, 1)
+	assert.Equal(t, "chrome", options.BrowserName)
+	assert.Len(t, keyFile.Vaults, 1)
 }
 
-func TestRestoreDiscovery_SecondUserDataDir(t *testing.T) {
+func TestDiscoverRestore_SecondUserDataDir(t *testing.T) {
 	root := t.TempDir()
 	layoutProfile(t, root, "arc")
 	layoutProfile(t, root, "arc-2")
 	second := testVault("arc")
 	second.ID = "arc-2"
 	second.Keys = masterkey.Set{masterkey.V10: []byte("arc-2")}
-	dump := masterkey.Dump{Vaults: []masterkey.Vault{testVault("chrome"), testVault("arc"), second}}
+	keyFile := masterkey.KeyFile{Vaults: []masterkey.Vault{testVault("chrome"), testVault("arc"), second}}
 
-	discovery, keys, err := RestoreDiscovery(root, dump, Options{Browser: "arc"})
+	discovery, keys, err := DiscoverRestore(root, keyFile, Options{BrowserName: "arc"})
 	require.NoError(t, err)
 	assert.Equal(t, []browser.UserDataDirID{"arc", "arc-2"}, userDataDirIDs(discovery), "a vault's ID names its directory")
 	assert.Equal(t, filepath.Join(root, "arc-2"), discovery.Dirs[1].Path)
@@ -76,15 +76,15 @@ func TestRestoreDiscovery_SecondUserDataDir(t *testing.T) {
 	assert.Equal(t, masterkey.Set{masterkey.V10: []byte("arc-2")}, keys["arc-2"])
 }
 
-func TestRestoreDiscovery_FromLayout(t *testing.T) {
+func TestDiscoverRestore_FromLayout(t *testing.T) {
 	root := t.TempDir()
 	layoutProfile(t, root, "chrome")
 	layoutProfile(t, root, "nightly")
 	nightly := testVault("Nightly")
 	nightly.Kind = "chromium-yandex"
-	dump := masterkey.Dump{Vaults: []masterkey.Vault{testVault("chrome"), nightly, testVault("chrome"), testVault("edge")}}
+	keyFile := masterkey.KeyFile{Vaults: []masterkey.Vault{testVault("chrome"), nightly, testVault("chrome"), testVault("edge")}}
 
-	discovery, keys, err := RestoreDiscovery(root, dump, Options{Browser: "all"})
+	discovery, keys, err := DiscoverRestore(root, keyFile, Options{BrowserName: "all"})
 	require.NoError(t, err)
 	assert.Equal(t, []browser.UserDataDirID{"chrome", "nightly"}, userDataDirIDs(discovery), "a repeated vault restores once, one without data not at all")
 	assert.Len(t, keys, 2)
@@ -92,16 +92,16 @@ func TestRestoreDiscovery_FromLayout(t *testing.T) {
 		"a key this build does not know keeps its kind's format and its own name")
 }
 
-func TestRestoreDiscovery_OneUserDataNeedsOneVault(t *testing.T) {
+func TestDiscoverRestore_OneUserDataNeedsOneVault(t *testing.T) {
 	root := t.TempDir()
 	touch(t, root, "Default", "Preferences")
 	touch(t, root, "Default", "History")
-	dump := masterkey.Dump{Vaults: []masterkey.Vault{testVault("chrome"), testVault("edge")}}
+	keyFile := masterkey.KeyFile{Vaults: []masterkey.Vault{testVault("chrome"), testVault("edge")}}
 
-	_, _, err := RestoreDiscovery(root, dump, Options{Browser: "all"})
+	_, _, err := DiscoverRestore(root, keyFile, Options{BrowserName: "all"})
 	require.Error(t, err)
 
-	discovery, _, err := RestoreDiscovery(root, dump, Options{Browser: "edge"})
+	discovery, _, err := DiscoverRestore(root, keyFile, Options{BrowserName: "edge"})
 	require.NoError(t, err)
 	require.Equal(t, []browser.UserDataDirID{"edge"}, userDataDirIDs(discovery))
 	assert.Equal(t, root, discovery.Dirs[0].Path)

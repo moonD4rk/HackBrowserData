@@ -57,15 +57,15 @@ func extractYandexPasswords(masterKeys masterkey.Set, path string, out browser.C
 
 	logins, err := sqlitex.QueryRows(path, false, yandexLoginQuery,
 		func(rows *sql.Rows) (record.Login, error) {
-			var originURL, usernameElem, usernameVal, passwordElem, signonRealm string
+			var originURL, usernameElement, usernameValue, passwordElement, signonRealm string
 			var passwordValue []byte
 			var created int64
-			if err := rows.Scan(&originURL, &usernameElem, &usernameVal, &passwordElem, &passwordValue, &signonRealm, &created); err != nil {
+			if err := rows.Scan(&originURL, &usernameElement, &usernameValue, &passwordElement, &passwordValue, &signonRealm, &created); err != nil {
 				return record.Login{}, err
 			}
 			entry := record.Login{
 				URL:       originURL,
-				Username:  usernameVal,
+				Username:  usernameValue,
 				CreatedAt: timeconv.Chromium(created),
 				Store:     record.StoreLocal,
 			}
@@ -73,7 +73,7 @@ func extractYandexPasswords(masterKeys masterkey.Set, path string, out browser.C
 				out.Fail(fmt.Errorf("yandex: password for %s: %w", originURL, keyErr))
 				return entry, nil
 			}
-			aad := yandexLoginAAD(originURL, usernameElem, usernameVal, passwordElem, signonRealm, nil)
+			aad := yandexLoginAAD(originURL, usernameElement, usernameValue, passwordElement, signonRealm, nil)
 			plaintext, err := crypto.AESGCMDecryptBlob(dataKey, passwordValue, aad)
 			if err != nil {
 				out.Fail(fmt.Errorf("yandex: decrypt password for %s: %w", originURL, err))

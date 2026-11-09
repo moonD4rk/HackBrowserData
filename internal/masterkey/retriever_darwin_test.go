@@ -57,11 +57,11 @@ func (k *fakeKeychain) GenericPassword(_ context.Context, account string) ([]byt
 func TestKeychainRetriever(t *testing.T) {
 	ctx := context.Background()
 	locatorFor := func(loginKeychain LoginKeychain) Locator {
-		return Locator{KeychainLabel: "Chrome", Keychain: loginKeychain}
+		return Locator{SecretLabel: "Chrome", Keychain: loginKeychain}
 	}
 
 	t.Run("no keychain steps aside", func(t *testing.T) {
-		_, err := keychainRetriever{}.Retrieve(ctx, Locator{KeychainLabel: "Chrome"})
+		_, err := keychainRetriever{}.Retrieve(ctx, Locator{SecretLabel: "Chrome"})
 		require.ErrorIs(t, err, ErrNotApplicable)
 	})
 

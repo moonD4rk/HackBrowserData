@@ -27,7 +27,7 @@ type dbusRetriever struct{}
 func (dbusRetriever) Version() Version { return V11 }
 
 func (dbusRetriever) Retrieve(_ context.Context, locator Locator) ([]byte, error) {
-	storage := locator.KeychainLabel
+	storage := locator.SecretLabel
 	connection, err := dbus.SessionBus()
 	if err != nil {
 		return nil, fmt.Errorf("dbus session: %w", err)

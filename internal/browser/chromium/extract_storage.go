@@ -17,12 +17,12 @@ import (
 
 // Key prefixes and format bytes from Chromium's components/services/storage/dom_storage/local_storage_impl.cc.
 const (
-	localStorageVersionKey     = "VERSION"
-	localStorageMetaPrefix     = "META:"
-	localStorageMetaAccessKey  = "METAACCESS:"
-	localStorageDataPrefix     = '_'
-	chromiumStringUTF16Format  = 0
-	chromiumStringLatin1Format = 1
+	localStorageVersionKey    = "VERSION"
+	localStorageMetaPrefix    = "META:"
+	localStorageMetaAccessKey = "METAACCESS:"
+	localStorageDataPrefix    = '_'
+	stringFormatUTF16         = 0
+	stringFormatLatin1        = 1
 )
 
 const maxLocalStorageValueLength = 2048
@@ -91,7 +91,7 @@ func parseLocalStorageDataEntry(key, value []byte) record.LocalStorage {
 	}
 
 	entry.URL = string(key[:separator])
-	scriptKey, err := decodeChromiumString(key[separator+1:])
+	scriptKey, err := decodeStorageString(key[separator+1:])
 	if err != nil {
 		return entry
 	}
@@ -99,15 +99,15 @@ func parseLocalStorageDataEntry(key, value []byte) record.LocalStorage {
 	return entry
 }
 
-// decodeChromiumString switches on the first byte: 0x01 is Latin-1, 0x00 is UTF-16 LE.
-func decodeChromiumString(encoded []byte) (string, error) {
+// decodeStorageString switches on the first byte: 0x01 is Latin-1, 0x00 is UTF-16 LE.
+func decodeStorageString(encoded []byte) (string, error) {
 	if len(encoded) == 0 {
 		return "", fmt.Errorf("empty chromium string")
 	}
 	switch encoded[0] {
-	case chromiumStringLatin1Format:
+	case stringFormatLatin1:
 		return decodeLatin1(encoded[1:]), nil
-	case chromiumStringUTF16Format:
+	case stringFormatUTF16:
 		return decodeUTF16LE(encoded[1:])
 	default:
 		return "", fmt.Errorf("unknown chromium string format 0x%02x", encoded[0])
@@ -143,7 +143,7 @@ func decodeLocalStorageValue(value []byte) string {
 			len(value), maxLocalStorageValueLength,
 		)
 	}
-	decoded, err := decodeChromiumString(value)
+	decoded, err := decodeStorageString(value)
 	if err != nil {
 		return fmt.Sprintf("unsupported value encoding: %v", err)
 	}

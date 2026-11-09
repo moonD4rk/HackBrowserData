@@ -7,7 +7,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
-func archiveCmd() *cobra.Command {
+func newArchiveCommand() *cobra.Command {
 	var (
 		flags      app.Flags
 		outputPath string

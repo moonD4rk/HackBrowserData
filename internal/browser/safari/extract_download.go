@@ -10,11 +10,11 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-type safariDownloads struct {
-	DownloadHistory []safariDownloadEntry `plist:"DownloadHistory"`
+type downloadHistory struct {
+	DownloadHistory []downloadEntry `plist:"DownloadHistory"`
 }
 
-type safariDownloadEntry struct {
+type downloadEntry struct {
 	URL                string `plist:"DownloadEntryURL"`
 	Path               string `plist:"DownloadEntryPath"`
 	TotalBytes         int64  `plist:"DownloadEntryProgressTotalToLoad"`
@@ -23,22 +23,22 @@ type safariDownloadEntry struct {
 	DownloadIdentifier string `plist:"DownloadEntryIdentifier"`
 }
 
-// extractDownloads filters the shared Downloads.plist by owner UUID; untagged entries belong to the default profile.
-func extractDownloads(path, ownerUUID string, out browser.Collector) error {
+// extractDownloads filters the shared Downloads.plist by profile UUID; untagged entries belong to the default profile.
+func extractDownloads(path, profileUUID string, out browser.Collector) error {
 	file, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("open downloads: %w", err)
 	}
 	defer file.Close()
 
-	var decoded safariDownloads
+	var decoded downloadHistory
 	if err := plist.NewDecoder(file).Decode(&decoded); err != nil {
 		return fmt.Errorf("decode downloads: %w", err)
 	}
 
 	var downloads []record.Download
 	for _, entry := range decoded.DownloadHistory {
-		if !ownsDownload(entry.ProfileUUID, ownerUUID) {
+		if !belongsToProfile(entry.ProfileUUID, profileUUID) {
 			continue
 		}
 		downloads = append(downloads, record.Download{
@@ -51,10 +51,10 @@ func extractDownloads(path, ownerUUID string, out browser.Collector) error {
 	return nil
 }
 
-// ownsDownload treats empty ProfileUUID as DefaultProfile for backward compat with pre-profile Safari.
-func ownsDownload(entryUUID, ownerUUID string) bool {
+// belongsToProfile treats empty ProfileUUID as DefaultProfile for backward compat with pre-profile Safari.
+func belongsToProfile(entryUUID, profileUUID string) bool {
 	if entryUUID == "" {
 		entryUUID = defaultProfileSentinel
 	}
-	return entryUUID == ownerUUID
+	return entryUUID == profileUUID
 }

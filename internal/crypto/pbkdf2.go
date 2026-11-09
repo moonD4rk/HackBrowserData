@@ -6,10 +6,10 @@ import (
 )
 
 // PBKDF2Key is adapted from golang.org/x/crypto/pbkdf2.
-func PBKDF2Key(password, salt []byte, iterations, keyLen int, newHash func() hash.Hash) []byte {
+func PBKDF2Key(password, salt []byte, iterations, keyLength int, newHash func() hash.Hash) []byte {
 	prf := hmac.New(newHash, password)
 	hashLen := prf.Size()
-	numBlocks := (keyLen + hashLen - 1) / hashLen
+	numBlocks := (keyLength + hashLen - 1) / hashLen
 
 	var blockIndex [4]byte
 	derivedKey := make([]byte, 0, numBlocks*hashLen)
@@ -36,5 +36,5 @@ func PBKDF2Key(password, salt []byte, iterations, keyLen int, newHash func() has
 			}
 		}
 	}
-	return derivedKey[:keyLen]
+	return derivedKey[:keyLength]
 }

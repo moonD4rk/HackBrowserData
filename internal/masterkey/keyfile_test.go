@@ -6,43 +6,43 @@ import (
 	"testing"
 )
 
-func TestReadJSON_RejectsUnknownVersion(t *testing.T) {
+func TestReadKeyFile_RejectsUnknownVersion(t *testing.T) {
 	input := bytes.NewBufferString(`{"version":"99","created_at":"2026-05-16T00:00:00Z","host":{"os":"linux","arch":"amd64"},"vaults":[]}`)
-	_, err := ReadJSON(input)
+	_, err := ReadKeyFile(input)
 	if err == nil {
-		t.Fatal("ReadJSON should reject unknown version, got nil error")
+		t.Fatal("ReadKeyFile should reject unknown version, got nil error")
 	}
-	if !strings.Contains(err.Error(), "unsupported dump version") {
+	if !strings.Contains(err.Error(), "unsupported key file version") {
 		t.Errorf("error should mention unsupported version, got: %v", err)
 	}
 }
 
-func TestReadJSON_RejectsMissingVersion(t *testing.T) {
+func TestReadKeyFile_RejectsMissingVersion(t *testing.T) {
 	input := bytes.NewBufferString(`{"created_at":"2026-05-16T00:00:00Z","host":{"os":"linux","arch":"amd64"},"vaults":[]}`)
-	_, err := ReadJSON(input)
+	_, err := ReadKeyFile(input)
 	if err == nil {
-		t.Fatal("ReadJSON should reject empty version, got nil error")
+		t.Fatal("ReadKeyFile should reject empty version, got nil error")
 	}
 }
 
-func TestReadJSON_AcceptsCurrentVersion(t *testing.T) {
-	dump := NewDump()
+func TestReadKeyFile_AcceptsCurrentVersion(t *testing.T) {
+	keyFile := NewKeyFile()
 	var buffer bytes.Buffer
-	if err := dump.WriteJSON(&buffer); err != nil {
-		t.Fatalf("WriteJSON: %v", err)
+	if err := keyFile.Write(&buffer); err != nil {
+		t.Fatalf("Write: %v", err)
 	}
-	parsed, err := ReadJSON(&buffer)
+	parsed, err := ReadKeyFile(&buffer)
 	if err != nil {
-		t.Fatalf("ReadJSON: %v", err)
+		t.Fatalf("ReadKeyFile: %v", err)
 	}
-	if parsed.Version != DumpVersion {
-		t.Errorf("Version = %q, want %q", parsed.Version, DumpVersion)
+	if parsed.Version != KeyFileVersion {
+		t.Errorf("Version = %q, want %q", parsed.Version, KeyFileVersion)
 	}
 }
 
-func TestDump_VaultKindRoundTrip(t *testing.T) {
-	dump := NewDump()
-	dump.Vaults = append(dump.Vaults, Vault{
+func TestKeyFile_VaultKindRoundTrip(t *testing.T) {
+	keyFile := NewKeyFile()
+	keyFile.Vaults = append(keyFile.Vaults, Vault{
 		Browser:     "chrome",
 		Kind:        "chromium",
 		UserDataDir: "/p",
@@ -51,12 +51,12 @@ func TestDump_VaultKindRoundTrip(t *testing.T) {
 	})
 
 	var buffer bytes.Buffer
-	if err := dump.WriteJSON(&buffer); err != nil {
-		t.Fatalf("WriteJSON: %v", err)
+	if err := keyFile.Write(&buffer); err != nil {
+		t.Fatalf("Write: %v", err)
 	}
-	parsed, err := ReadJSON(&buffer)
+	parsed, err := ReadKeyFile(&buffer)
 	if err != nil {
-		t.Fatalf("ReadJSON: %v", err)
+		t.Fatalf("ReadKeyFile: %v", err)
 	}
 	if len(parsed.Vaults) != 1 {
 		t.Fatalf("Vaults len = %d, want 1", len(parsed.Vaults))
@@ -69,31 +69,31 @@ func TestDump_VaultKindRoundTrip(t *testing.T) {
 	}
 }
 
-// TestDump_KeysWireForm pins the frozen keys.json form: present versions only, in key order, {} for no keys.
-func TestDump_KeysWireForm(t *testing.T) {
-	dump := Dump{Version: DumpVersion, Vaults: []Vault{
+// TestKeyFile_KeysWireForm pins the frozen keys.json form: present versions only, in key order, {} for no keys.
+func TestKeyFile_KeysWireForm(t *testing.T) {
+	keyFile := KeyFile{Version: KeyFileVersion, Vaults: []Vault{
 		{Browser: "chrome", Keys: Set{V20: []byte{0x20}, V10: []byte{0x10}}},
 		{Browser: "opera", Keys: Set{}},
 	}}
 	var buffer bytes.Buffer
-	if err := dump.WriteJSON(&buffer); err != nil {
-		t.Fatalf("WriteJSON: %v", err)
+	if err := keyFile.Write(&buffer); err != nil {
+		t.Fatalf("Write: %v", err)
 	}
 	out := buffer.String()
 	for _, want := range []string{`"keys": {` + "\n" + `        "v10": "EA==",` + "\n" + `        "v20": "IA=="`, `"keys": {}`} {
 		if !strings.Contains(out, want) {
-			t.Errorf("WriteJSON output lacks %q:\n%s", want, out)
+			t.Errorf("Write output lacks %q:\n%s", want, out)
 		}
 	}
 }
 
-func TestReadJSON_IgnoresUnknownKeyVersions(t *testing.T) {
+func TestReadKeyFile_IgnoresUnknownKeyVersions(t *testing.T) {
 	input := bytes.NewBufferString(`{"version":"2","vaults":[{"browser":"chrome","keys":{"v10":"EA==","v99":"AQ=="}}]}`)
-	dump, err := ReadJSON(input)
+	keyFile, err := ReadKeyFile(input)
 	if err != nil {
-		t.Fatalf("ReadJSON: %v", err)
+		t.Fatalf("ReadKeyFile: %v", err)
 	}
-	if got := dump.Vaults[0].Keys[V10]; !bytes.Equal(got, []byte{0x10}) {
+	if got := keyFile.Vaults[0].Keys[V10]; !bytes.Equal(got, []byte{0x10}) {
 		t.Errorf("v10 = %x, want 10", got)
 	}
 }

@@ -18,20 +18,20 @@ import (
 )
 
 func TestValidate(t *testing.T) {
-	options, err := Validate(Flags{Browser: " Chrome ", Categories: "cookie, password,cookie", Format: "csv", Dir: "out", KeychainPassword: "pw"})
+	options, err := ValidateDump(Flags{Browser: " Chrome ", Categories: "cookie, password,cookie", Format: "csv", OutputDir: "out", KeychainPassword: "pw"})
 	require.NoError(t, err)
-	assert.Equal(t, "chrome", options.Browser)
+	assert.Equal(t, "chrome", options.BrowserName)
 	assert.Equal(t, []category.Category{category.Cookie, category.Password}, options.Categories, "a repeated category runs once")
 	assert.Equal(t, export.CSV, options.Format)
-	assert.Equal(t, "out", options.Dir)
-	assert.NotEmpty(t, options.Home)
+	assert.Equal(t, "out", options.OutputDir)
+	assert.NotEmpty(t, options.HomeDir)
 	password, err := options.KeychainPassword(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, "pw", password)
 
-	options, err = Validate(Flags{Categories: "all", Format: "json"})
+	options, err = ValidateDump(Flags{Categories: "all", Format: "json"})
 	require.NoError(t, err)
-	assert.Equal(t, "all", options.Browser)
+	assert.Equal(t, "all", options.BrowserName)
 	assert.Equal(t, category.All(), options.Categories)
 }
 
@@ -45,13 +45,13 @@ func TestValidate_RejectsBadInput(t *testing.T) {
 		"unknown format":       {Categories: "all", Format: "xml"},
 		"unknown browser":      {Browser: "bogus", Categories: "all", Format: "json"},
 		"another OS's browser": {Browser: otherOSBrowser(t), Categories: "all", Format: "json"},
-		"-d below a file":      {Categories: "all", Format: "json", Dir: filepath.Join(file, "out")},
-		"-d is a file":         {Categories: "all", Format: "json", Dir: file},
+		"-d below a file":      {Categories: "all", Format: "json", OutputDir: filepath.Join(file, "out")},
+		"-d is a file":         {Categories: "all", Format: "json", OutputDir: file},
 		"missing -p":           {Browser: "chrome", Categories: "all", Format: "json", ProfilePath: missing},
 		"-p is a file":         {Browser: "chrome", Categories: "all", Format: "json", ProfilePath: file},
 		"two password inputs":  {Categories: "all", Format: "json", KeychainPassword: "pw", KeychainPasswordStdin: true},
 	} {
-		_, err := Validate(flags)
+		_, err := ValidateDump(flags)
 		assert.Error(t, err, name)
 	}
 }
@@ -71,9 +71,9 @@ func otherOSBrowser(t *testing.T) string {
 
 func TestValidate_CreatesNoOutputDir(t *testing.T) {
 	root := t.TempDir()
-	options, err := Validate(Flags{Categories: "all", Format: "json", Dir: filepath.Join(root, "a", "b")})
+	options, err := ValidateDump(Flags{Categories: "all", Format: "json", OutputDir: filepath.Join(root, "a", "b")})
 	require.NoError(t, err)
-	assert.Equal(t, filepath.Join(root, "a", "b"), options.Dir)
+	assert.Equal(t, filepath.Join(root, "a", "b"), options.OutputDir)
 	_, err = os.Stat(filepath.Join(root, "a"))
 	assert.ErrorIs(t, err, fs.ErrNotExist)
 }
@@ -86,13 +86,13 @@ func TestValidate_RejectsAnOutputDirThatCannotBeCreated(t *testing.T) {
 	require.NoError(t, os.Chmod(root, 0o500))
 	defer func() { require.NoError(t, os.Chmod(root, 0o700)) }()
 
-	_, err := Validate(Flags{Categories: "all", Format: "json", Dir: filepath.Join(root, "results")})
+	_, err := ValidateDump(Flags{Categories: "all", Format: "json", OutputDir: filepath.Join(root, "results")})
 	assert.Error(t, err)
 }
 
 // TestValidate_IgnoresProfilePathForAllBrowsers keeps -p without a named browser ignored, as before; it is reported.
 func TestValidate_IgnoresProfilePathForAllBrowsers(t *testing.T) {
-	options, err := Validate(Flags{Browser: "all", Categories: "all", Format: "json", ProfilePath: filepath.Join(t.TempDir(), "missing")})
+	options, err := ValidateDump(Flags{Browser: "all", Categories: "all", Format: "json", ProfilePath: filepath.Join(t.TempDir(), "missing")})
 	require.NoError(t, err)
 	assert.Empty(t, options.ProfilePath)
 }
@@ -120,7 +120,7 @@ func TestValidate_KeychainPasswordInputs(t *testing.T) {
 			require.NoError(t, errors.Join(err, pipeWriter.Close()))
 
 			testCase.flags.Categories, testCase.flags.Format = "all", "json"
-			options, err := validate(testCase.flags, pipeReader)
+			options, err := validateDump(testCase.flags, pipeReader)
 			require.NoError(t, err)
 			got, err := options.KeychainPassword(context.Background())
 			require.ErrorIs(t, err, testCase.err)

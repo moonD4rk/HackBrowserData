@@ -12,12 +12,12 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
 )
 
-const firefoxDownloadQuery = `SELECT place_id, GROUP_CONCAT(content), url, dateAdded
+const downloadQuery = `SELECT place_id, GROUP_CONCAT(content), url, dateAdded
 	FROM (SELECT * FROM moz_annos INNER JOIN moz_places ON moz_annos.place_id=moz_places.id)
 	t GROUP BY place_id`
 
 func extractDownloads(path string, out browser.Collector) error {
-	downloads, err := sqlitex.QueryRows(path, true, firefoxDownloadQuery,
+	downloads, err := sqlitex.QueryRows(path, true, downloadQuery,
 		func(rows *sql.Rows) (record.Download, error) {
 			var placeID, dateAdded int64
 			var content, url string

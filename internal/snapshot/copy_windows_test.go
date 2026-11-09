@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCopy_FallsBackToTheLockedRead(t *testing.T) {
+func TestCopyPath_FallsBackToTheLockedRead(t *testing.T) {
 	from := filepath.Join(t.TempDir(), "cookies.db")
 	testData := []byte("cookie data")
 	require.NoError(t, os.WriteFile(from, testData, 0o644))
@@ -21,20 +21,20 @@ func TestCopy_FallsBackToTheLockedRead(t *testing.T) {
 	defer syscall.CloseHandle(handle)
 
 	into := filepath.Join(t.TempDir(), "cookies.db")
-	require.NoError(t, Copy(from, into, false), "Copy should succeed via the locked-file fallback")
+	require.NoError(t, copyPath(from, into, false), "copyPath should succeed via the locked-file fallback")
 
 	copied, err := os.ReadFile(into)
 	require.NoError(t, err)
 	assert.Equal(t, testData, copied)
 }
 
-func TestCopy_PlainWhenNotLocked(t *testing.T) {
+func TestCopyPath_PlainWhenNotLocked(t *testing.T) {
 	from := filepath.Join(t.TempDir(), "unlocked.db")
 	testData := []byte("unlocked data")
 	require.NoError(t, os.WriteFile(from, testData, 0o644))
 
 	into := filepath.Join(t.TempDir(), "unlocked.db")
-	require.NoError(t, Copy(from, into, false))
+	require.NoError(t, copyPath(from, into, false))
 
 	copied, err := os.ReadFile(into)
 	require.NoError(t, err)

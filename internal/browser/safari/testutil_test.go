@@ -181,7 +181,7 @@ func appendOriginRecord(encoded []byte, text string) []byte {
 	lenBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(lenBytes, uint32(len(text)))
 	encoded = append(encoded, lenBytes...)
-	encoded = append(encoded, originEncASCII)
+	encoded = append(encoded, originEncodingASCII)
 	return append(encoded, []byte(text)...)
 }
 

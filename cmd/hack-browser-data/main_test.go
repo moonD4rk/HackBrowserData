@@ -17,7 +17,7 @@ import (
 func TestStoppedRunPrintsNoErrorOrUsage(t *testing.T) {
 	home := t.TempDir()
 	setHome(t, home)
-	browsertest.ChromiumUserData(t, userDataDirOf(t, home, "chrome"), "chrome")
+	browsertest.WriteChromiumUserDataDir(t, userDataDirOf(t, home, "chrome"), "chrome")
 
 	for _, testCase := range []struct {
 		name, browser string
@@ -34,7 +34,7 @@ func TestStoppedRunPrintsNoErrorOrUsage(t *testing.T) {
 				cancel()
 			}
 			var screen bytes.Buffer
-			root := rootCmd()
+			root := newRootCommand()
 			root.SetOut(&screen)
 			root.SetErr(&screen)
 			root.SetArgs([]string{"-b", testCase.browser, "-d", filepath.Join(t.TempDir(), "results")})

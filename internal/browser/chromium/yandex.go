@@ -11,15 +11,15 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func yandexLoginAAD(originURL, usernameElem, usernameVal, passwordElem, signonRealm string, keyID []byte) []byte {
+func yandexLoginAAD(originURL, usernameElement, usernameValue, passwordElement, signonRealm string, keyID []byte) []byte {
 	hasher := sha1.New()
 	hasher.Write([]byte(originURL))
 	hasher.Write([]byte{0})
-	hasher.Write([]byte(usernameElem))
+	hasher.Write([]byte(usernameElement))
 	hasher.Write([]byte{0})
-	hasher.Write([]byte(usernameVal))
+	hasher.Write([]byte(usernameValue))
 	hasher.Write([]byte{0})
-	hasher.Write([]byte(passwordElem))
+	hasher.Write([]byte(passwordElement))
 	hasher.Write([]byte{0})
 	hasher.Write([]byte(signonRealm))
 	sum := hasher.Sum(nil)

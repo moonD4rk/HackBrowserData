@@ -27,7 +27,7 @@ func keysFakeKey(t *testing.T, encodedKey string) []byte {
 	return key
 }
 
-func keysFreeze(t *testing.T, dump masterkey.Dump, host masterkey.Host) masterkey.Dump {
+func keysFreeze(t *testing.T, dump masterkey.KeyFile, host masterkey.Host) masterkey.KeyFile {
 	t.Helper()
 	assert.Equal(t, runtime.GOOS, dump.Host.OS)
 	assert.Equal(t, runtime.GOARCH, dump.Host.Arch)
@@ -39,10 +39,10 @@ func keysFreeze(t *testing.T, dump masterkey.Dump, host masterkey.Host) masterke
 }
 
 // keysVaultsDump has two Chromium installs, the Opera and Yandex forks, and a vault that kept v10 when v20 failed.
-func keysVaultsDump(t *testing.T) masterkey.Dump {
+func keysVaultsDump(t *testing.T) masterkey.KeyFile {
 	t.Helper()
-	return masterkey.Dump{
-		Version:   masterkey.DumpVersion,
+	return masterkey.KeyFile{
+		Version:   masterkey.KeyFileVersion,
 		CreatedAt: keysGoldenCreatedAt,
 		Host:      masterkey.Host{OS: "windows", Arch: "amd64", Hostname: "GOLDEN-PC", User: `GOLDEN-PC\Jürgen`},
 		Vaults: []masterkey.Vault{
@@ -84,16 +84,16 @@ func keysVaultsDump(t *testing.T) masterkey.Dump {
 	}
 }
 
-func keysEmptyDump(t *testing.T) masterkey.Dump {
+func keysEmptyDump(t *testing.T) masterkey.KeyFile {
 	t.Helper()
-	return keysFreeze(t, masterkey.NewDump(), masterkey.Host{OS: "linux", Arch: "arm64"})
+	return keysFreeze(t, masterkey.NewKeyFile(), masterkey.Host{OS: "linux", Arch: "arm64"})
 }
 
 func TestKeysGolden(t *testing.T) {
 	tests := []struct {
 		name   string
 		golden string
-		dump   func(t *testing.T) masterkey.Dump
+		dump   func(t *testing.T) masterkey.KeyFile
 	}{
 		{name: "vaults", golden: "keys.golden", dump: keysVaultsDump},
 		{name: "empty", golden: "keys-empty.golden", dump: keysEmptyDump},
@@ -102,7 +102,7 @@ func TestKeysGolden(t *testing.T) {
 		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
 			var buffer bytes.Buffer
-			require.NoError(t, testCase.dump(t).WriteJSON(&buffer))
+			require.NoError(t, testCase.dump(t).Write(&buffer))
 			golden.Assert(t, testCase.golden, buffer.String())
 		})
 	}
@@ -113,14 +113,14 @@ func TestKeysRead(t *testing.T) {
 		name    string
 		golden  string
 		edit    func(t *testing.T, doc map[string]any)
-		want    func(t *testing.T) masterkey.Dump
+		want    func(t *testing.T) masterkey.KeyFile
 		wantErr string
 	}{
 		{name: "golden", golden: "keys.golden", want: keysVaultsDump},
 		{name: "empty golden", golden: "keys-empty.golden", want: keysEmptyDump},
 		{name: "unknown fields", golden: "keys.golden", edit: keysAddUnknownFields, want: keysVaultsDump},
-		{name: "older version", golden: "keys.golden", edit: keysSetVersion("1"), wantErr: "unsupported dump version"},
-		{name: "newer version", golden: "keys.golden", edit: keysSetVersion("3"), wantErr: "unsupported dump version"},
+		{name: "older version", golden: "keys.golden", edit: keysSetVersion("1"), wantErr: "unsupported key file version"},
+		{name: "newer version", golden: "keys.golden", edit: keysSetVersion("3"), wantErr: "unsupported key file version"},
 	}
 	for _, testCase := range tests {
 		testCase := testCase
@@ -130,7 +130,7 @@ func TestKeysRead(t *testing.T) {
 			if testCase.edit != nil {
 				data = keysEditJSON(t, data, testCase.edit)
 			}
-			got, err := masterkey.ReadJSON(bytes.NewReader(data))
+			got, err := masterkey.ReadKeyFile(bytes.NewReader(data))
 			if testCase.wantErr != "" {
 				require.ErrorContains(t, err, testCase.wantErr)
 				return

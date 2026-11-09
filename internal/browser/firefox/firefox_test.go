@@ -49,19 +49,19 @@ func TestDiscover_ProfilesAreDirsWithDataFiles(t *testing.T) {
 	touch(t, home, "Profiles", "Crash Reports", "InstallTime20240101000000")
 	touch(t, home, "Profiles", "profiles.ini")
 
-	dirs, err := Discover(testBrowser("Profiles"), browser.DiscoverOptions{Home: home})
+	dirs, err := Discover(testBrowser("Profiles"), browser.DiscoverOptions{HomeDir: home})
 	require.NoError(t, err)
 	require.Len(t, dirs, 1)
 	assert.Equal(t, browser.UserDataDirID("firefox"), dirs[0].ID)
 	assert.Equal(t, filepath.Join(home, "Profiles"), dirs[0].Path)
 	assert.Equal(t, []browser.Profile{
-		{Name: "abcd1234.default-release", Dir: "abcd1234.default-release"},
-		{Name: "wxyz5678.work", Dir: "wxyz5678.work"},
+		{Name: "abcd1234.default-release", RelativePath: "abcd1234.default-release"},
+		{Name: "wxyz5678.work", RelativePath: "wxyz5678.work"},
 	}, dirs[0].Profiles)
 }
 
 func TestDiscover_MissingUserDataDirYieldsNothing(t *testing.T) {
-	dirs, err := Discover(testBrowser("Profiles"), browser.DiscoverOptions{Home: t.TempDir()})
+	dirs, err := Discover(testBrowser("Profiles"), browser.DiscoverOptions{HomeDir: t.TempDir()})
 	require.NoError(t, err)
 	assert.Empty(t, dirs)
 }
@@ -77,7 +77,7 @@ func TestDiscover_UnreadableUserDataDirIsAnError(t *testing.T) {
 	require.NoError(t, os.Chmod(profiles, 0o000))
 	defer func() { require.NoError(t, os.Chmod(profiles, 0o700)) }()
 
-	dirs, err := Discover(testBrowser("Profiles"), browser.DiscoverOptions{Home: home})
+	dirs, err := Discover(testBrowser("Profiles"), browser.DiscoverOptions{HomeDir: home})
 	require.Error(t, err)
 	assert.Empty(t, dirs)
 }
@@ -88,19 +88,19 @@ func TestDiscover_ProfilePathSelectsOnlyThatProfile(t *testing.T) {
 	touch(t, custom, "abcd1234.default-release", "places.sqlite")
 	touch(t, custom, "wxyz5678.work", "places.sqlite")
 
-	options := browser.DiscoverOptions{Home: t.TempDir(), ProfilePath: filepath.Join(custom, "abcd1234.default-release")}
+	options := browser.DiscoverOptions{HomeDir: t.TempDir(), ProfilePath: filepath.Join(custom, "abcd1234.default-release")}
 	dirs, err := Discover(testBrowser("Profiles"), options)
 	require.NoError(t, err)
 	require.Len(t, dirs, 1)
 	assert.Equal(t, custom, dirs[0].Path)
-	assert.Equal(t, []browser.Profile{{Name: "abcd1234.default-release", Dir: "abcd1234.default-release"}}, dirs[0].Profiles)
+	assert.Equal(t, []browser.Profile{{Name: "abcd1234.default-release", RelativePath: "abcd1234.default-release"}}, dirs[0].Profiles)
 }
 
 func TestDiscover_ProfilePathWithoutDataFindsNothing(t *testing.T) {
 	custom := t.TempDir()
 	touch(t, custom, "abcd1234.default-release", "key4.db")
 
-	options := browser.DiscoverOptions{Home: t.TempDir(), ProfilePath: filepath.Join(custom, "abcd1234.default-release")}
+	options := browser.DiscoverOptions{HomeDir: t.TempDir(), ProfilePath: filepath.Join(custom, "abcd1234.default-release")}
 	dirs, err := Discover(testBrowser("Profiles"), options)
 	require.NoError(t, err)
 	assert.Empty(t, dirs)
@@ -127,7 +127,7 @@ func TestExtractLogins_WithoutKeyStore(t *testing.T) {
 	logins := createTestJSON(t, "logins.json", fmt.Sprintf(`{"logins": [{"hostname": "https://a.test",
 		"encryptedUsername": %q, "encryptedPassword": %q, "timeCreated": 1700000000000}]}`, encodedLogin, encodedLogin))
 	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{"p/logins.json": logins}),
-		browser.Profile{Name: "p", Dir: "p"}, nil)
+		browser.Profile{Name: "p", RelativePath: "p"}, nil)
 
 	var out testCollector
 	require.NoError(t, extractLogins(context.Background(), profileSnapshot, &out))
@@ -145,7 +145,7 @@ func TestExtractLogins_NoLoginsNeverReadsTheKey(t *testing.T) {
 	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{
 		"p/logins.json": createTestJSON(t, "logins.json", `{"logins": []}`),
 		"p/key4.db":     createTestJSON(t, "key4.db", "not a database"),
-	}), browser.Profile{Name: "p", Dir: "p"}, nil)
+	}), browser.Profile{Name: "p", RelativePath: "p"}, nil)
 
 	var out testCollector
 	require.NoError(t, extractLogins(context.Background(), profileSnapshot, &out))
@@ -163,7 +163,7 @@ func TestExtractors_EachProfileReadsItsOwnFiles(t *testing.T) {
 	})
 	dir := browser.UserDataDir{Browser: testBrowser()}
 	want := map[string]string{"a.default": "Home", "b.work": "Work"}
-	for _, profile := range []browser.Profile{{Name: "a.default", Dir: "a.default"}, {Name: "b.work", Dir: "b.work"}} {
+	for _, profile := range []browser.Profile{{Name: "a.default", RelativePath: "a.default"}, {Name: "b.work", RelativePath: "b.work"}} {
 		var out testCollector
 		require.NoError(t, Extractors(dir, profile)[category.History].Extract(context.Background(), browser.NewProfileSnapshot(dirSnapshot, profile, nil), &out))
 		got := collected[record.History](t, &out)

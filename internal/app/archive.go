@@ -21,19 +21,19 @@ func Archive(ctx context.Context, discovery Discovery, options Options, archiveP
 	}
 	files := archiveFiles(NewPlan(Discovery{Dirs: dirs}, options), dirs)
 
-	snapshotDir, err := snapshot.Temp()
+	snapshots, err := snapshot.Temp()
 	if err != nil {
 		return 0, err
 	}
-	defer closeSnapshot(snapshotDir)
-	if err := snapshotDir.Capture(ctx, files); err != nil {
+	defer closeSnapshot(snapshots)
+	if err := snapshots.Capture(ctx, files); err != nil {
 		return 0, err
 	}
-	fileCount := countCaptured(snapshotDir, files)
+	fileCount := countCaptured(snapshots, files)
 	if fileCount == 0 {
 		return 0, errors.New("no decryption-relevant files found to archive")
 	}
-	if err := snapshotDir.Zip(archivePath); err != nil {
+	if err := snapshots.Zip(archivePath); err != nil {
 		return 0, fmt.Errorf("write archive %s: %w", archivePath, err)
 	}
 	return fileCount, nil
@@ -64,10 +64,10 @@ func archiveFiles(plan Plan, dirs []browser.UserDataDir) []snapshot.File {
 }
 
 // countCaptured counts the files that reached the snapshot, reporting each one whose copy failed.
-func countCaptured(snapshotDir *snapshot.Dir, files []snapshot.File) int {
+func countCaptured(snapshots *snapshot.Dir, files []snapshot.File) int {
 	fileCount := 0
 	for _, file := range files {
-		if _, err := snapshotDir.Snapshot(file.UserDataDirID).Path(file.RelativePath); err != nil {
+		if _, err := snapshots.Snapshot(file.UserDataDirID).Path(file.RelativePath); err != nil {
 			log.Warnf("archive: acquire %s/%s: %v", file.UserDataDirID, file.RelativePath, err)
 			continue
 		}

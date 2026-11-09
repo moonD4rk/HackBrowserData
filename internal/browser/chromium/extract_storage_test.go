@@ -14,7 +14,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-func TestDecodeChromiumString(t *testing.T) {
+func TestDecodeStorageString(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   []byte
@@ -28,8 +28,8 @@ func TestDecodeChromiumString(t *testing.T) {
 		},
 		{
 			name:  "latin1 non-ascii",
-			input: append([]byte{chromiumStringLatin1Format}, 0x6E, 0x61, 0xEF, 0x76, 0x65), // "naïve" in Latin-1
-			want:  "na\u00efve",                                                             // U+00EF = ï
+			input: append([]byte{stringFormatLatin1}, 0x6E, 0x61, 0xEF, 0x76, 0x65), // "naïve" in Latin-1
+			want:  "na\u00efve",                                                     // U+00EF = ï
 		},
 		{
 			name:  "utf16le ascii",
@@ -43,7 +43,7 @@ func TestDecodeChromiumString(t *testing.T) {
 		},
 		{
 			name:  "utf16le empty content",
-			input: []byte{chromiumStringUTF16Format},
+			input: []byte{stringFormatUTF16},
 			want:  "",
 		},
 		{
@@ -53,7 +53,7 @@ func TestDecodeChromiumString(t *testing.T) {
 		},
 		{
 			name:    "invalid utf16 byte length",
-			input:   []byte{chromiumStringUTF16Format, 0x61},
+			input:   []byte{stringFormatUTF16, 0x61},
 			wantErr: "invalid UTF-16 byte length",
 		},
 		{
@@ -65,7 +65,7 @@ func TestDecodeChromiumString(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			got, err := decodeChromiumString(testCase.input)
+			got, err := decodeStorageString(testCase.input)
 			if testCase.wantErr != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), testCase.wantErr)
@@ -255,13 +255,13 @@ func levelDBFiles(t *testing.T, dir string) map[string]string {
 }
 
 func testEncodeLatin1(text string) []byte {
-	return append([]byte{chromiumStringLatin1Format}, []byte(text)...)
+	return append([]byte{stringFormatLatin1}, []byte(text)...)
 }
 
 func testEncodeUTF16(text string) []byte {
 	encoded := utf16.Encode([]rune(text))
 	result := make([]byte, 1, 1+len(encoded)*2)
-	result[0] = chromiumStringUTF16Format
+	result[0] = stringFormatUTF16
 	for _, unit := range encoded {
 		var raw [2]byte
 		binary.LittleEndian.PutUint16(raw[:], unit)

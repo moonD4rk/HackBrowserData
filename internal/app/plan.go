@@ -14,7 +14,7 @@ import (
 // Extraction is plain data, looked up again when it runs, so a Plan prints as it is and compares with DeepEqual.
 type Extraction struct {
 	UserDataDirID browser.UserDataDirID
-	Profile       string            // Profile.Name; "" in a result about a whole user data dir
+	ProfileName   string            // Profile.Name; "" in a result about a whole user data dir
 	Category      category.Category // zero in a result about a whole user data dir
 }
 
@@ -34,13 +34,13 @@ func NewPlan(discovery Discovery, options Options) Plan {
 }
 
 func newPlan(discovery Discovery, options Options, extractors extractorsFunc) Plan {
-	plan := Plan{Dirs: discovery.Dirs, Skipped: append([]Result(nil), discovery.Failed...)}
+	plan := Plan{Dirs: discovery.Dirs, Skipped: append([]Result(nil), discovery.Errors...)}
 	captured := make(map[snapshot.File]bool)
 	for _, dir := range discovery.Dirs {
 		for _, profile := range dir.Profiles {
 			profileExtractors := extractors(dir, profile)
 			for _, dataCategory := range options.Categories {
-				extraction := Extraction{UserDataDirID: dir.ID, Profile: profile.Name, Category: dataCategory}
+				extraction := Extraction{UserDataDirID: dir.ID, ProfileName: profile.Name, Category: dataCategory}
 				extractor, ok := profileExtractors[dataCategory]
 				if !ok {
 					plan.Skipped = append(plan.Skipped, Result{Extraction: extraction, Outcome: OutcomeUnsupported})

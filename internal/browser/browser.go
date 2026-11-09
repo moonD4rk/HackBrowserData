@@ -30,11 +30,11 @@ const (
 
 // Platform is one OS's half of a Browser; one without UserDataDirs means the browser is not supported there.
 type Platform struct {
-	UserDataDirs  []string // slash-separated, relative to the home directory; globs allowed
-	KeychainLabel string   // macOS Keychain account / Linux Secret Service label; "" = none
-	Exe           string   // Windows: the program the ABE payload is injected into
-	ExeFallbacks  []string // Windows: program paths tried when the registry has no App Paths entry
-	ABE           masterkey.ABEKind
+	UserDataDirs        []string // slash-separated, relative to the home directory; globs allowed
+	SecretLabel         string   // macOS Keychain account / Linux Secret Service label; "" = none
+	Executable          string   // Windows: the program the ABE payload is injected into
+	ExecutableFallbacks []string // Windows: program paths tried when the registry has no App Paths entry
+	ABE                 masterkey.ABEKind
 }
 
 // Supported returns the browsers of the running OS, in table order.

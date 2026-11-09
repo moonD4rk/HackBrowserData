@@ -10,10 +10,10 @@ import (
 	"time"
 )
 
-const DumpVersion = "2"
+const KeyFileVersion = "2"
 
-// Dump is keys.json: produced on one host, it decrypts copied profile data on another.
-type Dump struct {
+// KeyFile is keys.json: produced on one host, it decrypts copied profile data on another.
+type KeyFile struct {
 	Version   string    `json:"version"`
 	CreatedAt time.Time `json:"created_at"`
 	Host      Host      `json:"host"`
@@ -28,7 +28,7 @@ type Host struct {
 	User     string `json:"user,omitempty"`
 }
 
-// Vault names its engine in Kind, so a consumer can read a vault without the browser in its own table.
+// Vault names its on-disk format in Kind, so a consumer can read a vault without the browser in its own table.
 type Vault struct {
 	Browser string `json:"browser"`
 	// ID names a second user data dir of the same browser ("arc-2"); the first one's is Browser, so it is left out.
@@ -39,9 +39,9 @@ type Vault struct {
 	Keys        Set      `json:"keys"`
 }
 
-func NewDump() Dump {
-	return Dump{
-		Version:   DumpVersion,
+func NewKeyFile() KeyFile {
+	return KeyFile{
+		Version:   KeyFileVersion,
 		CreatedAt: time.Now().UTC(),
 		Host:      currentHost(),
 		Vaults:    []Vault{},
@@ -59,24 +59,24 @@ func currentHost() Host {
 	return host
 }
 
-func (d Dump) WriteJSON(writer io.Writer) error {
+func (d KeyFile) Write(writer io.Writer) error {
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(d); err != nil {
-		return fmt.Errorf("encode dump: %w", err)
+		return fmt.Errorf("encode key file: %w", err)
 	}
 	return nil
 }
 
-// ReadJSON rejects a version it cannot interpret, since a silent misparse is worse than an error.
-func ReadJSON(reader io.Reader) (Dump, error) {
-	var dump Dump
+// ReadKeyFile rejects a version it cannot interpret, since a silent misparse is worse than an error.
+func ReadKeyFile(reader io.Reader) (KeyFile, error) {
+	var dump KeyFile
 	decoder := json.NewDecoder(reader)
 	if err := decoder.Decode(&dump); err != nil {
-		return Dump{}, fmt.Errorf("decode dump: %w", err)
+		return KeyFile{}, fmt.Errorf("decode key file: %w", err)
 	}
-	if dump.Version != DumpVersion {
-		return Dump{}, fmt.Errorf("unsupported dump version %q (this build expects %q)", dump.Version, DumpVersion)
+	if dump.Version != KeyFileVersion {
+		return KeyFile{}, fmt.Errorf("unsupported key file version %q (this build expects %q)", dump.Version, KeyFileVersion)
 	}
 	return dump, nil
 }

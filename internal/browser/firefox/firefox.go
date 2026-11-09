@@ -63,14 +63,14 @@ func profileAt(firefoxBrowser browser.Browser, path string) []browser.UserDataDi
 		ID:       firefoxBrowser.UserDataDirID(0),
 		Browser:  firefoxBrowser,
 		Path:     filepath.Dir(clean),
-		Profiles: []browser.Profile{{Name: name, Dir: name}},
+		Profiles: []browser.Profile{{Name: name, RelativePath: name}},
 	}}
 }
 
 func userDataDirPaths(firefoxBrowser browser.Browser, options browser.DiscoverOptions) []string {
 	paths := make([]string, 0, len(firefoxBrowser.Platform().UserDataDirs))
 	for _, relativePath := range firefoxBrowser.Platform().UserDataDirs {
-		paths = append(paths, filepath.Join(options.Home, filepath.FromSlash(relativePath)))
+		paths = append(paths, filepath.Join(options.HomeDir, filepath.FromSlash(relativePath)))
 	}
 	return paths
 }
@@ -84,7 +84,7 @@ func discoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
 	var profiles []browser.Profile
 	for _, entry := range entries {
 		if entry.IsDir() && hasDataFile(filepath.Join(dir.Path, entry.Name())) {
-			profiles = append(profiles, browser.Profile{Name: entry.Name(), Dir: entry.Name()})
+			profiles = append(profiles, browser.Profile{Name: entry.Name(), RelativePath: entry.Name()})
 		}
 	}
 	return profiles, nil

@@ -55,7 +55,7 @@ func TestDecryptGCM_CrossPlatform(t *testing.T) {
 
 func TestDecryptCBC_CrossPlatform(t *testing.T) {
 	plaintext := []byte("posix_v10_value")
-	encrypted, err := crypto.AESCBCEncrypt(cbcKey, chromiumCBCIV, plaintext)
+	encrypted, err := crypto.AESCBCEncrypt(cbcKey, cbcIV, plaintext)
 	require.NoError(t, err)
 
 	ciphertext := append([]byte("v10"), encrypted...)
@@ -64,19 +64,19 @@ func TestDecryptCBC_CrossPlatform(t *testing.T) {
 	assert.Equal(t, plaintext, got)
 }
 
-// TestKEmptyKey_MatchesChromium pins the derived kEmptyKey to the reference bytes in Chromium's os_crypt_linux.cc.
-func TestKEmptyKey_MatchesChromium(t *testing.T) {
+// TestEmptyPasswordKey_MatchesChromium pins emptyPasswordKey to the reference bytes in os_crypt_linux.cc.
+func TestEmptyPasswordKey_MatchesChromium(t *testing.T) {
 	want := []byte{
 		0xd0, 0xd0, 0xec, 0x9c, 0x7d, 0x77, 0xd4, 0x3a,
 		0xc5, 0x41, 0x87, 0xfa, 0x48, 0x18, 0xd1, 0x7f,
 	}
-	assert.Equal(t, want, kEmptyKey)
-	assert.Len(t, kEmptyKey, 16)
+	assert.Equal(t, want, emptyPasswordKey)
+	assert.Len(t, emptyPasswordKey, 16)
 }
 
 func TestDecryptCBC_EmptyKeyFallback(t *testing.T) {
 	plaintext := []byte("legacy_kwallet_value")
-	encrypted, err := crypto.AESCBCEncrypt(kEmptyKey, chromiumCBCIV, plaintext)
+	encrypted, err := crypto.AESCBCEncrypt(emptyPasswordKey, cbcIV, plaintext)
 	require.NoError(t, err)
 	ciphertext := append([]byte("v11"), encrypted...)
 

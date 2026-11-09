@@ -13,7 +13,7 @@ import (
 )
 
 func TestFlagSurface(t *testing.T) {
-	golden.Assert(t, "flags.golden", flagSurface(rootCmd()))
+	golden.Assert(t, "flags.golden", flagSurface(newRootCommand()))
 }
 
 func flagSurface(root *cobra.Command) string {
