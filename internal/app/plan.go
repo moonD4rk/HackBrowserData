@@ -71,7 +71,7 @@ func locate(dir browser.UserDataDir, profile browser.Profile, sources []browser.
 		return nil, true, nil
 	}
 	for _, source := range sources {
-		file, ok, err := firstOnDisk(dir, profile, source)
+		file, ok, err := firstOnDisk(dir, source.CandidatePaths(profile), source.IsDir)
 		switch {
 		case err != nil:
 			return nil, false, err
@@ -85,13 +85,14 @@ func locate(dir browser.UserDataDir, profile browser.Profile, sources []browser.
 	return files, present, nil
 }
 
-func firstOnDisk(dir browser.UserDataDir, profile browser.Profile, source browser.Source) (snapshot.File, bool, error) {
-	for _, relativePath := range source.CandidatePaths(profile) {
+// firstOnDisk takes relativePaths under the dir, in the order a source tries them.
+func firstOnDisk(dir browser.UserDataDir, relativePaths []string, isDir bool) (snapshot.File, bool, error) {
+	for _, relativePath := range relativePaths {
 		info, err := os.Stat(filepath.Join(dir.Path, filepath.FromSlash(relativePath)))
 		switch {
-		case err == nil && info.IsDir() == source.IsDir:
+		case err == nil && info.IsDir() == isDir:
 			return snapshot.File{
-				UserDataDirID: string(dir.ID), UserDataDirPath: dir.Path, RelativePath: relativePath, IsDir: source.IsDir,
+				UserDataDirID: string(dir.ID), UserDataDirPath: dir.Path, RelativePath: relativePath, IsDir: isDir,
 			}, true, nil
 		case err != nil && !errors.Is(err, fs.ErrNotExist):
 			return snapshot.File{}, false, err

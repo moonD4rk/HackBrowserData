@@ -22,7 +22,7 @@ import (
 
 var history = browser.Source{Path: "History"}
 
-type extractFunc func(ctx context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error
+type extractFunc func(ctx context.Context, input browser.Input, out browser.Collector) error
 
 // fakeBase reads History for every category, so a test needs one fixture file per profile.
 func fakeBase(extractFuncs map[category.Category]extractFunc) extractorsFunc {
@@ -55,7 +55,7 @@ func chromeDir(t *testing.T, id browser.UserDataDirID, profiles ...string) brows
 func run(t *testing.T, base extractorsFunc, keys dirKeysFunc, categories []category.Category, dirs ...browser.UserDataDir) (Summary, string) {
 	t.Helper()
 	output := Output{Dir: t.TempDir()}
-	summary, err := execute(context.Background(), Discovery{Dirs: dirs}, categories, output, base, keys)
+	summary, err := execute(context.Background(), Discovery{Dirs: dirs}, categories, output, runner{extractors: base, retrieveKeys: keys})
 	require.NoError(t, err)
 	return summary, output.Dir
 }
@@ -71,28 +71,28 @@ func outcomes(summary Summary) map[category.Category]Result {
 func TestExecute_Outcomes(t *testing.T) {
 	cookie := func(name string) *record.Cookie { return &record.Cookie{Name: name} }
 	base := fakeBase(map[category.Category]extractFunc{
-		category.Cookie: func(_ context.Context, _ browser.ProfileSnapshot, out browser.Collector) error {
+		category.Cookie: func(_ context.Context, _ browser.Input, out browser.Collector) error {
 			out.Add(cookie("a"))
 			out.Add(cookie("b"))
 			out.Fail(errors.New("value not decrypted"))
 			return nil
 		},
-		category.Password: func(_ context.Context, _ browser.ProfileSnapshot, out browser.Collector) error {
+		category.Password: func(_ context.Context, _ browser.Input, out browser.Collector) error {
 			out.Fail(errors.New("password not decrypted"))
 			return nil
 		},
-		category.History: func(context.Context, browser.ProfileSnapshot, browser.Collector) error { return nil },
-		category.Bookmark: func(context.Context, browser.ProfileSnapshot, browser.Collector) error {
+		category.History: func(context.Context, browser.Input, browser.Collector) error { return nil },
+		category.Bookmark: func(context.Context, browser.Input, browser.Collector) error {
 			return errors.New("corrupt")
 		},
-		category.Download: func(context.Context, browser.ProfileSnapshot, browser.Collector) error {
+		category.Download: func(context.Context, browser.Input, browser.Collector) error {
 			return fmt.Errorf("History: %w", fs.ErrNotExist)
 		},
-		category.Extension: func(_ context.Context, _ browser.ProfileSnapshot, out browser.Collector) error {
+		category.Extension: func(_ context.Context, _ browser.Input, out browser.Collector) error {
 			out.Add(&record.Extension{Name: "kept"})
 			return errors.New("truncated")
 		},
-		category.CreditCard: func(_ context.Context, _ browser.ProfileSnapshot, out browser.Collector) error {
+		category.CreditCard: func(_ context.Context, _ browser.Input, out browser.Collector) error {
 			out.Add(&record.CreditCard{Name: "kept"})
 			return fmt.Errorf("Web Data: %w", fs.ErrNotExist)
 		},
@@ -129,12 +129,12 @@ func TestExecute_ReportsEachDirWhatNeverRanFirst(t *testing.T) {
 	failed := DirFailure{UserDataDirID: "edge", Err: errors.New("permission denied")}
 	chrome, brave := chromeDir(t, "chrome", "Default"), chromeDir(t, "brave", "Default")
 	base := fakeBase(map[category.Category]extractFunc{
-		category.History: func(context.Context, browser.ProfileSnapshot, browser.Collector) error { return nil },
+		category.History: func(context.Context, browser.Input, browser.Collector) error { return nil },
 	})
 	categories := []category.Category{category.Password, category.History}
 	discovery := Discovery{Dirs: []browser.UserDataDir{chrome, brave}, DirFailures: []DirFailure{failed}}
 
-	summary, err := execute(context.Background(), discovery, categories, Output{Dir: t.TempDir()}, base, noKeys(t))
+	summary, err := execute(context.Background(), discovery, categories, Output{Dir: t.TempDir()}, runner{extractors: base, retrieveKeys: noKeys(t)})
 	require.NoError(t, err)
 	assert.Equal(t, []DirFailure{failed}, summary.DirFailures, "discovery's failures are reported with the run's")
 	var got []string
@@ -148,12 +148,12 @@ func TestExecute_ReportsEachDirWhatNeverRanFirst(t *testing.T) {
 }
 
 func TestExecute_KeysAreRetrievedOncePerUserDataDir(t *testing.T) {
-	cookie := func(ctx context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
-		out.Add(&record.Cookie{Value: string(profileSnapshot.MasterKeys(ctx)[masterkey.V10])})
+	cookie := func(ctx context.Context, input browser.Input, out browser.Collector) error {
+		out.Add(&record.Cookie{Value: string(input.MasterKeys(ctx)[masterkey.V10])})
 		return nil
 	}
-	login := func(ctx context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
-		out.Add(&record.Login{Password: string(profileSnapshot.MasterKeys(ctx)[masterkey.V10])})
+	login := func(ctx context.Context, input browser.Input, out browser.Collector) error {
+		out.Add(&record.Login{Password: string(input.MasterKeys(ctx)[masterkey.V10])})
 		return nil
 	}
 	calls := 0
@@ -185,18 +185,18 @@ func TestExecute_HistoryNeverRetrievesKeys(t *testing.T) {
 	touch(t, path, "Default", "History")
 	dir := browser.UserDataDir{ID: "chrome", Browser: lookup(t, "chrome"), Path: path, Profiles: []browser.Profile{{Name: "Default", RelativePath: "Default"}}}
 
-	run(t, extractorsWith(nil), noKeys(t), []category.Category{category.History, category.Download}, dir)
+	run(t, extractorsFor, noKeys(t), []category.Category{category.History, category.Download}, dir)
 }
 
 func TestExecute_RemovesEachSnapshotBeforeTheNextDir(t *testing.T) {
 	var captured []string
 	base := fakeBase(map[category.Category]extractFunc{
-		category.History: func(_ context.Context, profileSnapshot browser.ProfileSnapshot, _ browser.Collector) error {
+		category.History: func(_ context.Context, input browser.Input, _ browser.Collector) error {
 			for _, earlier := range captured {
 				_, err := os.Stat(earlier)
 				require.ErrorIs(t, err, fs.ErrNotExist, "an earlier dir's copy is still on disk")
 			}
-			path, err := profileSnapshot.Path(history)
+			path, err := input.Path(history)
 			require.NoError(t, err)
 			captured = append(captured, path)
 			return nil
@@ -216,14 +216,14 @@ func TestExecute_StopEndsTheRunBeforeTheNextExtractionAndRemovesTheCopy(t *testi
 	defer cancel()
 	var copied []string
 	base := fakeBase(map[category.Category]extractFunc{
-		category.History: func(_ context.Context, profileSnapshot browser.ProfileSnapshot, _ browser.Collector) error {
-			path, err := profileSnapshot.Path(history)
+		category.History: func(_ context.Context, input browser.Input, _ browser.Collector) error {
+			path, err := input.Path(history)
 			require.NoError(t, err)
 			copied = append(copied, path)
 			cancel()
 			return nil
 		},
-		category.Download: func(context.Context, browser.ProfileSnapshot, browser.Collector) error {
+		category.Download: func(context.Context, browser.Input, browser.Collector) error {
 			t.Error("an extraction ran after the stop")
 			return nil
 		},
@@ -231,7 +231,7 @@ func TestExecute_StopEndsTheRunBeforeTheNextExtractionAndRemovesTheCopy(t *testi
 	categories := []category.Category{category.History, category.Download}
 	discovery := Discovery{Dirs: []browser.UserDataDir{chromeDir(t, "chrome", "Default"), chromeDir(t, "chrome-2", "Default")}}
 
-	_, err := execute(ctx, discovery, categories, Output{Dir: t.TempDir()}, base, noKeys(t))
+	_, err := execute(ctx, discovery, categories, Output{Dir: t.TempDir()}, runner{extractors: base, retrieveKeys: noKeys(t)})
 	require.ErrorIs(t, err, context.Canceled)
 	require.Len(t, copied, 1, "the next user data dir is never captured")
 	_, statErr := os.Stat(copied[0])
@@ -244,14 +244,14 @@ func TestExecute_OutputFailureStopsTheRunAndLeavesNoCopies(t *testing.T) {
 	}
 	var copied string
 	base := fakeBase(map[category.Category]extractFunc{
-		category.History: func(_ context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
+		category.History: func(_ context.Context, input browser.Input, out browser.Collector) error {
 			var err error
-			copied, err = profileSnapshot.Path(history)
+			copied, err = input.Path(history)
 			require.NoError(t, err)
 			out.Add(&record.History{URL: "https://example.com"})
 			return nil
 		},
-		category.Download: func(context.Context, browser.ProfileSnapshot, browser.Collector) error {
+		category.Download: func(context.Context, browser.Input, browser.Collector) error {
 			t.Error("an extraction ran after the output failed")
 			return nil
 		},
@@ -261,7 +261,7 @@ func TestExecute_OutputFailureStopsTheRunAndLeavesNoCopies(t *testing.T) {
 	defer func() { require.NoError(t, os.Chmod(output.Dir, 0o700)) }()
 
 	discovery := Discovery{Dirs: []browser.UserDataDir{chromeDir(t, "chrome", "Default")}}
-	_, err := execute(context.Background(), discovery, []category.Category{category.History, category.Download}, output, base, noKeys(t))
+	_, err := execute(context.Background(), discovery, []category.Category{category.History, category.Download}, output, runner{extractors: base, retrieveKeys: noKeys(t)})
 	require.Error(t, err)
 	require.NotEmpty(t, copied)
 	_, statErr := os.Stat(copied)

@@ -50,7 +50,7 @@ func TestPlanDir(t *testing.T) {
 	}
 	categories := []category.Category{category.Password, category.Cookie, category.History, category.Download, category.CreditCard}
 
-	plan := planDir(dir, categories, extractorsWith(nil))
+	plan := planDir(dir, categories, extractorsFor)
 
 	file := func(relativePath string) snapshot.File {
 		return snapshot.File{UserDataDirID: "chrome", UserDataDirPath: path, RelativePath: relativePath}
@@ -85,11 +85,11 @@ func TestPlanDir_PicksTheFirstCandidateOnDisk(t *testing.T) {
 	touch(t, path, "Default", "Cookies")
 	dir := browser.UserDataDir{ID: "chrome", Browser: lookup(t, "chrome"), Path: path, Profiles: []browser.Profile{{Name: "Default", RelativePath: "Default"}}}
 
-	plan := planDir(dir, []category.Category{category.Cookie}, extractorsWith(nil))
+	plan := planDir(dir, []category.Category{category.Cookie}, extractorsFor)
 	assert.Equal(t, []snapshot.File{{UserDataDirID: "chrome", UserDataDirPath: path, RelativePath: "Default/Cookies"}}, plan.files)
 
 	touch(t, path, "Default", "Network", "Cookies")
-	plan = planDir(dir, []category.Category{category.Cookie}, extractorsWith(nil))
+	plan = planDir(dir, []category.Category{category.Cookie}, extractorsFor)
 	assert.Equal(t, []snapshot.File{{UserDataDirID: "chrome", UserDataDirPath: path, RelativePath: "Default/Network/Cookies"}}, plan.files,
 		"a leftover legacy Cookies never wins")
 }
@@ -99,7 +99,7 @@ func TestPlanDir_FlatLayoutProfile(t *testing.T) {
 	touch(t, path, "History")
 	dir := browser.UserDataDir{ID: "opera", Browser: lookup(t, "opera"), Path: path, Profiles: []browser.Profile{{Name: "Opera Stable"}}}
 
-	plan := planDir(dir, []category.Category{category.History}, extractorsWith(nil))
+	plan := planDir(dir, []category.Category{category.History}, extractorsFor)
 	assert.Equal(t, []snapshot.File{{UserDataDirID: "opera", UserDataDirPath: path, RelativePath: "History"}}, plan.files)
 	assert.Equal(t, []Extraction{{UserDataDirID: "opera", ProfileName: "Opera Stable", Category: category.History}}, extractionsOf(plan))
 }

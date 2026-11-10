@@ -21,24 +21,25 @@ func Execute(
 	ctx context.Context, discovery Discovery, categories []category.Category, output Output, keychainConfig KeychainConfig,
 ) (Summary, error) {
 	keychain := newLoginKeychain(keychainConfig)
-	return execute(ctx, discovery, categories, output, extractorsWith(keychain), keysFromMachine(keychain))
+	fromMachine := runner{extractors: extractorsFor, retrieveKeys: keysFromMachine(keychain), loginKeychain: keychain}
+	return execute(ctx, discovery, categories, output, fromMachine)
 }
 
 // ExecuteWithKeys decrypts with a key file's keys, so it never reads this machine's secret stores.
 func ExecuteWithKeys(
 	ctx context.Context, discovery Discovery, categories []category.Category, output Output, keys map[browser.UserDataDirID]masterkey.Set,
 ) (Summary, error) {
-	return execute(ctx, discovery, categories, output, extractorsWith(nil), keysFromFile(keys))
+	return execute(ctx, discovery, categories, output, runner{extractors: extractorsFor, retrieveKeys: keysFromFile(keys)})
 }
 
-func execute(
-	ctx context.Context, discovery Discovery, categories []category.Category, output Output, extractors extractorsFunc, keys dirKeysFunc,
-) (Summary, error) {
+// execute gives the runner the run's writer; the caller sets where its extractors, keys, and keychain come from.
+func execute(ctx context.Context, discovery Discovery, categories []category.Category, output Output, dirRunner runner) (Summary, error) {
 	writer, err := export.NewWriter(output.Dir, output.Format, output.Zip)
 	if err != nil {
 		return Summary{}, err
 	}
-	summary, err := runner{writer: writer, extractors: extractors, retrieveKeys: keys, logProgress: true}.run(ctx, discovery, categories)
+	dirRunner.writer, dirRunner.logProgress = writer, true
+	summary, err := dirRunner.run(ctx, discovery, categories)
 	closeErr := writer.Close()
 	summary.Exported = writer.Listing()
 	return summary, errors.Join(err, closeErr)
@@ -50,10 +51,11 @@ type recordWriter interface {
 
 // runner is what every user data dir of one run shares; logProgress logs each dir as it starts.
 type runner struct {
-	writer       recordWriter
-	extractors   extractorsFunc
-	retrieveKeys dirKeysFunc
-	logProgress  bool
+	writer        recordWriter
+	extractors    extractorsFunc
+	retrieveKeys  dirKeysFunc
+	loginKeychain browser.LoginKeychain
+	logProgress   bool
 }
 
 func (r runner) run(ctx context.Context, discovery Discovery, categories []category.Category) (Summary, error) {
@@ -105,8 +107,8 @@ func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories 
 		if err := ctx.Err(); err != nil {
 			return summary, fmt.Errorf("run stopped: %w", err)
 		}
-		profileSnapshot := browser.NewProfileSnapshot(dirSnapshot, extraction.profile, keys.get)
-		result, err := r.runExtraction(ctx, extraction, profileSnapshot, dir.Browser.DisplayName)
+		input := browser.NewInput(dirSnapshot, extraction.profile, keys.get, r.loginKeychain)
+		result, err := r.runExtraction(ctx, extraction, input, dir.Browser.DisplayName)
 		if err != nil {
 			return summary, err
 		}
@@ -121,10 +123,10 @@ func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories 
 
 // runExtraction exports the records emitted before an extraction failed, as they always were; its error stops the run.
 func (r runner) runExtraction(
-	ctx context.Context, extraction plannedExtraction, profileSnapshot browser.ProfileSnapshot, browserName string,
+	ctx context.Context, extraction plannedExtraction, input browser.Input, browserName string,
 ) (Result, error) {
 	recordCollector := &collector{browserName: browserName, profileName: extraction.ProfileName}
-	err := extraction.extractor.Extract(ctx, profileSnapshot, recordCollector)
+	err := extraction.extractor.Extract(ctx, input, recordCollector)
 	if writeErr := r.writer.Write(extraction.Category, recordCollector.records); writeErr != nil {
 		return Result{}, writeErr
 	}

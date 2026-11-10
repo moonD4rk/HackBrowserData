@@ -163,13 +163,10 @@ func DiscoverRestore(root string, vaults []masterkey.Vault) (Discovery, map[brow
 }
 
 func restoredDir(vault masterkey.Vault, id browser.UserDataDirID, path string) (browser.UserDataDir, error) {
-	restoredBrowser, err := vaultBrowser(vault)
+	restoredBrowser, vaultKind := vaultBrowser(vault)
+	dir, err := chromium.DiscoverAt(restoredBrowser, vaultKind, id, path)
 	if err != nil {
 		return browser.UserDataDir{}, err
-	}
-	dir, err := chromium.DiscoverAt(restoredBrowser, id, path)
-	if err != nil {
-		return browser.UserDataDir{}, fmt.Errorf("read %s: %w", path, err)
 	}
 	found := withData([]browser.UserDataDir{dir})
 	if len(found) == 0 {
@@ -179,17 +176,13 @@ func restoredDir(vault masterkey.Vault, id browser.UserDataDirID, path string) (
 }
 
 // vaultBrowser searches the whole table, so a fork this OS lacks still restores. A browser this build does not know
-// restores as it always did: the vault's kind picks the on-disk format, and its name stands in as the browser.
-func vaultBrowser(vault masterkey.Vault) (browser.Browser, error) {
+// keeps its own name, and its vault's kind picks the on-disk format.
+func vaultBrowser(vault masterkey.Vault) (restored browser.Browser, vaultKind string) {
 	name := strings.ToLower(vault.Browser)
 	if namedBrowser, ok := browser.Lookup(name); ok && namedBrowser.Base == browser.Chromium {
-		return namedBrowser, nil
+		return namedBrowser, chromium.VaultKind(namedBrowser)
 	}
-	formatName, err := chromium.BrowserNameForKind(vault.Kind, name)
-	if err != nil {
-		return browser.Browser{}, err
-	}
-	return browser.Browser{Name: formatName, DisplayName: vault.Browser, Base: browser.Chromium}, nil
+	return browser.Browser{Name: name, DisplayName: vault.Browser, Base: browser.Chromium}, vault.Kind
 }
 
 // vaultUserDataDirID is the vault's directory in an archive: its ID for a second user data dir, else its browser name.

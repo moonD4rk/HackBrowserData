@@ -1,14 +1,9 @@
 package record
 
-import (
-	"time"
-
-	"github.com/moond4rk/hackbrowserdata/internal/category"
-)
+import "time"
 
 // Record is one output row; the collector sets its Browser and Profile, so extractors leave both empty.
 type Record interface {
-	Category() category.Category
 	SetBrowserAndProfile(browser, profile string)
 }
 
@@ -122,16 +117,6 @@ type SessionStorage struct {
 	Key     string `json:"key" csv:"key"`
 	Value   string `json:"value" csv:"value"`
 }
-
-func (r *Login) Category() category.Category          { return category.Password }
-func (r *Cookie) Category() category.Category         { return category.Cookie }
-func (r *Bookmark) Category() category.Category       { return category.Bookmark }
-func (r *History) Category() category.Category        { return category.History }
-func (r *Download) Category() category.Category       { return category.Download }
-func (r *CreditCard) Category() category.Category     { return category.CreditCard }
-func (r *Extension) Category() category.Category      { return category.Extension }
-func (r *LocalStorage) Category() category.Category   { return category.LocalStorage }
-func (r *SessionStorage) Category() category.Category { return category.SessionStorage }
 
 func (r *Login) SetBrowserAndProfile(browser, profile string) {
 	r.Browser, r.Profile = browser, profile

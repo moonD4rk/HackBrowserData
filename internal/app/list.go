@@ -28,7 +28,7 @@ func ValidateList() (ListOptions, error) {
 // CountRecords runs every category with no key and the keychain locked, counting records instead of exporting them.
 func CountRecords(ctx context.Context, discovery Discovery, keychainConfig KeychainConfig) (Summary, error) {
 	keychain := newLoginKeychain(keychainConfig)
-	counter := runner{writer: discard{}, extractors: extractorsWith(keychain), retrieveKeys: keysFromFile(nil)}
+	counter := runner{writer: discard{}, extractors: extractorsFor, retrieveKeys: keysFromFile(nil), loginKeychain: keychain}
 	return counter.run(ctx, discovery, category.All())
 }
 

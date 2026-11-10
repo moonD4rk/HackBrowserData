@@ -26,7 +26,7 @@ func newDumpKeysCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			discovery := app.Discover(options.Target)
+			discovery := app.Discover(command.Context(), options.Target)
 			vaultCount, err := app.DumpKeys(command.Context(), discovery, options.Keychain, command.OutOrStdout(), outputPath)
 			if err != nil {
 				return err

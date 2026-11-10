@@ -9,7 +9,12 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-func extractPasswords(ctx context.Context, loginKeychain LoginKeychain, out browser.Collector) error {
+// extractPasswords reads no file, so it always runs; without a usable password the keychain yields metadata only.
+func extractPasswords(ctx context.Context, input browser.Input, out browser.Collector) error {
+	loginKeychain := input.LoginKeychain()
+	if loginKeychain == nil {
+		return errNoKeychain
+	}
 	passwords, err := loginKeychain.InternetPasswords(ctx)
 	if err != nil {
 		return err
@@ -23,7 +28,7 @@ func extractPasswords(ctx context.Context, loginKeychain LoginKeychain, out brow
 		out.Add(&record.Login{
 			URL:       url,
 			Username:  internetPassword.Account,
-			Password:  internetPassword.PlainPassword,
+			Password:  internetPassword.Password,
 			CreatedAt: internetPassword.Created.UTC(),
 			Store:     record.StoreLocal,
 		})

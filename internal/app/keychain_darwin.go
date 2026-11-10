@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/moond4rk/keychainbreaker"
-
 	"github.com/moond4rk/hackbrowserdata/internal/keychain"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
@@ -37,7 +35,7 @@ func (k *reportingKeychain) GenericPassword(ctx context.Context, account string)
 	return secret, err
 }
 
-func (k *reportingKeychain) InternetPasswords(ctx context.Context) ([]keychainbreaker.InternetPassword, error) {
+func (k *reportingKeychain) InternetPasswords(ctx context.Context) ([]keychain.InternetPassword, error) {
 	passwords, err := k.Keychain.InternetPasswords(ctx)
 	k.warnLockedOnce()
 	return passwords, err

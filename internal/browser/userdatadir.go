@@ -15,6 +15,9 @@ type UserDataDir struct {
 	Browser  Browser
 	Path     string
 	Profiles []Profile
+	// VaultKind is set on a restored dir: the on-disk format its vault names. A discovered dir leaves it empty, and
+	// its browser's name picks the format.
+	VaultKind string
 }
 
 // Profile is one profile within a user data dir. Name is the output's profile value and never a path.

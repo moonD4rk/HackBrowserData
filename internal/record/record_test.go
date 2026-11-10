@@ -7,32 +7,11 @@ import (
 	"unicode"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
-func allRecords() map[category.Category]Record {
-	return map[category.Category]Record{
-		category.Password:       &Login{},
-		category.Cookie:         &Cookie{},
-		category.Bookmark:       &Bookmark{},
-		category.History:        &History{},
-		category.Download:       &Download{},
-		category.CreditCard:     &CreditCard{},
-		category.Extension:      &Extension{},
-		category.LocalStorage:   &LocalStorage{},
-		category.SessionStorage: &SessionStorage{},
-	}
-}
-
-func TestCategory_OneRecordTypePerCategory(t *testing.T) {
-	records := allRecords()
-	assert.Len(t, records, len(category.All()))
-	for _, dataCategory := range category.All() {
-		row, ok := records[dataCategory]
-		if assert.Truef(t, ok, "no record type for %s", dataCategory) {
-			assert.Equalf(t, dataCategory, row.Category(), "%T", row)
-		}
+func allRecords() []Record {
+	return []Record{
+		&Login{}, &Cookie{}, &Bookmark{}, &History{}, &Download{}, &CreditCard{}, &Extension{}, &LocalStorage{}, &SessionStorage{},
 	}
 }
 

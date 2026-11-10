@@ -95,8 +95,9 @@ func TestDiscoverRestore_FromLayout(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []browser.UserDataDirID{"chrome", "nightly"}, userDataDirIDs(discovery), "a repeated vault restores once, one without data not at all")
 	assert.Len(t, keys, 2)
-	assert.Equal(t, browser.Browser{Name: "yandex", DisplayName: "Nightly", Base: browser.Chromium}, discovery.Dirs[1].Browser,
-		"a key this build does not know keeps its kind's format and its own name")
+	assert.Equal(t, browser.Browser{Name: "nightly", DisplayName: "Nightly", Base: browser.Chromium}, discovery.Dirs[1].Browser,
+		"a browser this build does not know keeps its own name")
+	assert.Equal(t, "chromium-yandex", discovery.Dirs[1].VaultKind, "and its vault's kind picks the format")
 }
 
 func TestDiscoverRestore_OneUserDataNeedsOneVault(t *testing.T) {

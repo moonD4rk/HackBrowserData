@@ -107,7 +107,7 @@ func retrieveDirKeys(ctx context.Context, dir browser.UserDataDir, keys dirKeysF
 	defer closeRoot(root)
 	var files []snapshot.File
 	for _, source := range chromium.KeySources() {
-		if file, ok, err := firstOnDisk(dir, browser.Profile{}, source); err == nil && ok {
+		if file, ok, err := firstOnDisk(dir, source.Paths(), source.IsDir); err == nil && ok {
 			files = append(files, file)
 		}
 	}
