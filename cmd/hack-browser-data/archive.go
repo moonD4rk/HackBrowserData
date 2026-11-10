@@ -24,7 +24,7 @@ func newArchiveCommand() *cobra.Command {
 				return err
 			}
 			discovery := app.Discover(options.Target)
-			if foundNothing(command.ErrOrStderr(), discovery, "no browsers found") {
+			if warnIfNothingFound(command.ErrOrStderr(), discovery, "no browsers found") {
 				return nil
 			}
 			fileCount, err := app.Archive(command.Context(), discovery, options.Categories, outputPath)

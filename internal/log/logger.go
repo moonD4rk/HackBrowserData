@@ -65,15 +65,3 @@ func (l *logger) write(level logLevel, message string) {
 	_, _ = io.WriteString(l.out, line)
 	l.mutex.Unlock()
 }
-
-func (l *logger) Debugf(format string, args ...any) {
-	l.write(debugLevel, fmt.Sprintf(format, args...))
-}
-
-func (l *logger) Infof(format string, args ...any) {
-	l.write(infoLevel, fmt.Sprintf(format, args...))
-}
-
-func (l *logger) Warnf(format string, args ...any) {
-	l.write(warnLevel, fmt.Sprintf(format, args...))
-}

@@ -80,8 +80,8 @@ func report(writer io.Writer, summary app.Summary) {
 	}
 }
 
-// foundNothing reports discovery's failures, the likely reason it found no browser data, then says so.
-func foundNothing(stderr io.Writer, discovery app.Discovery, message string) bool {
+// warnIfNothingFound reports discovery's failures, the likely reason it found no browser data, then says so.
+func warnIfNothingFound(stderr io.Writer, discovery app.Discovery, message string) bool {
 	if len(discovery.Dirs) > 0 {
 		return false
 	}
@@ -93,7 +93,7 @@ func foundNothing(stderr io.Writer, discovery app.Discovery, message string) boo
 }
 
 // announceExport lists the files a run wrote, even when it stopped early, so the user finds what it left.
-func announceExport(stderr io.Writer, exported export.Output) {
+func announceExport(stderr io.Writer, exported export.Listing) {
 	if len(exported.Files) == 0 {
 		return
 	}

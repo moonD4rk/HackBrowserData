@@ -39,21 +39,21 @@ func namedProfiles(library string) []browser.Profile {
 
 // readNamedProfilesFromDB reads a copy, never Safari's live file; (nil, err) means unreadable, and any slice is final.
 func readNamedProfilesFromDB(library string) ([]browser.Profile, error) {
-	snapshotDir, err := snapshot.Temp()
+	root, err := snapshot.Temp()
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
-		if err := snapshotDir.Close(); err != nil {
+		if err := root.Close(); err != nil {
 			log.Warnf("%v", err)
 		}
 	}()
-	if err := snapshotDir.Capture(context.Background(), []snapshot.File{{
+	if err := root.Capture(context.Background(), []snapshot.File{{
 		UserDataDirID: discoveryUserDataDirID, UserDataDirPath: library, RelativePath: tabsDatabasePath,
 	}}); err != nil {
 		return nil, fmt.Errorf("copy SafariTabs.db: %w", err)
 	}
-	path, err := snapshotDir.Snapshot(discoveryUserDataDirID).Path(tabsDatabasePath)
+	path, err := root.Snapshot(discoveryUserDataDirID).Path(tabsDatabasePath)
 	if err != nil {
 		return nil, fmt.Errorf("copy SafariTabs.db: %w", err)
 	}
@@ -109,7 +109,7 @@ func readNamedProfilesFromDir(library string) []browser.Profile {
 	return out
 }
 
-// newNamedProfile sets Dir to the profile's own History.db directory, so its UUID travels with it to Extractors.
+// newNamedProfile sets RelativePath to the profile's own History.db directory, so its UUID travels with it to Extractors.
 func newNamedProfile(upperUUID, title string) browser.Profile {
 	return browser.Profile{Name: resolveProfileName(title, upperUUID), RelativePath: namedProfilesDir + "/" + upperUUID}
 }

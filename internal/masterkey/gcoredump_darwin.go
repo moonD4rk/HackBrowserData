@@ -58,8 +58,8 @@ type addressRange struct {
 	end   uint64
 }
 
-// DecryptKeychainRecords requires root.
-func DecryptKeychainRecords() ([]keychainbreaker.GenericPassword, error) {
+// decryptKeychainRecords requires root.
+func decryptKeychainRecords() ([]keychainbreaker.GenericPassword, error) {
 	if os.Geteuid() != 0 {
 		return nil, errors.New("requires root privileges")
 	}

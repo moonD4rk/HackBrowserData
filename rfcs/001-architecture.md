@@ -32,9 +32,10 @@ Dependencies point down only. Interfaces live with their consumer, nothing regis
 
 ## Naming
 
-- A name is judged at its call site, qualified by its package, and never repeats the package's name.
+- A name is judged at its call site, qualified by its package, and never repeats the package's name, unless it names the one type the package exists for.
 - A name says what a thing is, not its role or its shape, and one concept has one word.
 - Names are spelled out; only Go's universal idioms stay short, and lint enforces it.
 - The domain's words: a **browser** is a row of the browser table; its **base** is what it is built on (Chromium, Firefox, or Safari); a **user data dir** is a browser's data directory, where an installation would be the program; and a **profile**, an **extraction**, a **snapshot**, a **record**, and a **category** mean what they say.
+- Unqualified, "dir" means a user data dir; any other directory is named for what it holds.
 
 **Rejected:** "engine" for the base, which means the renderer; "origin" or "owner" for where a record came from, which are web and access-control terms; and "job" for an extraction, which suggests a worker pool that does not exist.

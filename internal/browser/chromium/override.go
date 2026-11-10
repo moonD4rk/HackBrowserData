@@ -7,13 +7,13 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
-// kindChromium is the keys.json kind of every Chromium browser no override covers.
-const kindChromium = "chromium"
+// vaultKindChromium is the keys.json kind of every Chromium browser no override covers.
+const vaultKindChromium = "chromium"
 
 // override is a fork that stores data its own way: its browsers, its keys.json kind, and the extractors it swaps.
 type override struct {
 	browserNames []string
-	kind         string
+	vaultKind    string
 	extractors   browser.Extractors
 }
 
@@ -21,7 +21,7 @@ type override struct {
 var overrides = []override{
 	{
 		browserNames: []string{"yandex"},
-		kind:         "chromium-yandex",
+		vaultKind:    "chromium-yandex",
 		extractors: browser.Extractors{
 			category.Password:   newDecryptingExtractor(extractYandexPasswords, yaPassmanData),
 			category.CreditCard: newDecryptingExtractor(extractYandexCreditCards, yaCreditCards),
@@ -29,7 +29,7 @@ var overrides = []override{
 	},
 	{
 		browserNames: []string{"opera", "opera-gx", "vought"},
-		kind:         "chromium-opera",
+		vaultKind:    "chromium-opera",
 		extractors: browser.Extractors{
 			category.Extension: newPlainExtractor(extractOperaExtensions, securePreferences),
 		},
@@ -50,18 +50,18 @@ func overrideFor(browserName string) (override, bool) {
 // VaultKind names a vault's on-disk format, so a reader without the browser in its table still picks its files.
 func VaultKind(chromiumBrowser browser.Browser) string {
 	if fork, ok := overrideFor(chromiumBrowser.Name); ok {
-		return fork.kind
+		return fork.vaultKind
 	}
-	return kindChromium
+	return vaultKindChromium
 }
 
 // BrowserNameForKind names the browser whose extractors read a vault of kind; a plain Chromium vault keeps its own.
 func BrowserNameForKind(kind, name string) (string, error) {
-	if kind == kindChromium {
+	if kind == vaultKindChromium {
 		return name, nil
 	}
 	for _, fork := range overrides {
-		if fork.kind == kind {
+		if fork.vaultKind == kind {
 			return fork.browserNames[0], nil
 		}
 	}

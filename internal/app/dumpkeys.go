@@ -65,7 +65,7 @@ func dumpKeysWith(ctx context.Context, discovery Discovery, keys dirKeysFunc) (m
 		if dir.Browser.Base != browser.Chromium {
 			continue
 		}
-		set, err := retrieveKeys(ctx, dir, keys)
+		set, err := retrieveDirKeys(ctx, dir, keys)
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return masterkey.KeyFile{}, fmt.Errorf("run stopped: %w", ctxErr)
 		}
@@ -94,22 +94,22 @@ func dumpKeysWith(ctx context.Context, discovery Discovery, keys dirKeysFunc) (m
 	return keyFile, nil
 }
 
-func retrieveKeys(ctx context.Context, dir browser.UserDataDir, keys dirKeysFunc) (masterkey.Set, error) {
-	snapshots, err := snapshot.Temp()
+func retrieveDirKeys(ctx context.Context, dir browser.UserDataDir, keys dirKeysFunc) (masterkey.Set, error) {
+	root, err := snapshot.Temp()
 	if err != nil {
 		return nil, err
 	}
-	defer closeSnapshot(snapshots)
+	defer closeRoot(root)
 	var files []snapshot.File
 	for _, source := range chromium.KeySources() {
 		if file, ok, err := firstOnDisk(dir, browser.Profile{}, source); err == nil && ok {
 			files = append(files, file)
 		}
 	}
-	if err := snapshots.Capture(ctx, files); err != nil {
+	if err := root.Capture(ctx, files); err != nil {
 		return nil, err
 	}
-	return keys(ctx, dir, snapshots.Snapshot(string(dir.ID)))
+	return keys(ctx, dir, root.Snapshot(string(dir.ID)))
 }
 
 func profileNames(dir browser.UserDataDir) []string {

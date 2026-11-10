@@ -93,14 +93,14 @@ func discoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
 	return profiles, nil
 }
 
-func hasDataFile(dir string) bool {
+func hasDataFile(path string) bool {
 	for _, extractor := range defaultExtractors {
 		for _, source := range extractor.Sources {
 			if source.Optional {
 				continue
 			}
 			for _, relativePath := range source.Paths() {
-				if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(relativePath))); err == nil {
+				if _, err := os.Stat(filepath.Join(path, filepath.FromSlash(relativePath))); err == nil {
 					return true
 				}
 			}

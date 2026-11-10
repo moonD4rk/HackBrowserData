@@ -14,7 +14,7 @@ import (
 )
 
 // platformRetrievers run both: a profile upgraded past Chrome 127 holds v10 and v20 values side by side.
-var platformRetrievers = []Retriever{dpapiRetriever{}, abeRetriever{}}
+var platformRetrievers = []keyRetriever{dpapiRetriever{}, abeRetriever{}}
 
 type dpapiRetriever struct{}
 

@@ -85,7 +85,7 @@ func chromiumKeyFile(t *testing.T) string {
 		profiles = append(profiles, fixtureProfile.Dir)
 	}
 	keyFile := masterkey.KeyFile{
-		// A literal rather than KeyFileVersion: keys files written by today's dumpkeys must keep restoring.
+		// A literal rather than the version constant: keys files written by today's dumpkeys must keep restoring.
 		Version:   "2",
 		CreatedAt: time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC),
 		Host:      masterkey.Host{OS: "windows", Arch: "amd64"},

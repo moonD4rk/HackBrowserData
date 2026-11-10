@@ -8,16 +8,16 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/zipfile"
 )
 
-func (d *Dir) Zip(archivePath string) error {
+func (r *Root) Zip(archivePath string) error {
 	var names []string
-	walkErr := filepath.WalkDir(d.path, func(walkedPath string, entry fs.DirEntry, err error) error {
+	walkErr := filepath.WalkDir(r.path, func(walkedPath string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if entry.IsDir() {
 			return nil
 		}
-		relativePath, err := filepath.Rel(d.path, walkedPath)
+		relativePath, err := filepath.Rel(r.path, walkedPath)
 		if err != nil {
 			return err
 		}
@@ -25,7 +25,7 @@ func (d *Dir) Zip(archivePath string) error {
 		return nil
 	})
 	if walkErr != nil {
-		return fmt.Errorf("zip %s: %w", d.path, walkErr)
+		return fmt.Errorf("zip %s: %w", r.path, walkErr)
 	}
-	return zipfile.Write(archivePath, d.path, names)
+	return zipfile.Write(archivePath, r.path, names)
 }

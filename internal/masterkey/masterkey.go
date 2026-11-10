@@ -21,14 +21,14 @@ const (
 // Set holds one user data dir's key per version; encoding/json writes it as keys.json's "keys" object.
 type Set map[Version][]byte
 
-// Retriever obtains one version's key from one OS secret store.
-type Retriever interface {
+// keyRetriever obtains one version's key from one OS secret store.
+type keyRetriever interface {
 	Version() Version
 	Retrieve(ctx context.Context, loc Locator) ([]byte, error)
 }
 
-// ErrNotApplicable is a retriever's way of stepping aside; it never counts as a failure.
-var ErrNotApplicable = errors.New("retriever not applicable")
+// errNotApplicable is a retriever's way of stepping aside; it never counts as a failure.
+var errNotApplicable = errors.New("retriever not applicable")
 
 var errStorageNotFound = errors.New("not found in credential store") //nolint:unused // only used on darwin and linux
 
@@ -62,7 +62,7 @@ func RetrieveAll(ctx context.Context, locator Locator) (Set, error) {
 	return retrieveAll(ctx, locator, platformRetrievers)
 }
 
-func retrieveAll(ctx context.Context, locator Locator, retrievers []Retriever) (Set, error) {
+func retrieveAll(ctx context.Context, locator Locator, retrievers []keyRetriever) (Set, error) {
 	keys := make(Set)
 	var versions []Version
 	failures := make(map[Version][]error)
@@ -77,7 +77,7 @@ func retrieveAll(ctx context.Context, locator Locator, retrievers []Retriever) (
 		}
 		key, err := retriever.Retrieve(ctx, locator)
 		switch {
-		case errors.Is(err, ErrNotApplicable):
+		case errors.Is(err, errNotApplicable):
 		case err != nil:
 			log.Debugf("%s retriever %T failed: %v", version, retriever, err)
 			failures[version] = append(failures[version], err)

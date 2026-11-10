@@ -48,12 +48,12 @@ type privateKeyPBE struct {
 
 func (pbe privateKeyPBE) Decrypt(globalSalt []byte) ([]byte, error) {
 	key, iv := pbe.deriveKeyAndIV(globalSalt)
-	return DES3Decrypt(key, iv, pbe.Encrypted)
+	return des3Decrypt(key, iv, pbe.Encrypted)
 }
 
 func (pbe privateKeyPBE) Encrypt(globalSalt, plaintext []byte) ([]byte, error) {
 	key, iv := pbe.deriveKeyAndIV(globalSalt)
-	return DES3Encrypt(key, iv, plaintext)
+	return des3Encrypt(key, iv, plaintext)
 }
 
 // deriveKeyAndIV follows https://searchfox.org/mozilla-central/source/security/nss/lib/softoken/lowpbe.c
@@ -145,7 +145,7 @@ func (pbe credentialPBE) Decrypt(masterKey []byte) ([]byte, error) {
 		if len(key) < des3KeySize {
 			return nil, errShortKey
 		}
-		return DES3Decrypt(key[:des3KeySize], iv, pbe.Encrypted)
+		return des3Decrypt(key[:des3KeySize], iv, pbe.Encrypted)
 	case aes.BlockSize: // 16: AES-256-CBC (Firefox 144+)
 		return AESCBCDecrypt(key, iv, pbe.Encrypted)
 	default:
@@ -160,7 +160,7 @@ func (pbe credentialPBE) Encrypt(masterKey, plaintext []byte) ([]byte, error) {
 		if len(key) < des3KeySize {
 			return nil, errShortKey
 		}
-		return DES3Encrypt(key[:des3KeySize], iv, plaintext)
+		return des3Encrypt(key[:des3KeySize], iv, plaintext)
 	case aes.BlockSize:
 		return AESCBCEncrypt(key, iv, plaintext)
 	default:

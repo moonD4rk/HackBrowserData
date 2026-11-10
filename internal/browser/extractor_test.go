@@ -57,15 +57,15 @@ func TestProfileSnapshotPath_FailedCopyIsReported(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(from, "Default", "Network", "Cookies"), 0o700))
 	writeSnapshotFile(t, from, "Default/Cookies")
 
-	snapshotDir, err := snapshot.Temp()
+	root, err := snapshot.Temp()
 	require.NoError(t, err)
-	defer func() { require.NoError(t, snapshotDir.Close()) }()
-	require.NoError(t, snapshotDir.Capture(context.Background(), []snapshot.File{
+	defer func() { require.NoError(t, root.Close()) }()
+	require.NoError(t, root.Capture(context.Background(), []snapshot.File{
 		{UserDataDirID: "chrome", UserDataDirPath: from, RelativePath: "Default/Network/Cookies"},
 		{UserDataDirID: "chrome", UserDataDirPath: from, RelativePath: "Default/Cookies"},
 	}))
 
-	profileSnapshot := NewProfileSnapshot(snapshotDir.Snapshot("chrome"), Profile{Name: "Default", RelativePath: "Default"}, nil)
+	profileSnapshot := NewProfileSnapshot(root.Snapshot("chrome"), Profile{Name: "Default", RelativePath: "Default"}, nil)
 	_, err = profileSnapshot.Path(Source{Path: "Network/Cookies", Fallbacks: []string{"Cookies"}})
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, fs.ErrNotExist)

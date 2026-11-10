@@ -20,7 +20,7 @@ var linuxParams = pbkdf2Params{
 }
 
 // platformRetrievers run both: a profile holds v10 and v11 values once its host moved between headless and keyring.
-var platformRetrievers = []Retriever{posixRetriever{}, dbusRetriever{}}
+var platformRetrievers = []keyRetriever{posixRetriever{}, dbusRetriever{}}
 
 type dbusRetriever struct{}
 

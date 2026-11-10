@@ -31,7 +31,7 @@ var darwinParams = pbkdf2Params{
 const securityCmdTimeout = 30 * time.Second
 
 // platformRetrievers stop at the first success; the security CLI goes last because it may prompt.
-var platformRetrievers = []Retriever{
+var platformRetrievers = []keyRetriever{
 	&gcoredumpRetriever{},
 	keychainRetriever{},
 	&securityRetriever{cache: make(map[string]securityResult)},
@@ -49,17 +49,17 @@ func (*gcoredumpRetriever) Version() Version { return V10 }
 // Retrieve steps aside on failure: the common "needs root" case isn't warning-worthy and would drown real warnings.
 func (r *gcoredumpRetriever) Retrieve(_ context.Context, locator Locator) ([]byte, error) {
 	r.once.Do(func() {
-		r.records, r.err = DecryptKeychainRecords()
+		r.records, r.err = decryptKeychainRecords()
 	})
 	if r.err != nil {
 		log.Debugf("gcoredump: %v", r.err)
-		return nil, ErrNotApplicable
+		return nil, errNotApplicable
 	}
 
 	key, err := findStorageKey(r.records, locator.SecretLabel)
 	if err != nil {
 		log.Debugf("gcoredump: %v", err)
-		return nil, ErrNotApplicable
+		return nil, errNotApplicable
 	}
 	return key, nil
 }
@@ -80,11 +80,11 @@ func (keychainRetriever) Version() Version { return V10 }
 
 func (keychainRetriever) Retrieve(ctx context.Context, locator Locator) ([]byte, error) {
 	if locator.Keychain == nil {
-		return nil, ErrNotApplicable
+		return nil, errNotApplicable
 	}
 	secret, err := locator.Keychain.GenericPassword(ctx, locator.SecretLabel)
 	if errors.Is(err, keychain.ErrLocked) {
-		return nil, ErrNotApplicable
+		return nil, errNotApplicable
 	}
 	if err != nil {
 		return nil, err

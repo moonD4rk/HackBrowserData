@@ -94,7 +94,7 @@ func discoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
 
 	var profiles []browser.Profile
 	for _, entry := range entries {
-		if entry.IsDir() && !isSkippedDir(entry.Name()) && isProfileDir(filepath.Join(dir.Path, entry.Name())) {
+		if entry.IsDir() && !isSkippedProfileDir(entry.Name()) && isProfileDir(filepath.Join(dir.Path, entry.Name())) {
 			profiles = append(profiles, browser.Profile{Name: entry.Name(), RelativePath: entry.Name()})
 		}
 	}
@@ -110,23 +110,23 @@ func discoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
 
 	// Copied or restored trees may lack the marker, which no category reads, so a subdir with profile files is one too.
 	for _, entry := range entries {
-		if entry.IsDir() && !isSkippedDir(entry.Name()) && hasAnyFile(filepath.Join(dir.Path, entry.Name()), profileFiles) {
+		if entry.IsDir() && !isSkippedProfileDir(entry.Name()) && hasAnyFile(filepath.Join(dir.Path, entry.Name()), profileFiles) {
 			profiles = append(profiles, browser.Profile{Name: entry.Name(), RelativePath: entry.Name()})
 		}
 	}
 	return profiles, nil
 }
 
-func isProfileDir(dir string) bool {
+func isProfileDir(path string) bool {
 	for _, name := range profileMarkers {
-		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
+		if _, err := os.Stat(filepath.Join(path, name)); err == nil {
 			return true
 		}
 	}
 	return false
 }
 
-func isSkippedDir(name string) bool {
+func isSkippedProfileDir(name string) bool {
 	switch name {
 	case "System Profile", "Guest Profile", "Snapshot":
 		return true
@@ -146,9 +146,9 @@ func profileFilePaths(dir browser.UserDataDir) []string {
 	return paths
 }
 
-func hasAnyFile(dir string, paths []string) bool {
-	for _, relativePath := range paths {
-		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(relativePath))); err == nil {
+func hasAnyFile(path string, relativePaths []string) bool {
+	for _, relativePath := range relativePaths {
+		if _, err := os.Stat(filepath.Join(path, filepath.FromSlash(relativePath))); err == nil {
 			return true
 		}
 	}
