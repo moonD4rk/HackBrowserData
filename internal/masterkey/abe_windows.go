@@ -30,12 +30,12 @@ func (abeRetriever) Version() Version { return V20 }
 func (abeRetriever) Retrieve(_ context.Context, loc Locator) ([]byte, error) {
 	// Non-ABE forks (Opera/Vivaldi/Yandex) have no ABE kind; pre-v20 Chrome takes the errNoABEKey path below.
 	if loc.ABE == ABENone {
-		return nil, ErrNotApplicable
+		return nil, errNotApplicable
 	}
 
 	encKey, err := loadEncryptedKey(loc.LocalState)
 	if errors.Is(err, errNoABEKey) {
-		return nil, ErrNotApplicable
+		return nil, errNotApplicable
 	}
 	if err != nil {
 		return nil, err

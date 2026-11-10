@@ -47,17 +47,17 @@ func runRestore(ctx context.Context, stderr io.Writer, flags app.RestoreFlags) e
 	if err != nil {
 		return err
 	}
-	data, err := openRestoreData(flags.DataDir, flags.DataZip)
+	root, err := openRestoreData(flags.DataDir, flags.DataZip)
 	if err != nil {
 		return err
 	}
-	defer closeRestoreData(data)
+	defer closeRestoreData(root)
 
-	discovery, keys, err := app.DiscoverRestore(data.Path(), keyFile, options.Target.BrowserName)
+	discovery, keys, err := app.DiscoverRestore(root.Path(), keyFile, options.Target.BrowserName)
 	if err != nil {
 		return err
 	}
-	if foundNothing(stderr, discovery, "no browsers to restore from the supplied keys and data") {
+	if warnIfNothingFound(stderr, discovery, "no browsers to restore from the supplied keys and data") {
 		return nil
 	}
 	summary, err := app.ExecuteWithKeys(ctx, discovery, options.Categories, options.Output, keys)
@@ -68,19 +68,19 @@ func runRestore(ctx context.Context, stderr io.Writer, flags app.RestoreFlags) e
 	return err
 }
 
-func openRestoreData(dataDir, dataZip string) (*snapshot.Dir, error) {
+func openRestoreData(dataDir, dataZip string) (*snapshot.Root, error) {
 	if dataDir != "" {
 		return snapshot.Open(dataDir), nil
 	}
-	snapshots, err := snapshot.Unzip(dataZip)
+	root, err := snapshot.Unzip(dataZip)
 	if err != nil {
 		return nil, fmt.Errorf("extract %s: %w", dataZip, err)
 	}
-	return snapshots, nil
+	return root, nil
 }
 
-func closeRestoreData(snapshots *snapshot.Dir) {
-	if err := snapshots.Close(); err != nil {
+func closeRestoreData(root *snapshot.Root) {
+	if err := root.Close(); err != nil {
 		log.Warnf("restore: %v", err)
 	}
 }

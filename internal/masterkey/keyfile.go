@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const KeyFileVersion = "2"
+const keyFileVersion = "2"
 
 // KeyFile is keys.json: produced on one host, it decrypts copied profile data on another.
 type KeyFile struct {
@@ -41,7 +41,7 @@ type Vault struct {
 
 func NewKeyFile() KeyFile {
 	return KeyFile{
-		Version:   KeyFileVersion,
+		Version:   keyFileVersion,
 		CreatedAt: time.Now().UTC(),
 		Host:      currentHost(),
 		Vaults:    []Vault{},
@@ -75,8 +75,8 @@ func ReadKeyFile(reader io.Reader) (KeyFile, error) {
 	if err := decoder.Decode(&dump); err != nil {
 		return KeyFile{}, fmt.Errorf("decode key file: %w", err)
 	}
-	if dump.Version != KeyFileVersion {
-		return KeyFile{}, fmt.Errorf("unsupported key file version %q (this build expects %q)", dump.Version, KeyFileVersion)
+	if dump.Version != keyFileVersion {
+		return KeyFile{}, fmt.Errorf("unsupported key file version %q (this build expects %q)", dump.Version, keyFileVersion)
 	}
 	return dump, nil
 }

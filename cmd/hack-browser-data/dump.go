@@ -46,7 +46,7 @@ func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychai
 		return err
 	}
 	discovery := app.Discover(options.Target)
-	if foundNothing(stderr, discovery, "no browsers found") {
+	if warnIfNothingFound(stderr, discovery, "no browsers found") {
 		return nil
 	}
 	summary, err := app.Execute(ctx, discovery, options.Categories, options.Output, options.Keychain)

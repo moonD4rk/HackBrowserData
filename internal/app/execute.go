@@ -40,7 +40,7 @@ func execute(
 	}
 	summary, err := runner{writer: writer, extractors: extractors, retrieveKeys: keys, logProgress: true}.run(ctx, discovery, categories)
 	closeErr := writer.Close()
-	summary.Exported = writer.Output()
+	summary.Exported = writer.Listing()
 	return summary, errors.Join(err, closeErr)
 }
 
@@ -82,20 +82,20 @@ func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories 
 		log.Infof("Extracting %s...", dir.Browser.DisplayName)
 	}
 
-	snapshots, err := snapshot.Temp()
+	root, err := snapshot.Temp()
 	if err != nil {
 		summary.Results = append(summary.Results, failAll(plan.extractions, err)...)
 		return summary, nil
 	}
-	defer closeSnapshot(snapshots)
-	if err := snapshots.Capture(ctx, plan.files); err != nil {
+	defer closeRoot(root)
+	if err := root.Capture(ctx, plan.files); err != nil {
 		if ctx.Err() != nil {
 			return summary, err
 		}
 		summary.Results = append(summary.Results, failAll(plan.extractions, err)...)
 		return summary, nil
 	}
-	dirSnapshot := snapshots.Snapshot(string(dir.ID))
+	dirSnapshot := root.Snapshot(string(dir.ID))
 
 	keys := &dirKeys{dir: dir, dirSnapshot: dirSnapshot}
 	if dir.Browser.Base == browser.Chromium {
@@ -139,8 +139,8 @@ func failAll(extractions []plannedExtraction, err error) []Result {
 	return results
 }
 
-func closeSnapshot(snapshots *snapshot.Dir) {
-	if err := snapshots.Close(); err != nil {
+func closeRoot(root *snapshot.Root) {
+	if err := root.Close(); err != nil {
 		log.Warnf("%v", err)
 	}
 }

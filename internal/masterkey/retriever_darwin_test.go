@@ -62,13 +62,13 @@ func TestKeychainRetriever(t *testing.T) {
 
 	t.Run("no keychain steps aside", func(t *testing.T) {
 		_, err := keychainRetriever{}.Retrieve(ctx, Locator{SecretLabel: "Chrome"})
-		require.ErrorIs(t, err, ErrNotApplicable)
+		require.ErrorIs(t, err, errNotApplicable)
 	})
 
 	t.Run("locked keychain steps aside", func(t *testing.T) {
 		loginKeychain := &fakeKeychain{err: fmt.Errorf("%w: wrong password", keychain.ErrLocked)}
 		_, err := keychainRetriever{}.Retrieve(ctx, locatorFor(loginKeychain))
-		require.ErrorIs(t, err, ErrNotApplicable)
+		require.ErrorIs(t, err, errNotApplicable)
 	})
 
 	t.Run("secret derives the v10 key", func(t *testing.T) {
@@ -82,7 +82,7 @@ func TestKeychainRetriever(t *testing.T) {
 	t.Run("missing label is an error", func(t *testing.T) {
 		_, err := keychainRetriever{}.Retrieve(ctx, locatorFor(&fakeKeychain{secrets: map[string][]byte{}}))
 		require.Error(t, err)
-		assert.NotErrorIs(t, err, ErrNotApplicable)
+		assert.NotErrorIs(t, err, errNotApplicable)
 	})
 }
 

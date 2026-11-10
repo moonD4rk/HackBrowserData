@@ -45,7 +45,7 @@ func TestAESCBCDecrypt(t *testing.T) {
 }
 
 func TestDES3Encrypt(t *testing.T) {
-	encrypted, err := DES3Encrypt(des3Key, des3IV, plainText)
+	encrypted, err := des3Encrypt(des3Key, des3IV, plainText)
 	require.NoError(t, err)
 	assert.NotEmpty(t, encrypted)
 	assert.Equal(t, des3Ciphertext, fmt.Sprintf("%x", encrypted))
@@ -53,7 +53,7 @@ func TestDES3Encrypt(t *testing.T) {
 
 func TestDES3Decrypt(t *testing.T) {
 	ciphertext, _ := hex.DecodeString(des3Ciphertext)
-	decrypted, err := DES3Decrypt(des3Key, des3IV, ciphertext)
+	decrypted, err := des3Decrypt(des3Key, des3IV, ciphertext)
 	require.NoError(t, err)
 	assert.NotEmpty(t, decrypted)
 	assert.Equal(t, plainText, decrypted)

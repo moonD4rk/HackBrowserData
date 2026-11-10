@@ -31,15 +31,15 @@ func TestZipUnzip_RoundTrip(t *testing.T) {
 	}
 	require.NoError(t, zipReader.Close())
 
-	snapshotDir, err := Unzip(archive)
+	root, err := Unzip(archive)
 	require.NoError(t, err)
 	for relativePath, want := range files {
-		got, err := os.ReadFile(filepath.Join(snapshotDir.Path(), filepath.FromSlash(relativePath)))
+		got, err := os.ReadFile(filepath.Join(root.Path(), filepath.FromSlash(relativePath)))
 		require.NoError(t, err, relativePath)
 		assert.True(t, bytes.Equal(want, got), "%s: got %d bytes, want %d", relativePath, len(got), len(want))
 	}
-	require.NoError(t, snapshotDir.Close())
-	assert.NoDirExists(t, snapshotDir.Path())
+	require.NoError(t, root.Close())
+	assert.NoDirExists(t, root.Path())
 }
 
 func TestZip_MissingSnapshotDirFails(t *testing.T) {

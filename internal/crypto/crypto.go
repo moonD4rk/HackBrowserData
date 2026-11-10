@@ -23,7 +23,7 @@ func AESCBCDecrypt(key, iv, ciphertext []byte) ([]byte, error) {
 	return cbcDecrypt(block, iv, ciphertext)
 }
 
-func DES3Encrypt(key, iv, plaintext []byte) ([]byte, error) {
+func des3Encrypt(key, iv, plaintext []byte) ([]byte, error) {
 	block, err := des.NewTripleDESCipher(key)
 	if err != nil {
 		return nil, err
@@ -31,7 +31,7 @@ func DES3Encrypt(key, iv, plaintext []byte) ([]byte, error) {
 	return cbcEncrypt(block, iv, plaintext)
 }
 
-func DES3Decrypt(key, iv, ciphertext []byte) ([]byte, error) {
+func des3Decrypt(key, iv, ciphertext []byte) ([]byte, error) {
 	block, err := des.NewTripleDESCipher(key)
 	if err != nil {
 		return nil, err

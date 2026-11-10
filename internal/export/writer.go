@@ -14,16 +14,16 @@ import (
 )
 
 type Writer struct {
-	dir    string
-	format Format
-	zip    bool
-	files  map[category.Category]*categoryFile
-	failed bool
-	out    Output
+	dir     string
+	format  Format
+	zip     bool
+	files   map[category.Category]*categoryFile
+	failed  bool
+	listing Listing
 }
 
-// Output is what a clean Close left in the output dir: each category file in category order, and the zip with --zip.
-type Output struct {
+// Listing is what a clean Close left in the output dir: each category file in category order, and the zip with --zip.
+type Listing struct {
 	Dir     string
 	Files   []File
 	ZipName string
@@ -82,7 +82,7 @@ func (w *Writer) write(dataCategory category.Category, records []record.Record) 
 	return nil
 }
 
-// Close completes the files even after a failed Write, so they keep what was written; only a clean run fills Output.
+// Close completes the files even after a failed Write, so they keep what was written; only a clean run fills Listing.
 func (w *Writer) Close() error {
 	var (
 		errs  []error
@@ -106,15 +106,15 @@ func (w *Writer) Close() error {
 		}
 		return nil
 	}
-	w.out = Output{Dir: w.dir, Files: files}
+	w.listing = Listing{Dir: w.dir, Files: files}
 	if w.zip {
 		return w.writeZip()
 	}
 	return nil
 }
 
-func (w *Writer) Output() Output {
-	return w.out
+func (w *Writer) Listing() Listing {
+	return w.listing
 }
 
 // writeZip removes the loose files only after the zip is in place, so a failure leaves every one of them where it was.
@@ -133,7 +133,7 @@ func (w *Writer) writeZip() error {
 			return fmt.Errorf("zip: remove %s: %w", name, err)
 		}
 	}
-	w.out.ZipName = zipName
+	w.listing.ZipName = zipName
 	return nil
 }
 

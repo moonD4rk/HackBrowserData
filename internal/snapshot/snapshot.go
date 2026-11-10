@@ -19,46 +19,46 @@ type File struct {
 	IsDir           bool
 }
 
-// Dir is a snapshot directory, laid out as <dir>/<UserDataDirID>/<RelativePath>: one Snapshot per user data dir.
-type Dir struct {
+// Root is the snapshot directory, laid out as <root>/<UserDataDirID>/<RelativePath>: one Snapshot per user data dir.
+type Root struct {
 	path   string
 	temp   bool
 	failed map[string]error // keyed by the cleaned <UserDataDirID>/<RelativePath>, so any spelling of a file finds its failure
 }
 
 // Temp creates a private temporary snapshot directory, which Close removes.
-func Temp() (*Dir, error) {
+func Temp() (*Root, error) {
 	path, err := os.MkdirTemp("", "hbd-snapshot-*")
 	if err != nil {
 		return nil, fmt.Errorf("create snapshot dir: %w", err)
 	}
-	return &Dir{path: path, temp: true, failed: make(map[string]error)}, nil
+	return &Root{path: path, temp: true, failed: make(map[string]error)}, nil
 }
 
 // Open uses an existing snapshot directory in place; Close leaves it there.
-func Open(path string) *Dir {
-	return &Dir{path: path, failed: make(map[string]error)}
+func Open(path string) *Root {
+	return &Root{path: path, failed: make(map[string]error)}
 }
 
 // Unzip extracts an archive into a temporary snapshot directory, rejecting entries that would land outside it.
-func Unzip(archivePath string) (*Dir, error) {
-	snapshotDir, err := Temp()
+func Unzip(archivePath string) (*Root, error) {
+	root, err := Temp()
 	if err != nil {
 		return nil, err
 	}
-	if err := zipfile.Extract(archivePath, snapshotDir.path); err != nil {
-		return nil, errors.Join(err, snapshotDir.Close())
+	if err := zipfile.Extract(archivePath, root.path); err != nil {
+		return nil, errors.Join(err, root.Close())
 	}
-	return snapshotDir, nil
+	return root, nil
 }
 
-func (d *Dir) Path() string {
-	return d.path
+func (r *Root) Path() string {
+	return r.path
 }
 
 // Capture keeps a file's own failure for Snapshot.Path instead of stopping the rest of the capture.
-func (d *Dir) Capture(ctx context.Context, files []File) error {
-	if err := os.MkdirAll(d.path, 0o700); err != nil {
+func (r *Root) Capture(ctx context.Context, files []File) error {
+	if err := os.MkdirAll(r.path, 0o700); err != nil {
 		return fmt.Errorf("snapshot dir: %w", err)
 	}
 	for _, file := range files {
@@ -69,40 +69,40 @@ func (d *Dir) Capture(ctx context.Context, files []File) error {
 		if err != nil {
 			continue // Snapshot.Path reports the same error for this file
 		}
-		if err := d.capture(local, file); err != nil {
-			d.failed[local] = err
+		if err := r.capture(local, file); err != nil {
+			r.failed[local] = err
 		} else {
-			delete(d.failed, local)
+			delete(r.failed, local)
 		}
 	}
 	return nil
 }
 
-func (d *Dir) capture(local string, file File) error {
-	target := filepath.Join(d.path, local)
+func (r *Root) capture(local string, file File) error {
+	target := filepath.Join(r.path, local)
 	if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
 		return fmt.Errorf("create %s: %w", filepath.Dir(target), err)
 	}
 	return copyPath(filepath.Join(file.UserDataDirPath, filepath.FromSlash(file.RelativePath)), target, file.IsDir)
 }
 
-func (d *Dir) Snapshot(userDataDirID string) Snapshot {
-	return Snapshot{userDataDirID: userDataDirID, root: d.path, failed: d.failed}
+func (r *Root) Snapshot(userDataDirID string) Snapshot {
+	return Snapshot{userDataDirID: userDataDirID, rootPath: r.path, failed: r.failed}
 }
 
-func (d *Dir) Close() error {
-	if !d.temp {
+func (r *Root) Close() error {
+	if !r.temp {
 		return nil
 	}
-	if err := os.RemoveAll(d.path); err != nil {
-		return fmt.Errorf("remove snapshot dir %s: %w", d.path, err)
+	if err := os.RemoveAll(r.path); err != nil {
+		return fmt.Errorf("remove snapshot dir %s: %w", r.path, err)
 	}
 	return nil
 }
 
 type Snapshot struct {
 	userDataDirID string
-	root          string
+	rootPath      string
 	failed        map[string]error
 }
 
@@ -115,7 +115,7 @@ func (s Snapshot) Path(relativePath string) (string, error) {
 	if err, ok := s.failed[local]; ok {
 		return "", err
 	}
-	fullPath := filepath.Join(s.root, local)
+	fullPath := filepath.Join(s.rootPath, local)
 	if _, err := os.Lstat(fullPath); err != nil {
 		return "", err
 	}

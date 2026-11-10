@@ -75,7 +75,7 @@ func TestRetrieveAll_FirstKeyWinsAndStopsTheVersion(t *testing.T) {
 	winner := &fakeRetriever{version: V10, key: v10Key}
 	later := &fakeRetriever{version: V10, key: bytes.Repeat([]byte{0xFF}, 16)}
 
-	got, err := retrieveAll(context.Background(), Locator{}, []Retriever{failing, winner, later})
+	got, err := retrieveAll(context.Background(), Locator{}, []keyRetriever{failing, winner, later})
 	require.NoError(t, err, "a strategy that failed before a later one succeeded is not an error")
 	assert.Equal(t, Set{V10: v10Key}, got)
 	assert.Equal(t, []int{1, 1, 0}, []int{failing.calls, winner.calls, later.calls})
@@ -83,7 +83,7 @@ func TestRetrieveAll_FirstKeyWinsAndStopsTheVersion(t *testing.T) {
 
 func TestRetrieveAll_VersionsAreIndependent(t *testing.T) {
 	v20Retriever := &fakeRetriever{version: V20, err: errors.New("abe: inject failed")}
-	got, err := retrieveAll(context.Background(), Locator{}, []Retriever{
+	got, err := retrieveAll(context.Background(), Locator{}, []keyRetriever{
 		&fakeRetriever{version: V10, key: v10Key},
 		v20Retriever,
 	})
@@ -95,7 +95,7 @@ func TestRetrieveAll_VersionsAreIndependent(t *testing.T) {
 func TestRetrieveAll_ErrorOnlyWhenEveryRetrieverFails(t *testing.T) {
 	first := errors.New("keychain: not found")
 	second := errors.New("security command: denied")
-	_, err := retrieveAll(context.Background(), Locator{}, []Retriever{
+	_, err := retrieveAll(context.Background(), Locator{}, []keyRetriever{
 		&fakeRetriever{version: V10, err: first},
 		&fakeRetriever{version: V10, err: second},
 	})
@@ -105,9 +105,9 @@ func TestRetrieveAll_ErrorOnlyWhenEveryRetrieverFails(t *testing.T) {
 }
 
 func TestRetrieveAll_NotApplicableIsSilent(t *testing.T) {
-	got, err := retrieveAll(context.Background(), Locator{}, []Retriever{
-		&fakeRetriever{version: V10, err: ErrNotApplicable},
-		&fakeRetriever{version: V20, err: ErrNotApplicable},
+	got, err := retrieveAll(context.Background(), Locator{}, []keyRetriever{
+		&fakeRetriever{version: V10, err: errNotApplicable},
+		&fakeRetriever{version: V20, err: errNotApplicable},
 		&fakeRetriever{version: V11},
 	})
 	require.NoError(t, err)
@@ -117,13 +117,13 @@ func TestRetrieveAll_NotApplicableIsSilent(t *testing.T) {
 func TestRetrieveAll_PassesTheLocator(t *testing.T) {
 	retriever := &fakeRetriever{version: V10, key: v10Key}
 	locator := Locator{LocalState: "/tmp/Local State", SecretLabel: "Chrome", Executable: "chrome.exe", ABE: ABEChromeBase}
-	_, err := retrieveAll(context.Background(), locator, []Retriever{retriever})
+	_, err := retrieveAll(context.Background(), locator, []keyRetriever{retriever})
 	require.NoError(t, err)
 	assert.Equal(t, locator, retriever.gotLoc)
 }
 
-func asRetrievers(fakes []*fakeRetriever) []Retriever {
-	retrievers := make([]Retriever, 0, len(fakes))
+func asRetrievers(fakes []*fakeRetriever) []keyRetriever {
+	retrievers := make([]keyRetriever, 0, len(fakes))
 	for _, fake := range fakes {
 		retrievers = append(retrievers, fake)
 	}

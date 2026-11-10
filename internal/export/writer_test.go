@@ -115,7 +115,7 @@ func TestClose_AfterFailedWriteKeepsEarlierFiles(t *testing.T) {
 	var cookies []record.Cookie
 	readJSON(t, filepath.Join(dir, "cookie.json"), &cookies)
 	assert.Empty(t, cookies)
-	assert.Zero(t, writer.Output(), "a failed run lists nothing")
+	assert.Zero(t, writer.Listing(), "a failed run lists nothing")
 }
 
 func TestClose_OutputListsTheFilesInCategoryOrder(t *testing.T) {
@@ -128,7 +128,7 @@ func TestClose_OutputListsTheFilesInCategoryOrder(t *testing.T) {
 	}))
 	require.NoError(t, writer.Close())
 
-	assert.Equal(t, Output{Dir: dir, Files: []File{{Name: "password.json", Count: 2}, {Name: "history.json", Count: 1}}}, writer.Output())
+	assert.Equal(t, Listing{Dir: dir, Files: []File{{Name: "password.json", Count: 2}, {Name: "history.json", Count: 1}}}, writer.Listing())
 }
 
 // TestClose_ZipLeavesOtherFilesAlone packs only this run's files; the rest of the directory is not the writer's.
@@ -158,7 +158,7 @@ func TestClose_ZipOutputNamesTheArchive(t *testing.T) {
 	require.NoError(t, writer.Write(category.Password, []record.Record{&record.Login{URL: "https://a.example"}}))
 	require.NoError(t, writer.Close())
 
-	assert.Equal(t, Output{Dir: dir, Files: []File{{Name: "password.csv", Count: 1}}, ZipName: "results.zip"}, writer.Output())
+	assert.Equal(t, Listing{Dir: dir, Files: []File{{Name: "password.csv", Count: 1}}, ZipName: "results.zip"}, writer.Listing())
 }
 
 // TestClose_ZipIsOwnerOnly gives the zip the category files' owner-only mode, since it holds the same records.

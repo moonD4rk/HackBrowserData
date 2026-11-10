@@ -42,7 +42,7 @@ func keysFreeze(t *testing.T, keyFile masterkey.KeyFile, host masterkey.Host) ma
 func keysVaultsFile(t *testing.T) masterkey.KeyFile {
 	t.Helper()
 	return masterkey.KeyFile{
-		Version:   masterkey.KeyFileVersion,
+		Version:   "2",
 		CreatedAt: keysGoldenCreatedAt,
 		Host:      masterkey.Host{OS: "windows", Arch: "amd64", Hostname: "GOLDEN-PC", User: `GOLDEN-PC\Jürgen`},
 		Vaults: []masterkey.Vault{
