@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moond4rk/keychainbreaker"
 	"github.com/moond4rk/plist"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
+	"github.com/moond4rk/hackbrowserdata/internal/keychain"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
@@ -41,7 +41,7 @@ func sourcePaths(profile browser.Profile, extractors browser.Extractors) map[cat
 }
 
 func TestExtractors_DefaultProfileSources(t *testing.T) {
-	extractors := Extractors(libraryDir, defaultProfile, nil)
+	extractors := Extractors(libraryDir, defaultProfile)
 	assert.Equal(t, map[category.Category][]string{
 		category.History:  {"Safari/History.db"},
 		category.Cookie:   {containerDir + "/Cookies/Cookies.binarycookies", "Cookies/Cookies.binarycookies"},
@@ -66,10 +66,10 @@ func TestExtractors_NamedProfileSources(t *testing.T) {
 		category.Cookie:       {store + "/Cookies/Cookies.binarycookies"},
 		category.Download:     {"Safari/Downloads.plist"},
 		category.LocalStorage: {store + "/Origins"},
-	}, sourcePaths(workProfile, Extractors(libraryDir, workProfile, nil)))
+	}, sourcePaths(workProfile, Extractors(libraryDir, workProfile)))
 
 	copied := browser.UserDataDir{Profiles: []browser.Profile{{Name: "default", RelativePath: "SafariCopy"}, workProfile}}
-	assert.Equal(t, []string{"SafariCopy/Downloads.plist"}, sourcePaths(workProfile, Extractors(copied, workProfile, nil))[category.Download],
+	assert.Equal(t, []string{"SafariCopy/Downloads.plist"}, sourcePaths(workProfile, Extractors(copied, workProfile))[category.Download],
 		"a named profile's downloads sit in the default profile's dir, whatever -p named it")
 }
 
@@ -96,12 +96,12 @@ func writeTestPlist(t *testing.T, value any) string {
 	return plistPath
 }
 
-func extract(t *testing.T, dirSnapshot snapshot.Snapshot, profile browser.Profile, loginKeychain LoginKeychain, dataCategory category.Category) (*testCollector, error) {
+func extract(t *testing.T, dirSnapshot snapshot.Snapshot, profile browser.Profile, loginKeychain browser.LoginKeychain, dataCategory category.Category) (*testCollector, error) {
 	t.Helper()
-	extractor, ok := Extractors(libraryDir, profile, loginKeychain)[dataCategory]
+	extractor, ok := Extractors(libraryDir, profile)[dataCategory]
 	require.Truef(t, ok, "no %s extractor for %s", dataCategory, profile.Name)
 	var out testCollector
-	err := extractor.Extract(context.Background(), browser.NewProfileSnapshot(dirSnapshot, profile, nil), &out)
+	err := extractor.Extract(context.Background(), browser.NewInput(dirSnapshot, profile, nil, loginKeychain), &out)
 	return &out, err
 }
 
@@ -143,20 +143,20 @@ func TestExtractors_ExtensionsFromTheSnapshot(t *testing.T) {
 }
 
 type fakeKeychain struct {
-	passwords []keychainbreaker.InternetPassword
+	passwords []keychain.InternetPassword
 	err       error
 	calls     int
 }
 
-func (k *fakeKeychain) InternetPasswords(context.Context) ([]keychainbreaker.InternetPassword, error) {
+func (k *fakeKeychain) InternetPasswords(context.Context) ([]keychain.InternetPassword, error) {
 	k.calls++
 	return k.passwords, k.err
 }
 
 func TestExtractors_PasswordsFromTheKeychain(t *testing.T) {
 	created := time.Date(2024, 3, 1, 9, 0, 0, 0, time.FixedZone("CET", 3600))
-	loginKeychain := &fakeKeychain{passwords: []keychainbreaker.InternetPassword{
-		{Protocol: "htps", Server: "github.com", Port: 443, Account: "alice", PlainPassword: "s3cret", Created: created},
+	loginKeychain := &fakeKeychain{passwords: []keychain.InternetPassword{
+		{Protocol: "htps", Server: "github.com", Port: 443, Account: "alice", Password: "s3cret", Created: created},
 		{Protocol: "htps", Server: "locked.test", Account: "bob"},
 		{Protocol: "htps", Server: "", Account: "nobody"},
 		{Protocol: "htps", Server: "anonymous.test", Account: ""},
@@ -181,7 +181,7 @@ func TestExtractors_PasswordsWithoutAKeychain(t *testing.T) {
 
 // TestExtractors_NamedProfileSkipsUserWideSources leaves the keychain and the untagged plists to the default profile.
 func TestExtractors_NamedProfileSkipsUserWideSources(t *testing.T) {
-	extractors := Extractors(libraryDir, workProfile, &fakeKeychain{})
+	extractors := Extractors(libraryDir, workProfile)
 	for _, dataCategory := range []category.Category{category.Password, category.Bookmark, category.Extension} {
 		assert.NotContains(t, extractors, dataCategory)
 	}

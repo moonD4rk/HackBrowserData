@@ -1,4 +1,3 @@
-// Package keychain owns the user's macOS login keychain: one handle per run, opened on first use.
 package keychain
 
 import (
@@ -61,13 +60,25 @@ func (k *Keychain) GenericPassword(ctx context.Context, account string) ([]byte,
 }
 
 // InternetPasswords leaves the secrets empty when the keychain is locked.
-func (k *Keychain) InternetPasswords(ctx context.Context) ([]keychainbreaker.InternetPassword, error) {
+func (k *Keychain) InternetPasswords(ctx context.Context) ([]InternetPassword, error) {
 	if err := k.open(ctx); err != nil {
 		return nil, err
 	}
-	passwords, err := k.opened.InternetPasswords()
+	items, err := k.opened.InternetPasswords()
 	if err != nil {
 		return nil, fmt.Errorf("read internet passwords: %w", err)
+	}
+	passwords := make([]InternetPassword, 0, len(items))
+	for _, item := range items {
+		passwords = append(passwords, InternetPassword{
+			Protocol: item.Protocol,
+			Server:   item.Server,
+			Port:     item.Port,
+			Path:     item.Path,
+			Account:  item.Account,
+			Password: item.PlainPassword,
+			Created:  item.Created,
+		})
 	}
 	return passwords, nil
 }

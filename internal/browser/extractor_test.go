@@ -22,37 +22,37 @@ func writeSnapshotFile(t *testing.T, root, relativePath string) string {
 	return path
 }
 
-func TestProfileSnapshotPath(t *testing.T) {
+func TestInputPath(t *testing.T) {
 	root := t.TempDir()
 	legacyCookies := writeSnapshotFile(t, root, "chrome/Default/Cookies")
 	localState := writeSnapshotFile(t, root, "chrome/Local State")
 	dirSnapshot := snapshot.Open(root).Snapshot("chrome")
-	profileSnapshot := NewProfileSnapshot(dirSnapshot, Profile{Name: "Default", RelativePath: "Default"}, nil)
+	input := NewInput(dirSnapshot, Profile{Name: "Default", RelativePath: "Default"}, nil, nil)
 
-	got, err := profileSnapshot.Path(Source{Path: "Network/Cookies", Fallbacks: []string{"Cookies"}})
+	got, err := input.Path(Source{Path: "Network/Cookies", Fallbacks: []string{"Cookies"}})
 	require.NoError(t, err)
 	assert.Equal(t, legacyCookies, got, "a candidate that was never captured is skipped")
 
-	got, err = profileSnapshot.Path(Source{Path: "Local State", Shared: true})
+	got, err = input.Path(Source{Path: "Local State", Shared: true})
 	require.NoError(t, err)
 	assert.Equal(t, localState, got, "a shared source resolves under the user data dir, not the profile")
 
-	_, err = profileSnapshot.Path(Source{Path: "History"})
+	_, err = input.Path(Source{Path: "History"})
 	require.ErrorIs(t, err, fs.ErrNotExist)
 }
 
-func TestProfileSnapshotPath_FlatLayoutProfile(t *testing.T) {
+func TestInputPath_FlatLayoutProfile(t *testing.T) {
 	root := t.TempDir()
 	history := writeSnapshotFile(t, root, "opera/History")
-	profileSnapshot := NewProfileSnapshot(snapshot.Open(root).Snapshot("opera"), Profile{Name: "Opera Stable"}, nil)
+	input := NewInput(snapshot.Open(root).Snapshot("opera"), Profile{Name: "Opera Stable"}, nil, nil)
 
-	got, err := profileSnapshot.Path(Source{Path: "History"})
+	got, err := input.Path(Source{Path: "History"})
 	require.NoError(t, err)
 	assert.Equal(t, history, got)
 }
 
-// TestProfileSnapshotPath_FailedCopyIsReported makes a failed copy an error, not a reason to read a lower candidate.
-func TestProfileSnapshotPath_FailedCopyIsReported(t *testing.T) {
+// TestInputPath_FailedCopyIsReported makes a failed copy an error, not a reason to read a lower candidate.
+func TestInputPath_FailedCopyIsReported(t *testing.T) {
 	from := t.TempDir()
 	require.NoError(t, os.MkdirAll(filepath.Join(from, "Default", "Network", "Cookies"), 0o700))
 	writeSnapshotFile(t, from, "Default/Cookies")
@@ -65,23 +65,23 @@ func TestProfileSnapshotPath_FailedCopyIsReported(t *testing.T) {
 		{UserDataDirID: "chrome", UserDataDirPath: from, RelativePath: "Default/Cookies"},
 	}))
 
-	profileSnapshot := NewProfileSnapshot(root.Snapshot("chrome"), Profile{Name: "Default", RelativePath: "Default"}, nil)
-	_, err = profileSnapshot.Path(Source{Path: "Network/Cookies", Fallbacks: []string{"Cookies"}})
+	input := NewInput(root.Snapshot("chrome"), Profile{Name: "Default", RelativePath: "Default"}, nil, nil)
+	_, err = input.Path(Source{Path: "Network/Cookies", Fallbacks: []string{"Cookies"}})
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, fs.ErrNotExist)
 }
 
-func TestProfileSnapshotMasterKeys(t *testing.T) {
+func TestInputMasterKeys(t *testing.T) {
 	dirSnapshot := snapshot.Open(t.TempDir()).Snapshot("chrome")
-	assert.Nil(t, NewProfileSnapshot(dirSnapshot, Profile{}, nil).MasterKeys(context.Background()))
+	assert.Nil(t, NewInput(dirSnapshot, Profile{}, nil, nil).MasterKeys(context.Background()))
 
 	calls := 0
 	want := masterkey.Set{masterkey.V10: []byte("k")}
-	profileSnapshot := NewProfileSnapshot(dirSnapshot, Profile{}, func(context.Context) masterkey.Set {
+	input := NewInput(dirSnapshot, Profile{}, func(context.Context) masterkey.Set {
 		calls++
 		return want
-	})
-	assert.Equal(t, want, profileSnapshot.MasterKeys(context.Background()))
+	}, nil)
+	assert.Equal(t, want, input.MasterKeys(context.Background()))
 	assert.Equal(t, 1, calls)
 }
 

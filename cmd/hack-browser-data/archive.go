@@ -23,7 +23,7 @@ func newArchiveCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			discovery := app.Discover(options.Target)
+			discovery := app.Discover(command.Context(), options.Target)
 			if warnIfNothingFound(command.ErrOrStderr(), discovery, "no browsers found") {
 				return nil
 			}

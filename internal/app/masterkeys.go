@@ -6,7 +6,6 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/chromium"
-	"github.com/moond4rk/hackbrowserdata/internal/browser/safari"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
@@ -14,7 +13,7 @@ import (
 // loginKeychain is the run's one login keychain, shared by Chromium's v10 key and Safari's passwords; nil off macOS.
 type loginKeychain interface {
 	masterkey.LoginKeychain
-	safari.LoginKeychain
+	browser.LoginKeychain
 }
 
 type dirKeysFunc func(ctx context.Context, dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterkey.Set, error)

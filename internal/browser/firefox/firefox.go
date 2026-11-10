@@ -120,8 +120,8 @@ func Extractors(_ browser.UserDataDir, _ browser.Profile) browser.Extractors {
 func newPlainExtractor(parse func(string, browser.Collector) error, source browser.Source) browser.Extractor {
 	return browser.Extractor{
 		Sources: []browser.Source{source},
-		Extract: func(_ context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
-			path, err := profileSnapshot.Path(source)
+		Extract: func(_ context.Context, input browser.Input, out browser.Collector) error {
+			path, err := input.Path(source)
 			if err != nil {
 				return err
 			}
@@ -134,19 +134,19 @@ func newPlainExtractor(parse func(string, browser.Collector) error, source brows
 func newDecryptingExtractor(parse func(func() ([]byte, error), string, browser.Collector) error, source browser.Source) browser.Extractor {
 	return browser.Extractor{
 		Sources: []browser.Source{source, keyStore},
-		Extract: func(_ context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
-			path, err := profileSnapshot.Path(source)
+		Extract: func(_ context.Context, input browser.Input, out browser.Collector) error {
+			path, err := input.Path(source)
 			if err != nil {
 				return err
 			}
-			masterKey := func() ([]byte, error) { return profileKey(profileSnapshot, path) }
+			masterKey := func() ([]byte, error) { return profileKey(input, path) }
 			return parse(masterKey, path, out)
 		},
 	}
 }
 
-func profileKey(profileSnapshot browser.ProfileSnapshot, loginsPath string) ([]byte, error) {
-	key4Path, err := profileSnapshot.Path(keyStore)
+func profileKey(input browser.Input, loginsPath string) ([]byte, error) {
+	key4Path, err := input.Path(keyStore)
 	if err != nil {
 		return nil, err
 	}

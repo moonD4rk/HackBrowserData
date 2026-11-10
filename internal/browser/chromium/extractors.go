@@ -38,11 +38,15 @@ var defaultExtractors = browser.Extractors{
 }
 
 func Extractors(dir browser.UserDataDir, _ browser.Profile) browser.Extractors {
+	return kindExtractors(vaultKindOf(dir))
+}
+
+func kindExtractors(vaultKind string) browser.Extractors {
 	extractors := make(browser.Extractors, len(defaultExtractors))
 	for dataCategory, extractor := range defaultExtractors {
 		extractors[dataCategory] = extractor
 	}
-	if fork, ok := overrideFor(dir.Browser.Name); ok {
+	if fork, ok := overrideForVaultKind(vaultKind); ok {
 		for dataCategory, extractor := range fork.extractors {
 			extractors[dataCategory] = extractor
 		}
@@ -55,15 +59,15 @@ func newDecryptingExtractor(parse func(masterKeysFunc, string, browser.Collector
 	return browser.Extractor{
 		// The dir's master keys come from KeySources, so a decrypting extraction must find them in the snapshot too.
 		Sources: append(sources, KeySources()...),
-		Extract: func(ctx context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
+		Extract: func(ctx context.Context, input browser.Input, out browser.Collector) error {
 			var errs []error
 			for _, source := range sources {
-				path, err := profileSnapshot.Path(source)
+				path, err := input.Path(source)
 				if source.Optional && errors.Is(err, fs.ErrNotExist) {
 					continue
 				}
 				if err == nil {
-					err = parse(masterKeysOf(ctx, profileSnapshot), path, out)
+					err = parse(masterKeysOf(ctx, input), path, out)
 				}
 				errs = append(errs, err)
 			}
@@ -72,15 +76,15 @@ func newDecryptingExtractor(parse func(masterKeysFunc, string, browser.Collector
 	}
 }
 
-func masterKeysOf(ctx context.Context, profileSnapshot browser.ProfileSnapshot) masterKeysFunc {
-	return func() masterkey.Set { return profileSnapshot.MasterKeys(ctx) }
+func masterKeysOf(ctx context.Context, input browser.Input) masterKeysFunc {
+	return func() masterkey.Set { return input.MasterKeys(ctx) }
 }
 
 func newPlainExtractor(parse func(string, browser.Collector) error, source browser.Source) browser.Extractor {
 	return browser.Extractor{
 		Sources: []browser.Source{source},
-		Extract: func(_ context.Context, profileSnapshot browser.ProfileSnapshot, out browser.Collector) error {
-			path, err := profileSnapshot.Path(source)
+		Extract: func(_ context.Context, input browser.Input, out browser.Collector) error {
+			path, err := input.Path(source)
 			if err != nil {
 				return err
 			}

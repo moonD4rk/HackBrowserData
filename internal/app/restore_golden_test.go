@@ -71,7 +71,7 @@ func TestArchiveRestoreRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	options.Target.HomeDir = home
 	archive := filepath.Join(t.TempDir(), "data.zip")
-	_, err = app.Archive(context.Background(), app.Discover(options.Target), options.Categories, archive)
+	_, err = app.Archive(context.Background(), app.Discover(context.Background(), options.Target), options.Categories, archive)
 	require.NoError(t, err)
 
 	out := restoreGolden(t, app.RestoreFlags{KeyFile: chromiumKeyFile(t), DataZip: archive, OutputDir: t.TempDir()})

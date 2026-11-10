@@ -40,12 +40,16 @@ func Discover(chromiumBrowser browser.Browser, options browser.DiscoverOptions) 
 	return dirs, errors.Join(errs...)
 }
 
-// DiscoverAt reads the profiles of a user data dir the table does not name, such as a copy restore was given.
-func DiscoverAt(chromiumBrowser browser.Browser, id browser.UserDataDirID, path string) (browser.UserDataDir, error) {
-	dir := browser.UserDataDir{ID: id, Browser: chromiumBrowser, Path: path}
+// DiscoverAt reads the profiles of a user data dir the table does not name, such as a copy restore was given, in the
+// on-disk format vaultKind names.
+func DiscoverAt(chromiumBrowser browser.Browser, vaultKind string, id browser.UserDataDirID, path string) (browser.UserDataDir, error) {
+	if !isVaultKind(vaultKind) {
+		return browser.UserDataDir{}, fmt.Errorf("unknown vault kind %q", vaultKind)
+	}
+	dir := browser.UserDataDir{ID: id, Browser: chromiumBrowser, Path: path, VaultKind: vaultKind}
 	profiles, err := discoverProfiles(dir)
 	if err != nil {
-		return dir, err
+		return dir, fmt.Errorf("read %s: %w", path, err)
 	}
 	dir.Profiles = profiles
 	return dir, nil
@@ -136,7 +140,7 @@ func isSkippedProfileDir(name string) bool {
 
 func profileFilePaths(dir browser.UserDataDir) []string {
 	var paths []string
-	for _, extractor := range Extractors(dir, browser.Profile{}) {
+	for _, extractor := range kindExtractors(vaultKindOf(dir)) {
 		for _, source := range extractor.Sources {
 			if !source.Shared {
 				paths = append(paths, source.Paths()...)

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/moond4rk/hackbrowserdata/internal/category"
+	"github.com/moond4rk/hackbrowserdata/internal/keychain"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
@@ -41,7 +42,7 @@ func (s Source) CandidatePaths(profile Profile) []string {
 
 type Extractor struct {
 	Sources []Source
-	Extract func(ctx context.Context, profileSnapshot ProfileSnapshot, out Collector) error
+	Extract func(ctx context.Context, input Input, out Collector) error
 }
 
 type Extractors map[category.Category]Extractor
@@ -52,21 +53,31 @@ type Collector interface {
 	Fail(err error)
 }
 
-type ProfileSnapshot struct {
-	Profile    Profile
-	snapshot   snapshot.Snapshot
-	masterKeys func(ctx context.Context) masterkey.Set
+// LoginKeychain is what an extractor reads from the run's macOS login keychain.
+type LoginKeychain interface {
+	InternetPasswords(ctx context.Context) ([]keychain.InternetPassword, error)
 }
 
-// NewProfileSnapshot takes masterKeys, the dir's call-once retrieval, nil for bases that keep no Chromium keys.
-func NewProfileSnapshot(dirSnapshot snapshot.Snapshot, profile Profile, masterKeys func(context.Context) masterkey.Set) ProfileSnapshot {
-	return ProfileSnapshot{Profile: profile, snapshot: dirSnapshot, masterKeys: masterKeys}
+// Input is what an extractor reads for one profile: its captured files, the dir's master keys, and the run's keychain.
+type Input struct {
+	Profile       Profile
+	snapshot      snapshot.Snapshot
+	masterKeys    func(ctx context.Context) masterkey.Set
+	loginKeychain LoginKeychain
+}
+
+// NewInput takes masterKeys, the dir's call-once retrieval, nil for bases that keep no Chromium keys, and the run's
+// login keychain, nil off macOS and in a restore.
+func NewInput(
+	dirSnapshot snapshot.Snapshot, profile Profile, masterKeys func(context.Context) masterkey.Set, loginKeychain LoginKeychain,
+) Input {
+	return Input{Profile: profile, snapshot: dirSnapshot, masterKeys: masterKeys, loginKeychain: loginKeychain}
 }
 
 // Path skips a candidate that was never captured but returns the error of one whose copy failed.
-func (ps ProfileSnapshot) Path(source Source) (string, error) {
-	for _, relativePath := range source.CandidatePaths(ps.Profile) {
-		capturedPath, err := ps.snapshot.Path(relativePath)
+func (in Input) Path(source Source) (string, error) {
+	for _, relativePath := range source.CandidatePaths(in.Profile) {
+		capturedPath, err := in.snapshot.Path(relativePath)
 		if errors.Is(err, fs.ErrNotExist) {
 			continue
 		}
@@ -76,9 +87,13 @@ func (ps ProfileSnapshot) Path(source Source) (string, error) {
 }
 
 // MasterKeys may block on its first call; a key version that could not be retrieved is absent from the Set.
-func (ps ProfileSnapshot) MasterKeys(ctx context.Context) masterkey.Set {
-	if ps.masterKeys == nil {
+func (in Input) MasterKeys(ctx context.Context) masterkey.Set {
+	if in.masterKeys == nil {
 		return nil
 	}
-	return ps.masterKeys(ctx)
+	return in.masterKeys(ctx)
+}
+
+func (in Input) LoginKeychain() LoginKeychain {
+	return in.loginKeychain
 }

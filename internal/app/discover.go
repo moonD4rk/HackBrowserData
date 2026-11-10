@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
@@ -15,11 +16,11 @@ type Discovery struct {
 	DirFailures []DirFailure
 }
 
-func Discover(target Target) Discovery {
+func Discover(ctx context.Context, target Target) Discovery {
 	var discovery Discovery
 	discoverOptions := browser.DiscoverOptions{HomeDir: target.HomeDir, ProfilePath: target.ProfilePath}
 	for _, targetBrowser := range target.Browsers {
-		dirs, err := discover(targetBrowser, discoverOptions)
+		dirs, err := discover(ctx, targetBrowser, discoverOptions)
 		discovery.Dirs = append(discovery.Dirs, withData(dirs)...)
 		if err != nil {
 			discovery.DirFailures = append(discovery.DirFailures, DirFailure{UserDataDirID: browser.UserDataDirID(targetBrowser.Name), Err: err})
@@ -30,12 +31,11 @@ func Discover(target Target) Discovery {
 
 // withData drops profiles holding no file any category reads, such as a bare Preferences, but keeps unreadable ones.
 func withData(dirs []browser.UserDataDir) []browser.UserDataDir {
-	extractors := extractorsWith(nil)
 	var out []browser.UserDataDir
 	for _, dir := range dirs {
 		var profiles []browser.Profile
 		for _, profile := range dir.Profiles {
-			if hasData(dir, profile, extractors(dir, profile)) {
+			if hasData(dir, profile, extractorsFor(dir, profile)) {
 				profiles = append(profiles, profile)
 			}
 		}
@@ -60,31 +60,29 @@ func hasData(dir browser.UserDataDir, profile browser.Profile, extractors browse
 }
 
 // discover dispatches on Base here, not in browser, because the base packages import browser.
-func discover(supportedBrowser browser.Browser, options browser.DiscoverOptions) ([]browser.UserDataDir, error) {
-	switch supportedBrowser.Base {
+func discover(ctx context.Context, targetBrowser browser.Browser, options browser.DiscoverOptions) ([]browser.UserDataDir, error) {
+	switch targetBrowser.Base {
 	case browser.Chromium:
-		return chromium.Discover(supportedBrowser, options)
+		return chromium.Discover(targetBrowser, options)
 	case browser.Firefox:
-		return firefox.Discover(supportedBrowser, options)
+		return firefox.Discover(targetBrowser, options)
 	case browser.Safari:
-		return safari.Discover(supportedBrowser, options)
+		return safari.Discover(ctx, targetBrowser, options)
 	default:
-		return nil, fmt.Errorf("%s: no base package", supportedBrowser.Name)
+		return nil, fmt.Errorf("%s: no base package", targetBrowser.Name)
 	}
 }
 
-// extractorsWith hands Safari the run's login keychain, which its default profile's password extractor reads.
-func extractorsWith(keychain safari.LoginKeychain) extractorsFunc {
-	return func(dir browser.UserDataDir, profile browser.Profile) browser.Extractors {
-		switch dir.Browser.Base {
-		case browser.Chromium:
-			return chromium.Extractors(dir, profile)
-		case browser.Firefox:
-			return firefox.Extractors(dir, profile)
-		case browser.Safari:
-			return safari.Extractors(dir, profile, keychain)
-		default:
-			return nil
-		}
+// extractorsFor dispatches on Base here for the same reason discover does.
+func extractorsFor(dir browser.UserDataDir, profile browser.Profile) browser.Extractors {
+	switch dir.Browser.Base {
+	case browser.Chromium:
+		return chromium.Extractors(dir, profile)
+	case browser.Firefox:
+		return firefox.Extractors(dir, profile)
+	case browser.Safari:
+		return safari.Extractors(dir, profile)
+	default:
+		return nil
 	}
 }

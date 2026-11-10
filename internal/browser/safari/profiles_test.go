@@ -1,6 +1,7 @@
 package safari
 
 import (
+	"context"
 	"database/sql"
 	"os"
 	"path/filepath"
@@ -26,7 +27,7 @@ func libraryAt(t *testing.T, home string) (container string) {
 
 func discoverProfiles(t *testing.T, home string) []browser.Profile {
 	t.Helper()
-	dirs, err := Discover(testBrowser(), browser.DiscoverOptions{HomeDir: home})
+	dirs, err := Discover(context.Background(), testBrowser(), browser.DiscoverOptions{HomeDir: home})
 	require.NoError(t, err)
 	require.Len(t, dirs, 1)
 	assert.Equal(t, browser.UserDataDirID("safari"), dirs[0].ID)
@@ -47,7 +48,7 @@ func TestDiscover_DefaultOnly(t *testing.T) {
 }
 
 func TestDiscover_MissingSafariYieldsNothing(t *testing.T) {
-	dirs, err := Discover(testBrowser(), browser.DiscoverOptions{HomeDir: t.TempDir()})
+	dirs, err := Discover(context.Background(), testBrowser(), browser.DiscoverOptions{HomeDir: t.TempDir()})
 	require.NoError(t, err)
 	assert.Empty(t, dirs)
 }
@@ -63,7 +64,7 @@ func TestDiscover_UnreadableSafariDirIsAnError(t *testing.T) {
 	require.NoError(t, os.Chmod(library, 0o000))
 	defer func() { require.NoError(t, os.Chmod(library, 0o700)) }()
 
-	dirs, err := Discover(testBrowser(), browser.DiscoverOptions{HomeDir: home})
+	dirs, err := Discover(context.Background(), testBrowser(), browser.DiscoverOptions{HomeDir: home})
 	require.Error(t, err)
 	assert.Empty(t, dirs)
 }
@@ -79,7 +80,7 @@ func TestDiscover_ProfilePathIsTheSafariDir(t *testing.T) {
 	home := t.TempDir()
 	libraryAt(t, home)
 	options := browser.DiscoverOptions{HomeDir: home, ProfilePath: filepath.Join(copied, "Library", "SafariCopy")}
-	dirs, err := Discover(testBrowser(), options)
+	dirs, err := Discover(context.Background(), testBrowser(), options)
 	require.NoError(t, err)
 	require.Len(t, dirs, 1)
 	assert.Equal(t, filepath.Join(copied, "Library"), dirs[0].Path)

@@ -97,7 +97,7 @@ func TestArchiveGolden(t *testing.T) {
 			require.NoError(t, err)
 			options.Target.HomeDir = home
 			out := filepath.Join(t.TempDir(), "browser-data.zip")
-			fileCount, err := app.Archive(context.Background(), app.Discover(options.Target), options.Categories, out)
+			fileCount, err := app.Archive(context.Background(), app.Discover(context.Background(), options.Target), options.Categories, out)
 			require.NoError(t, err)
 			golden.Assert(t, testCase.golden, fmt.Sprintf("entries=%d\n", fileCount)+golden.ZipListing(t, out))
 

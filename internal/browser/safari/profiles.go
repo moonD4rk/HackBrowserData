@@ -29,8 +29,8 @@ var unsafeNameChars = regexp.MustCompile(`[/\\:*?"<>|\x00-\x1f]+`)
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$`)
 
 // namedProfiles reads SafariTabs.db (authoritative), with a ReadDir fallback only if the DB itself is unreadable.
-func namedProfiles(library string) []browser.Profile {
-	named, err := readNamedProfilesFromDB(library)
+func namedProfiles(ctx context.Context, library string, id browser.UserDataDirID) []browser.Profile {
+	named, err := readNamedProfilesFromDB(ctx, library, id)
 	if err != nil {
 		named = readNamedProfilesFromDir(library)
 	}
@@ -38,7 +38,7 @@ func namedProfiles(library string) []browser.Profile {
 }
 
 // readNamedProfilesFromDB reads a copy, never Safari's live file; (nil, err) means unreadable, and any slice is final.
-func readNamedProfilesFromDB(library string) ([]browser.Profile, error) {
+func readNamedProfilesFromDB(ctx context.Context, library string, id browser.UserDataDirID) ([]browser.Profile, error) {
 	root, err := snapshot.Temp()
 	if err != nil {
 		return nil, err
@@ -48,12 +48,12 @@ func readNamedProfilesFromDB(library string) ([]browser.Profile, error) {
 			log.Warnf("%v", err)
 		}
 	}()
-	if err := root.Capture(context.Background(), []snapshot.File{{
-		UserDataDirID: discoveryUserDataDirID, UserDataDirPath: library, RelativePath: tabsDatabasePath,
+	if err := root.Capture(ctx, []snapshot.File{{
+		UserDataDirID: string(id), UserDataDirPath: library, RelativePath: tabsDatabasePath,
 	}}); err != nil {
 		return nil, fmt.Errorf("copy SafariTabs.db: %w", err)
 	}
-	path, err := root.Snapshot(discoveryUserDataDirID).Path(tabsDatabasePath)
+	path, err := root.Snapshot(string(id)).Path(tabsDatabasePath)
 	if err != nil {
 		return nil, fmt.Errorf("copy SafariTabs.db: %w", err)
 	}

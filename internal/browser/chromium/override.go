@@ -1,8 +1,6 @@
 package chromium
 
 import (
-	"fmt"
-
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
@@ -47,6 +45,20 @@ func overrideFor(browserName string) (override, bool) {
 	return override{}, false
 }
 
+func overrideForVaultKind(vaultKind string) (override, bool) {
+	for _, fork := range overrides {
+		if fork.vaultKind == vaultKind {
+			return fork, true
+		}
+	}
+	return override{}, false
+}
+
+func isVaultKind(vaultKind string) bool {
+	_, ok := overrideForVaultKind(vaultKind)
+	return ok || vaultKind == vaultKindChromium
+}
+
 // VaultKind names a vault's on-disk format, so a reader without the browser in its table still picks its files.
 func VaultKind(chromiumBrowser browser.Browser) string {
 	if fork, ok := overrideFor(chromiumBrowser.Name); ok {
@@ -55,15 +67,10 @@ func VaultKind(chromiumBrowser browser.Browser) string {
 	return vaultKindChromium
 }
 
-// BrowserNameForKind names the browser whose extractors read a vault of kind; a plain Chromium vault keeps its own.
-func BrowserNameForKind(kind, name string) (string, error) {
-	if kind == vaultKindChromium {
-		return name, nil
+// vaultKindOf is a restored dir's own kind, or else its browser's.
+func vaultKindOf(dir browser.UserDataDir) string {
+	if dir.VaultKind != "" {
+		return dir.VaultKind
 	}
-	for _, fork := range overrides {
-		if fork.vaultKind == kind {
-			return fork.browserNames[0], nil
-		}
-	}
-	return "", fmt.Errorf("unknown vault kind %q", kind)
+	return VaultKind(dir.Browser)
 }

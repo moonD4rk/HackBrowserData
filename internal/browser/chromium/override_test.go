@@ -23,7 +23,7 @@ func TestOverrides_NameChromiumBrowsers(t *testing.T) {
 	}
 }
 
-// TestOverrides_KindsAndNamesAreUnique keeps BrowserNameForKind and overrideFor from depending on table order.
+// TestOverrides_KindsAndNamesAreUnique keeps overrideFor and overrideForVaultKind from depending on table order.
 func TestOverrides_KindsAndNamesAreUnique(t *testing.T) {
 	kinds := map[string]bool{vaultKindChromium: true}
 	names := map[string]bool{}
@@ -43,19 +43,27 @@ func TestVaultKind_RoundTripsEveryFork(t *testing.T) {
 		for _, name := range fork.browserNames {
 			kind := VaultKind(browser.Browser{Name: name})
 			require.Equalf(t, fork.vaultKind, kind, "override %q", name)
-			forkBrowserName, err := BrowserNameForKind(kind, "unknown")
-			require.NoError(t, err)
-			restored, ok := overrideFor(forkBrowserName)
-			require.True(t, ok, forkBrowserName)
+			restored, ok := overrideForVaultKind(kind)
+			require.True(t, ok, kind)
 			assert.Equalf(t, categoriesOf(fork.extractors), categoriesOf(restored.extractors), "kind %s of %q", kind, name)
 		}
 	}
 	assert.Equal(t, vaultKindChromium, VaultKind(browser.Browser{Name: "chrome"}))
-	plainBrowserName, err := BrowserNameForKind(vaultKindChromium, "unknown")
+	assert.True(t, isVaultKind(vaultKindChromium))
+	assert.False(t, isVaultKind("bogus"))
+	assert.False(t, isVaultKind(""))
+}
+
+// TestDiscoverAt_ReadsAnUnknownBrowserInItsVaultKind keeps a restored fork's own name while its kind picks the files.
+func TestDiscoverAt_ReadsAnUnknownBrowserInItsVaultKind(t *testing.T) {
+	nightly := browser.Browser{Name: "nightly", DisplayName: "Nightly", Base: browser.Chromium}
+	dir, err := DiscoverAt(nightly, "chromium-yandex", "nightly", t.TempDir())
 	require.NoError(t, err)
-	assert.Equal(t, "unknown", plainBrowserName)
-	_, err = BrowserNameForKind("bogus", "unknown")
-	assert.Error(t, err)
+	assert.Equal(t, nightly, dir.Browser)
+	assert.Equal(t, "Ya Passman Data", Extractors(dir, browser.Profile{})[category.Password].Sources[0].Path)
+
+	_, err = DiscoverAt(nightly, "bogus", "nightly", t.TempDir())
+	require.Error(t, err)
 }
 
 func categoriesOf(extractors browser.Extractors) []category.Category {
@@ -72,14 +80,14 @@ func TestExtractors_OperaReadsOpsettings(t *testing.T) {
 	preferencesPath := createTestJSON(t, "Secure Preferences", `{
 		"extensions": {"opsettings": {"ext1": {"location": 1, "manifest": {"name": "Opera Ext", "version": "1.0"}}}}
 	}`)
-	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{"Default/Secure Preferences": preferencesPath}),
-		browser.Profile{Name: "Default", RelativePath: "Default"}, nil)
+	input := browser.NewInput(snapshotOf(t, map[string]string{"Default/Secure Preferences": preferencesPath}),
+		browser.Profile{Name: "Default", RelativePath: "Default"}, nil, nil)
 
 	for _, name := range []string{"opera", "opera-gx", "vought"} {
 		chromiumBrowser, ok := browser.Lookup(name)
 		require.True(t, ok, name)
 		var out testCollector
-		require.NoError(t, Extractors(browser.UserDataDir{Browser: chromiumBrowser}, profileSnapshot.Profile)[category.Extension].Extract(context.Background(), profileSnapshot, &out), name)
+		require.NoError(t, Extractors(browser.UserDataDir{Browser: chromiumBrowser}, input.Profile)[category.Extension].Extract(context.Background(), input, &out), name)
 		got := collected[record.Extension](t, &out)
 		require.Len(t, got, 1, name)
 		assert.Equal(t, "Opera Ext", got[0].Name, name)
@@ -87,6 +95,6 @@ func TestExtractors_OperaReadsOpsettings(t *testing.T) {
 
 	chrome, ok := browser.Lookup("chrome")
 	require.True(t, ok)
-	err := Extractors(browser.UserDataDir{Browser: chrome}, profileSnapshot.Profile)[category.Extension].Extract(context.Background(), profileSnapshot, &testCollector{})
+	err := Extractors(browser.UserDataDir{Browser: chrome}, input.Profile)[category.Extension].Extract(context.Background(), input, &testCollector{})
 	require.Error(t, err, "Chrome has no opsettings fallback")
 }

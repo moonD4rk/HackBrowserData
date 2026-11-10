@@ -126,11 +126,11 @@ func TestDecryptingExtractor_WithoutKeyStore(t *testing.T) {
 	encodedLogin := loginPBEBase64(t)
 	logins := createTestJSON(t, "logins.json", fmt.Sprintf(`{"logins": [{"hostname": "https://a.test",
 		"encryptedUsername": %q, "encryptedPassword": %q, "timeCreated": 1700000000000}]}`, encodedLogin, encodedLogin))
-	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{"p/logins.json": logins}),
-		browser.Profile{Name: "p", RelativePath: "p"}, nil)
+	input := browser.NewInput(snapshotOf(t, map[string]string{"p/logins.json": logins}),
+		browser.Profile{Name: "p", RelativePath: "p"}, nil, nil)
 
 	var out testCollector
-	require.NoError(t, defaultExtractors[category.Password].Extract(context.Background(), profileSnapshot, &out))
+	require.NoError(t, defaultExtractors[category.Password].Extract(context.Background(), input, &out))
 	got := collected[record.Login](t, &out)
 	require.Len(t, got, 1)
 	assert.Equal(t, "https://a.test", got[0].URL)
@@ -142,13 +142,13 @@ func TestDecryptingExtractor_WithoutKeyStore(t *testing.T) {
 
 // TestPasswordExtractor_NoLoginsNeverReadsTheKey leaves key4.db unread without logins, so an unreadable one is harmless.
 func TestDecryptingExtractor_NoLoginsNeverReadsTheKey(t *testing.T) {
-	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{
+	input := browser.NewInput(snapshotOf(t, map[string]string{
 		"p/logins.json": createTestJSON(t, "logins.json", `{"logins": []}`),
 		"p/key4.db":     createTestJSON(t, "key4.db", "not a database"),
-	}), browser.Profile{Name: "p", RelativePath: "p"}, nil)
+	}), browser.Profile{Name: "p", RelativePath: "p"}, nil, nil)
 
 	var out testCollector
-	require.NoError(t, defaultExtractors[category.Password].Extract(context.Background(), profileSnapshot, &out))
+	require.NoError(t, defaultExtractors[category.Password].Extract(context.Background(), input, &out))
 	assert.Empty(t, out.records)
 	assert.Empty(t, out.fails)
 }
@@ -165,7 +165,7 @@ func TestExtractors_EachProfileReadsItsOwnFiles(t *testing.T) {
 	want := map[string]string{"a.default": "Home", "b.work": "Work"}
 	for _, profile := range []browser.Profile{{Name: "a.default", RelativePath: "a.default"}, {Name: "b.work", RelativePath: "b.work"}} {
 		var out testCollector
-		require.NoError(t, Extractors(dir, profile)[category.History].Extract(context.Background(), browser.NewProfileSnapshot(dirSnapshot, profile, nil), &out))
+		require.NoError(t, Extractors(dir, profile)[category.History].Extract(context.Background(), browser.NewInput(dirSnapshot, profile, nil, nil), &out))
 		got := collected[record.History](t, &out)
 		require.Len(t, got, 1, profile.Name)
 		assert.Equal(t, want[profile.Name], got[0].Title, profile.Name)

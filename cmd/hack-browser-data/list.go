@@ -20,7 +20,7 @@ func newListCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			discovery := app.Discover(options.Target)
+			discovery := app.Discover(command.Context(), options.Target)
 			for _, failure := range discovery.DirFailures {
 				log.Warnf("%s: %v", failure.UserDataDirID, failure.Err)
 			}

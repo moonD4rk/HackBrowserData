@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -35,11 +36,11 @@ func TestDiscover(t *testing.T) {
 	writeUserDataDir(t, home, "edge")
 	writeUserDataDir(t, home, "chrome")
 
-	discovery := Discover(Target{Browsers: browser.Supported(), HomeDir: home})
+	discovery := Discover(context.Background(), Target{Browsers: browser.Supported(), HomeDir: home})
 	assert.Equal(t, []browser.UserDataDirID{"chrome", "edge"}, userDataDirIDs(discovery), "table order, which is output order")
 	assert.Empty(t, discovery.DirFailures)
 
-	discovery = Discover(Target{Browsers: []browser.Browser{lookup(t, "edge")}, HomeDir: home})
+	discovery = Discover(context.Background(), Target{Browsers: []browser.Browser{lookup(t, "edge")}, HomeDir: home})
 	assert.Equal(t, []browser.UserDataDirID{"edge"}, userDataDirIDs(discovery))
 }
 
@@ -50,7 +51,7 @@ func TestDiscover_ProfilePath(t *testing.T) {
 	touch(t, custom, "Default", "Preferences")
 	touch(t, custom, "Default", "History")
 
-	discovery := Discover(Target{Browsers: []browser.Browser{lookup(t, "chrome")}, HomeDir: home, ProfilePath: custom})
+	discovery := Discover(context.Background(), Target{Browsers: []browser.Browser{lookup(t, "chrome")}, HomeDir: home, ProfilePath: custom})
 	require.Len(t, discovery.Dirs, 1)
 	assert.Equal(t, custom, discovery.Dirs[0].Path)
 }
@@ -63,7 +64,7 @@ func TestDiscover_KeepsOnlyProfilesWithData(t *testing.T) {
 	edge := writeUserDataDir(t, home, "edge")
 	require.NoError(t, os.Remove(filepath.Join(edge, "Default", "History")))
 
-	discovery := Discover(Target{Browsers: browser.Supported(), HomeDir: home})
+	discovery := Discover(context.Background(), Target{Browsers: browser.Supported(), HomeDir: home})
 	assert.Equal(t, []browser.UserDataDirID{"chrome"}, userDataDirIDs(discovery))
 	assert.Equal(t, []browser.Profile{{Name: "Default", RelativePath: "Default"}}, discovery.Dirs[0].Profiles)
 }
@@ -77,7 +78,7 @@ func TestDiscover_UnreadableDirIsReported(t *testing.T) {
 	require.NoError(t, os.Chmod(path, 0o000))
 	defer func() { require.NoError(t, os.Chmod(path, 0o700)) }()
 
-	discovery := Discover(Target{Browsers: browser.Supported(), HomeDir: home})
+	discovery := Discover(context.Background(), Target{Browsers: browser.Supported(), HomeDir: home})
 	assert.Empty(t, discovery.Dirs)
 	require.Len(t, discovery.DirFailures, 1)
 	assert.Equal(t, browser.UserDataDirID("chrome"), discovery.DirFailures[0].UserDataDirID)

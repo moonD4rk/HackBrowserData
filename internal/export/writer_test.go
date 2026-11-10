@@ -85,18 +85,6 @@ func TestWrite_AppendsExtractionsInWriteOrder(t *testing.T) {
 	assert.Equal(t, []record.History{*older, *busier, *quiet}, rows, "each extraction is sorted on its own, then appended")
 }
 
-func TestWrite_RejectsRecordOfAnotherCategory(t *testing.T) {
-	dir := t.TempDir()
-	writer, err := NewWriter(dir, JSON, false)
-	require.NoError(t, err)
-	require.EqualError(t, writer.Write(category.Cookie, []record.Record{&record.Login{}}), "*record.Login is not a cookie record")
-	require.NoError(t, writer.Close())
-
-	entries, err := os.ReadDir(dir)
-	require.NoError(t, err)
-	assert.Empty(t, entries)
-}
-
 func TestClose_AfterFailedWriteKeepsEarlierFiles(t *testing.T) {
 	dir := t.TempDir()
 	writer, err := NewWriter(dir, JSON, false)

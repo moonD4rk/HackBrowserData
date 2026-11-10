@@ -41,7 +41,7 @@ func TestExtractors_EachProfileReadsItsOwnFiles(t *testing.T) {
 	want := map[string]string{"Default": "Home", "Profile 1": "Work"}
 	for _, profile := range []browser.Profile{{Name: "Default", RelativePath: "Default"}, {Name: "Profile 1", RelativePath: "Profile 1"}} {
 		var out testCollector
-		require.NoError(t, Extractors(dir, profile)[category.History].Extract(context.Background(), browser.NewProfileSnapshot(dirSnapshot, profile, nil), &out))
+		require.NoError(t, Extractors(dir, profile)[category.History].Extract(context.Background(), browser.NewInput(dirSnapshot, profile, nil, nil), &out))
 		got := collected[record.History](t, &out)
 		require.Len(t, got, 1, profile.Name)
 		assert.Equal(t, want[profile.Name], got[0].Title, profile.Name)
@@ -52,13 +52,13 @@ func TestDecryptingExtractor_ReadsSourcesInOrder(t *testing.T) {
 	local := createTestDB(t, "Login Data", loginsSchema, insertLogin("https://local.example", "", "local-user", "", 13340000000000000))
 	account := createTestDB(t, "Login Data For Account", loginsSchema,
 		insertLogin("https://account.example", "", "account-user", "", 13360000000000000))
-	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{
+	input := browser.NewInput(snapshotOf(t, map[string]string{
 		"Default/Login Data":             local,
 		"Default/Login Data For Account": account,
-	}), browser.Profile{Name: "Default", RelativePath: "Default"}, nil)
+	}), browser.Profile{Name: "Default", RelativePath: "Default"}, nil, nil)
 
 	var out testCollector
-	require.NoError(t, defaultExtractors[category.Password].Extract(context.Background(), profileSnapshot, &out))
+	require.NoError(t, defaultExtractors[category.Password].Extract(context.Background(), input, &out))
 	got := collected[record.Login](t, &out)
 	require.Len(t, got, 2)
 	assert.Equal(t, "local-user", got[0].Username)
@@ -70,11 +70,11 @@ func TestDecryptingExtractor_ReadsSourcesInOrder(t *testing.T) {
 func TestDecryptingExtractor_SkipsAbsentOptionalSource(t *testing.T) {
 	account := createTestDB(t, "Login Data For Account", loginsSchema,
 		insertLogin("https://account.example", "", "account-user", "", 13360000000000000))
-	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{"Default/Login Data For Account": account}),
-		browser.Profile{Name: "Default", RelativePath: "Default"}, nil)
+	input := browser.NewInput(snapshotOf(t, map[string]string{"Default/Login Data For Account": account}),
+		browser.Profile{Name: "Default", RelativePath: "Default"}, nil, nil)
 
 	var out testCollector
-	require.NoError(t, defaultExtractors[category.Password].Extract(context.Background(), profileSnapshot, &out))
+	require.NoError(t, defaultExtractors[category.Password].Extract(context.Background(), input, &out))
 	got := collected[record.Login](t, &out)
 	require.Len(t, got, 1)
 	assert.Equal(t, record.StoreAccount, got[0].Store)
@@ -84,12 +84,12 @@ func TestDecryptingExtractor_BrokenSourceKeepsTheOthers(t *testing.T) {
 	broken := createTestJSON(t, "Login Data", "not a database")
 	account := createTestDB(t, "Login Data For Account", loginsSchema,
 		insertLogin("https://account.example", "", "account-user", "", 13360000000000000))
-	profileSnapshot := browser.NewProfileSnapshot(snapshotOf(t, map[string]string{
+	input := browser.NewInput(snapshotOf(t, map[string]string{
 		"Default/Login Data":             broken,
 		"Default/Login Data For Account": account,
-	}), browser.Profile{Name: "Default", RelativePath: "Default"}, nil)
+	}), browser.Profile{Name: "Default", RelativePath: "Default"}, nil, nil)
 
 	var out testCollector
-	require.Error(t, defaultExtractors[category.Password].Extract(context.Background(), profileSnapshot, &out))
+	require.Error(t, defaultExtractors[category.Password].Extract(context.Background(), input, &out))
 	assert.Len(t, collected[record.Login](t, &out), 1)
 }

@@ -63,11 +63,6 @@ func (w *Writer) write(dataCategory category.Category, records []record.Record) 
 	if len(records) == 0 {
 		return nil
 	}
-	for _, row := range records {
-		if row.Category() != dataCategory {
-			return fmt.Errorf("%T is not a %s record", row, dataCategory)
-		}
-	}
 	file, err := w.open(dataCategory)
 	if err != nil {
 		return err

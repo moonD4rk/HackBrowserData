@@ -69,18 +69,17 @@ func Archive(ctx context.Context, discovery Discovery, categories []category.Cat
 }
 
 func archiveFiles(dirs []browser.UserDataDir, categories []category.Category) []snapshot.File {
-	extractors := extractorsWith(nil)
 	var files []snapshot.File
 	seen := make(map[snapshot.File]bool)
 	for _, dir := range dirs {
 		for _, profile := range dir.Profiles {
 			for _, source := range chromium.ArchiveSources() {
-				if file, ok, err := firstOnDisk(dir, profile, source); err == nil && ok {
+				if file, ok, err := firstOnDisk(dir, source.CandidatePaths(profile), source.IsDir); err == nil && ok {
 					files = appendNew(files, seen, file)
 				}
 			}
 		}
-		files = appendNew(files, seen, planDir(dir, categories, extractors).files...)
+		files = appendNew(files, seen, planDir(dir, categories, extractorsFor).files...)
 	}
 	return files
 }
