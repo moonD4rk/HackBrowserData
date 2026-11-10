@@ -15,21 +15,14 @@ type Discovery struct {
 	DirFailures []DirFailure
 }
 
-// Discover applies the target's profile path only when one browser is named.
 func Discover(target Target) Discovery {
 	var discovery Discovery
-	for _, supportedBrowser := range browser.Supported() {
-		if target.BrowserName != allBrowsers && supportedBrowser.Name != target.BrowserName {
-			continue
-		}
-		discoverOptions := browser.DiscoverOptions{HomeDir: target.HomeDir}
-		if target.BrowserName != allBrowsers {
-			discoverOptions.ProfilePath = target.ProfilePath
-		}
-		dirs, err := discover(supportedBrowser, discoverOptions)
+	discoverOptions := browser.DiscoverOptions{HomeDir: target.HomeDir, ProfilePath: target.ProfilePath}
+	for _, targetBrowser := range target.Browsers {
+		dirs, err := discover(targetBrowser, discoverOptions)
 		discovery.Dirs = append(discovery.Dirs, withData(dirs)...)
 		if err != nil {
-			discovery.DirFailures = append(discovery.DirFailures, DirFailure{UserDataDirID: browser.UserDataDirID(supportedBrowser.Name), Err: err})
+			discovery.DirFailures = append(discovery.DirFailures, DirFailure{UserDataDirID: browser.UserDataDirID(targetBrowser.Name), Err: err})
 		}
 	}
 	return discovery

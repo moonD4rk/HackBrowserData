@@ -22,7 +22,7 @@ Every extraction — one category from one profile of one data directory — end
 
 ## Layers
 
-- The command layer wires flags into the pipeline and holds what lives as long as the process: signals, the console window, the data a restore reads.
+- The command layer wires flags into the pipeline, prints what it returns, and holds what lives as long as the process: signals, the console window, the data a restore reads.
 - The pipeline orchestrates, and it is the only place that knows every browser base.
 - Each browser base knows its own discovery and file formats.
 - Shared services sit below them: secret retrieval, pure crypto primitives, snapshot capture, and export.

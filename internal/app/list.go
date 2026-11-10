@@ -3,30 +3,33 @@ package app
 import (
 	"context"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-// ListOptions is what list reads: every browser and category, with the keychain left locked, so counting never prompts.
-func ListOptions() (Options, error) {
+type ListOptions struct {
+	Target   Target
+	Keychain KeychainConfig
+}
+
+// ValidateList targets every browser and leaves the keychain without a password, so counting never prompts.
+func ValidateList() (ListOptions, error) {
 	home, err := homeDir()
 	if err != nil {
-		return Options{}, err
+		return ListOptions{}, err
 	}
-	return Options{
-		Target:     Target{BrowserName: allBrowsers, HomeDir: home},
-		Categories: category.All(),
-		Keychain:   KeychainConfig{HomeDir: home},
+	return ListOptions{
+		Target:   Target{Browsers: browser.Supported(), HomeDir: home},
+		Keychain: KeychainConfig{Path: loginKeychainPath(home)},
 	}, nil
 }
 
-// CountRecords runs with no key and the keychain locked, counting records instead of exporting them.
-func CountRecords(
-	ctx context.Context, discovery Discovery, categories []category.Category, keychainConfig KeychainConfig,
-) (Summary, error) {
+// CountRecords runs every category with no key and the keychain locked, counting records instead of exporting them.
+func CountRecords(ctx context.Context, discovery Discovery, keychainConfig KeychainConfig) (Summary, error) {
 	keychain := newLoginKeychain(keychainConfig)
 	counter := runner{writer: discard{}, extractors: extractorsWith(keychain), retrieveKeys: keysFromFile(nil)}
-	return counter.run(ctx, discovery, categories)
+	return counter.run(ctx, discovery, category.All())
 }
 
 type discard struct{}

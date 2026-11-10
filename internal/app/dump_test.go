@@ -20,19 +20,20 @@ func TestValidateDump(t *testing.T) {
 	keychainPassword := func(context.Context) (string, error) { return "pw", nil }
 	options, err := ValidateDump(DumpFlags{Browser: " Chrome ", Categories: "cookie, password,cookie", Format: "csv", OutputDir: "out"}, keychainPassword)
 	require.NoError(t, err)
-	assert.Equal(t, "chrome", options.Target.BrowserName)
+	require.Len(t, options.Target.Browsers, 1)
+	assert.Equal(t, "chrome", options.Target.Browsers[0].Name)
 	assert.Equal(t, []category.Category{category.Cookie, category.Password}, options.Categories, "a repeated category runs once")
 	assert.Equal(t, export.CSV, options.Output.Format)
 	assert.Equal(t, "out", options.Output.Dir)
 	assert.NotEmpty(t, options.Target.HomeDir)
-	assert.Equal(t, options.Target.HomeDir, options.Keychain.HomeDir)
+	assert.Equal(t, loginKeychainPath(options.Target.HomeDir), options.Keychain.Path)
 	password, err := options.Keychain.Password(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, "pw", password)
 
 	options, err = ValidateDump(DumpFlags{Categories: "all", Format: "json"}, nil)
 	require.NoError(t, err)
-	assert.Equal(t, "all", options.Target.BrowserName)
+	assert.Equal(t, browser.Supported(), options.Target.Browsers)
 	assert.Equal(t, category.All(), options.Categories)
 }
 

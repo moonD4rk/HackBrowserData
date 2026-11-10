@@ -14,18 +14,10 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/export"
 )
 
-// Options are a command's validated flags, grouped by the stage that reads them; a command leaves the rest empty.
-type Options struct {
-	Target     Target
-	Categories []category.Category
-	Output     Output
-	Keychain   KeychainConfig
-}
-
 // Target is what Discover looks for.
 type Target struct {
-	BrowserName string // "all" or one Browser.Name
-	ProfilePath string // a custom profile dir, used only with one browser
+	Browsers    []browser.Browser
+	ProfilePath string // a custom profile dir; set only when Browsers holds one browser
 	HomeDir     string
 }
 
@@ -38,7 +30,7 @@ type Output struct {
 
 // KeychainConfig locates the macOS login keychain and says how to get its password; other systems ignore it.
 type KeychainConfig struct {
-	HomeDir string
+	Path string
 	// Password runs when the keychain first opens; "" leaves it locked, and nil, as list has it, silently.
 	Password func(ctx context.Context) (string, error)
 }
@@ -53,18 +45,18 @@ func homeDir() (string, error) {
 
 const allBrowsers = "all"
 
-// parseBrowser accepts all or one of this OS's browser names; a name from another OS's table has nothing to find here.
-func parseBrowser(value string) (string, error) {
+// parseBrowsers accepts all or one of this OS's browser names; a name from another OS's table has nothing to find here.
+func parseBrowsers(value string) ([]browser.Browser, error) {
 	name := strings.ToLower(strings.TrimSpace(value))
 	if name == "" || name == allBrowsers {
-		return allBrowsers, nil
+		return browser.Supported(), nil
 	}
 	for _, supportedBrowser := range browser.Supported() {
 		if supportedBrowser.Name == name {
-			return name, nil
+			return []browser.Browser{supportedBrowser}, nil
 		}
 	}
-	return "", fmt.Errorf("unknown browser %q, available: %s|%s", value, allBrowsers, strings.Join(browser.Names(), "|"))
+	return nil, fmt.Errorf("unknown browser %q, available: %s|%s", value, allBrowsers, strings.Join(browser.Names(), "|"))
 }
 
 // parseCategories keeps a repeated category once, or its records would be exported twice.

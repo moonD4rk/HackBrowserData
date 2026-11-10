@@ -18,18 +18,23 @@ type DumpKeysFlags struct {
 	Browser string
 }
 
-func ValidateDumpKeys(flags DumpKeysFlags, keychainPassword func(context.Context) (string, error)) (Options, error) {
-	browserName, err := parseBrowser(flags.Browser)
+type DumpKeysOptions struct {
+	Target   Target
+	Keychain KeychainConfig
+}
+
+func ValidateDumpKeys(flags DumpKeysFlags, keychainPassword func(context.Context) (string, error)) (DumpKeysOptions, error) {
+	browsers, err := parseBrowsers(flags.Browser)
 	if err != nil {
-		return Options{}, err
+		return DumpKeysOptions{}, err
 	}
 	home, err := homeDir()
 	if err != nil {
-		return Options{}, err
+		return DumpKeysOptions{}, err
 	}
-	return Options{
-		Target:   Target{BrowserName: browserName, HomeDir: home},
-		Keychain: KeychainConfig{HomeDir: home, Password: keychainPassword},
+	return DumpKeysOptions{
+		Target:   Target{Browsers: browsers, HomeDir: home},
+		Keychain: KeychainConfig{Path: loginKeychainPath(home), Password: keychainPassword},
 	}, nil
 }
 

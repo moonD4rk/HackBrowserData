@@ -10,6 +10,7 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/chromium"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/export"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
@@ -27,46 +28,66 @@ type RestoreFlags struct {
 	Zip        bool
 }
 
-// ValidateRestore checks restore's flags and reads its keys before any data is opened. A restore's browsers are the
-// key file's vaults, not this OS's table, so -b is checked against them.
-func ValidateRestore(flags RestoreFlags) (Options, masterkey.KeyFile, error) {
+type RestoreOptions struct {
+	Vaults     []masterkey.Vault // the key file's vaults that -b selects
+	Categories []category.Category
+	Output     Output
+}
+
+// ValidateRestore checks restore's flags and reads its keys, from stdin for "-", before any data is opened. A restore's
+// browsers are the key file's vaults, not this OS's table, so -b selects among them.
+func ValidateRestore(flags RestoreFlags, stdin io.Reader) (RestoreOptions, error) {
 	if flags.KeyFile == "" {
-		return Options{}, masterkey.KeyFile{}, errors.New("requires --keys <file> (or - for stdin)")
+		return RestoreOptions{}, errors.New("requires --keys <file> (or - for stdin)")
 	}
 	if (flags.DataDir == "") == (flags.DataZip == "") {
-		return Options{}, masterkey.KeyFile{}, errors.New("exactly one of --data-dir or --data-zip is required")
+		return RestoreOptions{}, errors.New("exactly one of --data-dir or --data-zip is required")
 	}
 	categories, err := parseCategories(flags.Categories)
 	if err != nil {
-		return Options{}, masterkey.KeyFile{}, err
+		return RestoreOptions{}, err
 	}
 	format, err := export.ParseFormat(flags.Format)
 	if err != nil {
-		return Options{}, masterkey.KeyFile{}, err
+		return RestoreOptions{}, err
 	}
 	if err := checkOutputDir(flags.OutputDir); err != nil {
-		return Options{}, masterkey.KeyFile{}, err
+		return RestoreOptions{}, err
 	}
 	if err := checkRestoreData(flags.DataDir, flags.DataZip); err != nil {
-		return Options{}, masterkey.KeyFile{}, err
+		return RestoreOptions{}, err
 	}
-	keyFile, err := readKeyFile(flags.KeyFile)
+	keyFile, err := readKeyFile(flags.KeyFile, stdin)
 	if err != nil {
-		return Options{}, masterkey.KeyFile{}, err
+		return RestoreOptions{}, err
 	}
-	filter := strings.ToLower(strings.TrimSpace(flags.Browser))
-	if filter == "" {
-		filter = allBrowsers
+	vaults, err := selectVaults(keyFile.Vaults, flags.Browser)
+	if err != nil {
+		return RestoreOptions{}, err
 	}
-	if filter != allBrowsers && len(vaultsOf(keyFile, filter)) == 0 {
-		return Options{}, masterkey.KeyFile{}, fmt.Errorf("no vault for browser %q in keys (have: %s)", filter, vaultBrowserNames(keyFile.Vaults))
-	}
-	options := Options{
-		Target:     Target{BrowserName: filter},
+	return RestoreOptions{
+		Vaults:     vaults,
 		Categories: categories,
 		Output:     Output{Dir: flags.OutputDir, Format: format, Zip: flags.Zip},
+	}, nil
+}
+
+// selectVaults keeps the vaults of the browser -b names, or every vault when it names none.
+func selectVaults(vaults []masterkey.Vault, browserName string) ([]masterkey.Vault, error) {
+	name := strings.ToLower(strings.TrimSpace(browserName))
+	if name == "" || name == allBrowsers {
+		return vaults, nil
 	}
-	return options, keyFile, nil
+	var selected []masterkey.Vault
+	for _, vault := range vaults {
+		if strings.EqualFold(vault.Browser, name) {
+			selected = append(selected, vault)
+		}
+	}
+	if len(selected) == 0 {
+		return nil, fmt.Errorf("no vault for browser %q in keys (have: %s)", name, vaultBrowserNames(vaults))
+	}
+	return selected, nil
 }
 
 func checkRestoreData(dataDir, dataZip string) error {
@@ -82,8 +103,8 @@ func checkRestoreData(dataDir, dataZip string) error {
 	return nil
 }
 
-func readKeyFile(path string) (masterkey.KeyFile, error) {
-	var reader io.Reader = os.Stdin
+func readKeyFile(path string, stdin io.Reader) (masterkey.KeyFile, error) {
+	reader := stdin
 	if path != "-" {
 		file, err := os.Open(path)
 		if err != nil {
@@ -99,12 +120,9 @@ func readKeyFile(path string) (masterkey.KeyFile, error) {
 	return keyFile, nil
 }
 
-// DiscoverRestore rebuilds the user data dirs under root, and their keys, from the key file: each vault names a
+// DiscoverRestore rebuilds the user data dirs under root, and their keys, from the vaults: each vault names a
 // subdirectory of root, or root is one browser's User Data.
-func DiscoverRestore(
-	root string, keyFile masterkey.KeyFile, browserName string,
-) (Discovery, map[browser.UserDataDirID]masterkey.Set, error) {
-	vaults := vaultsOf(keyFile, browserName)
+func DiscoverRestore(root string, vaults []masterkey.Vault) (Discovery, map[browser.UserDataDirID]masterkey.Set, error) {
 	archived := false
 	for _, vault := range vaults {
 		if dirExists(filepath.Join(root, string(vaultUserDataDirID(vault)))) {
@@ -180,16 +198,6 @@ func vaultUserDataDirID(vault masterkey.Vault) browser.UserDataDirID {
 		return browser.UserDataDirID(vault.ID)
 	}
 	return browser.UserDataDirID(strings.ToLower(vault.Browser))
-}
-
-func vaultsOf(keyFile masterkey.KeyFile, filter string) []masterkey.Vault {
-	var out []masterkey.Vault
-	for _, vault := range keyFile.Vaults {
-		if filter == allBrowsers || strings.EqualFold(vault.Browser, filter) {
-			out = append(out, vault)
-		}
-	}
-	return out
 }
 
 func vaultBrowserNames(vaults []masterkey.Vault) string {
