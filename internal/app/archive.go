@@ -18,21 +18,26 @@ type ArchiveFlags struct {
 	Categories string
 }
 
+type ArchiveOptions struct {
+	Target     Target
+	Categories []category.Category
+}
+
 // ValidateArchive takes no keychain password: an archive copies files and reads no secret.
-func ValidateArchive(flags ArchiveFlags) (Options, error) {
-	browserName, err := parseBrowser(flags.Browser)
+func ValidateArchive(flags ArchiveFlags) (ArchiveOptions, error) {
+	browsers, err := parseBrowsers(flags.Browser)
 	if err != nil {
-		return Options{}, err
+		return ArchiveOptions{}, err
 	}
 	categories, err := parseCategories(flags.Categories)
 	if err != nil {
-		return Options{}, err
+		return ArchiveOptions{}, err
 	}
 	home, err := homeDir()
 	if err != nil {
-		return Options{}, err
+		return ArchiveOptions{}, err
 	}
-	return Options{Target: Target{BrowserName: browserName, HomeDir: home}, Categories: categories}, nil
+	return ArchiveOptions{Target: Target{Browsers: browsers, HomeDir: home}, Categories: categories}, nil
 }
 
 // Archive returns how many files and directories it captured.

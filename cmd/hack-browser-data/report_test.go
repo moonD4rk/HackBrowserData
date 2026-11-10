@@ -1,4 +1,4 @@
-package app
+package main
 
 import (
 	"bytes"
@@ -9,23 +9,24 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moond4rk/hackbrowserdata/internal/app"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
 func TestReport(t *testing.T) {
-	cookie := Extraction{UserDataDirID: "chrome", ProfileName: "Default", Category: category.Cookie}
+	cookie := app.Extraction{UserDataDirID: "chrome", ProfileName: "Default", Category: category.Cookie}
 	var buffer bytes.Buffer
-	require.NoError(t, Report(&buffer, Summary{
-		Results: []Result{
-			{Extraction: cookie, Outcome: OutcomePartial, Records: 224, Failures: 4},
+	report(&buffer, app.Summary{
+		Results: []app.Result{
+			{Extraction: cookie, Outcome: app.OutcomePartial, Records: 224, Failures: 4},
 			{
-				Extraction: Extraction{UserDataDirID: "chrome", ProfileName: "Default", Category: category.Password},
-				Outcome:    OutcomeError, Failures: 2, Err: errors.New("password not decrypted"),
+				Extraction: app.Extraction{UserDataDirID: "chrome", ProfileName: "Default", Category: category.Password},
+				Outcome:    app.OutcomeError, Failures: 2, Err: errors.New("password not decrypted"),
 			},
-			{Extraction: Extraction{UserDataDirID: "edge", ProfileName: "Default", Category: category.Password}},
+			{Extraction: app.Extraction{UserDataDirID: "edge", ProfileName: "Default", Category: category.Password}},
 		},
-		DirFailures: []DirFailure{{UserDataDirID: "arc-2", Err: errors.New("permission denied")}},
-	}))
+		DirFailures: []app.DirFailure{{UserDataDirID: "arc-2", Err: errors.New("permission denied")}},
+	})
 
 	lines := strings.Split(strings.TrimSpace(buffer.String()), "\n")
 	require.Len(t, lines, 5)

@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
-	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,8 +10,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/moond4rk/hackbrowserdata/internal/app"
-	"github.com/moond4rk/hackbrowserdata/internal/export"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
@@ -70,40 +66,6 @@ func silenceWhenStopped(command *cobra.Command) {
 			invoked.SilenceErrors, invoked.SilenceUsage = true, true
 		}
 		return err
-	}
-}
-
-// report prints the run's summary; it is not part of the output, so failing to print it never fails the run.
-func report(writer io.Writer, summary app.Summary) {
-	if err := app.Report(writer, summary); err != nil {
-		log.Warnf("print summary: %v", err)
-	}
-}
-
-// warnIfNothingFound reports discovery's failures, the likely reason it found no browser data, then says so.
-func warnIfNothingFound(stderr io.Writer, discovery app.Discovery, message string) bool {
-	if len(discovery.Dirs) > 0 {
-		return false
-	}
-	if len(discovery.DirFailures) > 0 {
-		report(stderr, app.Summary{DirFailures: discovery.DirFailures})
-	}
-	log.Warnf("%s", message)
-	return true
-}
-
-// announceExport lists the files a run wrote, even when it stopped early, so the user finds what it left.
-func announceExport(stderr io.Writer, exported export.Listing) {
-	if len(exported.Files) == 0 {
-		return
-	}
-	fmt.Fprintln(stderr)
-	log.Infof("Exported to %s/", exported.Dir)
-	for _, file := range exported.Files {
-		log.Infof("  %-24s %d entries", file.Name, file.Count)
-	}
-	if exported.ZipName != "" {
-		log.Infof("Compressed: %s/%s", exported.Dir, exported.ZipName)
 	}
 }
 

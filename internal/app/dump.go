@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/export"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
@@ -19,45 +21,52 @@ type DumpFlags struct {
 	ProfilePath string
 }
 
+type DumpOptions struct {
+	Target     Target
+	Categories []category.Category
+	Output     Output
+	Keychain   KeychainConfig
+}
+
 // ValidateDump checks every flag before any browser or secret is touched, so a bad flag fails fast.
-func ValidateDump(flags DumpFlags, keychainPassword func(context.Context) (string, error)) (Options, error) {
-	browserName, err := parseBrowser(flags.Browser)
+func ValidateDump(flags DumpFlags, keychainPassword func(context.Context) (string, error)) (DumpOptions, error) {
+	browsers, err := parseBrowsers(flags.Browser)
 	if err != nil {
-		return Options{}, err
+		return DumpOptions{}, err
 	}
 	categories, err := parseCategories(flags.Categories)
 	if err != nil {
-		return Options{}, err
+		return DumpOptions{}, err
 	}
 	format, err := export.ParseFormat(flags.Format)
 	if err != nil {
-		return Options{}, err
+		return DumpOptions{}, err
 	}
 	if err := checkOutputDir(flags.OutputDir); err != nil {
-		return Options{}, err
+		return DumpOptions{}, err
 	}
-	profilePath, err := checkProfilePath(browserName, flags.ProfilePath)
+	profilePath, err := checkProfilePath(browsers, flags.ProfilePath)
 	if err != nil {
-		return Options{}, err
+		return DumpOptions{}, err
 	}
 	home, err := homeDir()
 	if err != nil {
-		return Options{}, err
+		return DumpOptions{}, err
 	}
-	return Options{
-		Target:     Target{BrowserName: browserName, ProfilePath: profilePath, HomeDir: home},
+	return DumpOptions{
+		Target:     Target{Browsers: browsers, ProfilePath: profilePath, HomeDir: home},
 		Categories: categories,
 		Output:     Output{Dir: flags.OutputDir, Format: format, Zip: flags.Zip},
-		Keychain:   KeychainConfig{HomeDir: home, Password: keychainPassword},
+		Keychain:   KeychainConfig{Path: loginKeychainPath(home), Password: keychainPassword},
 	}, nil
 }
 
-// checkProfilePath keeps -p only when one browser is named; with -b all it is ignored, as it always was, but now said.
-func checkProfilePath(browserName, path string) (string, error) {
+// checkProfilePath keeps -p only for one browser; with -b all it is ignored, as it always was, but now said.
+func checkProfilePath(browsers []browser.Browser, path string) (string, error) {
 	if path == "" {
 		return "", nil
 	}
-	if browserName == allBrowsers {
+	if len(browsers) != 1 {
 		log.Warnf("-p needs a specific -b; ignoring %s", path)
 		return "", nil
 	}

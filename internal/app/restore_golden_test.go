@@ -115,17 +115,17 @@ func restoreGolden(t *testing.T, flags app.RestoreFlags) string {
 	if flags.Format == "" {
 		flags.Format = "json"
 	}
-	options, keyFile, err := app.ValidateRestore(flags)
+	options, err := app.ValidateRestore(flags, nil)
 	require.NoError(t, err)
 
-	data := snapshot.Open(flags.DataDir)
+	root := snapshot.Open(flags.DataDir)
 	if flags.DataZip != "" {
-		data, err = snapshot.Unzip(flags.DataZip)
+		root, err = snapshot.Unzip(flags.DataZip)
 		require.NoError(t, err)
 	}
-	defer data.Close()
+	defer root.Close()
 
-	discovery, keys, err := app.DiscoverRestore(data.Path(), keyFile, options.Target.BrowserName)
+	discovery, keys, err := app.DiscoverRestore(root.Path(), options.Vaults)
 	require.NoError(t, err)
 	_, err = app.ExecuteWithKeys(context.Background(), discovery, options.Categories, options.Output, keys)
 	require.NoError(t, err)

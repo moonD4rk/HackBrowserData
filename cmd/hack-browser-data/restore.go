@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -43,7 +44,7 @@ func newRestoreCommand() *cobra.Command {
 }
 
 func runRestore(ctx context.Context, stderr io.Writer, flags app.RestoreFlags) error {
-	options, keyFile, err := app.ValidateRestore(flags)
+	options, err := app.ValidateRestore(flags, os.Stdin)
 	if err != nil {
 		return err
 	}
@@ -53,7 +54,7 @@ func runRestore(ctx context.Context, stderr io.Writer, flags app.RestoreFlags) e
 	}
 	defer closeRestoreData(root)
 
-	discovery, keys, err := app.DiscoverRestore(root.Path(), keyFile, options.Target.BrowserName)
+	discovery, keys, err := app.DiscoverRestore(root.Path(), options.Vaults)
 	if err != nil {
 		return err
 	}
