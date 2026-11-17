@@ -18,6 +18,8 @@ typedef struct BrowserComIds {
     GUID iid_v1;
     BOOL has_iid_v2;
     GUID iid_v2;
+    BOOL has_iid_v3;
+    GUID iid_v3;
 } BrowserComIds;
 
 const BrowserComIds *LookupBrowserByExe(const char *exe_basename);

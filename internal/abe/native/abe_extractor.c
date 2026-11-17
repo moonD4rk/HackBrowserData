@@ -111,11 +111,17 @@ static extract_result extract_key_inner(const BrowserComIds *ids)
         return r;
     }
 
-    // IElevator2 is Chrome 144+; older vendors only implement v1. Try v2
-    // first (when declared), fall back to v1.
+    // Browsers rotate their elevator interface across versions and deregister
+    // the old IID, so try newest to oldest (v3, v2, v1) and use whichever the
+    // running build still answers.
     IUnknown *pObj = NULL;
     HRESULT hr = S_OK;
-    if (ids->has_iid_v2) {
+    if (ids->has_iid_v3) {
+        hr = CoCreateInstance(&ids->clsid, NULL, CLSCTX_LOCAL_SERVER,
+                              &ids->iid_v3, (void **)&pObj);
+        if (FAILED(hr)) pObj = NULL;
+    }
+    if (!pObj && ids->has_iid_v2) {
         hr = CoCreateInstance(&ids->clsid, NULL, CLSCTX_LOCAL_SERVER,
                               &ids->iid_v2, (void **)&pObj);
         if (FAILED(hr)) pObj = NULL;
