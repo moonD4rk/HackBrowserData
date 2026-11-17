@@ -48,29 +48,41 @@ func TestExtractors_EachProfileReadsItsOwnFiles(t *testing.T) {
 	}
 }
 
-// TestExtractors_ExtensionsFallBackToPreferences covers Linux builds and 360, whose Secure Preferences holds no list.
+// TestExtractors_ExtensionsFallBackToPreferences covers Linux builds and 360, whose list is in Preferences.
 func TestExtractors_ExtensionsFallBackToPreferences(t *testing.T) {
 	tests := []struct {
-		browserName string
-		preferences string
+		name          string
+		browserName   string
+		preferences   string
+		includeSecure bool
 	}{
-		{"chrome", `{"extensions": {"settings": {"ext1": {"location": 1, "manifest": {"name": "Ext", "version": "1.0"}}}}}`},
-		{"opera", `{"extensions": {"opsettings": {"ext1": {"location": 1, "manifest": {"name": "Ext", "version": "1.0"}}}}}`},
+		{"chrome empty secure", "chrome", `{"extensions": {"settings": {"ext1": {"location": 1, "manifest": {"name": "Ext", "version": "1.0"}}}}}`, true},
+		{"chrome no secure", "chrome", `{"extensions": {"settings": {"ext1": {"location": 1, "manifest": {"name": "Ext", "version": "1.0"}}}}}`, false},
+		{"opera empty secure", "opera", `{"extensions": {"opsettings": {"ext1": {"location": 1, "manifest": {"name": "Ext", "version": "1.0"}}}}}`, true},
 	}
 	for _, testCase := range tests {
-		input := browser.NewInput(snapshotOf(t, map[string]string{
-			"Default/Secure Preferences": createTestJSON(t, "Secure Preferences", `{"protection": {"macs": {}}}`),
-			"Default/Preferences":        createTestJSON(t, "Preferences", testCase.preferences),
-		}), browser.Profile{Name: "Default", RelativePath: "Default"}, nil, nil)
-		chromiumBrowser, ok := browser.Lookup(testCase.browserName)
-		require.True(t, ok, testCase.browserName)
+		t.Run(testCase.name, func(t *testing.T) {
+			files := map[string]string{
+				"Default/Preferences": createTestJSON(t, "Preferences", testCase.preferences),
+			}
+			if testCase.includeSecure {
+				files["Default/Secure Preferences"] = createTestJSON(t, "Secure Preferences", `{"protection": {"macs": {}}}`)
+			}
+			input := browser.NewInput(snapshotOf(t, files), browser.Profile{Name: "Default", RelativePath: "Default"}, nil, nil)
+			chromiumBrowser, ok := browser.Lookup(testCase.browserName)
+			require.True(t, ok)
 
-		var out testCollector
-		extractor := Extractors(browser.UserDataDir{Browser: chromiumBrowser}, input.Profile)[category.Extension]
-		require.NoError(t, extractor.Extract(context.Background(), input, &out), testCase.browserName)
-		got := collected[record.Extension](t, &out)
-		require.Len(t, got, 1, testCase.browserName)
-		assert.Equal(t, "Ext", got[0].Name, testCase.browserName)
+			extractor := Extractors(browser.UserDataDir{Browser: chromiumBrowser}, input.Profile)[category.Extension]
+			for _, source := range extractor.Sources {
+				assert.True(t, source.Optional, source.Path)
+			}
+
+			var out testCollector
+			require.NoError(t, extractor.Extract(context.Background(), input, &out))
+			got := collected[record.Extension](t, &out)
+			require.Len(t, got, 1)
+			assert.Equal(t, "Ext", got[0].Name)
+		})
 	}
 }
 

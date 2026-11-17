@@ -114,6 +114,21 @@ func TestPlanDir_UnsupportedCategory(t *testing.T) {
 	assert.Empty(t, plan.extractions)
 }
 
+// TestPlanDir_ExtensionsPresentWithOnlyPreferences covers Linux builds that keep no Secure Preferences file.
+func TestPlanDir_ExtensionsPresentWithOnlyPreferences(t *testing.T) {
+	path := t.TempDir()
+	touch(t, path, "Default", "Preferences")
+	dir := browser.UserDataDir{
+		ID: "chrome", Browser: lookup(t, "chrome"), Path: path,
+		Profiles: []browser.Profile{{Name: "Default", RelativePath: "Default"}},
+	}
+
+	plan := planDir(dir, []category.Category{category.Extension}, extractorsFor)
+	assert.Equal(t, []Extraction{{UserDataDirID: "chrome", ProfileName: "Default", Category: category.Extension}}, extractionsOf(plan))
+	assert.Equal(t, []snapshot.File{{UserDataDirID: "chrome", UserDataDirPath: path, RelativePath: "Default/Preferences"}}, plan.files)
+	assert.Empty(t, plan.skipped)
+}
+
 // TestPlanDir_ExtractorWithoutSourcesRuns covers Safari's passwords: read from the keychain, they are never absent.
 func TestPlanDir_ExtractorWithoutSourcesRuns(t *testing.T) {
 	dir := browser.UserDataDir{ID: "safari", Path: t.TempDir(), Profiles: []browser.Profile{{Name: "default", RelativePath: "Safari"}}}

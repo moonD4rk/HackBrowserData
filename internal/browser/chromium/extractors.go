@@ -18,7 +18,7 @@ var (
 	bookmarks           = browser.Source{Path: "Bookmarks"}
 	history             = browser.Source{Path: "History"}
 	webData             = browser.Source{Path: "Web Data"}
-	securePreferences   = browser.Source{Path: "Secure Preferences"}
+	securePreferences   = browser.Source{Path: "Secure Preferences", Optional: true}
 	preferences         = browser.Source{Path: "Preferences", Optional: true}
 	localStorage        = browser.Source{Path: "Local Storage/leveldb", IsDir: true}
 	sessionStorage      = browser.Source{Path: "Session Storage", IsDir: true}
