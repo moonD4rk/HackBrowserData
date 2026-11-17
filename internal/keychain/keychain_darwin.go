@@ -17,6 +17,9 @@ var ErrLocked = errors.New("login keychain is locked")
 
 var errNotFound = errors.New("not found in login keychain")
 
+// errPasswordUnsupported replaces keychainbreaker's advice to pass a key with WithKey, which the CLI has no flag for.
+var errPasswordUnsupported = errors.New("a password cannot unlock this keychain format (macOS 26.4 and later)")
+
 type Keychain struct {
 	path     string
 	password PasswordFunc
@@ -120,6 +123,9 @@ func (k *Keychain) unlock(ctx context.Context) error {
 		return ErrLocked
 	}
 	if err := k.opened.TryUnlock(keychainbreaker.WithPassword(password)); err != nil {
+		if errors.Is(err, keychainbreaker.ErrUnsupportedBlobVersion) {
+			err = errPasswordUnsupported
+		}
 		return fmt.Errorf("%w: %w", ErrLocked, err)
 	}
 	return nil
