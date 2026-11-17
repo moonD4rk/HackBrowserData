@@ -48,6 +48,32 @@ func TestExtractors_EachProfileReadsItsOwnFiles(t *testing.T) {
 	}
 }
 
+// TestExtractors_ExtensionsFallBackToPreferences covers Linux builds and 360, whose Secure Preferences holds no list.
+func TestExtractors_ExtensionsFallBackToPreferences(t *testing.T) {
+	tests := []struct {
+		browserName string
+		preferences string
+	}{
+		{"chrome", `{"extensions": {"settings": {"ext1": {"location": 1, "manifest": {"name": "Ext", "version": "1.0"}}}}}`},
+		{"opera", `{"extensions": {"opsettings": {"ext1": {"location": 1, "manifest": {"name": "Ext", "version": "1.0"}}}}}`},
+	}
+	for _, testCase := range tests {
+		input := browser.NewInput(snapshotOf(t, map[string]string{
+			"Default/Secure Preferences": createTestJSON(t, "Secure Preferences", `{"protection": {"macs": {}}}`),
+			"Default/Preferences":        createTestJSON(t, "Preferences", testCase.preferences),
+		}), browser.Profile{Name: "Default", RelativePath: "Default"}, nil, nil)
+		chromiumBrowser, ok := browser.Lookup(testCase.browserName)
+		require.True(t, ok, testCase.browserName)
+
+		var out testCollector
+		extractor := Extractors(browser.UserDataDir{Browser: chromiumBrowser}, input.Profile)[category.Extension]
+		require.NoError(t, extractor.Extract(context.Background(), input, &out), testCase.browserName)
+		got := collected[record.Extension](t, &out)
+		require.Len(t, got, 1, testCase.browserName)
+		assert.Equal(t, "Ext", got[0].Name, testCase.browserName)
+	}
+}
+
 func TestDecryptingExtractor_ReadsSourcesInOrder(t *testing.T) {
 	local := createTestDB(t, "Login Data", loginsSchema, insertLogin("https://local.example", "", "local-user", "", 13340000000000000))
 	account := createTestDB(t, "Login Data For Account", loginsSchema,

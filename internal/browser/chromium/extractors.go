@@ -19,6 +19,7 @@ var (
 	history             = browser.Source{Path: "History"}
 	webData             = browser.Source{Path: "Web Data"}
 	securePreferences   = browser.Source{Path: "Secure Preferences"}
+	preferences         = browser.Source{Path: "Preferences", Optional: true}
 	localStorage        = browser.Source{Path: "Local Storage/leveldb", IsDir: true}
 	sessionStorage      = browser.Source{Path: "Session Storage", IsDir: true}
 	yaPassmanData       = browser.Source{Path: "Ya Passman Data"}
@@ -32,13 +33,20 @@ var defaultExtractors = browser.Extractors{
 	category.History:        newPlainExtractor(extractHistories, history),
 	category.Download:       newPlainExtractor(extractDownloads, history),
 	category.CreditCard:     newDecryptingExtractor(extractCreditCards, webData),
-	category.Extension:      newPlainExtractor(extractExtensions, securePreferences),
+	category.Extension:      newExtensionExtractor(extractExtensions),
 	category.LocalStorage:   newPlainExtractor(extractLocalStorage, localStorage),
 	category.SessionStorage: newPlainExtractor(extractSessionStorage, sessionStorage),
 }
 
+// withoutExtensionList names forks whose Preferences files hold no extension list, so extensions are unsupported there.
+var withoutExtensionList = map[string]bool{"qq": true, "sogou": true}
+
 func Extractors(dir browser.UserDataDir, _ browser.Profile) browser.Extractors {
-	return kindExtractors(vaultKindOf(dir))
+	extractors := kindExtractors(vaultKindOf(dir))
+	if withoutExtensionList[dir.Browser.Name] {
+		delete(extractors, category.Extension)
+	}
+	return extractors
 }
 
 func kindExtractors(vaultKind string) browser.Extractors {
