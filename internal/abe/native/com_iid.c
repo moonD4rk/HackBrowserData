@@ -43,16 +43,20 @@ static const BrowserComIds kBrowsers[] = {
         { 0x1BF5208B, 0x295F, 0x4992, { 0xB5, 0xF4, 0x3A, 0x9B, 0xB6, 0x49, 0x48, 0x38 } },
     },
 
-    // Microsoft Edge
+    // Microsoft Edge — three elevator generations; abe_extractor tries newest first (v3, v2, v1).
     // CLSID:  {1FCBE96C-1697-43AF-9140-2897C7C69767}
-    // v1 IID: {C9C2B807-7731-4F34-81B7-44FF7779522B}  IEdgeElevatorFinal
-    // v2 IID: {8F7B6792-784D-4047-845D-1782EFBEF205}  IEdgeElevator2Final
+    // v1 IID: {C9C2B807-7731-4F34-81B7-44FF7779522B}  IElevatorEdge
+    // v2 IID: {8F7B6792-784D-4047-845D-1782EFBEF205}  IElevator2
+    // v3 IID: {12B23868-6DCD-4D1A-AD4C-65B0285201FC}  IElevator3Edge (Edge 157 deregistered v1/v2)
+    // DecryptData stays at slot 8 for all three: the gen-2/gen-3 methods are appended after it.
     {
         "msedge.exe", BROWSER_EDGE,
         { 0x1FCBE96C, 0x1697, 0x43AF, { 0x91, 0x40, 0x28, 0x97, 0xC7, 0xC6, 0x97, 0x67 } },
         { 0xC9C2B807, 0x7731, 0x4F34, { 0x81, 0xB7, 0x44, 0xFF, 0x77, 0x79, 0x52, 0x2B } },
         TRUE,
         { 0x8F7B6792, 0x784D, 0x4047, { 0x84, 0x5D, 0x17, 0x82, 0xEF, 0xBE, 0xF2, 0x05 } },
+        TRUE,
+        { 0x12B23868, 0x6DCD, 0x4D1A, { 0xAD, 0x4C, 0x65, 0xB0, 0x28, 0x52, 0x01, 0xFC } },
     },
 
     // CocCoc Browser
