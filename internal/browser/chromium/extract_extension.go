@@ -1,7 +1,9 @@
 package chromium
 
 import (
-	"fmt"
+	"context"
+	"errors"
+	"io/fs"
 	"os"
 
 	"github.com/tidwall/gjson"
@@ -14,6 +16,31 @@ var extensionJSONPaths = []string{
 	"extensions.settings",
 	"settings.extensions",
 	"settings.settings",
+}
+
+var errNoExtensionList = errors.New("cannot find extensions in settings")
+
+// newExtensionExtractor falls back to Preferences, where Linux builds and forks such as 360 keep the list.
+func newExtensionExtractor(parse func(string, browser.Collector) error) browser.Extractor {
+	sources := []browser.Source{securePreferences, preferences}
+	return browser.Extractor{
+		Sources: sources,
+		Extract: func(_ context.Context, input browser.Input, out browser.Collector) error {
+			for _, source := range sources {
+				path, err := input.Path(source)
+				if errors.Is(err, fs.ErrNotExist) {
+					continue
+				}
+				if err == nil {
+					err = parse(path, out)
+				}
+				if !errors.Is(err, errNoExtensionList) {
+					return err
+				}
+			}
+			return errNoExtensionList
+		},
+	}
 }
 
 func extractExtensions(path string, out browser.Collector) error {
@@ -35,7 +62,7 @@ func extractExtensionsAt(path string, jsonPaths []string, out browser.Collector)
 		}
 	}
 	if !settings.Exists() {
-		return fmt.Errorf("cannot find extensions in settings")
+		return errNoExtensionList
 	}
 
 	settings.ForEach(func(id, extension gjson.Result) bool {

@@ -29,7 +29,7 @@ var overrides = []override{
 		browserNames: []string{"opera", "opera-gx", "vought"},
 		vaultKind:    "chromium-opera",
 		extractors: browser.Extractors{
-			category.Extension: newPlainExtractor(extractOperaExtensions, securePreferences),
+			category.Extension: newExtensionExtractor(extractOperaExtensions),
 		},
 	},
 }
