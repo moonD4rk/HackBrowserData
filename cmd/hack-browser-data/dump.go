@@ -36,6 +36,7 @@ func newDumpCommand() *cobra.Command {
 	command.Flags().StringVarP(&flags.ProfilePath, "profile-path", "p", "", "custom profile dir path, get with chrome://version")
 	addKeychainPasswordFlags(command, &keychain)
 	command.Flags().BoolVar(&flags.Zip, "zip", false, "compress output to zip")
+	command.Flags().IntVar(&flags.MaxStorageValue, "max-storage-value", app.DefaultMaxStorageValue, "max storage value chars, 0=unlimited")
 
 	return command
 }

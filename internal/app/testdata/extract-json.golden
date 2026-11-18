@@ -776,7 +776,7 @@
     "last_visit": "2024-06-01T14:00:00Z"
   }
 ]
--- localstorage.json (3847 bytes) --
+-- localstorage.json (3871 bytes) --
 [
   {
     "browser": "Chrome",
@@ -808,7 +808,7 @@
     "is_meta": false,
     "url": "https://app.home.chrome.test",
     "key": "blob",
-    "value": "value is too long, length is 2101, supported max length is 2048"
+    "value": "value too long: 2100 chars (max 2048, raise with --max-storage-value)"
   },
   {
     "browser": "Chrome",
@@ -848,7 +848,7 @@
     "is_meta": false,
     "url": "https://app.work.chrome.test",
     "key": "blob",
-    "value": "value is too long, length is 2101, supported max length is 2048"
+    "value": "value too long: 2100 chars (max 2048, raise with --max-storage-value)"
   },
   {
     "browser": "Chrome",
@@ -888,7 +888,7 @@
     "is_meta": false,
     "url": "https://app.home.edge.test",
     "key": "blob",
-    "value": "value is too long, length is 2101, supported max length is 2048"
+    "value": "value too long: 2100 chars (max 2048, raise with --max-storage-value)"
   },
   {
     "browser": "Microsoft Edge",
@@ -928,7 +928,7 @@
     "is_meta": false,
     "url": "https://app.work.edge.test",
     "key": "blob",
-    "value": "value is too long, length is 2101, supported max length is 2048"
+    "value": "value too long: 2100 chars (max 2048, raise with --max-storage-value)"
   },
   {
     "browser": "Microsoft Edge",

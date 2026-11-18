@@ -78,27 +78,27 @@ Microsoft Edge,Default,https://news.home.edge.test/ja,ニュース,3,2024-03-01T
 Microsoft Edge,Profile 1,https://www.work.edge.test/,Home,42,2024-06-01T12:00:00Z
 Microsoft Edge,Profile 1,https://docs.work.edge.test/guide?q=go&lang=en,"Guide, ""quoted"" & <b>bold</b>",7,2024-06-01T13:00:00Z
 Microsoft Edge,Profile 1,https://news.work.edge.test/ja,ニュース,3,2024-06-01T14:00:00Z
--- localstorage.csv (1829 bytes) --
+-- localstorage.csv (1853 bytes) --
 ﻿browser,profile,is_meta,url,key,value
 Chrome,Default,true,https://app.home.chrome.test,,"meta data, value bytes is [8 150 1]"
 Chrome,Default,true,https://app.home.chrome.test,,"meta data, value bytes is [16 32]"
 Chrome,Default,false,https://app.home.chrome.test,言語,日本語
-Chrome,Default,false,https://app.home.chrome.test,blob,"value is too long, length is 2101, supported max length is 2048"
+Chrome,Default,false,https://app.home.chrome.test,blob,"value too long: 2100 chars (max 2048, raise with --max-storage-value)"
 Chrome,Default,false,https://app.home.chrome.test,greeting,café
 Chrome,Profile 1,true,https://app.work.chrome.test,,"meta data, value bytes is [8 150 1]"
 Chrome,Profile 1,true,https://app.work.chrome.test,,"meta data, value bytes is [16 32]"
 Chrome,Profile 1,false,https://app.work.chrome.test,言語,日本語
-Chrome,Profile 1,false,https://app.work.chrome.test,blob,"value is too long, length is 2101, supported max length is 2048"
+Chrome,Profile 1,false,https://app.work.chrome.test,blob,"value too long: 2100 chars (max 2048, raise with --max-storage-value)"
 Chrome,Profile 1,false,https://app.work.chrome.test,greeting,café
 Microsoft Edge,Default,true,https://app.home.edge.test,,"meta data, value bytes is [8 150 1]"
 Microsoft Edge,Default,true,https://app.home.edge.test,,"meta data, value bytes is [16 32]"
 Microsoft Edge,Default,false,https://app.home.edge.test,言語,日本語
-Microsoft Edge,Default,false,https://app.home.edge.test,blob,"value is too long, length is 2101, supported max length is 2048"
+Microsoft Edge,Default,false,https://app.home.edge.test,blob,"value too long: 2100 chars (max 2048, raise with --max-storage-value)"
 Microsoft Edge,Default,false,https://app.home.edge.test,greeting,café
 Microsoft Edge,Profile 1,true,https://app.work.edge.test,,"meta data, value bytes is [8 150 1]"
 Microsoft Edge,Profile 1,true,https://app.work.edge.test,,"meta data, value bytes is [16 32]"
 Microsoft Edge,Profile 1,false,https://app.work.edge.test,言語,日本語
-Microsoft Edge,Profile 1,false,https://app.work.edge.test,blob,"value is too long, length is 2101, supported max length is 2048"
+Microsoft Edge,Profile 1,false,https://app.work.edge.test,blob,"value too long: 2100 chars (max 2048, raise with --max-storage-value)"
 Microsoft Edge,Profile 1,false,https://app.work.edge.test,greeting,café
 -- password.csv (1170 bytes) --
 ﻿browser,profile,url,username,password,created_at,store

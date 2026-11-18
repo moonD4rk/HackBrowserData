@@ -25,8 +25,6 @@ const (
 	stringFormatLatin1        = 1
 )
 
-const maxLocalStorageValueLength = 2048
-
 // readOnly keeps the open from replaying the journal into new files in the copy, a write that can fail on Windows.
 var readOnly = &opt.Options{ReadOnly: true}
 
@@ -135,12 +133,6 @@ func decodeUTF16LE(encoded []byte) (string, error) {
 }
 
 func decodeLocalStorageValue(value []byte) string {
-	if len(value) >= maxLocalStorageValueLength {
-		return fmt.Sprintf(
-			"value is too long, length is %d, supported max length is %d",
-			len(value), maxLocalStorageValueLength,
-		)
-	}
 	decoded, err := decodeStorageString(value)
 	if err != nil {
 		return fmt.Sprintf("unsupported value encoding: %v", err)

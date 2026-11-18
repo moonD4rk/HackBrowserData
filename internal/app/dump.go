@@ -13,12 +13,13 @@ import (
 
 // DumpFlags are dump's command-line values as cobra parsed them.
 type DumpFlags struct {
-	Browser     string
-	Categories  string
-	Format      string
-	OutputDir   string
-	Zip         bool
-	ProfilePath string
+	Browser         string
+	Categories      string
+	Format          string
+	OutputDir       string
+	Zip             bool
+	ProfilePath     string
+	MaxStorageValue int
 }
 
 type DumpOptions struct {
@@ -56,7 +57,7 @@ func ValidateDump(flags DumpFlags, keychainPassword func(context.Context) (strin
 	return DumpOptions{
 		Target:     Target{Browsers: browsers, ProfilePath: profilePath, HomeDir: home},
 		Categories: categories,
-		Output:     Output{Dir: flags.OutputDir, Format: format, Zip: flags.Zip},
+		Output:     Output{Dir: flags.OutputDir, Format: format, Zip: flags.Zip, MaxStorageValue: flags.MaxStorageValue},
 		Keychain:   KeychainConfig{Path: loginKeychainPath(home), Password: keychainPassword},
 	}, nil
 }

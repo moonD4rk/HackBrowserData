@@ -68,7 +68,7 @@ func ValidateRestore(flags RestoreFlags, stdin io.Reader) (RestoreOptions, error
 	return RestoreOptions{
 		Vaults:     vaults,
 		Categories: categories,
-		Output:     Output{Dir: flags.OutputDir, Format: format, Zip: flags.Zip},
+		Output:     Output{Dir: flags.OutputDir, Format: format, Zip: flags.Zip, MaxStorageValue: DefaultMaxStorageValue},
 	}, nil
 }
 

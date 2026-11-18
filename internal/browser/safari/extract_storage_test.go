@@ -109,17 +109,6 @@ func TestDecodeUTF16LE(t *testing.T) {
 	})
 }
 
-func TestDecodeLocalStorageValue_Truncates(t *testing.T) {
-	// 1100 chars × 2 bytes = 2200 bytes, over the 2048 cap.
-	oversized := encodeUTF16LE(strings.Repeat("x", 1100))
-	got := decodeLocalStorageValue(oversized)
-	assert.Contains(t, got, "too long")
-	assert.Contains(t, got, "2048")
-
-	assert.Contains(t, decodeLocalStorageValue(encodeUTF16LE(strings.Repeat("x", 1024))), "length is 2048", "the cap itself is too long")
-	assert.Equal(t, strings.Repeat("x", 1023), decodeLocalStorageValue(encodeUTF16LE(strings.Repeat("x", 1023))))
-}
-
 func TestExtractLocalStorage_SingleOrigin(t *testing.T) {
 	root := buildTestLocalStorageDir(t, map[string][]testLocalStorageItem{
 		"https://example.com": {{Key: "auth_token", Value: "abc123"}},
@@ -191,7 +180,8 @@ func TestExtractLocalStorage_EmptyItemTable(t *testing.T) {
 	assert.Empty(t, entries)
 }
 
-func TestExtractLocalStorage_TruncatesOversizedValue(t *testing.T) {
+func TestExtractLocalStorage_EmitsFullValue(t *testing.T) {
+	// The size bound moved to the app layer, so the extractor now emits the whole value.
 	root := buildTestLocalStorageDir(t, map[string][]testLocalStorageItem{
 		"https://example.com": {{Key: "big", Value: strings.Repeat("x", 1100)}},
 	})
@@ -200,7 +190,7 @@ func TestExtractLocalStorage_TruncatesOversizedValue(t *testing.T) {
 	entries := collected[record.LocalStorage](t, &out)
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
-	assert.Contains(t, entries[0].Value, "too long")
+	assert.Equal(t, strings.Repeat("x", 1100), entries[0].Value)
 }
 
 func TestExtractLocalStorage_Partitioned(t *testing.T) {

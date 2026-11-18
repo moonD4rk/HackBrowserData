@@ -22,8 +22,6 @@ const (
 	webkitLocalStorageSubdir = "LocalStorage"
 	webkitLocalStorageDB     = "localstorage.sqlite3"
 	webkitOriginSaltName     = "salt" // HMAC salt sibling of the <hash> dirs; not a data dir
-
-	maxLocalStorageValueLength = 2048
 )
 
 // origin file encoding-byte constants (WebCore SecurityOrigin serialization).
@@ -216,20 +214,9 @@ func extractOriginStorage(path, origin string, out browser.Collector) error {
 			out.Fail(fmt.Errorf("row with NULL key in %s", path))
 			continue
 		}
-		out.Add(&record.LocalStorage{URL: origin, Key: key.String, Value: decodeLocalStorageValue(value)})
+		out.Add(&record.LocalStorage{URL: origin, Key: key.String, Value: decodeUTF16LE(value)})
 	}
 	return rows.Err()
-}
-
-// decodeLocalStorageValue turns values at or above the cap into a size marker to bound the output, as Chromium's does.
-func decodeLocalStorageValue(encoded []byte) string {
-	if len(encoded) >= maxLocalStorageValueLength {
-		return fmt.Sprintf(
-			"value is too long, length is %d, supported max length is %d",
-			len(encoded), maxLocalStorageValueLength,
-		)
-	}
-	return decodeUTF16LE(encoded)
 }
 
 // decodeUTF16LE returns an odd-length value as is, so a stray byte does not drop the row.
