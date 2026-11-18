@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"unicode/utf8"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
@@ -128,39 +127,12 @@ func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories 
 func (r runner) runExtraction(
 	ctx context.Context, extraction plannedExtraction, input browser.Input, browserName string,
 ) (Result, error) {
-	recordCollector := &collector{browserName: browserName, profileName: extraction.ProfileName}
+	recordCollector := &collector{browserName: browserName, profileName: extraction.ProfileName, maxStorageValue: r.maxStorageValue}
 	err := extraction.extractor.Extract(ctx, input, recordCollector)
-	limitStorageValues(recordCollector.records, r.maxStorageValue)
 	if writeErr := r.writer.Write(extraction.Category, recordCollector.records); writeErr != nil {
 		return Result{}, writeErr
 	}
 	return recordCollector.result(extraction.Extraction, err), nil
-}
-
-// limitStorageValues replaces an over-long localStorage/sessionStorage value with a size marker; limit <= 0 keeps all.
-func limitStorageValues(records []record.Record, limit int) {
-	if limit <= 0 {
-		return
-	}
-	for _, row := range records {
-		switch stored := row.(type) {
-		case *record.LocalStorage:
-			if !stored.IsMeta {
-				stored.Value = capStorageValue(stored.Value, limit)
-			}
-		case *record.SessionStorage:
-			if !stored.IsMeta {
-				stored.Value = capStorageValue(stored.Value, limit)
-			}
-		}
-	}
-}
-
-func capStorageValue(value string, limit int) string {
-	if count := utf8.RuneCountInString(value); count > limit {
-		return fmt.Sprintf("value too long: %d chars (max %d, raise with --max-storage-value)", count, limit)
-	}
-	return value
 }
 
 func failAll(extractions []plannedExtraction, err error) []Result {

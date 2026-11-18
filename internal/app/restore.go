@@ -18,14 +18,15 @@ import (
 
 // RestoreFlags are restore's command-line values as cobra parsed them.
 type RestoreFlags struct {
-	KeyFile    string // a keys.json path, or "-" for stdin
-	DataDir    string
-	DataZip    string
-	Browser    string
-	Categories string
-	Format     string
-	OutputDir  string
-	Zip        bool
+	KeyFile         string // a keys.json path, or "-" for stdin
+	DataDir         string
+	DataZip         string
+	Browser         string
+	Categories      string
+	Format          string
+	OutputDir       string
+	Zip             bool
+	MaxStorageValue int
 }
 
 type RestoreOptions struct {
@@ -54,6 +55,9 @@ func ValidateRestore(flags RestoreFlags, stdin io.Reader) (RestoreOptions, error
 	if err := checkOutputDir(flags.OutputDir); err != nil {
 		return RestoreOptions{}, err
 	}
+	if err := checkMaxStorageValue(flags.MaxStorageValue); err != nil {
+		return RestoreOptions{}, err
+	}
 	if err := checkRestoreData(flags.DataDir, flags.DataZip); err != nil {
 		return RestoreOptions{}, err
 	}
@@ -68,7 +72,7 @@ func ValidateRestore(flags RestoreFlags, stdin io.Reader) (RestoreOptions, error
 	return RestoreOptions{
 		Vaults:     vaults,
 		Categories: categories,
-		Output:     Output{Dir: flags.OutputDir, Format: format, Zip: flags.Zip, MaxStorageValue: DefaultMaxStorageValue},
+		Output:     Output{Dir: flags.OutputDir, Format: format, Zip: flags.Zip, MaxStorageValue: flags.MaxStorageValue},
 	}, nil
 }
 

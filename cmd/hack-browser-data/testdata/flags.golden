@@ -42,6 +42,7 @@ hack-browser-data restore --dir -d string "results"
 hack-browser-data restore --format -f string "json"
 hack-browser-data restore --help -h bool "false"
 hack-browser-data restore --keys string ""
+hack-browser-data restore --max-storage-value int "2048"
 hack-browser-data restore --zip bool "false"
 hack-browser-data restore --verbose -v bool "false" inherited
 hack-browser-data version --help -h bool "false"

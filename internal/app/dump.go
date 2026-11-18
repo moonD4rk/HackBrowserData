@@ -50,6 +50,9 @@ func ValidateDump(flags DumpFlags, keychainPassword func(context.Context) (strin
 	if err != nil {
 		return DumpOptions{}, err
 	}
+	if err := checkMaxStorageValue(flags.MaxStorageValue); err != nil {
+		return DumpOptions{}, err
+	}
 	home, err := homeDir()
 	if err != nil {
 		return DumpOptions{}, err

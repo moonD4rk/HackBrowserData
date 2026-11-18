@@ -115,6 +115,7 @@ func restoreGolden(t *testing.T, flags app.RestoreFlags) string {
 	if flags.Format == "" {
 		flags.Format = "json"
 	}
+	flags.MaxStorageValue = app.DefaultMaxStorageValue // match the extract goldens, which cap at the default
 	options, err := app.ValidateRestore(flags, nil)
 	require.NoError(t, err)
 
