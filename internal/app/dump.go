@@ -23,14 +23,15 @@ type DumpFlags struct {
 }
 
 type DumpOptions struct {
-	Target     Target
-	Categories []category.Category
-	Output     Output
-	Keychain   KeychainConfig
+	Target          Target
+	Categories      []category.Category
+	Output          Output
+	Keychain        KeychainConfig
+	FirefoxPassword func(ctx context.Context) (string, error) // nil is the empty password; Execute reads it at most once
 }
 
 // ValidateDump checks every flag before any browser or secret is touched, so a bad flag fails fast.
-func ValidateDump(flags DumpFlags, keychainPassword func(context.Context) (string, error)) (DumpOptions, error) {
+func ValidateDump(flags DumpFlags, keychainPassword, firefoxPassword func(context.Context) (string, error)) (DumpOptions, error) {
 	browsers, err := parseBrowsers(flags.Browser)
 	if err != nil {
 		return DumpOptions{}, err
@@ -58,10 +59,11 @@ func ValidateDump(flags DumpFlags, keychainPassword func(context.Context) (strin
 		return DumpOptions{}, err
 	}
 	return DumpOptions{
-		Target:     Target{Browsers: browsers, ProfilePath: profilePath, HomeDir: home},
-		Categories: categories,
-		Output:     Output{Dir: flags.OutputDir, Format: format, Zip: flags.Zip, MaxStorageValue: flags.MaxStorageValue},
-		Keychain:   KeychainConfig{Path: loginKeychainPath(home), Password: keychainPassword},
+		Target:          Target{Browsers: browsers, ProfilePath: profilePath, HomeDir: home},
+		Categories:      categories,
+		Output:          Output{Dir: flags.OutputDir, Format: format, Zip: flags.Zip, MaxStorageValue: flags.MaxStorageValue},
+		Keychain:        KeychainConfig{Path: loginKeychainPath(home), Password: keychainPassword},
+		FirefoxPassword: firefoxPassword,
 	}, nil
 }
 

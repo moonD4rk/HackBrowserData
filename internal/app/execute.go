@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
@@ -19,13 +20,28 @@ import (
 // ran before it, with the files written, so the caller can list them.
 func Execute(
 	ctx context.Context, discovery Discovery, categories []category.Category, output Output, keychainConfig KeychainConfig,
-	firefoxPassword func(context.Context) ([]byte, error),
+	firefoxPassword func(context.Context) (string, error),
 ) (Summary, error) {
 	keychain := newLoginKeychain(keychainConfig)
 	fromMachine := runner{
-		extractors: extractorsFor, retrieveKeys: keysFromMachine(keychain), loginKeychain: keychain, firefoxPassword: firefoxPassword,
+		extractors: extractorsFor, retrieveKeys: keysFromMachine(keychain), loginKeychain: keychain,
+		firefoxPassword: readOnce(firefoxPassword),
 	}
 	return execute(ctx, discovery, categories, output, fromMachine)
+}
+
+// readOnce lets every protected Firefox profile of a run share one read, since stdin yields the password only once.
+func readOnce(read func(context.Context) (string, error)) func(context.Context) (string, error) {
+	if read == nil {
+		return nil
+	}
+	var once sync.Once
+	var password string
+	var err error
+	return func(ctx context.Context) (string, error) {
+		once.Do(func() { password, err = read(ctx) })
+		return password, err
+	}
 }
 
 // ExecuteWithKeys decrypts with a key file's keys, so it never reads this machine's secret stores.
@@ -59,7 +75,7 @@ type runner struct {
 	extractors      extractorsFunc
 	retrieveKeys    dirKeysFunc
 	loginKeychain   browser.LoginKeychain
-	firefoxPassword func(context.Context) ([]byte, error)
+	firefoxPassword func(context.Context) (string, error)
 	logProgress     bool
 	maxStorageValue int
 }

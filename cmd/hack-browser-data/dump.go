@@ -45,7 +45,7 @@ func newDumpCommand() *cobra.Command {
 }
 
 func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychain keychainFlags, firefox firefoxFlags) error {
-	options, err := app.ValidateDump(flags, keychainPasswordFunc(keychain, os.Stdin))
+	options, err := app.ValidateDump(flags, keychainPasswordFunc(keychain, os.Stdin), firefoxPasswordFunc(firefox, os.Stdin))
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychai
 	if warnIfNothingFound(stderr, discovery, "no browsers found") {
 		return nil
 	}
-	summary, err := app.Execute(ctx, discovery, options.Categories, options.Output, options.Keychain, firefoxPasswordFunc(firefox, os.Stdin))
+	summary, err := app.Execute(ctx, discovery, options.Categories, options.Output, options.Keychain, options.FirefoxPassword)
 	announceExport(stderr, summary.Exported)
 	if ctx.Err() == nil {
 		report(stderr, summary)

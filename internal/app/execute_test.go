@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
+	"github.com/moond4rk/hackbrowserdata/internal/browser/browsertest"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
@@ -266,4 +268,30 @@ func TestExecute_OutputFailureStopsTheRunAndLeavesNoCopies(t *testing.T) {
 	require.NotEmpty(t, copied)
 	_, statErr := os.Stat(copied)
 	assert.ErrorIs(t, statErr, fs.ErrNotExist)
+}
+
+// TestExecute_FirefoxPasswordReadOnce: stdin yields the password once, yet every protected profile of the run needs it.
+func TestExecute_FirefoxPasswordReadOnce(t *testing.T) {
+	home := t.TempDir()
+	firefoxBrowser, ok := browser.Lookup("firefox")
+	require.True(t, ok)
+	profilesDir := filepath.Join(home, filepath.FromSlash(firefoxBrowser.Platform().UserDataDirs[0]))
+	globalSalt, masterKey := bytes.Repeat([]byte("16-byte-salt-abc"), 3), []byte("firefox-pw-master-key-24")
+	for _, profile := range []string{"a.default", "b.work"} {
+		browsertest.WriteFirefoxPrimaryPasswordProfile(t, filepath.Join(profilesDir, profile), globalSalt, []byte("hunter2"), [][]byte{masterKey})
+	}
+	reads := 0
+	password := func(context.Context) (string, error) {
+		reads++
+		return "hunter2", nil
+	}
+
+	discovery := Discover(context.Background(), Target{Browsers: []browser.Browser{firefoxBrowser}, HomeDir: home})
+	summary, err := Execute(context.Background(), discovery, []category.Category{category.Password}, Output{Dir: t.TempDir()}, KeychainConfig{}, password)
+	require.NoError(t, err)
+	require.Len(t, summary.Results, 2)
+	for _, result := range summary.Results {
+		assert.Equal(t, OutcomeOK, result.Outcome, result.ProfileName)
+	}
+	assert.Equal(t, 1, reads, "one read serves every protected profile of the run")
 }

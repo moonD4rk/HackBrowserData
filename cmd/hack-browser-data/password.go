@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -40,25 +39,18 @@ func addFirefoxPasswordFlags(command *cobra.Command, flags *firefoxFlags) {
 	command.MarkFlagsMutuallyExclusive("firefox-pw", "firefox-pw-stdin")
 }
 
-// firefoxPasswordFunc is read lazily when a profile has a primary password; no flag means the empty password, no prompt.
-func firefoxPasswordFunc(flags firefoxFlags, stdin *os.File) func(context.Context) ([]byte, error) {
+// firefoxPasswordFunc reads a flag, else the first line of stdin; nil means the empty password, and it never prompts.
+func firefoxPasswordFunc(flags firefoxFlags, stdin *os.File) func(context.Context) (string, error) {
 	switch {
 	case flags.password != "":
-		password := []byte(flags.password)
-		return func(context.Context) ([]byte, error) { return password, nil }
+		password := flags.password
+		return func(context.Context) (string, error) { return password, nil }
 	case flags.passwordStdin:
-		var once sync.Once
-		var password []byte
-		var readErr error
-		return func(ctx context.Context) ([]byte, error) {
-			once.Do(func() {
-				line, err := untilDone(ctx, func() (string, error) { return firstLine(stdin) })
-				password, readErr = []byte(line), err
-			})
-			return password, readErr
+		return func(ctx context.Context) (string, error) {
+			return untilDone(ctx, func() (string, error) { return firstLine(stdin) })
 		}
 	default:
-		return func(context.Context) ([]byte, error) { return nil, nil }
+		return nil
 	}
 }
 
