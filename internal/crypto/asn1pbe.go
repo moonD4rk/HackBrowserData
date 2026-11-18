@@ -46,20 +46,21 @@ type privateKeyPBE struct {
 	Encrypted []byte
 }
 
-func (pbe privateKeyPBE) Decrypt(globalSalt []byte) ([]byte, error) {
-	key, iv := pbe.deriveKeyAndIV(globalSalt)
+func (pbe privateKeyPBE) Decrypt(secret []byte) ([]byte, error) {
+	key, iv := pbe.deriveKeyAndIV(secret)
 	return des3Decrypt(key, iv, pbe.Encrypted)
 }
 
-func (pbe privateKeyPBE) Encrypt(globalSalt, plaintext []byte) ([]byte, error) {
-	key, iv := pbe.deriveKeyAndIV(globalSalt)
+func (pbe privateKeyPBE) Encrypt(secret, plaintext []byte) ([]byte, error) {
+	key, iv := pbe.deriveKeyAndIV(secret)
 	return des3Encrypt(key, iv, plaintext)
 }
 
 // deriveKeyAndIV follows https://searchfox.org/mozilla-central/source/security/nss/lib/softoken/lowpbe.c
-func (pbe privateKeyPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
+// secret is the global salt, or the global salt followed by the primary password when the profile has one.
+func (pbe privateKeyPBE) deriveKeyAndIV(secret []byte) ([]byte, []byte) {
 	entrySalt := pbe.Algorithm.Salt.EntrySalt
-	passwordHash := sha1.Sum(globalSalt)
+	passwordHash := sha1.Sum(secret)
 	combinedHash := sha1.Sum(append(passwordHash[:], entrySalt...))
 	paddedSalt := zeroPad(entrySalt, 20)
 
@@ -106,18 +107,19 @@ type saltAttributes struct {
 	}
 }
 
-func (pbe passwordCheckPBE) Decrypt(globalSalt []byte) ([]byte, error) {
-	key, iv := pbe.deriveKeyAndIV(globalSalt)
+func (pbe passwordCheckPBE) Decrypt(secret []byte) ([]byte, error) {
+	key, iv := pbe.deriveKeyAndIV(secret)
 	return AESCBCDecrypt(key, iv, pbe.Encrypted)
 }
 
-func (pbe passwordCheckPBE) Encrypt(globalSalt, plaintext []byte) ([]byte, error) {
-	key, iv := pbe.deriveKeyAndIV(globalSalt)
+func (pbe passwordCheckPBE) Encrypt(secret, plaintext []byte) ([]byte, error) {
+	key, iv := pbe.deriveKeyAndIV(secret)
 	return AESCBCEncrypt(key, iv, plaintext)
 }
 
-func (pbe passwordCheckPBE) deriveKeyAndIV(globalSalt []byte) ([]byte, []byte) {
-	password := sha1.Sum(globalSalt)
+// secret is the global salt, or the global salt followed by the primary password when the profile has one.
+func (pbe passwordCheckPBE) deriveKeyAndIV(secret []byte) ([]byte, []byte) {
+	password := sha1.Sum(secret)
 
 	params := pbe.Algorithm.KDFParams.PBKDF2.Salt
 	key := PBKDF2Key(password[:], params.EntrySalt, params.IterationCount, params.KeySize, sha256.New)

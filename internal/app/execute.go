@@ -19,9 +19,12 @@ import (
 // ran before it, with the files written, so the caller can list them.
 func Execute(
 	ctx context.Context, discovery Discovery, categories []category.Category, output Output, keychainConfig KeychainConfig,
+	firefoxPassword func(context.Context) ([]byte, error),
 ) (Summary, error) {
 	keychain := newLoginKeychain(keychainConfig)
-	fromMachine := runner{extractors: extractorsFor, retrieveKeys: keysFromMachine(keychain), loginKeychain: keychain}
+	fromMachine := runner{
+		extractors: extractorsFor, retrieveKeys: keysFromMachine(keychain), loginKeychain: keychain, firefoxPassword: firefoxPassword,
+	}
 	return execute(ctx, discovery, categories, output, fromMachine)
 }
 
@@ -56,6 +59,7 @@ type runner struct {
 	extractors      extractorsFunc
 	retrieveKeys    dirKeysFunc
 	loginKeychain   browser.LoginKeychain
+	firefoxPassword func(context.Context) ([]byte, error)
 	logProgress     bool
 	maxStorageValue int
 }
@@ -109,7 +113,7 @@ func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories 
 		if err := ctx.Err(); err != nil {
 			return summary, fmt.Errorf("run stopped: %w", err)
 		}
-		input := browser.NewInput(dirSnapshot, extraction.profile, keys.get, r.loginKeychain)
+		input := browser.NewInput(dirSnapshot, extraction.profile, keys.get, r.loginKeychain).WithFirefoxPassword(r.firefoxPassword)
 		result, err := r.runExtraction(ctx, extraction, input, dir.Browser.DisplayName)
 		if err != nil {
 			return summary, err

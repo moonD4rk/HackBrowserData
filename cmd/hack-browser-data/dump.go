@@ -14,6 +14,7 @@ func newDumpCommand() *cobra.Command {
 	var (
 		flags    app.DumpFlags
 		keychain keychainFlags
+		firefox  firefoxFlags
 	)
 
 	command := &cobra.Command{
@@ -25,7 +26,7 @@ func newDumpCommand() *cobra.Command {
   hack-browser-data dump -f cookie-editor
   hack-browser-data dump --zip`,
 		RunE: func(command *cobra.Command, args []string) error {
-			return runDump(command.Context(), command.ErrOrStderr(), flags, keychain)
+			return runDump(command.Context(), command.ErrOrStderr(), flags, keychain, firefox)
 		},
 	}
 
@@ -35,13 +36,14 @@ func newDumpCommand() *cobra.Command {
 	command.Flags().StringVarP(&flags.OutputDir, "dir", "d", "results", "output directory")
 	command.Flags().StringVarP(&flags.ProfilePath, "profile-path", "p", "", "custom profile dir path, get with chrome://version")
 	addKeychainPasswordFlags(command, &keychain)
+	addFirefoxPasswordFlags(command, &firefox)
 	command.Flags().BoolVar(&flags.Zip, "zip", false, "compress output to zip")
 	command.Flags().IntVar(&flags.MaxStorageValue, "max-storage-value", app.DefaultMaxStorageValue, "max storage value chars, 0=unlimited")
 
 	return command
 }
 
-func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychain keychainFlags) error {
+func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychain keychainFlags, firefox firefoxFlags) error {
 	options, err := app.ValidateDump(flags, keychainPasswordFunc(keychain, os.Stdin))
 	if err != nil {
 		return err
@@ -50,7 +52,7 @@ func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychai
 	if warnIfNothingFound(stderr, discovery, "no browsers found") {
 		return nil
 	}
-	summary, err := app.Execute(ctx, discovery, options.Categories, options.Output, options.Keychain)
+	summary, err := app.Execute(ctx, discovery, options.Categories, options.Output, options.Keychain, firefoxPasswordFunc(firefox, os.Stdin))
 	announceExport(stderr, summary.Exported)
 	if ctx.Err() == nil {
 		report(stderr, summary)

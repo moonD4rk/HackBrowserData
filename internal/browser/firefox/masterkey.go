@@ -15,13 +15,14 @@ import (
 )
 
 // retrieveMasterKey derives the key candidates in key4.db and returns the one that opens the logins in loginsPath.
-func retrieveMasterKey(key4Path, loginsPath string) ([]byte, error) {
+// primaryPassword is empty when the user gave none; a profile protected by a primary password needs the right one.
+func retrieveMasterKey(key4Path, loginsPath string, primaryPassword []byte) ([]byte, error) {
 	key4, err := readKey4DB(key4Path)
 	if err != nil {
 		return nil, err
 	}
 
-	keys, err := key4.deriveKeys()
+	keys, err := key4.deriveKeys(primaryPassword)
 	if err != nil {
 		return nil, err
 	}
@@ -89,8 +90,14 @@ func readKey4DB(path string) (*key4DB, error) {
 	return &record, nil
 }
 
-func (k *key4DB) deriveKeys() ([][]byte, error) {
-	if err := k.verifyPasswordCheck(); err != nil {
+var (
+	errPrimaryPasswordRequired = errors.New("profile has a primary password; pass it with --firefox-pw")
+	errPrimaryPasswordWrong    = errors.New("primary password is incorrect")
+)
+
+func (k *key4DB) deriveKeys(primaryPassword []byte) ([][]byte, error) {
+	password, err := k.selectPassword(primaryPassword)
+	if err != nil {
 		return nil, err
 	}
 
@@ -99,7 +106,7 @@ func (k *key4DB) deriveKeys() ([][]byte, error) {
 		if !bytes.Equal(entry.typeTag, nssKeyTypeTag) {
 			continue
 		}
-		key, err := k.decryptPrivateKey(entry)
+		key, err := k.decryptPrivateKey(entry, password)
 		if err != nil {
 			log.Debugf("decrypt nss private key: %v", err)
 			continue
@@ -109,27 +116,37 @@ func (k *key4DB) deriveKeys() ([][]byte, error) {
 	return keys, nil
 }
 
-func (k *key4DB) verifyPasswordCheck() error {
-	pbe, err := crypto.NewASN1PBE(k.passwordCheck)
-	if err != nil {
-		return fmt.Errorf("parse password check: %w", err)
+// selectPassword returns the empty password for a profile with no primary password, else the user's once it checks out,
+// so one run can mix profiles that have a primary password with the many that do not.
+func (k *key4DB) selectPassword(primaryPassword []byte) ([]byte, error) {
+	if k.passwordChecks(nil) {
+		return nil, nil
 	}
-	plain, err := pbe.Decrypt(k.globalSalt)
-	if err != nil {
-		return fmt.Errorf("decrypt password check: %w", err)
+	if len(primaryPassword) > 0 && k.passwordChecks(primaryPassword) {
+		return primaryPassword, nil
 	}
-	if !bytes.Contains(plain, []byte("password-check")) {
-		return errors.New("password check verification failed")
+	if len(primaryPassword) == 0 {
+		return nil, errPrimaryPasswordRequired
 	}
-	return nil
+	return nil, errPrimaryPasswordWrong
 }
 
-func (k *key4DB) decryptPrivateKey(entry privateKey) ([]byte, error) {
+// passwordChecks reports whether the password decrypts the "password-check" marker metaData holds for exactly this test.
+func (k *key4DB) passwordChecks(password []byte) bool {
+	pbe, err := crypto.NewASN1PBE(k.passwordCheck)
+	if err != nil {
+		return false
+	}
+	plain, err := pbe.Decrypt(saltWithPassword(k.globalSalt, password))
+	return err == nil && bytes.Contains(plain, []byte("password-check"))
+}
+
+func (k *key4DB) decryptPrivateKey(entry privateKey, password []byte) ([]byte, error) {
 	pbe, err := crypto.NewASN1PBE(entry.encrypted)
 	if err != nil {
 		return nil, fmt.Errorf("parse private key: %w", err)
 	}
-	derivedKey, err := pbe.Decrypt(k.globalSalt)
+	derivedKey, err := pbe.Decrypt(saltWithPassword(k.globalSalt, password))
 	if err != nil {
 		return nil, fmt.Errorf("decrypt private key: %w", err)
 	}
@@ -138,6 +155,18 @@ func (k *key4DB) decryptPrivateKey(entry privateKey) ([]byte, error) {
 	}
 	// Firefox 144+ uses AES-256-CBC, so the whole derived key is kept rather than 3DES's 24 bytes.
 	return derivedKey, nil
+}
+
+// saltWithPassword is the PBE input NSS hashes: the global salt, or the global salt followed by the primary password.
+// It never mutates globalSalt, which the caller reuses for the password check and every key entry.
+func saltWithPassword(globalSalt, password []byte) []byte {
+	if len(password) == 0 {
+		return globalSalt
+	}
+	combined := make([]byte, 0, len(globalSalt)+len(password))
+	combined = append(combined, globalSalt...)
+	combined = append(combined, password...)
+	return combined
 }
 
 type encryptedLogin struct {
