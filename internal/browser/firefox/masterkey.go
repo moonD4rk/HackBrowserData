@@ -125,14 +125,14 @@ func (k *key4DB) selectPassword(primaryPassword func() ([]byte, error)) ([]byte,
 	if err != nil {
 		return nil, fmt.Errorf("parse key4.db password check: %w", err)
 	}
-	if passwordChecks(pbe, saltWithPassword(k.globalSalt, nil)) {
+	if passwordChecks(pbe, crypto.NSSPasswordKey(k.globalSalt, nil)) {
 		return nil, nil
 	}
 	password, err := primaryPassword()
 	if err != nil {
 		return nil, err
 	}
-	if len(password) > 0 && passwordChecks(pbe, saltWithPassword(k.globalSalt, password)) {
+	if len(password) > 0 && passwordChecks(pbe, crypto.NSSPasswordKey(k.globalSalt, password)) {
 		return password, nil
 	}
 	if len(password) == 0 {
@@ -141,9 +141,9 @@ func (k *key4DB) selectPassword(primaryPassword func() ([]byte, error)) ([]byte,
 	return nil, errPrimaryPasswordWrong
 }
 
-// passwordChecks reports whether secret decrypts the "password-check" marker the profile stored in metaData.item2.
-func passwordChecks(pbe crypto.ASN1PBE, secret []byte) bool {
-	plain, err := pbe.Decrypt(secret)
+// passwordChecks reports whether passwordKey decrypts the "password-check" marker the profile stored in metaData.item2.
+func passwordChecks(pbe crypto.ASN1PBE, passwordKey []byte) bool {
+	plain, err := pbe.Decrypt(passwordKey)
 	return err == nil && bytes.Contains(plain, []byte("password-check"))
 }
 
@@ -152,7 +152,7 @@ func (k *key4DB) decryptPrivateKey(entry privateKey, password []byte) ([]byte, e
 	if err != nil {
 		return nil, fmt.Errorf("parse private key: %w", err)
 	}
-	derivedKey, err := pbe.Decrypt(saltWithPassword(k.globalSalt, password))
+	derivedKey, err := pbe.Decrypt(crypto.NSSPasswordKey(k.globalSalt, password))
 	if err != nil {
 		return nil, fmt.Errorf("decrypt private key: %w", err)
 	}
@@ -161,18 +161,6 @@ func (k *key4DB) decryptPrivateKey(entry privateKey, password []byte) ([]byte, e
 	}
 	// Firefox 144+ uses AES-256-CBC, so the whole derived key is kept rather than 3DES's 24 bytes.
 	return derivedKey, nil
-}
-
-// saltWithPassword is the PBE input NSS hashes: the global salt, or the global salt followed by the primary password.
-// It never mutates globalSalt, which the caller reuses for the password check and every key entry.
-func saltWithPassword(globalSalt, password []byte) []byte {
-	if len(password) == 0 {
-		return globalSalt
-	}
-	combined := make([]byte, 0, len(globalSalt)+len(password))
-	combined = append(combined, globalSalt...)
-	combined = append(combined, password...)
-	return combined
 }
 
 type encryptedLogin struct {

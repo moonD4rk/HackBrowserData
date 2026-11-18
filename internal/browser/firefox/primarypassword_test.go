@@ -13,21 +13,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/crypto"
 )
 
-func TestSaltWithPassword(t *testing.T) {
-	salt := []byte("saltsalt")
-
-	// An empty password derives from the global salt alone.
-	assert.Equal(t, salt, saltWithPassword(salt, nil))
-
-	// A password is appended after the salt.
-	assert.Equal(t, []byte("saltsaltpw"), saltWithPassword(salt, []byte("pw")))
-
-	// The result must not share globalSalt's backing array, which the password check and every key entry reuse.
-	got := saltWithPassword(salt, []byte("pw"))
-	got[0] = 'X'
-	assert.Equal(t, []byte("saltsalt"), salt, "globalSalt must not be mutated")
-}
-
 // passwordCheckPBEHex is a real metaData.item2 PBE blob from crypto's vectors (global salt "moond4rk" x3); its single
 // 16-byte ciphertext block is swapped for one over "password-check" to make a primary-password fixture.
 const passwordCheckPBEHex = "307a3066060960864801650304012e3059303a060960864801650304012e302d04186d6f6f6e6434726b6d6f6f6e6434726b6d6f6f6e6434726b020101020120300b060960864801650304012e301b060960864801650304012e040e303132333435363730313233343504100474679f2e6256518b7adb877beaa154"
@@ -39,7 +24,7 @@ func passwordCheckFor(t *testing.T, globalSalt, password []byte) []byte {
 	require.NoError(t, err)
 	pbe, err := crypto.NewASN1PBE(blob)
 	require.NoError(t, err)
-	cipher, err := pbe.Encrypt(saltWithPassword(globalSalt, password), []byte("password-check"))
+	cipher, err := pbe.Encrypt(crypto.NSSPasswordKey(globalSalt, password), []byte("password-check"))
 	require.NoError(t, err)
 	require.Len(t, cipher, 16, "a one-block ciphertext replaces the vector's own")
 	return append(append([]byte(nil), blob[:len(blob)-len(cipher)]...), cipher...)
@@ -93,7 +78,7 @@ func TestSelectPassword_CorruptCheck(t *testing.T) {
 
 func TestRetrieveMasterKey_PrimaryPassword(t *testing.T) {
 	dir := t.TempDir()
-	globalSalt := []byte("home-global-salt-20b")
+	globalSalt := bytes.Repeat([]byte("16-byte-salt-abc"), 3) // NSS's 48-byte salt for a newly set primary password
 	password := []byte("hunter2")
 	masterKey := []byte("firefox-pw-master-key-24")
 	browsertest.WriteFirefoxPrimaryPasswordProfile(t, dir, globalSalt, password, [][]byte{masterKey})
