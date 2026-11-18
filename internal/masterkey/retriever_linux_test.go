@@ -51,3 +51,11 @@ func TestPlatformRetrievers_Linux(t *testing.T) {
 	assert.Equal(t, V10, platformRetrievers[0].Version())
 	assert.Equal(t, V11, platformRetrievers[1].Version())
 }
+
+func TestLabelMatches(t *testing.T) {
+	assert.True(t, labelMatches("Chrome Safe Storage", "Chrome Safe Storage"), "exact label")
+	assert.True(t, labelMatches("Chrome Keys/Chrome Safe Storage", "Chrome Safe Storage"), "KWallet folder/entry form")
+	assert.False(t, labelMatches("Chromium Safe Storage", "Chrome Safe Storage"), "a different browser must not match")
+	assert.False(t, labelMatches("Chromium Keys/Chromium Safe Storage", "Chrome Safe Storage"), "nor its folder/entry form")
+	assert.False(t, labelMatches("", "Chrome Safe Storage"), "an unreadable label must not match")
+}
