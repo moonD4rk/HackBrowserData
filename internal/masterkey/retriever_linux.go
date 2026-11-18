@@ -40,7 +40,7 @@ const (
 	secretCallTimeout = 10 * time.Second
 )
 
-var errKeyringLocked = errors.New("keyring or wallet is locked") //nolint:unused // only used on linux
+var errKeyringLocked = errors.New("keyring or wallet is locked")
 
 // dbusSecret is the org.freedesktop.Secret.Item.GetSecret reply; a plain session leaves Value unencrypted.
 type dbusSecret struct {
