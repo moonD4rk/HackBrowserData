@@ -150,9 +150,6 @@ func profileKey(ctx context.Context, input browser.Input, loginsPath string) ([]
 	if err != nil {
 		return nil, err
 	}
-	primaryPassword, err := input.FirefoxPrimaryPassword(ctx)
-	if err != nil {
-		return nil, err
-	}
+	primaryPassword := func() ([]byte, error) { return input.FirefoxPrimaryPassword(ctx) }
 	return retrieveMasterKey(key4Path, loginsPath, primaryPassword)
 }

@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -46,9 +47,15 @@ func firefoxPasswordFunc(flags firefoxFlags, stdin *os.File) func(context.Contex
 		password := []byte(flags.password)
 		return func(context.Context) ([]byte, error) { return password, nil }
 	case flags.passwordStdin:
+		var once sync.Once
+		var password []byte
+		var readErr error
 		return func(ctx context.Context) ([]byte, error) {
-			line, err := untilDone(ctx, func() (string, error) { return firstLine(stdin) })
-			return []byte(line), err
+			once.Do(func() {
+				line, err := untilDone(ctx, func() (string, error) { return firstLine(stdin) })
+				password, readErr = []byte(line), err
+			})
+			return password, readErr
 		}
 	default:
 		return func(context.Context) ([]byte, error) { return nil, nil }

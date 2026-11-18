@@ -53,7 +53,21 @@ func WriteFirefoxUserDataDir(t *testing.T, profilesDir string) {
 	}
 }
 
+// WriteFirefoxPrimaryPasswordProfile writes one profile at dir whose key4.db is sealed with globalSalt+password, so its
+// master key needs that password; logins stay sealed with the last key, the master key.
+func WriteFirefoxPrimaryPasswordProfile(t *testing.T, dir string, globalSalt, password []byte, keys [][]byte) {
+	t.Helper()
+	seal := append(append([]byte(nil), globalSalt...), password...)
+	writeFirefoxProfileSealed(t, dir, "pw.firefox.test", time.Unix(1704067200, 0).UTC(), globalSalt, seal, keys)
+}
+
 func writeFirefoxProfile(t *testing.T, dir, site string, start time.Time, globalSalt []byte, keys [][]byte) {
+	writeFirefoxProfileSealed(t, dir, site, start, globalSalt, globalSalt, keys)
+}
+
+// writeFirefoxProfileSealed seals key4.db with key4Seal, which a primary-password profile sets to globalSalt+password
+// while metaData still stores the bare globalSalt, mirroring NSS.
+func writeFirefoxProfileSealed(t *testing.T, dir, site string, start time.Time, globalSalt, key4Seal []byte, keys [][]byte) {
 	t.Helper()
 	micros := func(offset time.Duration) int64 { return start.Add(offset).UnixMicro() }
 	millis := func(offset time.Duration) int64 { return start.Add(offset).UnixMilli() }
@@ -65,11 +79,11 @@ func writeFirefoxProfile(t *testing.T, dir, site string, start time.Time, global
 		firefoxMetaDataSchema,
 		firefoxNSSPrivateSchema,
 		fmt.Sprintf(`INSERT INTO metaData (id, item1, item2) VALUES ('password', x'%x', x'%x')`,
-			globalSalt, sealFirefoxPBES2(t, globalSalt, site+"/password-check", []byte("password-check"))),
+			globalSalt, sealFirefoxPBES2(t, key4Seal, site+"/password-check", []byte("password-check"))),
 	}
 	for i, key := range keys {
 		key4Statements = append(key4Statements, fmt.Sprintf(`INSERT INTO nssPrivate (id, a11, a102) VALUES (%d, x'%x', x'%x')`,
-			i+1, sealFirefoxPBES2(t, globalSalt, fmt.Sprintf("%s/key-%d", site, i), key), firefoxKeyID))
+			i+1, sealFirefoxPBES2(t, key4Seal, fmt.Sprintf("%s/key-%d", site, i), key), firefoxKeyID))
 	}
 	writeSQLite(t, filepath.Join(dir, "key4.db"), key4Statements...)
 

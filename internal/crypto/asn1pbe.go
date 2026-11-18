@@ -11,7 +11,8 @@ import (
 
 const des3KeySize = 24 // 3DES uses 24-byte (192-bit) keys
 
-// ASN1PBE keys privateKeyPBE and passwordCheckPBE with the global salt, and credentialPBE with the master key.
+// ASN1PBE keys privateKeyPBE and passwordCheckPBE from the global salt (plus the primary password when one is set), and
+// credentialPBE from the master key.
 type ASN1PBE interface {
 	Decrypt(key []byte) ([]byte, error)
 	Encrypt(key, plaintext []byte) ([]byte, error)

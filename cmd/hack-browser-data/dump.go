@@ -39,6 +39,7 @@ func newDumpCommand() *cobra.Command {
 	addFirefoxPasswordFlags(command, &firefox)
 	command.Flags().BoolVar(&flags.Zip, "zip", false, "compress output to zip")
 	command.Flags().IntVar(&flags.MaxStorageValue, "max-storage-value", app.DefaultMaxStorageValue, "max storage value chars, 0=unlimited")
+	command.MarkFlagsMutuallyExclusive("keychain-pw-stdin", "firefox-pw-stdin")
 
 	return command
 }
