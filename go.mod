@@ -8,7 +8,6 @@ require (
 	github.com/moond4rk/binarycookies v1.0.3
 	github.com/moond4rk/keychainbreaker v0.2.6
 	github.com/moond4rk/plist v1.2.2
-	github.com/ppacher/go-dbus-keyring v1.0.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
 	github.com/stretchr/testify v1.12.1
