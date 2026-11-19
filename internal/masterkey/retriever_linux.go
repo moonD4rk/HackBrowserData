@@ -31,16 +31,197 @@ type dbusRetriever struct{}
 func (dbusRetriever) Version() Version { return V11 }
 
 const (
-	secretServiceName = "org.freedesktop.secrets"
-	secretServicePath = "/org/freedesktop/secrets"
-	secretServiceIntf = "org.freedesktop.Secret.Service"
-	secretItemIntf    = "org.freedesktop.Secret.Item"
-	secretSessionIntf = "org.freedesktop.Secret.Session"
-	propertiesGet     = "org.freedesktop.DBus.Properties.Get"
-	secretCallTimeout = 10 * time.Second
+	secretServiceName      = "org.freedesktop.secrets"
+	secretServicePath      = "/org/freedesktop/secrets"
+	secretServiceInterface = "org.freedesktop.Secret.Service"
+	secretItemInterface    = "org.freedesktop.Secret.Item"
+	secretSessionInterface = "org.freedesktop.Secret.Session"
+	propertiesGet          = "org.freedesktop.DBus.Properties.Get"
+	secretCallTimeout      = 10 * time.Second
 )
 
 var errKeyringLocked = errors.New("keyring or wallet is locked")
+
+func (dbusRetriever) Retrieve(ctx context.Context, locator Locator) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, secretCallTimeout)
+	defer cancel()
+
+	service, err := newSecretService(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer service.Close()
+
+	secret, err := findStorageSecret(ctx, service, locator.SecretLabel)
+	if err != nil {
+		return nil, fmt.Errorf("%q: %w", locator.SecretLabel, err)
+	}
+	return linuxParams.deriveKey(secret), nil
+}
+
+// secretStore is what findStorageSecret needs from the Secret Service, so tests can stand in for D-Bus.
+type secretStore interface {
+	searchItems(ctx context.Context, attributes map[string]string) (unlocked, locked []dbus.ObjectPath, err error)
+	unlock(ctx context.Context, items []dbus.ObjectPath) ([]dbus.ObjectPath, error)
+	itemLabel(ctx context.Context, item dbus.ObjectPath) (string, error)
+	itemSecret(ctx context.Context, item dbus.ObjectPath) ([]byte, error)
+}
+
+// searchQueries find the storage item by libsecret's schema (GNOME), KWallet's schema, and KWallet's entry-name
+// attribute, the last independent of the schema label, which KWallet versions set inconsistently.
+func searchQueries(storage string) []map[string]string {
+	return []map[string]string{
+		{"xdg:schema": "chrome_libsecret_os_crypt_password_v2"},
+		{"xdg:schema": "org.qt.keychain"},
+		{"user": storage},
+	}
+}
+
+// findStorageSecret tries each query; a match behind a wallet that stays locked reads as locked, not as not found.
+func findStorageSecret(ctx context.Context, store secretStore, storage string) ([]byte, error) {
+	locked := false
+	for _, attributes := range searchQueries(storage) {
+		secret, err := searchStorageSecret(ctx, store, attributes, storage)
+		switch {
+		case err == nil:
+			return secret, nil
+		case errors.Is(err, errKeyringLocked):
+			locked = true
+		case !errors.Is(err, errStorageNotFound):
+			log.Debugf("secret service %v: %v", attributes, err)
+		}
+	}
+	switch {
+	case ctx.Err() != nil:
+		return nil, fmt.Errorf("secret service lookup: %w", ctx.Err())
+	case locked:
+		return nil, errKeyringLocked
+	}
+	return nil, errStorageNotFound
+}
+
+// searchStorageSecret relies on SearchItems, which resolves only live items, and reads each match on its own, so a
+// stale path that fails is skipped (a whole-collection read aborts on it instead).
+func searchStorageSecret(ctx context.Context, store secretStore, attributes map[string]string, storage string) ([]byte, error) {
+	items, locked, err := store.searchItems(ctx, attributes)
+	if err != nil {
+		return nil, err
+	}
+	var opened []dbus.ObjectPath
+	if len(locked) > 0 {
+		opened, err = store.unlock(ctx, locked)
+		if err != nil {
+			log.Debugf("secret service: %v", err)
+		}
+		items = append(items, opened...)
+	}
+	for _, item := range items {
+		label, err := store.itemLabel(ctx, item)
+		if err != nil {
+			log.Debugf("secret item %s: %v", item, err)
+			continue
+		}
+		if !labelMatches(label, storage) {
+			continue
+		}
+		secret, err := store.itemSecret(ctx, item)
+		if err != nil {
+			log.Debugf("secret item %s: %v", item, err)
+			continue
+		}
+		if len(secret) > 0 {
+			return secret, nil
+		}
+	}
+	if len(opened) < len(locked) {
+		return nil, errKeyringLocked
+	}
+	return nil, errStorageNotFound
+}
+
+// labelMatches accepts the exact Secret Service label and KWallet's "<folder>/<storage>" form.
+func labelMatches(label, storage string) bool {
+	return label == storage || strings.HasSuffix(label, "/"+storage)
+}
+
+type secretService struct {
+	connection *dbus.Conn
+	object     dbus.BusObject
+	session    dbus.ObjectPath
+}
+
+func newSecretService(ctx context.Context) (*secretService, error) {
+	connection, err := connectSessionBus(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("dbus session: %w", err)
+	}
+	service := &secretService{connection: connection, object: connection.Object(secretServiceName, secretServicePath)}
+	call := service.object.CallWithContext(ctx, secretServiceInterface+".OpenSession", 0, "plain", dbus.MakeVariant(""))
+	var output dbus.Variant
+	if err := call.Store(&output, &service.session); err != nil {
+		return nil, errors.Join(fmt.Errorf("open secret session: %w", err), connection.Close())
+	}
+	return service, nil
+}
+
+// connectSessionBus never launches a bus, unlike dbus.SessionBus, and ties the connection to ctx, so the deadline
+// bounds connecting and every later call, Close included.
+func connectSessionBus(ctx context.Context) (*dbus.Conn, error) {
+	connection, err := dbus.SessionBusPrivateNoAutoStartup(dbus.WithContext(ctx))
+	if err != nil {
+		return nil, err
+	}
+	if err := connection.Auth(nil); err != nil {
+		return nil, errors.Join(err, connection.Close())
+	}
+	if err := connection.Hello(); err != nil {
+		return nil, errors.Join(err, connection.Close())
+	}
+	return connection, nil
+}
+
+func (s *secretService) Close() error {
+	call := s.connection.Object(secretServiceName, s.session).Call(secretSessionInterface+".Close", 0)
+	return errors.Join(call.Err, s.connection.Close())
+}
+
+func (s *secretService) searchItems(ctx context.Context, attributes map[string]string) (unlocked, locked []dbus.ObjectPath, err error) {
+	call := s.object.CallWithContext(ctx, secretServiceInterface+".SearchItems", 0, attributes)
+	if err = call.Store(&unlocked, &locked); err != nil {
+		return nil, nil, fmt.Errorf("search items: %w", err)
+	}
+	return unlocked, locked, nil
+}
+
+// unlock keeps only what opens without a prompt; a returned prompt path (not "/") means a GUI dialog is needed,
+// which a non-interactive extraction skips rather than block on.
+func (s *secretService) unlock(ctx context.Context, items []dbus.ObjectPath) ([]dbus.ObjectPath, error) {
+	call := s.object.CallWithContext(ctx, secretServiceInterface+".Unlock", 0, items)
+	var unlocked []dbus.ObjectPath
+	var prompt dbus.ObjectPath
+	if err := call.Store(&unlocked, &prompt); err != nil {
+		return nil, fmt.Errorf("unlock items: %w", err)
+	}
+	return unlocked, nil
+}
+
+func (s *secretService) itemLabel(ctx context.Context, item dbus.ObjectPath) (string, error) {
+	call := s.connection.Object(secretServiceName, item).CallWithContext(ctx, propertiesGet, 0, secretItemInterface, "Label")
+	var label string
+	if err := call.Store(&label); err != nil {
+		return "", fmt.Errorf("read label: %w", err)
+	}
+	return label, nil
+}
+
+func (s *secretService) itemSecret(ctx context.Context, item dbus.ObjectPath) ([]byte, error) {
+	call := s.connection.Object(secretServiceName, item).CallWithContext(ctx, secretItemInterface+".GetSecret", 0, s.session)
+	var reply dbusSecret
+	if err := call.Store(&reply); err != nil {
+		return nil, fmt.Errorf("get secret: %w", err)
+	}
+	return reply.Value, nil
+}
 
 // dbusSecret is the org.freedesktop.Secret.Item.GetSecret reply; a plain session leaves Value unencrypted.
 type dbusSecret struct {
@@ -48,146 +229,6 @@ type dbusSecret struct {
 	Parameters  []byte
 	Value       []byte
 	ContentType string
-}
-
-// searchQueries find the storage item by libsecret's schema (GNOME), KWallet's schema, and KWallet's entry-name
-// attribute, the last independent of the schema label, which KWallet versions set inconsistently.
-func searchQueries(label string) []map[string]string {
-	return []map[string]string{
-		{"xdg:schema": "chrome_libsecret_os_crypt_password_v2"},
-		{"xdg:schema": "org.qt.keychain"},
-		{"user": label},
-	}
-}
-
-// Retrieve looks the storage key up through the Secret Service's SearchItems, which resolves only live items, then
-// reads each one by one so a stale path that errors is skipped (a whole-collection read aborts on it instead). A
-// match hidden behind a locked wallet is reported as locked, not as not found.
-func (dbusRetriever) Retrieve(ctx context.Context, locator Locator) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(ctx, secretCallTimeout)
-	defer cancel()
-
-	connection, err := dbus.SessionBus()
-	if err != nil {
-		return nil, fmt.Errorf("dbus session: %w", err)
-	}
-	service := connection.Object(secretServiceName, secretServicePath)
-
-	session, err := openSecretSession(ctx, service)
-	if err != nil {
-		return nil, err
-	}
-	defer closeSecretSession(connection, session)
-
-	sawLocked := false
-	for _, attrs := range searchQueries(locator.SecretLabel) {
-		secret, locked := findStorageSecret(ctx, connection, service, session, attrs, locator.SecretLabel)
-		if len(secret) > 0 {
-			return linuxParams.deriveKey(secret), nil
-		}
-		sawLocked = sawLocked || locked
-	}
-	if sawLocked {
-		return nil, fmt.Errorf("%q: %w", locator.SecretLabel, errKeyringLocked)
-	}
-	return nil, fmt.Errorf("%q: %w", locator.SecretLabel, errStorageNotFound)
-}
-
-func openSecretSession(ctx context.Context, service dbus.BusObject) (dbus.ObjectPath, error) {
-	call := service.CallWithContext(ctx, secretServiceIntf+".OpenSession", 0, "plain", dbus.MakeVariant(""))
-	if call.Err != nil {
-		return "", fmt.Errorf("open secret session: %w", call.Err)
-	}
-	var output dbus.Variant
-	var session dbus.ObjectPath
-	if err := call.Store(&output, &session); err != nil {
-		return "", fmt.Errorf("open secret session: %w", err)
-	}
-	return session, nil
-}
-
-func closeSecretSession(connection *dbus.Conn, session dbus.ObjectPath) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	if call := connection.Object(secretServiceName, session).CallWithContext(ctx, secretSessionIntf+".Close", 0); call.Err != nil {
-		log.Debugf("close secret session: %v", call.Err)
-	}
-}
-
-// findStorageSecret returns the first live item matching attrs whose label fits want, and whether a locked item hid a
-// possible match (so the caller can report "locked" rather than "not found").
-func findStorageSecret(
-	ctx context.Context, conn *dbus.Conn, service dbus.BusObject, session dbus.ObjectPath, attrs map[string]string, want string,
-) ([]byte, bool) {
-	call := service.CallWithContext(ctx, secretServiceIntf+".SearchItems", 0, attrs)
-	if call.Err != nil {
-		log.Debugf("secret service SearchItems %v: %v", attrs, call.Err)
-		return nil, false
-	}
-	var unlocked, locked []dbus.ObjectPath
-	if err := call.Store(&unlocked, &locked); err != nil {
-		return nil, false
-	}
-	sawLocked := false
-	if len(locked) > 0 {
-		opened := unlockItems(ctx, service, locked)
-		unlocked = append(unlocked, opened...)
-		sawLocked = len(opened) < len(locked)
-	}
-	for _, path := range unlocked {
-		if !labelMatches(itemLabel(ctx, conn, path), want) {
-			continue
-		}
-		if secret := itemSecret(ctx, conn, path, session); len(secret) > 0 {
-			return secret, sawLocked
-		}
-	}
-	return nil, sawLocked
-}
-
-// unlockItems unlocks only what opens without a prompt; a returned prompt path (not "/") means a GUI dialog is needed,
-// which a non-interactive extraction skips rather than block on.
-func unlockItems(ctx context.Context, service dbus.BusObject, locked []dbus.ObjectPath) []dbus.ObjectPath {
-	call := service.CallWithContext(ctx, secretServiceIntf+".Unlock", 0, locked)
-	if call.Err != nil {
-		return nil
-	}
-	var unlocked []dbus.ObjectPath
-	var prompt dbus.ObjectPath
-	if err := call.Store(&unlocked, &prompt); err != nil {
-		return nil
-	}
-	return unlocked
-}
-
-// labelMatches accepts the exact Secret Service label and KWallet's "<folder>/<entry>" form, where the entry is want.
-func labelMatches(label, want string) bool {
-	return label == want || strings.HasSuffix(label, "/"+want)
-}
-
-func itemLabel(ctx context.Context, conn *dbus.Conn, path dbus.ObjectPath) string {
-	call := conn.Object(secretServiceName, path).CallWithContext(ctx, propertiesGet, 0, secretItemIntf, "Label")
-	if call.Err != nil {
-		return ""
-	}
-	var value dbus.Variant
-	if err := call.Store(&value); err != nil {
-		return ""
-	}
-	label, _ := value.Value().(string)
-	return label
-}
-
-func itemSecret(ctx context.Context, conn *dbus.Conn, path, session dbus.ObjectPath) []byte {
-	call := conn.Object(secretServiceName, path).CallWithContext(ctx, secretItemIntf+".GetSecret", 0, session)
-	if call.Err != nil {
-		return nil
-	}
-	var secret dbusSecret
-	if err := call.Store(&secret); err != nil {
-		return nil
-	}
-	return secret.Value
 }
 
 // posixRetriever covers hosts without a keyring (headless, Docker, CI), mirroring Chromium's PosixKeyProvider.
