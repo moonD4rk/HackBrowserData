@@ -53,7 +53,18 @@ func WriteFirefoxUserDataDir(t *testing.T, profilesDir string) {
 	}
 }
 
+// WriteFirefoxPrimaryPasswordProfile writes one profile at dir whose key4.db opens only with password.
+func WriteFirefoxPrimaryPasswordProfile(t *testing.T, dir string, globalSalt, password []byte, keys [][]byte) {
+	t.Helper()
+	passwordKey := crypto.NSSPasswordKey(globalSalt, password)
+	writeFirefoxProfileSealed(t, dir, "pw.firefox.test", time.Unix(1704067200, 0).UTC(), globalSalt, passwordKey, keys)
+}
+
 func writeFirefoxProfile(t *testing.T, dir, site string, start time.Time, globalSalt []byte, keys [][]byte) {
+	writeFirefoxProfileSealed(t, dir, site, start, globalSalt, crypto.NSSPasswordKey(globalSalt, nil), keys)
+}
+
+func writeFirefoxProfileSealed(t *testing.T, dir, site string, start time.Time, globalSalt, passwordKey []byte, keys [][]byte) {
 	t.Helper()
 	micros := func(offset time.Duration) int64 { return start.Add(offset).UnixMicro() }
 	millis := func(offset time.Duration) int64 { return start.Add(offset).UnixMilli() }
@@ -65,11 +76,11 @@ func writeFirefoxProfile(t *testing.T, dir, site string, start time.Time, global
 		firefoxMetaDataSchema,
 		firefoxNSSPrivateSchema,
 		fmt.Sprintf(`INSERT INTO metaData (id, item1, item2) VALUES ('password', x'%x', x'%x')`,
-			globalSalt, sealFirefoxPBES2(t, globalSalt, site+"/password-check", []byte("password-check"))),
+			globalSalt, sealFirefoxPBES2(t, passwordKey, site+"/password-check", []byte("password-check"))),
 	}
 	for i, key := range keys {
 		key4Statements = append(key4Statements, fmt.Sprintf(`INSERT INTO nssPrivate (id, a11, a102) VALUES (%d, x'%x', x'%x')`,
-			i+1, sealFirefoxPBES2(t, globalSalt, fmt.Sprintf("%s/key-%d", site, i), key), firefoxKeyID))
+			i+1, sealFirefoxPBES2(t, passwordKey, fmt.Sprintf("%s/key-%d", site, i), key), firefoxKeyID))
 	}
 	writeSQLite(t, filepath.Join(dir, "key4.db"), key4Statements...)
 
@@ -171,7 +182,7 @@ type firefoxPBES2 struct {
 	Ciphertext []byte
 }
 
-func sealFirefoxPBES2(t *testing.T, globalSalt []byte, seed string, plaintext []byte) []byte {
+func sealFirefoxPBES2(t *testing.T, passwordKey []byte, seed string, plaintext []byte) []byte {
 	t.Helper()
 	var pbe firefoxPBES2
 	pbe.Algorithm.OID = oidPBES2
@@ -183,7 +194,7 @@ func sealFirefoxPBES2(t *testing.T, globalSalt []byte, seed string, plaintext []
 	kdf.Params.PRF.OID = oidHMACWithSHA256
 	pbe.Algorithm.Params.Cipher.OID = oidAES256CBC
 	pbe.Algorithm.Params.Cipher.IV = firefoxBytes(seed+"/iv", 14)
-	return sealFirefoxValue(t, func() ([]byte, error) { return asn1.Marshal(pbe) }, &pbe.Ciphertext, globalSalt, plaintext)
+	return sealFirefoxValue(t, func() ([]byte, error) { return asn1.Marshal(pbe) }, &pbe.Ciphertext, passwordKey, plaintext)
 }
 
 type firefoxLoginPBE struct {

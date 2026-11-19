@@ -104,7 +104,7 @@ func TestPrivateKeyPBE_Encrypt(t *testing.T) {
 				},
 			},
 		}
-		encrypted, err := privateKeyPBETC.Encrypt(testCase.GlobalSalt, testCase.Plaintext)
+		encrypted, err := privateKeyPBETC.Encrypt(NSSPasswordKey(testCase.GlobalSalt, nil), testCase.Plaintext)
 		require.NoError(t, err)
 		assert.NotEmpty(t, encrypted)
 		assert.Equal(t, privateKeyPBETC.Encrypted, encrypted)
@@ -132,7 +132,7 @@ func TestPrivateKeyPBE_Decrypt(t *testing.T) {
 				},
 			},
 		}
-		decrypted, err := privateKeyPBETC.Decrypt(testCase.GlobalSalt)
+		decrypted, err := privateKeyPBETC.Decrypt(NSSPasswordKey(testCase.GlobalSalt, nil))
 		require.NoError(t, err)
 		assert.NotEmpty(t, decrypted)
 		assert.Equal(t, pbePlaintext, decrypted)
@@ -189,7 +189,7 @@ func TestPasswordCheckPBE_Encrypt(t *testing.T) {
 			},
 			Encrypted: testCase.Encrypted,
 		}
-		encrypted, err := passwordCheckPBETC.Encrypt(testCase.GlobalSalt, testCase.Plaintext)
+		encrypted, err := passwordCheckPBETC.Encrypt(NSSPasswordKey(testCase.GlobalSalt, nil), testCase.Plaintext)
 		require.NoError(t, err)
 		assert.NotEmpty(t, encrypted)
 		assert.Equal(t, passwordCheckPBETC.Encrypted, encrypted)
@@ -232,7 +232,7 @@ func TestPasswordCheckPBE_Decrypt(t *testing.T) {
 			},
 			Encrypted: testCase.Encrypted,
 		}
-		decrypted, err := passwordCheckPBETC.Decrypt(testCase.GlobalSalt)
+		decrypted, err := passwordCheckPBETC.Decrypt(NSSPasswordKey(testCase.GlobalSalt, nil))
 		require.NoError(t, err)
 		assert.NotEmpty(t, decrypted)
 		assert.Equal(t, pbePlaintext, decrypted)
@@ -356,4 +356,18 @@ func TestCredentialPBE_ShortKey(t *testing.T) {
 		_, err = pbe.Encrypt(key, pbePlaintext)
 		require.ErrorIs(t, err, errShortKey)
 	}
+}
+
+// TestNSSPasswordKey_Firefox159 replays metaData from a real Firefox 159 profile whose primary password is "hunter2".
+func TestNSSPasswordKey_Firefox159(t *testing.T) {
+	globalSalt, err := hex.DecodeString("546f4e882d701365bd17ec777bf0a0522097698de795e2f4d15d09143f14c1ea0be7617e2b4789c06acb1972b4915e9d")
+	require.NoError(t, err)
+	passwordCheck, err := hex.DecodeString("308182306e06092a864886f70d01050d3061304206092a864886f70d01050c30350420b0b57ba501bea653854e421326e74e1180dfd92b529603d95e1156918b5ffae302022710020120300a06082a864886f70d0209301b060960864801650304012a040eb9c12e8fdb6ccde8a9a117776dfc041062cd23dfb1de6cee18cfc11a817f3f61")
+	require.NoError(t, err)
+	pbe, err := NewASN1PBE(passwordCheck)
+	require.NoError(t, err)
+
+	plain, err := pbe.Decrypt(NSSPasswordKey(globalSalt, []byte("hunter2")))
+	require.NoError(t, err)
+	assert.Contains(t, string(plain), "password-check")
 }

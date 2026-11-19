@@ -15,13 +15,15 @@ import (
 )
 
 // retrieveMasterKey derives the key candidates in key4.db and returns the one that opens the logins in loginsPath.
-func retrieveMasterKey(key4Path, loginsPath string) ([]byte, error) {
+// primaryPassword is read only when a profile turns out to have one, so a run of mostly-unprotected profiles never
+// blocks on stdin or a prompt it does not need.
+func retrieveMasterKey(key4Path, loginsPath string, primaryPassword func() ([]byte, error)) ([]byte, error) {
 	key4, err := readKey4DB(key4Path)
 	if err != nil {
 		return nil, err
 	}
 
-	keys, err := key4.deriveKeys()
+	keys, err := key4.deriveKeys(primaryPassword)
 	if err != nil {
 		return nil, err
 	}
@@ -89,8 +91,14 @@ func readKey4DB(path string) (*key4DB, error) {
 	return &record, nil
 }
 
-func (k *key4DB) deriveKeys() ([][]byte, error) {
-	if err := k.verifyPasswordCheck(); err != nil {
+var (
+	errPrimaryPasswordRequired = errors.New("profile has a primary password; pass it with --firefox-pw")
+	errPrimaryPasswordWrong    = errors.New("primary password is incorrect")
+)
+
+func (k *key4DB) deriveKeys(primaryPassword func() ([]byte, error)) ([][]byte, error) {
+	password, err := k.selectPassword(primaryPassword)
+	if err != nil {
 		return nil, err
 	}
 
@@ -99,7 +107,7 @@ func (k *key4DB) deriveKeys() ([][]byte, error) {
 		if !bytes.Equal(entry.typeTag, nssKeyTypeTag) {
 			continue
 		}
-		key, err := k.decryptPrivateKey(entry)
+		key, err := k.decryptPrivateKey(entry, password)
 		if err != nil {
 			log.Debugf("decrypt nss private key: %v", err)
 			continue
@@ -109,27 +117,42 @@ func (k *key4DB) deriveKeys() ([][]byte, error) {
 	return keys, nil
 }
 
-func (k *key4DB) verifyPasswordCheck() error {
+// selectPassword uses the empty password for a profile with no primary password, else the user's once it checks out,
+// reading primaryPassword (which may block) only when the empty one does not fit. A passwordCheck that will not parse
+// is a corrupt DB, reported as such rather than as a wrong password.
+func (k *key4DB) selectPassword(primaryPassword func() ([]byte, error)) ([]byte, error) {
 	pbe, err := crypto.NewASN1PBE(k.passwordCheck)
 	if err != nil {
-		return fmt.Errorf("parse password check: %w", err)
+		return nil, fmt.Errorf("parse key4.db password check: %w", err)
 	}
-	plain, err := pbe.Decrypt(k.globalSalt)
+	if passwordChecks(pbe, crypto.NSSPasswordKey(k.globalSalt, nil)) {
+		return nil, nil
+	}
+	password, err := primaryPassword()
 	if err != nil {
-		return fmt.Errorf("decrypt password check: %w", err)
+		return nil, err
 	}
-	if !bytes.Contains(plain, []byte("password-check")) {
-		return errors.New("password check verification failed")
+	if len(password) > 0 && passwordChecks(pbe, crypto.NSSPasswordKey(k.globalSalt, password)) {
+		return password, nil
 	}
-	return nil
+	if len(password) == 0 {
+		return nil, errPrimaryPasswordRequired
+	}
+	return nil, errPrimaryPasswordWrong
 }
 
-func (k *key4DB) decryptPrivateKey(entry privateKey) ([]byte, error) {
+// passwordChecks reports whether passwordKey decrypts the "password-check" marker the profile stored in metaData.item2.
+func passwordChecks(pbe crypto.ASN1PBE, passwordKey []byte) bool {
+	plain, err := pbe.Decrypt(passwordKey)
+	return err == nil && bytes.Contains(plain, []byte("password-check"))
+}
+
+func (k *key4DB) decryptPrivateKey(entry privateKey, password []byte) ([]byte, error) {
 	pbe, err := crypto.NewASN1PBE(entry.encrypted)
 	if err != nil {
 		return nil, fmt.Errorf("parse private key: %w", err)
 	}
-	derivedKey, err := pbe.Decrypt(k.globalSalt)
+	derivedKey, err := pbe.Decrypt(crypto.NSSPasswordKey(k.globalSalt, password))
 	if err != nil {
 		return nil, fmt.Errorf("decrypt private key: %w", err)
 	}

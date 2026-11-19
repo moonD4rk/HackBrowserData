@@ -18,7 +18,9 @@ import (
 
 func TestValidateDump(t *testing.T) {
 	keychainPassword := func(context.Context) (string, error) { return "pw", nil }
-	options, err := ValidateDump(DumpFlags{Browser: " Chrome ", Categories: "cookie, password,cookie", Format: "csv", OutputDir: "out"}, keychainPassword)
+	firefoxPassword := func(context.Context) (string, error) { return "ff", nil }
+	options, err := ValidateDump(DumpFlags{Browser: " Chrome ", Categories: "cookie, password,cookie", Format: "csv", OutputDir: "out"},
+		keychainPassword, firefoxPassword)
 	require.NoError(t, err)
 	require.Len(t, options.Target.Browsers, 1)
 	assert.Equal(t, "chrome", options.Target.Browsers[0].Name)
@@ -30,8 +32,11 @@ func TestValidateDump(t *testing.T) {
 	password, err := options.Keychain.Password(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, "pw", password)
+	password, err = options.FirefoxPassword(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, "ff", password)
 
-	options, err = ValidateDump(DumpFlags{Categories: "all", Format: "json"}, nil)
+	options, err = ValidateDump(DumpFlags{Categories: "all", Format: "json"}, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, browser.Supported(), options.Target.Browsers)
 	assert.Equal(t, category.All(), options.Categories)
@@ -52,7 +57,7 @@ func TestValidateDump_RejectsBadInput(t *testing.T) {
 		"missing -p":           {Browser: "chrome", Categories: "all", Format: "json", ProfilePath: missing},
 		"-p is a file":         {Browser: "chrome", Categories: "all", Format: "json", ProfilePath: file},
 	} {
-		_, err := ValidateDump(flags, nil)
+		_, err := ValidateDump(flags, nil, nil)
 		assert.Error(t, err, name)
 	}
 }
@@ -72,7 +77,7 @@ func otherOSBrowser(t *testing.T) string {
 
 func TestValidateDump_CreatesNoOutputDir(t *testing.T) {
 	root := t.TempDir()
-	options, err := ValidateDump(DumpFlags{Categories: "all", Format: "json", OutputDir: filepath.Join(root, "a", "b")}, nil)
+	options, err := ValidateDump(DumpFlags{Categories: "all", Format: "json", OutputDir: filepath.Join(root, "a", "b")}, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, filepath.Join(root, "a", "b"), options.Output.Dir)
 	_, err = os.Stat(filepath.Join(root, "a"))
@@ -87,13 +92,13 @@ func TestValidateDump_RejectsAnOutputDirThatCannotBeCreated(t *testing.T) {
 	require.NoError(t, os.Chmod(root, 0o500))
 	defer func() { require.NoError(t, os.Chmod(root, 0o700)) }()
 
-	_, err := ValidateDump(DumpFlags{Categories: "all", Format: "json", OutputDir: filepath.Join(root, "results")}, nil)
+	_, err := ValidateDump(DumpFlags{Categories: "all", Format: "json", OutputDir: filepath.Join(root, "results")}, nil, nil)
 	assert.Error(t, err)
 }
 
 // TestValidateDump_IgnoresProfilePathForAllBrowsers keeps -p without a named browser ignored, as before; it is reported.
 func TestValidateDump_IgnoresProfilePathForAllBrowsers(t *testing.T) {
-	options, err := ValidateDump(DumpFlags{Browser: "all", Categories: "all", Format: "json", ProfilePath: filepath.Join(t.TempDir(), "missing")}, nil)
+	options, err := ValidateDump(DumpFlags{Browser: "all", Categories: "all", Format: "json", ProfilePath: filepath.Join(t.TempDir(), "missing")}, nil, nil)
 	require.NoError(t, err)
 	assert.Empty(t, options.Target.ProfilePath)
 }

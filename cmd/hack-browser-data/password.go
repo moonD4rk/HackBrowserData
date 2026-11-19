@@ -26,6 +26,34 @@ func addKeychainPasswordFlags(command *cobra.Command, flags *keychainFlags) {
 	command.MarkFlagsMutuallyExclusive("keychain-pw", "keychain-pw-stdin")
 }
 
+// firefoxFlags say where a Firefox primary password comes from; both empty means the empty password, the common case.
+type firefoxFlags struct {
+	password      string
+	passwordStdin bool
+}
+
+func addFirefoxPasswordFlags(command *cobra.Command, flags *firefoxFlags) {
+	command.Flags().StringVar(&flags.password, "firefox-pw", "", "Firefox primary password (visible in ps and shell history)")
+	command.Flags().BoolVar(&flags.passwordStdin, "firefox-pw-stdin", false,
+		"read the Firefox primary password from the first line of stdin")
+	command.MarkFlagsMutuallyExclusive("firefox-pw", "firefox-pw-stdin")
+}
+
+// firefoxPasswordFunc reads a flag, else the first line of stdin; nil means the empty password, and it never prompts.
+func firefoxPasswordFunc(flags firefoxFlags, stdin *os.File) func(context.Context) (string, error) {
+	switch {
+	case flags.password != "":
+		password := flags.password
+		return func(context.Context) (string, error) { return password, nil }
+	case flags.passwordStdin:
+		return func(ctx context.Context) (string, error) {
+			return untilDone(ctx, func() (string, error) { return firstLine(stdin) })
+		}
+	default:
+		return nil
+	}
+}
+
 var errNoPassword = errors.New("macOS login password not given and stdin is not a terminal")
 
 // keychainPasswordFunc is read lazily: a flag, else a no-echo prompt on a terminal, else none (metadata only).

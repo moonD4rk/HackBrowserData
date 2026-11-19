@@ -58,12 +58,13 @@ type LoginKeychain interface {
 	InternetPasswords(ctx context.Context) ([]keychain.InternetPassword, error)
 }
 
-// Input is what an extractor reads for one profile: its captured files, the dir's master keys, and the run's keychain.
+// Input is what an extractor reads for one profile: its captured files, the dir's master keys, and the run's secrets.
 type Input struct {
-	Profile       Profile
-	snapshot      snapshot.Snapshot
-	masterKeys    func(ctx context.Context) masterkey.Set
-	loginKeychain LoginKeychain
+	Profile         Profile
+	snapshot        snapshot.Snapshot
+	masterKeys      func(ctx context.Context) masterkey.Set
+	loginKeychain   LoginKeychain
+	firefoxPassword func(ctx context.Context) (string, error)
 }
 
 // NewInput takes masterKeys, the dir's call-once retrieval, nil for bases that keep no Chromium keys, and the run's
@@ -96,4 +97,18 @@ func (in Input) MasterKeys(ctx context.Context) masterkey.Set {
 
 func (in Input) LoginKeychain() LoginKeychain {
 	return in.loginKeychain
+}
+
+// WithFirefoxPassword sets the lazy Firefox primary-password source; only the dump path supplies one.
+func (in Input) WithFirefoxPassword(password func(context.Context) (string, error)) Input {
+	in.firefoxPassword = password
+	return in
+}
+
+// FirefoxPrimaryPassword is the user's primary password, "" when none was given; it may block on first use.
+func (in Input) FirefoxPrimaryPassword(ctx context.Context) (string, error) {
+	if in.firefoxPassword == nil {
+		return "", nil
+	}
+	return in.firefoxPassword(ctx)
 }
