@@ -15,6 +15,7 @@ var browsers = []Browser{
 		Linux: Platform{
 			UserDataDirs: []string{".config/google-chrome"},
 			SecretLabel:  "Chrome Safe Storage",
+			PortalAppID:  "com.google.Chrome",
 		},
 		Windows: Platform{
 			UserDataDirs: []string{"AppData/Local/Google/Chrome/User Data"},
@@ -60,6 +61,7 @@ var browsers = []Browser{
 		Linux: Platform{
 			UserDataDirs: []string{".config/chromium"},
 			SecretLabel:  "Chromium Safe Storage",
+			PortalAppID:  "org.chromium.Chromium",
 		},
 		Windows: Platform{
 			UserDataDirs: []string{"AppData/Local/Chromium/User Data"},
@@ -76,6 +78,7 @@ var browsers = []Browser{
 		Linux: Platform{
 			UserDataDirs: []string{".config/google-chrome-beta"},
 			SecretLabel:  "Chrome Safe Storage",
+			PortalAppID:  "com.google.Chrome.beta",
 		},
 		Windows: Platform{
 			UserDataDirs: []string{"AppData/Local/Google/Chrome Beta/User Data"},
@@ -170,6 +173,7 @@ var browsers = []Browser{
 		Linux: Platform{
 			UserDataDirs: []string{".config/BraveSoftware/Brave-Browser"},
 			SecretLabel:  "Brave Safe Storage",
+			PortalAppID:  "com.brave.Browser",
 		},
 		Windows: Platform{
 			UserDataDirs: []string{"AppData/Local/BraveSoftware/Brave-Browser/User Data"},

@@ -15,6 +15,7 @@ type Version string
 const (
 	V10 Version = "v10"
 	V11 Version = "v11"
+	V12 Version = "v12"
 	V20 Version = "v20"
 )
 
@@ -34,8 +35,9 @@ var errStorageNotFound = errors.New("not found in credential store") //nolint:un
 
 // Locator is where one user data dir's keys are found; each retriever reads only the fields of its OS.
 type Locator struct {
-	LocalState          string // the copied Local State; "" when the user data dir has none
-	SecretLabel         string // macOS Keychain account / Linux D-Bus Secret Service label
+	LocalState          string   // the copied Local State; "" when the user data dir has none
+	SecretLabel         string   // macOS Keychain account / Linux D-Bus Secret Service label
+	PortalAppIDs        []string // Linux: XDG portal app ids whose v12 secret decrypts this dir, most specific first
 	Executable          string
 	ExecutableFallbacks []string
 	ABE                 ABEKind

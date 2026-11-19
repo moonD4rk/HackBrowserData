@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
@@ -164,6 +165,7 @@ func KeyLocator(dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterk
 	platform := dir.Browser.Platform()
 	locator := masterkey.Locator{
 		SecretLabel: platform.SecretLabel, Executable: platform.Executable, ExecutableFallbacks: platform.ExecutableFallbacks, ABE: platform.ABE,
+		PortalAppIDs: portalAppIDs(dir.Path, platform.PortalAppID),
 	}
 	path, err := dirSnapshot.Path(localState.Path)
 	switch {
@@ -173,6 +175,36 @@ func KeyLocator(dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterk
 		return locator, fmt.Errorf("local state: %w", err)
 	}
 	return locator, nil
+}
+
+// portalAppIDs lists the v12 app id candidates for a dir, most specific first: a Flatpak install's own id, taken
+// from its .var/app/<id>/ path, then the browser's registered id. Empty ids and duplicates are dropped.
+func portalAppIDs(dirPath, registeredID string) []string {
+	var ids []string
+	add := func(id string) {
+		if id == "" {
+			return
+		}
+		for _, existing := range ids {
+			if existing == id {
+				return
+			}
+		}
+		ids = append(ids, id)
+	}
+	add(flatpakAppID(dirPath))
+	add(registeredID)
+	return ids
+}
+
+// flatpakAppID returns the Flatpak application id in a path like ".../.var/app/<id>/config/...", or "" if absent.
+func flatpakAppID(dirPath string) string {
+	_, after, found := strings.Cut(filepath.ToSlash(dirPath), ".var/app/")
+	if !found {
+		return ""
+	}
+	id, _, _ := strings.Cut(after, "/")
+	return id
 }
 
 // KeySources are the files KeyLocator reads from a snapshot.

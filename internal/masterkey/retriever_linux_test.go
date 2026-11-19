@@ -4,6 +4,7 @@ package masterkey
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"strconv"
 	"testing"
@@ -48,11 +49,13 @@ func TestPosixRetriever_MatchesChromiumKV10Key(t *testing.T) {
 }
 
 func TestPlatformRetrievers_Linux(t *testing.T) {
-	require.Len(t, platformRetrievers, 2)
+	require.Len(t, platformRetrievers, 3)
 	assert.IsType(t, posixRetriever{}, platformRetrievers[0], "v10 is the peanuts kV10Key")
 	assert.IsType(t, dbusRetriever{}, platformRetrievers[1], "v11 is the D-Bus keyring kV11Key")
+	assert.IsType(t, portalRetriever{}, platformRetrievers[2], "v12 is the XDG portal app key")
 	assert.Equal(t, V10, platformRetrievers[0].Version())
 	assert.Equal(t, V11, platformRetrievers[1].Version())
+	assert.Equal(t, V12, platformRetrievers[2].Version())
 }
 
 func TestLabelMatches(t *testing.T) {
@@ -139,6 +142,89 @@ func TestFindStorageSecret(t *testing.T) {
 	}
 }
 
+func TestFindPortalSecret(t *testing.T) {
+	gnome := func(appID string) map[string]string {
+		return map[string]string{"xdg:schema": "org.freedesktop.portal.Secret", "app_id": appID}
+	}
+	kde := func(appID string) map[string]string {
+		return map[string]string{"server": "xdg-desktop-portal", "user": appID}
+	}
+	tests := []struct {
+		name    string
+		store   fakeSecretStore
+		appIDs  []string
+		want    string
+		wantErr error
+	}{
+		{
+			name:   "gnome portal item read via GetSecrets",
+			store:  fakeSecretStore{{attributes: gnome("com.google.Chrome"), secret: "gnome", stale: true, batchReadable: true}},
+			appIDs: []string{"com.google.Chrome"},
+			want:   "gnome",
+		},
+		{
+			name:   "kde portal item falls back to a per-item read",
+			store:  fakeSecretStore{{attributes: kde("com.google.Chrome"), label: "xdg-desktop-portal/com.google.Chrome", secret: "kde"}},
+			appIDs: []string{"com.google.Chrome"},
+			want:   "kde",
+		},
+		{
+			name: "flatpak id is tried before the table id",
+			store: fakeSecretStore{
+				{attributes: gnome("com.google.Chrome"), secret: "deb", stale: true, batchReadable: true},
+				{attributes: gnome("org.chromium.Chromium"), secret: "flatpak", stale: true, batchReadable: true},
+			},
+			appIDs: []string{"org.chromium.Chromium", "com.google.Chrome"},
+			want:   "flatpak",
+		},
+		{
+			name:   "empty app id is the final candidate",
+			store:  fakeSecretStore{{attributes: gnome(""), secret: "shared", stale: true, batchReadable: true}},
+			appIDs: []string{"com.brave.Browser", ""},
+			want:   "shared",
+		},
+		{
+			name:    "portal item that stays locked reads as locked",
+			store:   fakeSecretStore{{attributes: gnome("com.google.Chrome"), secret: "hidden", stale: true, batchReadable: true, locked: true}},
+			appIDs:  []string{"com.google.Chrome"},
+			wantErr: errKeyringLocked,
+		},
+		{
+			name:    "no matching app id is not found",
+			store:   fakeSecretStore{{attributes: gnome("com.google.Chrome"), secret: "x", stale: true, batchReadable: true}},
+			appIDs:  []string{"org.chromium.Chromium"},
+			wantErr: errStorageNotFound,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			secret, err := findPortalSecret(context.Background(), testCase.store, testCase.appIDs)
+			if testCase.wantErr != nil {
+				require.ErrorIs(t, err, testCase.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, testCase.want, string(secret))
+		})
+	}
+}
+
+// TestPortalParams_Vector pins the v12 key derivation to an independently computed HKDF-SHA256 output.
+func TestPortalParams_Vector(t *testing.T) {
+	secret := make([]byte, 64)
+	for i := range secret {
+		secret[i] = byte(i)
+	}
+	want := "39ba5df998f8f1c032fac27b67d7359f8feda53482637745b35e4778295d32e7"
+	assert.Equal(t, want, hex.EncodeToString(portalParams.deriveKey(secret)))
+	assert.Len(t, portalParams.deriveKey(secret), 32)
+}
+
+func TestPortalRetriever_StepsAside(t *testing.T) {
+	_, err := portalRetriever{}.Retrieve(context.Background(), Locator{})
+	require.ErrorIs(t, err, errNotApplicable, "no portal app id means no v12, so the retriever must step aside")
+}
+
 func TestFindStorageSecret_Timeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 0)
 	defer cancel()
@@ -149,14 +235,16 @@ func TestFindStorageSecret_Timeout(t *testing.T) {
 	assert.NotErrorIs(t, err, errStorageNotFound, "a lookup that ran out of time must not read as not found")
 }
 
-// fakeItem is one Secret Service item: a locked one reads only once unlocked, and a stale one never does.
+// fakeItem is one Secret Service item: a locked one reads only once unlocked, and a stale one never does. A
+// batchReadable item answers GetSecrets but not a per-item read, as gnome-keyring's unexported portal items do.
 type fakeItem struct {
-	attributes map[string]string
-	label      string
-	secret     string
-	locked     bool
-	unlockable bool
-	stale      bool
+	attributes    map[string]string
+	label         string
+	secret        string
+	locked        bool
+	unlockable    bool
+	stale         bool
+	batchReadable bool
 }
 
 type fakeSecretStore []fakeItem
@@ -221,6 +309,16 @@ func (s fakeSecretStore) itemSecret(_ context.Context, path dbus.ObjectPath) ([]
 		return nil, errors.New("cannot get secret of a locked object")
 	}
 	return []byte(item.secret), nil
+}
+
+func (s fakeSecretStore) secrets(_ context.Context, items []dbus.ObjectPath) (map[dbus.ObjectPath][]byte, error) {
+	values := make(map[dbus.ObjectPath][]byte)
+	for _, path := range items {
+		if item := s.item(path); item.batchReadable && !item.locked {
+			values[path] = []byte(item.secret)
+		}
+	}
+	return values, nil
 }
 
 func hasAttributes(attributes, query map[string]string) bool {

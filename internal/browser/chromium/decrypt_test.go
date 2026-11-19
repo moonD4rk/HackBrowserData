@@ -68,6 +68,33 @@ func TestDecryptValue_V10_CrossHostGCM(t *testing.T) {
 	assert.Equal(t, plaintext, got)
 }
 
+// TestDecryptValue_V12 seals a value as Chromium's SecretPortalKeyProvider does and decrypts it via the V12 slot.
+func TestDecryptValue_V12(t *testing.T) {
+	key := []byte("0123456789abcdef0123456789abcdef") // 32-byte HKDF-SHA256 output
+	plaintext := []byte("portal_cookie_value")
+	nonce := []byte("v12_nonce_12")
+	gcm, err := crypto.AESGCMEncrypt(key, nonce, plaintext)
+	require.NoError(t, err)
+	ciphertext := append([]byte("v12"), append(nonce, gcm...)...)
+
+	t.Run("decrypts via the V12 slot", func(t *testing.T) {
+		got, err := decryptValue(masterkey.Set{masterkey.V12: key}, ciphertext)
+		require.NoError(t, err)
+		assert.Equal(t, plaintext, got)
+	})
+
+	t.Run("v12 routes to its own key, not V20", func(t *testing.T) {
+		wrong := bytes.Repeat([]byte{0x99}, 32)
+		_, err := decryptValue(masterkey.Set{masterkey.V12: wrong, masterkey.V20: key}, ciphertext)
+		require.Error(t, err, "the GCM tag must fail when the V12 slot holds the wrong key")
+	})
+
+	t.Run("missing V12 key errors", func(t *testing.T) {
+		_, err := decryptValue(masterkey.Set{masterkey.V10: key}, ciphertext)
+		require.Error(t, err)
+	})
+}
+
 // TestDecryptValue_V10_V11_SlotSeparation is #578 on Linux: v10 and v11 values each route to their own key.
 func TestDecryptValue_V10_V11_SlotSeparation(t *testing.T) {
 	v10Key := bytes.Repeat([]byte{0x10}, 16) // V10 slot key (peanuts-derived kV10Key)
@@ -160,7 +187,7 @@ func TestDetectVersion(t *testing.T) {
 	}{
 		{"v10 prefix", []byte("v10" + "encrypted_data"), masterkey.V10},
 		{"v11 prefix", []byte("v11" + "encrypted_data"), masterkey.V11},
-		{"v12 prefix", []byte("v12" + "encrypted_data"), versionV12},
+		{"v12 prefix", []byte("v12" + "encrypted_data"), masterkey.V12},
 		{"v20 prefix", []byte("v20" + "encrypted_data"), masterkey.V20},
 		{"no prefix (DPAPI)", []byte{0x01, 0x00, 0x00, 0x00}, unversioned},
 		{"short input", []byte{0x01, 0x02}, unversioned},
