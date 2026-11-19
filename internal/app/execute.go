@@ -39,6 +39,7 @@ func execute(ctx context.Context, discovery Discovery, categories []category.Cat
 		return Summary{}, err
 	}
 	dirRunner.writer, dirRunner.logProgress = writer, true
+	dirRunner.maxStorageValue = output.MaxStorageValue
 	summary, err := dirRunner.run(ctx, discovery, categories)
 	closeErr := writer.Close()
 	summary.Exported = writer.Listing()
@@ -51,11 +52,12 @@ type recordWriter interface {
 
 // runner is what every user data dir of one run shares; logProgress logs each dir as it starts.
 type runner struct {
-	writer        recordWriter
-	extractors    extractorsFunc
-	retrieveKeys  dirKeysFunc
-	loginKeychain browser.LoginKeychain
-	logProgress   bool
+	writer          recordWriter
+	extractors      extractorsFunc
+	retrieveKeys    dirKeysFunc
+	loginKeychain   browser.LoginKeychain
+	logProgress     bool
+	maxStorageValue int
 }
 
 func (r runner) run(ctx context.Context, discovery Discovery, categories []category.Category) (Summary, error) {
@@ -125,7 +127,7 @@ func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories 
 func (r runner) runExtraction(
 	ctx context.Context, extraction plannedExtraction, input browser.Input, browserName string,
 ) (Result, error) {
-	recordCollector := &collector{browserName: browserName, profileName: extraction.ProfileName}
+	recordCollector := &collector{browserName: browserName, profileName: extraction.ProfileName, maxStorageValue: r.maxStorageValue}
 	err := extraction.extractor.Extract(ctx, input, recordCollector)
 	if writeErr := r.writer.Write(extraction.Category, recordCollector.records); writeErr != nil {
 		return Result{}, writeErr

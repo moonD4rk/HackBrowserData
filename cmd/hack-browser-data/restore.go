@@ -36,6 +36,7 @@ func newRestoreCommand() *cobra.Command {
 	command.Flags().StringVarP(&flags.Format, "format", "f", "json", "output format: csv|json|cookie-editor")
 	command.Flags().StringVarP(&flags.OutputDir, "dir", "d", "results", "output directory")
 	command.Flags().BoolVar(&flags.Zip, "zip", false, "compress output to zip")
+	command.Flags().IntVar(&flags.MaxStorageValue, "max-storage-value", app.DefaultMaxStorageValue, "max storage value chars, 0=unlimited")
 
 	_ = command.MarkFlagRequired("keys")
 	command.MarkFlagsMutuallyExclusive("data-dir", "data-zip")

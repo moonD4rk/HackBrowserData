@@ -23,9 +23,20 @@ type Target struct {
 
 // Output is where and how Execute writes records.
 type Output struct {
-	Dir    string
-	Format export.Format
-	Zip    bool
+	Dir             string
+	Format          export.Format
+	Zip             bool
+	MaxStorageValue int // localStorage/sessionStorage value characters kept before a size marker replaces it; <= 0 keeps all
+}
+
+// DefaultMaxStorageValue bounds a stored value's characters unless --max-storage-value overrides it; 0 disables the bound.
+const DefaultMaxStorageValue = 2048
+
+func checkMaxStorageValue(value int) error {
+	if value < 0 {
+		return fmt.Errorf("--max-storage-value must be >= 0 (0 means unlimited), got %d", value)
+	}
+	return nil
 }
 
 // KeychainConfig locates the macOS login keychain and says how to get its password; other systems ignore it.
