@@ -7,6 +7,7 @@ import (
 
 // HKDFKey is the extract-and-expand HKDF, written out because Go 1.20 has no crypto/hkdf and the project adds no
 // x/crypto dependency; an empty salt means a block of newHash-sized zeros, as the construction specifies.
+// keyLength must be at most 255*HashLen (the single-block AES-256 key here is well within it).
 func HKDFKey(secret, salt, info []byte, keyLength int, newHash func() hash.Hash) []byte {
 	if len(salt) == 0 {
 		salt = make([]byte, newHash().Size())

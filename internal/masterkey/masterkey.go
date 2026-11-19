@@ -35,9 +35,9 @@ var errStorageNotFound = errors.New("not found in credential store") //nolint:un
 
 // Locator is where one user data dir's keys are found; each retriever reads only the fields of its OS.
 type Locator struct {
-	LocalState          string   // the copied Local State; "" when the user data dir has none
-	SecretLabel         string   // macOS Keychain account / Linux D-Bus Secret Service label
-	PortalAppIDs        []string // Linux: XDG portal app ids whose v12 secret decrypts this dir, most specific first
+	LocalState          string // the copied Local State; "" when the user data dir has none
+	SecretLabel         string // macOS Keychain account / Linux D-Bus Secret Service label
+	PortalAppID         string // Linux: the XDG portal app id whose v12 secret decrypts this dir; "" = no v12
 	Executable          string
 	ExecutableFallbacks []string
 	ABE                 ABEKind

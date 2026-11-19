@@ -143,62 +143,45 @@ func TestFindStorageSecret(t *testing.T) {
 }
 
 func TestFindPortalSecret(t *testing.T) {
-	gnome := func(appID string) map[string]string {
-		return map[string]string{"xdg:schema": "org.freedesktop.portal.Secret", "app_id": appID}
-	}
-	kde := func(appID string) map[string]string {
-		return map[string]string{"server": "xdg-desktop-portal", "user": appID}
-	}
+	const appID = "com.google.Chrome"
+	gnome := map[string]string{"xdg:schema": "org.freedesktop.portal.Secret", "app_id": appID}
+	kde := map[string]string{"server": "xdg-desktop-portal", "user": appID}
 	tests := []struct {
 		name    string
 		store   fakeSecretStore
-		appIDs  []string
+		appID   string
 		want    string
 		wantErr error
 	}{
 		{
-			name:   "gnome portal item read via GetSecrets",
-			store:  fakeSecretStore{{attributes: gnome("com.google.Chrome"), secret: "gnome", stale: true, batchReadable: true}},
-			appIDs: []string{"com.google.Chrome"},
-			want:   "gnome",
+			// gnome-keyring never exports the object, so a per-item read fails (stale); only GetSecrets returns it.
+			name:  "gnome portal item read via GetSecrets",
+			store: fakeSecretStore{{attributes: gnome, secret: "gnome", stale: true, batchReadable: true}},
+			appID: appID,
+			want:  "gnome",
 		},
 		{
-			name:   "kde portal item falls back to a per-item read",
-			store:  fakeSecretStore{{attributes: kde("com.google.Chrome"), label: "xdg-desktop-portal/com.google.Chrome", secret: "kde"}},
-			appIDs: []string{"com.google.Chrome"},
-			want:   "kde",
-		},
-		{
-			name: "flatpak id is tried before the table id",
-			store: fakeSecretStore{
-				{attributes: gnome("com.google.Chrome"), secret: "deb", stale: true, batchReadable: true},
-				{attributes: gnome("org.chromium.Chromium"), secret: "flatpak", stale: true, batchReadable: true},
-			},
-			appIDs: []string{"org.chromium.Chromium", "com.google.Chrome"},
-			want:   "flatpak",
-		},
-		{
-			name:   "empty app id is the final candidate",
-			store:  fakeSecretStore{{attributes: gnome(""), secret: "shared", stale: true, batchReadable: true}},
-			appIDs: []string{"com.brave.Browser", ""},
-			want:   "shared",
+			name:  "kde portal item read via GetSecrets",
+			store: fakeSecretStore{{attributes: kde, label: "xdg-desktop-portal/" + appID, secret: "kde", batchReadable: true}},
+			appID: appID,
+			want:  "kde",
 		},
 		{
 			name:    "portal item that stays locked reads as locked",
-			store:   fakeSecretStore{{attributes: gnome("com.google.Chrome"), secret: "hidden", stale: true, batchReadable: true, locked: true}},
-			appIDs:  []string{"com.google.Chrome"},
+			store:   fakeSecretStore{{attributes: gnome, secret: "hidden", stale: true, batchReadable: true, locked: true}},
+			appID:   appID,
 			wantErr: errKeyringLocked,
 		},
 		{
 			name:    "no matching app id is not found",
-			store:   fakeSecretStore{{attributes: gnome("com.google.Chrome"), secret: "x", stale: true, batchReadable: true}},
-			appIDs:  []string{"org.chromium.Chromium"},
+			store:   fakeSecretStore{{attributes: gnome, secret: "x", stale: true, batchReadable: true}},
+			appID:   "org.chromium.Chromium",
 			wantErr: errStorageNotFound,
 		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			secret, err := findPortalSecret(context.Background(), testCase.store, testCase.appIDs)
+			secret, err := findPortalSecret(context.Background(), testCase.store, testCase.appID)
 			if testCase.wantErr != nil {
 				require.ErrorIs(t, err, testCase.wantErr)
 				return
@@ -209,15 +192,14 @@ func TestFindPortalSecret(t *testing.T) {
 	}
 }
 
-// TestPortalParams_Vector pins the v12 key derivation to an independently computed HKDF-SHA256 output.
-func TestPortalParams_Vector(t *testing.T) {
+// TestPortalKey_Vector pins the v12 key derivation to an independently computed HKDF-SHA256 output.
+func TestPortalKey_Vector(t *testing.T) {
 	secret := make([]byte, 64)
 	for i := range secret {
 		secret[i] = byte(i)
 	}
 	want := "39ba5df998f8f1c032fac27b67d7359f8feda53482637745b35e4778295d32e7"
-	assert.Equal(t, want, hex.EncodeToString(portalParams.deriveKey(secret)))
-	assert.Len(t, portalParams.deriveKey(secret), 32)
+	assert.Equal(t, want, hex.EncodeToString(portalKey(secret)))
 }
 
 func TestPortalRetriever_StepsAside(t *testing.T) {
@@ -311,7 +293,7 @@ func (s fakeSecretStore) itemSecret(_ context.Context, path dbus.ObjectPath) ([]
 	return []byte(item.secret), nil
 }
 
-func (s fakeSecretStore) secrets(_ context.Context, items []dbus.ObjectPath) (map[dbus.ObjectPath][]byte, error) {
+func (s fakeSecretStore) itemSecrets(_ context.Context, items []dbus.ObjectPath) (map[dbus.ObjectPath][]byte, error) {
 	values := make(map[dbus.ObjectPath][]byte)
 	for _, path := range items {
 		if item := s.item(path); item.batchReadable && !item.locked {

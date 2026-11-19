@@ -167,29 +167,26 @@ func TestKeyLocator(t *testing.T) {
 	assert.Empty(t, locator.LocalState)
 }
 
-func TestPortalAppIDs(t *testing.T) {
+func TestPortalAppID(t *testing.T) {
 	tests := []struct {
 		name         string
 		dirPath      string
 		registeredID string
-		want         []string
+		want         string
 	}{
-		{name: "deb install uses the table id", dirPath: "/home/u/.config/google-chrome", registeredID: "com.google.Chrome", want: []string{"com.google.Chrome"}},
+		{name: "deb install uses the registered id", dirPath: "/home/u/.config/google-chrome", registeredID: "com.google.Chrome", want: "com.google.Chrome"},
 		{
-			name: "flatpak install is tried before the table id", registeredID: "org.chromium.Chromium",
+			// a Flatpak sandbox fixes the app id, so the path id wins over the table id and never falls back to it.
+			name: "flatpak id overrides the registered id", registeredID: "org.chromium.Chromium",
 			dirPath: "/home/u/.var/app/io.github.ungoogled_software.ungoogled_chromium/config/chromium",
-			want:    []string{"io.github.ungoogled_software.ungoogled_chromium", "org.chromium.Chromium"},
+			want:    "io.github.ungoogled_software.ungoogled_chromium",
 		},
-		{
-			name: "matching flatpak and table id collapse to one", registeredID: "com.google.Chrome",
-			dirPath: "/home/u/.var/app/com.google.Chrome/config/google-chrome", want: []string{"com.google.Chrome"},
-		},
-		{name: "no table id leaves only the flatpak id", dirPath: "/home/u/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser", want: []string{"com.brave.Browser"}},
-		{name: "no candidates for a browser without a portal id", dirPath: "/home/u/.config/microsoft-edge", want: nil},
+		{name: "no registered id leaves only the flatpak id", dirPath: "/home/u/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser", want: "com.brave.Browser"},
+		{name: "no portal id for a browser without one", dirPath: "/home/u/.config/microsoft-edge", want: ""},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			assert.Equal(t, testCase.want, portalAppIDs(testCase.dirPath, testCase.registeredID))
+			assert.Equal(t, testCase.want, portalAppID(testCase.dirPath, testCase.registeredID))
 		})
 	}
 }

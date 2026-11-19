@@ -165,7 +165,7 @@ func KeyLocator(dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterk
 	platform := dir.Browser.Platform()
 	locator := masterkey.Locator{
 		SecretLabel: platform.SecretLabel, Executable: platform.Executable, ExecutableFallbacks: platform.ExecutableFallbacks, ABE: platform.ABE,
-		PortalAppIDs: portalAppIDs(dir.Path, platform.PortalAppID),
+		PortalAppID: portalAppID(dir.Path, platform.PortalAppID),
 	}
 	path, err := dirSnapshot.Path(localState.Path)
 	switch {
@@ -177,24 +177,13 @@ func KeyLocator(dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterk
 	return locator, nil
 }
 
-// portalAppIDs lists the v12 app id candidates for a dir, most specific first: a Flatpak install's own id, taken
-// from its .var/app/<id>/ path, then the browser's registered id. Empty ids and duplicates are dropped.
-func portalAppIDs(dirPath, registeredID string) []string {
-	var ids []string
-	add := func(id string) {
-		if id == "" {
-			return
-		}
-		for _, existing := range ids {
-			if existing == id {
-				return
-			}
-		}
-		ids = append(ids, id)
+// portalAppID is the v12 app id for a dir: a Flatpak install's id is fixed by its sandbox, taken from the
+// .var/app/<id>/ path, so it wins outright; otherwise the browser's registered id applies.
+func portalAppID(dirPath, registeredID string) string {
+	if flatpak := flatpakAppID(dirPath); flatpak != "" {
+		return flatpak
 	}
-	add(flatpakAppID(dirPath))
-	add(registeredID)
-	return ids
+	return registeredID
 }
 
 // flatpakAppID returns the Flatpak application id in a path like ".../.var/app/<id>/config/...", or "" if absent.
