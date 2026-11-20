@@ -28,10 +28,10 @@ func decryptValue(masterKeys masterkey.Set, ciphertext []byte) ([]byte, error) {
 		return decryptCBC(masterKeys[masterkey.V10], ciphertext)
 	case masterkey.V11:
 		return decryptCBC(masterKeys[masterkey.V11], ciphertext)
+	case masterkey.V12:
+		return decryptGCM(masterKeys[masterkey.V12], ciphertext)
 	case masterkey.V20:
 		return decryptGCM(masterKeys[masterkey.V20], ciphertext)
-	case versionV12:
-		return nil, fmt.Errorf("unsupported cipher version v12 (Chromium SecretPortal / Flatpak; not yet implemented)")
 	case unversioned:
 		return masterkey.DecryptDPAPI(ciphertext)
 	default:
@@ -40,8 +40,6 @@ func decryptValue(masterKeys masterkey.Set, ciphertext []byte) ([]byte, error) {
 }
 
 const (
-	// versionV12 is recognized only to report a known gap: v12 is not implemented yet.
-	versionV12 masterkey.Version = "v12"
 	// unversioned is a value without a version prefix, which Chromium on Windows sealed with DPAPI.
 	unversioned masterkey.Version = ""
 
@@ -53,7 +51,7 @@ func detectVersion(ciphertext []byte) masterkey.Version {
 		return unversioned
 	}
 	switch version := masterkey.Version(ciphertext[:versionPrefixLength]); version {
-	case masterkey.V10, masterkey.V11, masterkey.V20, versionV12:
+	case masterkey.V10, masterkey.V11, masterkey.V12, masterkey.V20:
 		return version
 	default:
 		return unversioned

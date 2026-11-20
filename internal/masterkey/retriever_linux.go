@@ -5,6 +5,7 @@ package masterkey
 import (
 	"context"
 	"crypto/sha1"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 
+	"github.com/moond4rk/hackbrowserdata/internal/crypto"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
@@ -23,8 +25,13 @@ var linuxParams = pbkdf2Params{
 	hashFunc:   sha1.New,
 }
 
-// platformRetrievers run both: a profile holds v10 and v11 values once its host moved between headless and keyring.
-var platformRetrievers = []keyRetriever{posixRetriever{}, dbusRetriever{}}
+// portalKey derives the v12 key from the XDG portal app secret, matching Chromium's SecretPortalKeyProvider.
+func portalKey(secret []byte) []byte {
+	return crypto.HKDFKey(secret, []byte("fdo_portal_secret_salt"), []byte("HKDF-SHA-256 AES-256-GCM"), 32, sha256.New)
+}
+
+// platformRetrievers run in order: v10 headless, v11 keyring, v12 XDG portal; a profile can hold values of each.
+var platformRetrievers = []keyRetriever{posixRetriever{}, dbusRetriever{}, portalRetriever{}}
 
 type dbusRetriever struct{}
 
@@ -59,12 +66,14 @@ func (dbusRetriever) Retrieve(ctx context.Context, locator Locator) ([]byte, err
 	return linuxParams.deriveKey(secret), nil
 }
 
-// secretStore is what findStorageSecret needs from the Secret Service, so tests can stand in for D-Bus.
+// secretStore is what the lookups need from the Secret Service, so tests can stand in for D-Bus. itemSecrets reads a
+// batch in one call, the only way to read gnome-keyring's portal items, whose D-Bus objects it never exports.
 type secretStore interface {
 	searchItems(ctx context.Context, attributes map[string]string) (unlocked, locked []dbus.ObjectPath, err error)
 	unlock(ctx context.Context, items []dbus.ObjectPath) ([]dbus.ObjectPath, error)
 	itemLabel(ctx context.Context, item dbus.ObjectPath) (string, error)
 	itemSecret(ctx context.Context, item dbus.ObjectPath) ([]byte, error)
+	itemSecrets(ctx context.Context, items []dbus.ObjectPath) (map[dbus.ObjectPath][]byte, error)
 }
 
 // searchQueries find the storage item by libsecret's schema (GNOME), KWallet's schema, and KWallet's entry-name
@@ -103,17 +112,9 @@ func findStorageSecret(ctx context.Context, store secretStore, storage string) (
 // searchStorageSecret relies on SearchItems, which resolves only live items, and reads each match on its own, so a
 // stale path that fails is skipped (a whole-collection read aborts on it instead).
 func searchStorageSecret(ctx context.Context, store secretStore, attributes map[string]string, storage string) ([]byte, error) {
-	items, locked, err := store.searchItems(ctx, attributes)
+	items, stillLocked, err := searchAndUnlock(ctx, store, attributes)
 	if err != nil {
 		return nil, err
-	}
-	var opened []dbus.ObjectPath
-	if len(locked) > 0 {
-		opened, err = store.unlock(ctx, locked)
-		if err != nil {
-			log.Debugf("secret service: %v", err)
-		}
-		items = append(items, opened...)
 	}
 	for _, item := range items {
 		label, err := store.itemLabel(ctx, item)
@@ -133,7 +134,79 @@ func searchStorageSecret(ctx context.Context, store secretStore, attributes map[
 			return secret, nil
 		}
 	}
-	if len(opened) < len(locked) {
+	if stillLocked {
+		return nil, errKeyringLocked
+	}
+	return nil, errStorageNotFound
+}
+
+// searchAndUnlock resolves a query to live item paths, unlocking any that open without a prompt; stillLocked is set
+// when a locked item stayed locked, which the callers report as errKeyringLocked rather than as not found.
+func searchAndUnlock(ctx context.Context, store secretStore, attributes map[string]string) ([]dbus.ObjectPath, bool, error) {
+	unlocked, locked, err := store.searchItems(ctx, attributes)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(locked) == 0 {
+		return unlocked, false, nil
+	}
+	opened, err := store.unlock(ctx, locked)
+	if err != nil {
+		log.Debugf("secret service: %v", err)
+	}
+	return append(unlocked, opened...), len(opened) < len(locked), nil
+}
+
+// findPortalSecret looks up the XDG portal app secret by its app id; a secret behind a wallet that stays locked reads
+// as locked, and no match steps aside so a profile whose browser never wrote a v12 value gets no error row.
+func findPortalSecret(ctx context.Context, store secretStore, appID string) ([]byte, error) {
+	locked := false
+	for _, attributes := range portalQueries(appID) {
+		secret, err := searchPortalSecret(ctx, store, attributes)
+		switch {
+		case err == nil:
+			return secret, nil
+		case errors.Is(err, errKeyringLocked):
+			locked = true
+		case !errors.Is(err, errStorageNotFound):
+			log.Debugf("portal secret %v: %v", attributes, err)
+		}
+	}
+	switch {
+	case ctx.Err() != nil:
+		return nil, fmt.Errorf("portal secret lookup: %w", ctx.Err())
+	case locked:
+		return nil, errKeyringLocked
+	}
+	return nil, errStorageNotFound
+}
+
+// portalQueries find the app secret by gnome-keyring's portal schema and app_id, then by ksecretd's synthesized
+// folder and entry, which carry no schema.
+func portalQueries(appID string) []map[string]string {
+	return []map[string]string{
+		{"xdg:schema": "org.freedesktop.portal.Secret", "app_id": appID},
+		{"server": "xdg-desktop-portal", "user": appID},
+	}
+}
+
+// searchPortalSecret reads matches with GetSecrets, the one call both gnome-keyring (whose portal item objects are
+// never exported) and ksecretd answer; GetSecrets is mandatory in the Secret Service API, so there is no fallback.
+func searchPortalSecret(ctx context.Context, store secretStore, attributes map[string]string) ([]byte, error) {
+	items, stillLocked, err := searchAndUnlock(ctx, store, attributes)
+	if err != nil {
+		return nil, err
+	}
+	secrets, err := store.itemSecrets(ctx, items)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range items {
+		if secret := secrets[item]; len(secret) > 0 {
+			return secret, nil
+		}
+	}
+	if stillLocked {
 		return nil, errKeyringLocked
 	}
 	return nil, errStorageNotFound
@@ -223,12 +296,59 @@ func (s *secretService) itemSecret(ctx context.Context, item dbus.ObjectPath) ([
 	return reply.Value, nil
 }
 
+// itemSecrets reads several items in one call; gnome-keyring answers here for portal items it never exports as objects.
+func (s *secretService) itemSecrets(ctx context.Context, items []dbus.ObjectPath) (map[dbus.ObjectPath][]byte, error) {
+	if len(items) == 0 {
+		return nil, nil
+	}
+	call := s.object.CallWithContext(ctx, secretServiceInterface+".GetSecrets", 0, items, s.session)
+	var replies map[dbus.ObjectPath]dbusSecret
+	if err := call.Store(&replies); err != nil {
+		return nil, fmt.Errorf("get secrets: %w", err)
+	}
+	values := make(map[dbus.ObjectPath][]byte, len(replies))
+	for path, reply := range replies {
+		values[path] = reply.Value
+	}
+	return values, nil
+}
+
 // dbusSecret is the org.freedesktop.Secret.Item.GetSecret reply; a plain session leaves Value unencrypted.
 type dbusSecret struct {
 	Session     dbus.ObjectPath
 	Parameters  []byte
 	Value       []byte
 	ContentType string
+}
+
+// portalRetriever reads the XDG desktop portal app secret (Chromium's SecretPortalKeyProvider, the v12 scheme). It
+// reads only a secret the portal already stored; it never calls RetrieveSecret, which would create one when missing.
+type portalRetriever struct{}
+
+func (portalRetriever) Version() Version { return V12 }
+
+func (portalRetriever) Retrieve(ctx context.Context, locator Locator) ([]byte, error) {
+	if locator.PortalAppID == "" {
+		return nil, errNotApplicable
+	}
+	ctx, cancel := context.WithTimeout(ctx, secretCallTimeout)
+	defer cancel()
+
+	service, err := newSecretService(ctx)
+	if err != nil {
+		log.Debugf("portal secret: %v", err)
+		return nil, errNotApplicable
+	}
+	defer service.Close()
+
+	secret, err := findPortalSecret(ctx, service, locator.PortalAppID)
+	switch {
+	case errors.Is(err, errStorageNotFound):
+		return nil, errNotApplicable
+	case err != nil:
+		return nil, err
+	}
+	return portalKey(secret), nil
 }
 
 // posixRetriever covers hosts without a keyring (headless, Docker, CI), mirroring Chromium's PosixKeyProvider.

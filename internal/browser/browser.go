@@ -32,6 +32,7 @@ const (
 type Platform struct {
 	UserDataDirs        []string // slash-separated, relative to the home directory; globs allowed
 	SecretLabel         string   // macOS Keychain account / Linux Secret Service label; "" = none
+	PortalAppID         string   // Linux: the app id whose XDG portal secret decrypts v12 values; "" = none
 	Executable          string   // Windows: the program the ABE payload is injected into
 	ExecutableFallbacks []string // Windows: program paths tried when the registry has no App Paths entry
 	ABE                 masterkey.ABEKind

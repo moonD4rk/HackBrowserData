@@ -15,6 +15,7 @@ type Version string
 const (
 	V10 Version = "v10"
 	V11 Version = "v11"
+	V12 Version = "v12"
 	V20 Version = "v20"
 )
 
@@ -36,6 +37,7 @@ var errStorageNotFound = errors.New("not found in credential store") //nolint:un
 type Locator struct {
 	LocalState          string // the copied Local State; "" when the user data dir has none
 	SecretLabel         string // macOS Keychain account / Linux D-Bus Secret Service label
+	PortalAppID         string // Linux: the XDG portal app id whose v12 secret decrypts this dir; "" = no v12
 	Executable          string
 	ExecutableFallbacks []string
 	ABE                 ABEKind
