@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf16"
 
+	"github.com/moond4rk/binarycookies/v2"
 	"github.com/moond4rk/plist"
 	"github.com/stretchr/testify/require"
 )
@@ -63,43 +64,43 @@ func WriteSafariLibrary(t *testing.T, library string) {
 	)
 
 	writeFile(t, filepath.Join(container, "Cookies", "Cookies.binarycookies"), string(encodeSafariCookieFile(t,
-		[]safariCookie{
+		[]binarycookies.Cookie{
 			{
-				domain: ".home.safari.test", name: "SID", path: "/", value: "sid-home.safari.test", flags: 0x5,
-				expires: timeAt(365 * day), created: timeAt(10*time.Minute + 750*time.Millisecond),
+				Domain: ".home.safari.test", Name: "SID", Path: "/", Value: "sid-home.safari.test", Flags: binarycookies.FlagSecure | binarycookies.FlagHTTPOnly,
+				Expires: timeAt(365 * day), Created: timeAt(10*time.Minute + 750*time.Millisecond),
 			},
 			{
-				domain: "www.home.safari.test", name: "prefs", path: "/settings", value: "theme=dark",
-				expires: timeAt(30 * day), created: timeAt(20 * time.Minute),
+				Domain: "www.home.safari.test", Name: "prefs", Path: "/settings", Value: "theme=dark",
+				Expires: timeAt(30 * day), Created: timeAt(20 * time.Minute),
 			},
 		},
-		[]safariCookie{
+		[]binarycookies.Cookie{
 			{
-				domain: ".home.safari.test", name: "tracker", path: "/", value: "opt-out", flags: 0x1,
-				expires: timeAt(730 * day), created: timeAt(30 * time.Minute),
+				Domain: ".home.safari.test", Name: "tracker", Path: "/", Value: "opt-out", Flags: binarycookies.FlagSecure,
+				Expires: timeAt(730 * day), Created: timeAt(30 * time.Minute),
 			},
 			{
-				domain: "app.home.safari.test", name: "csrf", path: "/", value: "token-123", flags: 0x4,
-				expires: timeAt(day), created: timeAt(40 * time.Minute),
+				Domain: "app.home.safari.test", Name: "csrf", Path: "/", Value: "token-123", Flags: binarycookies.FlagHTTPOnly,
+				Expires: timeAt(day), Created: timeAt(40 * time.Minute),
 			},
 		},
 	)))
 	// Since macOS 14 the jar lives in the container, which wins over a leftover ~/Library/Cookies jar.
 	writeFile(t, filepath.Join(library, "Cookies", "Cookies.binarycookies"), string(encodeSafariCookieFile(t,
-		[]safariCookie{{
-			domain: "old.home.safari.test", name: "legacy", path: "/", value: "stale",
-			expires: timeAt(day), created: timeAt(time.Minute),
+		[]binarycookies.Cookie{{
+			Domain: "old.home.safari.test", Name: "legacy", Path: "/", Value: "stale",
+			Expires: timeAt(day), Created: timeAt(time.Minute),
 		}},
 	)))
 	writeFile(t, filepath.Join(workStore, "Cookies", "Cookies.binarycookies"), string(encodeSafariCookieFile(t,
-		[]safariCookie{
+		[]binarycookies.Cookie{
 			{
-				domain: ".work.safari.test", name: "SSO", path: "/", value: "sso-work.safari.test", flags: 0x5,
-				expires: timeAt(7 * day), created: timeAt(6 * time.Hour),
+				Domain: ".work.safari.test", Name: "SSO", Path: "/", Value: "sso-work.safari.test", Flags: binarycookies.FlagSecure | binarycookies.FlagHTTPOnly,
+				Expires: timeAt(7 * day), Created: timeAt(6 * time.Hour),
 			},
 			{
-				domain: "wiki.work.safari.test", name: "lang", path: "/", value: "en",
-				expires: timeAt(90 * day), created: timeAt(7 * time.Hour),
+				Domain: "wiki.work.safari.test", Name: "lang", Path: "/", Value: "en",
+				Expires: timeAt(90 * day), Created: timeAt(7 * time.Hour),
 			},
 		},
 	)))
@@ -145,86 +146,16 @@ func writeSafariPlist(t *testing.T, path, body string) {
 	writeFile(t, path, string(data))
 }
 
-type safariCookie struct {
-	domain, name, path, value string
-	flags                     uint32
-	expires, created          time.Time
-}
-
-type safariCookieHeader struct {
-	Size          uint32
-	Version       uint32
-	Flags         uint32
-	HasPort       uint32
-	DomainOffset  uint32
-	NameOffset    uint32
-	PathOffset    uint32
-	ValueOffset   uint32
-	CommentOffset uint32
-	EndOfHeader   uint32
-	Expires       float64
-	Created       float64
-}
-
 // encodeSafariCookieFile takes one page of the jar per argument.
-func encodeSafariCookieFile(t *testing.T, pages ...[]safariCookie) []byte {
+func encodeSafariCookieFile(t *testing.T, pages ...[]binarycookies.Cookie) []byte {
 	t.Helper()
-	encoded := make([][]byte, len(pages))
-	file := binary.BigEndian.AppendUint32([]byte("cook"), uint32(len(pages)))
+	jar := &binarycookies.File{Pages: make([]binarycookies.Page, len(pages))}
 	for i, cookies := range pages {
-		encoded[i] = encodeSafariCookiePage(t, cookies)
-		file = binary.BigEndian.AppendUint32(file, uint32(len(encoded[i])))
+		jar.Pages[i].Cookies = cookies
 	}
-	for _, page := range encoded {
-		file = append(file, page...)
-	}
-	return append(file, make([]byte, 8)...) // the checksum, which the decoder reads but never verifies
-}
-
-func encodeSafariCookiePage(t *testing.T, cookies []safariCookie) []byte {
-	t.Helper()
-	records := make([][]byte, len(cookies))
-	for i, cookie := range cookies {
-		records[i] = encodeSafariCookieRecord(t, cookie)
-	}
-	page := binary.LittleEndian.AppendUint32([]byte{0x00, 0x00, 0x01, 0x00}, uint32(len(cookies)))
-	offset := 4 + 4 + 4*len(cookies) + 4
-	for _, encodedRecord := range records {
-		page = binary.LittleEndian.AppendUint32(page, uint32(offset))
-		offset += len(encodedRecord)
-	}
-	page = append(page, 0x00, 0x00, 0x00, 0x00)
-	for _, encodedRecord := range records {
-		page = append(page, encodedRecord...)
-	}
-	return page
-}
-
-func encodeSafariCookieRecord(t *testing.T, cookie safariCookie) []byte {
-	t.Helper()
-	header := safariCookieHeader{
-		Flags:   cookie.flags,
-		Expires: safariCoreData(cookie.expires),
-		Created: safariCoreData(cookie.created),
-	}
-	headerSize := uint32(binary.Size(header))
-	var strs []byte
-	for _, field := range []struct {
-		offset *uint32
-		value  string
-	}{
-		{&header.DomainOffset, cookie.domain},
-		{&header.NameOffset, cookie.name},
-		{&header.PathOffset, cookie.path},
-		{&header.ValueOffset, cookie.value},
-	} {
-		*field.offset = headerSize + uint32(len(strs))
-		strs = append(append(strs, field.value...), 0x00)
-	}
-	header.Size = headerSize + uint32(len(strs))
-	var buffer bytes.Buffer
-	require.NoError(t, binary.Write(&buffer, binary.LittleEndian, header))
-	return append(buffer.Bytes(), strs...)
+	var buf bytes.Buffer
+	require.NoError(t, binarycookies.Encode(&buf, jar))
+	return buf.Bytes()
 }
 
 type safariEndpoint struct {
