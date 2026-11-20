@@ -67,7 +67,7 @@ func WriteSafariLibrary(t *testing.T, library string) {
 		[]binarycookies.Cookie{
 			{
 				Domain: ".home.safari.test", Name: "SID", Path: "/", Value: "sid-home.safari.test", Flags: binarycookies.FlagSecure | binarycookies.FlagHTTPOnly,
-				Expires: timeAt(365 * day), Created: timeAt(10*time.Minute + 750*time.Millisecond),
+				Expires: timeAt(365 * day), Created: timeAt(10 * time.Minute),
 			},
 			{
 				Domain: "www.home.safari.test", Name: "prefs", Path: "/settings", Value: "theme=dark",
