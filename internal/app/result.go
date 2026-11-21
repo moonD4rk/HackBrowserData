@@ -60,5 +60,6 @@ type DirFailure struct {
 type Summary struct {
 	Results     []Result
 	DirFailures []DirFailure
-	Exported    export.Listing // the files Execute wrote; empty when nothing was exported
+	Exported    export.Listing // the files the run wrote; empty when nothing was exported
+	Err         error          // why the run ended early: it was stopped, or its output could not be written
 }

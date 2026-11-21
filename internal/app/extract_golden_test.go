@@ -1,4 +1,4 @@
-package app_test
+package app
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/moond4rk/hackbrowserdata/internal/app"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/browsertest"
 	"github.com/moond4rk/hackbrowserdata/internal/golden"
 
@@ -59,12 +58,15 @@ func TestExtractGoldenSafari(t *testing.T) {
 func extractGoldenRun(t *testing.T, home string, keys map[browser.UserDataDirID]masterkey.Set, format string) string {
 	t.Helper()
 	out := t.TempDir()
-	options, err := app.ValidateDump(app.DumpFlags{Browser: "all", Categories: "all", Format: format, OutputDir: out, MaxStorageValue: app.DefaultMaxStorageValue}, nil, nil)
+	flags := DumpFlags{Browser: "all", Categories: "all", Output: OutputFlags{Format: format, Dir: out, MaxStorageValue: DefaultMaxStorageValue}}
+	options, err := ValidateDump(flags, nil, nil)
 	require.NoError(t, err)
-	options.Target.HomeDir = home
 
-	_, err = app.ExecuteWithKeys(context.Background(), app.Discover(context.Background(), options.Target), options.Categories, options.Output, keys)
+	discovery := discover(context.Background(), options.Browsers, browser.DiscoverOptions{HomeDir: home})
+	fromFixture := runner{extractors: extractorsFor, retrieveKeys: keysFromFile(keys)}
+	summary, err := execute(context.Background(), discovery, options.Categories, options.Output, fromFixture)
 	require.NoError(t, err)
+	require.NoError(t, summary.Err)
 	return out
 }
 

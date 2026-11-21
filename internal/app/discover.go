@@ -16,11 +16,10 @@ type Discovery struct {
 	DirFailures []DirFailure
 }
 
-func Discover(ctx context.Context, target Target) Discovery {
+func discover(ctx context.Context, browsers []browser.Browser, options browser.DiscoverOptions) Discovery {
 	var discovery Discovery
-	discoverOptions := browser.DiscoverOptions{HomeDir: target.HomeDir, ProfilePath: target.ProfilePath}
-	for _, targetBrowser := range target.Browsers {
-		dirs, err := discover(ctx, targetBrowser, discoverOptions)
+	for _, targetBrowser := range browsers {
+		dirs, err := discoverBrowser(ctx, targetBrowser, options)
 		discovery.Dirs = append(discovery.Dirs, withData(dirs)...)
 		if err != nil {
 			discovery.DirFailures = append(discovery.DirFailures, DirFailure{UserDataDirID: browser.UserDataDirID(targetBrowser.Name), Err: err})
@@ -59,8 +58,8 @@ func hasData(dir browser.UserDataDir, profile browser.Profile, extractors browse
 	return false
 }
 
-// discover dispatches on Base here, not in browser, because the base packages import browser.
-func discover(ctx context.Context, targetBrowser browser.Browser, options browser.DiscoverOptions) ([]browser.UserDataDir, error) {
+// discoverBrowser dispatches on Base here, not in browser, because the base packages import browser.
+func discoverBrowser(ctx context.Context, targetBrowser browser.Browser, options browser.DiscoverOptions) ([]browser.UserDataDir, error) {
 	switch targetBrowser.Base {
 	case browser.Chromium:
 		return chromium.Discover(targetBrowser, options)
@@ -73,7 +72,7 @@ func discover(ctx context.Context, targetBrowser browser.Browser, options browse
 	}
 }
 
-// extractorsFor dispatches on Base here for the same reason discover does.
+// extractorsFor dispatches on Base here for the same reason discoverBrowser does.
 func extractorsFor(dir browser.UserDataDir, profile browser.Profile) browser.Extractors {
 	switch dir.Browser.Base {
 	case browser.Chromium:

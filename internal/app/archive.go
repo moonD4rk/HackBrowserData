@@ -16,11 +16,14 @@ import (
 type ArchiveFlags struct {
 	Browser    string
 	Categories string
+	OutputPath string
 }
 
 type ArchiveOptions struct {
-	Target     Target
-	Categories []category.Category
+	Browsers    []browser.Browser
+	HomeDir     string
+	Categories  []category.Category
+	ArchivePath string
 }
 
 // ValidateArchive takes no keychain password: an archive copies files and reads no secret.
@@ -37,35 +40,39 @@ func ValidateArchive(flags ArchiveFlags) (ArchiveOptions, error) {
 	if err != nil {
 		return ArchiveOptions{}, err
 	}
-	return ArchiveOptions{Target: Target{Browsers: browsers, HomeDir: home}, Categories: categories}, nil
+	return ArchiveOptions{Browsers: browsers, HomeDir: home, Categories: categories, ArchivePath: flags.OutputPath}, nil
 }
 
-// Archive returns how many files and directories it captured.
-func Archive(ctx context.Context, discovery Discovery, categories []category.Category, archivePath string) (int, error) {
+// Archive returns how many files and directories it captured. A Discovery without dirs means nothing was written.
+func Archive(ctx context.Context, options ArchiveOptions) (Discovery, int, error) {
+	discovery := discover(ctx, options.Browsers, browser.DiscoverOptions{HomeDir: options.HomeDir})
+	if len(discovery.Dirs) == 0 {
+		return discovery, 0, nil
+	}
 	var dirs []browser.UserDataDir
 	for _, dir := range discovery.Dirs {
 		if dir.Browser.Base == browser.Chromium {
 			dirs = append(dirs, dir)
 		}
 	}
-	files := archiveFiles(dirs, categories)
+	files := archiveFiles(dirs, options.Categories)
 
 	root, err := snapshot.NewRoot()
 	if err != nil {
-		return 0, err
+		return Discovery{}, 0, err
 	}
 	defer closeRoot(root)
 	if err := root.Capture(ctx, files); err != nil {
-		return 0, err
+		return Discovery{}, 0, err
 	}
 	fileCount := countCaptured(root, files)
 	if fileCount == 0 {
-		return 0, errors.New("no decryption-relevant files found to archive")
+		return Discovery{}, 0, errors.New("no decryption-relevant files found to archive")
 	}
-	if err := root.Zip(archivePath); err != nil {
-		return 0, fmt.Errorf("write archive %s: %w", archivePath, err)
+	if err := root.Zip(options.ArchivePath); err != nil {
+		return Discovery{}, 0, fmt.Errorf("write archive %s: %w", options.ArchivePath, err)
 	}
-	return fileCount, nil
+	return discovery, fileCount, nil
 }
 
 func archiveFiles(dirs []browser.UserDataDir, categories []category.Category) []snapshot.File {

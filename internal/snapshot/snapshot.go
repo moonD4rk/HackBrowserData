@@ -3,13 +3,10 @@ package snapshot
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/moond4rk/hackbrowserdata/internal/zipfile"
 )
 
 type File struct {
@@ -38,22 +35,6 @@ func NewRoot() (*Root, error) {
 // Open uses an existing snapshot directory in place; Close leaves it there.
 func Open(path string) *Root {
 	return &Root{path: path, failed: make(map[string]error)}
-}
-
-// Unzip extracts an archive into a temporary snapshot directory, rejecting entries that would land outside it.
-func Unzip(archivePath string) (*Root, error) {
-	root, err := NewRoot()
-	if err != nil {
-		return nil, err
-	}
-	if err := zipfile.Extract(archivePath, root.path); err != nil {
-		return nil, errors.Join(err, root.Close())
-	}
-	return root, nil
-}
-
-func (r *Root) Path() string {
-	return r.path
 }
 
 // Capture keeps a file's own failure for Snapshot.Path instead of stopping the rest of the capture.

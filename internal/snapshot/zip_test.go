@@ -9,9 +9,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moond4rk/hackbrowserdata/internal/zipfile"
 )
 
-func TestZipUnzip_RoundTrip(t *testing.T) {
+func TestZip_RoundTrip(t *testing.T) {
 	files := map[string][]byte{
 		"small.txt":                      []byte("hello"),
 		"chrome/Default/Network/Cookies": []byte("cookie-bytes"),
@@ -31,15 +33,13 @@ func TestZipUnzip_RoundTrip(t *testing.T) {
 	}
 	require.NoError(t, zipReader.Close())
 
-	root, err := Unzip(archive)
-	require.NoError(t, err)
+	unzipped := t.TempDir()
+	require.NoError(t, zipfile.Extract(archive, unzipped))
 	for relativePath, want := range files {
-		got, err := os.ReadFile(filepath.Join(root.Path(), filepath.FromSlash(relativePath)))
+		got, err := os.ReadFile(filepath.Join(unzipped, filepath.FromSlash(relativePath)))
 		require.NoError(t, err, relativePath)
 		assert.True(t, bytes.Equal(want, got), "%s: got %d bytes, want %d", relativePath, len(got), len(want))
 	}
-	require.NoError(t, root.Close())
-	assert.NoDirExists(t, root.Path())
 }
 
 func TestZip_MissingSnapshotDirFails(t *testing.T) {

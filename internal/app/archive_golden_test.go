@@ -93,11 +93,11 @@ func TestArchiveGolden(t *testing.T) {
 	for _, testCase := range tests {
 		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
-			options, err := app.ValidateArchive(app.ArchiveFlags{Browser: archiveLayoutBrowser, Categories: testCase.categories})
-			require.NoError(t, err)
-			options.Target.HomeDir = home
 			out := filepath.Join(t.TempDir(), "browser-data.zip")
-			fileCount, err := app.Archive(context.Background(), app.Discover(context.Background(), options.Target), options.Categories, out)
+			options, err := app.ValidateArchive(app.ArchiveFlags{Browser: archiveLayoutBrowser, Categories: testCase.categories, OutputPath: out})
+			require.NoError(t, err)
+			options.HomeDir = home
+			_, fileCount, err := app.Archive(context.Background(), options)
 			require.NoError(t, err)
 			golden.Assert(t, testCase.golden, fmt.Sprintf("entries=%d\n", fileCount)+golden.ZipListing(t, out))
 

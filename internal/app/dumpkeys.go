@@ -15,12 +15,16 @@ import (
 
 // DumpKeysFlags are dumpkeys' command-line values as cobra parsed them.
 type DumpKeysFlags struct {
-	Browser string
+	Browser    string
+	OutputPath string
 }
 
 type DumpKeysOptions struct {
-	Target   Target
-	Keychain KeychainConfig
+	Browsers   []browser.Browser
+	HomeDir    string
+	OutputPath string // "" writes the key file to stdout
+	// KeychainPassword runs when the macOS login keychain first opens; "" leaves it locked. Other systems ignore it.
+	KeychainPassword func(ctx context.Context) (string, error)
 }
 
 func ValidateDumpKeys(flags DumpKeysFlags, keychainPassword func(context.Context) (string, error)) (DumpKeysOptions, error) {
@@ -32,23 +36,22 @@ func ValidateDumpKeys(flags DumpKeysFlags, keychainPassword func(context.Context
 	if err != nil {
 		return DumpKeysOptions{}, err
 	}
-	return DumpKeysOptions{
-		Target:   Target{Browsers: browsers, HomeDir: home},
-		Keychain: KeychainConfig{Path: loginKeychainPath(home), Password: keychainPassword},
-	}, nil
+	return DumpKeysOptions{Browsers: browsers, HomeDir: home, OutputPath: flags.OutputPath, KeychainPassword: keychainPassword}, nil
 }
 
-// DumpKeys writes the key file to outputPath, or to stdout when it is "", and returns how many vaults it holds.
+// DumpKeys writes the key file to options.OutputPath, or to stdout when it is "", and returns how many vaults it holds.
 // A stopped run writes nothing, so it never leaves a keys.json behind.
-func DumpKeys(ctx context.Context, discovery Discovery, keychainConfig KeychainConfig, stdout io.Writer, outputPath string) (int, error) {
-	keyFile, err := dumpKeysWith(ctx, discovery, keysFromMachine(newLoginKeychain(keychainConfig)))
+func DumpKeys(ctx context.Context, options DumpKeysOptions, stdout io.Writer) (int, error) {
+	discovery := discover(ctx, options.Browsers, browser.DiscoverOptions{HomeDir: options.HomeDir})
+	keychain := newLoginKeychain(loginKeychainPath(options.HomeDir), options.KeychainPassword)
+	keyFile, err := dumpKeysWith(ctx, discovery, keysFromMachine(keychain))
 	if err != nil {
 		return 0, err
 	}
-	if outputPath == "" {
+	if options.OutputPath == "" {
 		return len(keyFile.Vaults), keyFile.Write(stdout)
 	}
-	if err := writeKeyFile(outputPath, keyFile); err != nil {
+	if err := writeKeyFile(options.OutputPath, keyFile); err != nil {
 		return 0, err
 	}
 	return len(keyFile.Vaults), nil

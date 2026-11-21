@@ -10,25 +10,9 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/export"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
-	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
-
-// Execute retrieves each dir's master keys from this machine. It handles one user data dir at a time, so at most one
-// dir's copies are on disk. Its error means the run ended early; like os.ReadDir, it still returns the Summary of what
-// ran before it, with the files written, so the caller can list them.
-func Execute(
-	ctx context.Context, discovery Discovery, categories []category.Category, output OutputOptions, keychainConfig KeychainConfig,
-	firefoxPassword func(context.Context) (string, error),
-) (Summary, error) {
-	keychain := newLoginKeychain(keychainConfig)
-	fromMachine := runner{
-		extractors: extractorsFor, retrieveKeys: keysFromMachine(keychain), loginKeychain: keychain,
-		firefoxPassword: readOnce(firefoxPassword),
-	}
-	return execute(ctx, discovery, categories, output, fromMachine)
-}
 
 // readOnce lets every protected Firefox profile of a run share one read, since stdin yields the password only once.
 func readOnce(read func(context.Context) (string, error)) func(context.Context) (string, error) {
@@ -44,15 +28,8 @@ func readOnce(read func(context.Context) (string, error)) func(context.Context) 
 	}
 }
 
-// ExecuteWithKeys decrypts with a key file's keys, so it never reads this machine's secret stores.
-func ExecuteWithKeys(
-	ctx context.Context, discovery Discovery, categories []category.Category, output OutputOptions,
-	keys map[browser.UserDataDirID]masterkey.Set,
-) (Summary, error) {
-	return execute(ctx, discovery, categories, output, runner{extractors: extractorsFor, retrieveKeys: keysFromFile(keys)})
-}
-
 // execute gives the runner the run's writer; the caller sets where its extractors, keys, and keychain come from.
+// It handles one user data dir at a time, so at most one dir's copies are on disk. Its error means nothing ran.
 func execute(
 	ctx context.Context, discovery Discovery, categories []category.Category, output OutputOptions, dirRunner runner,
 ) (Summary, error) {
@@ -62,10 +39,10 @@ func execute(
 	}
 	dirRunner.writer, dirRunner.logProgress = writer, true
 	dirRunner.maxStorageValue = output.MaxStorageValue
-	summary, err := dirRunner.run(ctx, discovery, categories)
-	closeErr := writer.Close()
+	summary := dirRunner.run(ctx, discovery, categories)
+	summary.Err = errors.Join(summary.Err, writer.Close())
 	summary.Exported = writer.Listing()
-	return summary, errors.Join(err, closeErr)
+	return summary, nil
 }
 
 type recordWriter interface {
@@ -83,27 +60,30 @@ type runner struct {
 	maxStorageValue int
 }
 
-func (r runner) run(ctx context.Context, discovery Discovery, categories []category.Category) (Summary, error) {
+// run ends at the first dir whose Summary has an Err, keeping what ran before it.
+func (r runner) run(ctx context.Context, discovery Discovery, categories []category.Category) Summary {
 	summary := Summary{DirFailures: append([]DirFailure(nil), discovery.DirFailures...)}
 	for _, dir := range discovery.Dirs {
 		if err := ctx.Err(); err != nil {
-			return summary, fmt.Errorf("run stopped: %w", err)
+			summary.Err = fmt.Errorf("run stopped: %w", err)
+			return summary
 		}
-		dirSummary, err := r.runDir(ctx, dir, categories)
+		dirSummary := r.runDir(ctx, dir, categories)
 		summary.Results = append(summary.Results, dirSummary.Results...)
 		summary.DirFailures = append(summary.DirFailures, dirSummary.DirFailures...)
-		if err != nil {
-			return summary, err
+		if dirSummary.Err != nil {
+			summary.Err = dirSummary.Err
+			return summary
 		}
 	}
-	return summary, nil
+	return summary
 }
 
-func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories []category.Category) (Summary, error) {
+func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories []category.Category) Summary {
 	plan := planDir(dir, categories, r.extractors)
 	summary := Summary{Results: plan.skipped}
 	if len(plan.extractions) == 0 {
-		return summary, nil
+		return summary
 	}
 	if r.logProgress {
 		log.Infof("Extracting %s...", dir.Browser.DisplayName)
@@ -112,15 +92,16 @@ func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories 
 	root, err := snapshot.NewRoot()
 	if err != nil {
 		summary.Results = append(summary.Results, failAll(plan.extractions, err)...)
-		return summary, nil
+		return summary
 	}
 	defer closeRoot(root)
 	if err := root.Capture(ctx, plan.files); err != nil {
 		if ctx.Err() != nil {
-			return summary, err
+			summary.Err = err
+			return summary
 		}
 		summary.Results = append(summary.Results, failAll(plan.extractions, err)...)
-		return summary, nil
+		return summary
 	}
 	dirSnapshot := root.Snapshot(string(dir.ID))
 
@@ -130,12 +111,14 @@ func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories 
 	}
 	for _, extraction := range plan.extractions {
 		if err := ctx.Err(); err != nil {
-			return summary, fmt.Errorf("run stopped: %w", err)
+			summary.Err = fmt.Errorf("run stopped: %w", err)
+			return summary
 		}
 		input := browser.NewInput(dirSnapshot, extraction.profile, keys.get, r.loginKeychain).WithFirefoxPassword(r.firefoxPassword)
 		result, err := r.runExtraction(ctx, extraction, input, dir.Browser.DisplayName)
 		if err != nil {
-			return summary, err
+			summary.Err = err
+			return summary
 		}
 		summary.Results = append(summary.Results, result)
 	}
@@ -143,7 +126,7 @@ func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories 
 		keyErr := fmt.Errorf("master key retrieval: %w", keys.err)
 		summary.DirFailures = []DirFailure{{UserDataDirID: dir.ID, Err: keyErr}}
 	}
-	return summary, nil
+	return summary
 }
 
 // runExtraction exports the records emitted before an extraction failed, as they always were; its error stops the run.

@@ -1,7 +1,6 @@
 package snapshot
 
 import (
-	"archive/zip"
 	"context"
 	"io/fs"
 	"os"
@@ -34,14 +33,14 @@ func userDataDir(t *testing.T) string {
 func TestTemp_IsPrivateAndCloseRemovesIt(t *testing.T) {
 	root, err := NewRoot()
 	require.NoError(t, err)
-	info, err := os.Stat(root.Path())
+	info, err := os.Stat(root.path)
 	require.NoError(t, err)
 	if runtime.GOOS != "windows" {
 		assert.Equal(t, fs.FileMode(0o700), info.Mode().Perm())
 	}
 
 	require.NoError(t, root.Close())
-	assert.NoDirExists(t, root.Path())
+	assert.NoDirExists(t, root.path)
 }
 
 func TestOpen_ReadsInPlaceAndCloseLeavesIt(t *testing.T) {
@@ -72,7 +71,7 @@ func TestCapture_FilesWithSidecarsAndDirsWithoutLocks(t *testing.T) {
 	dirSnapshot := root.Snapshot("chrome")
 	cookies, err := dirSnapshot.Path("Default/Network/Cookies")
 	require.NoError(t, err)
-	assert.Equal(t, filepath.Join(root.Path(), "chrome", "Default", "Network", "Cookies"), cookies)
+	assert.Equal(t, filepath.Join(root.path, "chrome", "Default", "Network", "Cookies"), cookies)
 	for suffix, want := range map[string]string{"-wal": "wal", "-shm": "shm"} {
 		got, err := os.ReadFile(cookies + suffix)
 		require.NoError(t, err)
@@ -141,7 +140,7 @@ func TestCapture_StaysInsideItsOwnSnapshot(t *testing.T) {
 
 	_, err = root.Snapshot("chrome").Path("../edge/Local State")
 	require.Error(t, err)
-	entries, err := os.ReadDir(root.Path())
+	entries, err := os.ReadDir(root.path)
 	require.NoError(t, err)
 	assert.Empty(t, entries, "nothing may be written outside a file's own snapshot")
 }
@@ -173,44 +172,6 @@ func TestCapture_ALaterCaptureReplacesAnEarlierFailure(t *testing.T) {
 	require.NoError(t, root.Capture(context.Background(), []File{{UserDataDirID: "chrome", UserDataDirPath: from, RelativePath: "Default/./History"}}))
 	_, err = root.Snapshot("chrome").Path("Default/History")
 	require.NoError(t, err)
-}
-
-func TestUnzip_RejectsZipSlipAndCleansUp(t *testing.T) {
-	tempRoot := privateTempRoot(t)
-	archive := zipWith(t, "../escape.txt")
-
-	_, err := Unzip(archive)
-	require.Error(t, err)
-	entries, err := os.ReadDir(tempRoot)
-	require.NoError(t, err)
-	assert.Empty(t, entries, "a rejected archive leaves neither the escaped file nor the snapshot directory behind")
-}
-
-// privateTempRoot points os.TempDir at a fresh directory, so a test can see everything Temp leaves behind.
-func privateTempRoot(t *testing.T) string {
-	t.Helper()
-	dir := t.TempDir()
-	for _, variable := range []string{"TMPDIR", "TMP", "TEMP"} {
-		t.Setenv(variable, dir)
-	}
-	return dir
-}
-
-func zipWith(t *testing.T, names ...string) string {
-	t.Helper()
-	archive := filepath.Join(t.TempDir(), "test.zip")
-	file, err := os.Create(archive)
-	require.NoError(t, err)
-	zipWriter := zip.NewWriter(file)
-	for _, name := range names {
-		writer, err := zipWriter.Create(name)
-		require.NoError(t, err)
-		_, err = writer.Write([]byte(name))
-		require.NoError(t, err)
-	}
-	require.NoError(t, zipWriter.Close())
-	require.NoError(t, file.Close())
-	return archive
 }
 
 func writeFile(t *testing.T, path string, data []byte) {

@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -14,14 +13,15 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/export"
 )
 
-// Target is what Discover looks for.
-type Target struct {
-	Browsers    []browser.Browser
-	ProfilePath string // a custom profile dir; set only when Browsers holds one browser
-	HomeDir     string
+// OutputFlags are the output flags dump and restore share, as cobra parsed them.
+type OutputFlags struct {
+	Format          string
+	Dir             string
+	Zip             bool
+	MaxStorageValue int
 }
 
-// OutputOptions is where and how Execute writes records.
+// OutputOptions is where and how a dump or a restore writes records.
 type OutputOptions struct {
 	Dir             string
 	Format          export.Format
@@ -32,18 +32,18 @@ type OutputOptions struct {
 // DefaultMaxStorageValue bounds a stored value's characters unless --max-storage-value overrides it; 0 disables the bound.
 const DefaultMaxStorageValue = 2048
 
-func checkMaxStorageValue(value int) error {
-	if value < 0 {
-		return fmt.Errorf("--max-storage-value must be >= 0 (0 means unlimited), got %d", value)
+func parseOutput(flags OutputFlags) (OutputOptions, error) {
+	format, err := export.ParseFormat(flags.Format)
+	if err != nil {
+		return OutputOptions{}, err
 	}
-	return nil
-}
-
-// KeychainConfig locates the macOS login keychain and says how to get its password; other systems ignore it.
-type KeychainConfig struct {
-	Path string
-	// Password runs when the keychain first opens; "" leaves it locked, and nil, as list has it, silently.
-	Password func(ctx context.Context) (string, error)
+	if err := checkOutputDir(flags.Dir); err != nil {
+		return OutputOptions{}, err
+	}
+	if flags.MaxStorageValue < 0 {
+		return OutputOptions{}, fmt.Errorf("--max-storage-value must be >= 0 (0 means unlimited), got %d", flags.MaxStorageValue)
+	}
+	return OutputOptions{Dir: flags.Dir, Format: format, Zip: flags.Zip, MaxStorageValue: flags.MaxStorageValue}, nil
 }
 
 func homeDir() (string, error) {
