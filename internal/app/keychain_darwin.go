@@ -12,11 +12,12 @@ import (
 )
 
 // newLoginKeychain builds the run's login keychain without opening it, so a run that never decrypts never prompts.
-func newLoginKeychain(config KeychainConfig) loginKeychain {
-	if config.Password == nil {
-		return keychain.New(config.Path, func(context.Context) (string, error) { return "", nil })
+// A nil password, as list has it, leaves the keychain locked without a word.
+func newLoginKeychain(path string, password func(context.Context) (string, error)) loginKeychain {
+	if password == nil {
+		return keychain.New(path, func(context.Context) (string, error) { return "", nil })
 	}
-	return &reportingKeychain{Keychain: keychain.New(config.Path, keychain.PasswordFunc(config.Password))}
+	return &reportingKeychain{Keychain: keychain.New(path, keychain.PasswordFunc(password))}
 }
 
 func loginKeychainPath(home string) string {

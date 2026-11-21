@@ -2,15 +2,12 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 
 	"github.com/spf13/cobra"
 
 	"github.com/moond4rk/hackbrowserdata/internal/app"
-	"github.com/moond4rk/hackbrowserdata/internal/log"
-	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
 func newRestoreCommand() *cobra.Command {
@@ -33,10 +30,7 @@ func newRestoreCommand() *cobra.Command {
 	command.Flags().StringVar(&flags.DataZip, "data-zip", "", "zip produced by the archive command (alternative to --data-dir)")
 	command.Flags().StringVarP(&flags.Browser, "browser", "b", "", "restore only this browser (optional; must match a vault in --keys)")
 	command.Flags().StringVarP(&flags.Categories, "category", "c", "all", "data categories (comma-separated): all|"+categoryNames())
-	command.Flags().StringVarP(&flags.Format, "format", "f", "json", "output format: csv|json|cookie-editor")
-	command.Flags().StringVarP(&flags.OutputDir, "dir", "d", "results", "output directory")
-	command.Flags().BoolVar(&flags.Zip, "zip", false, "compress output to zip")
-	command.Flags().IntVar(&flags.MaxStorageValue, "max-storage-value", app.DefaultMaxStorageValue, "max storage value chars, 0=unlimited")
+	addOutputFlags(command, &flags.Output)
 
 	_ = command.MarkFlagRequired("keys")
 	command.MarkFlagsMutuallyExclusive("data-dir", "data-zip")
@@ -49,40 +43,17 @@ func runRestore(ctx context.Context, stderr io.Writer, flags app.RestoreFlags) e
 	if err != nil {
 		return err
 	}
-	root, err := openRestoreData(flags.DataDir, flags.DataZip)
+	discovery, summary, err := app.Restore(ctx, options)
 	if err != nil {
 		return err
 	}
-	defer closeRestoreData(root)
-
-	discovery, keys, err := app.DiscoverRestore(root.Path(), options.Vaults)
-	if err != nil {
-		return err
-	}
-	if warnIfNothingFound(stderr, discovery, "no browsers to restore from the supplied keys and data") {
+	if len(discovery.Dirs) == 0 {
+		printNothingFound(stderr, discovery, "no browsers to restore from the supplied keys and data")
 		return nil
 	}
-	summary, err := app.ExecuteWithKeys(ctx, discovery, options.Categories, options.Output, keys)
 	printExported(stderr, summary.Exported)
 	if ctx.Err() == nil {
 		printSummary(stderr, summary)
 	}
-	return err
-}
-
-func openRestoreData(dataDir, dataZip string) (*snapshot.Root, error) {
-	if dataDir != "" {
-		return snapshot.Open(dataDir), nil
-	}
-	root, err := snapshot.Unzip(dataZip)
-	if err != nil {
-		return nil, fmt.Errorf("extract %s: %w", dataZip, err)
-	}
-	return root, nil
-}
-
-func closeRestoreData(root *snapshot.Root) {
-	if err := root.Close(); err != nil {
-		log.Warnf("restore: %v", err)
-	}
+	return summary.Err
 }

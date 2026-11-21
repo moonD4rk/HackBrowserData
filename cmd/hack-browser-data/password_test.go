@@ -14,14 +14,14 @@ import (
 func TestKeychainPasswordFunc(t *testing.T) {
 	tests := []struct {
 		name  string
-		flags keychainFlags
+		flags passwordFlags
 		stdin string
 		want  string
 		err   error
 	}{
-		{name: "flag", flags: keychainFlags{password: "from-flag"}, stdin: "from-stdin\n", want: "from-flag"},
-		{name: "stdin", flags: keychainFlags{passwordStdin: true}, stdin: "from-stdin\r\nnext\n", want: "from-stdin"},
-		{name: "stdin without newline", flags: keychainFlags{passwordStdin: true}, stdin: "from-stdin", want: "from-stdin"},
+		{name: "flag", flags: passwordFlags{value: "from-flag"}, stdin: "from-stdin\n", want: "from-flag"},
+		{name: "stdin", flags: passwordFlags{fromStdin: true}, stdin: "from-stdin\r\nnext\n", want: "from-stdin"},
+		{name: "stdin without newline", flags: passwordFlags{fromStdin: true}, stdin: "from-stdin", want: "from-stdin"},
 		{name: "none off a terminal", stdin: "from-stdin\n", err: errNoPassword},
 	}
 	for _, testCase := range tests {

@@ -13,39 +13,27 @@ import (
 	"golang.org/x/term"
 )
 
-// keychainFlags say where the macOS login keychain password comes from; both empty means a prompt, or none.
-type keychainFlags struct {
-	password      string
-	passwordStdin bool
+// passwordFlags say where one password comes from: its flag, or the first line of stdin. Neither leaves it to the
+// password's own default: a prompt or nothing for the keychain, the empty password for Firefox.
+type passwordFlags struct {
+	value     string
+	fromStdin bool
 }
 
-func addKeychainPasswordFlags(command *cobra.Command, flags *keychainFlags) {
-	command.Flags().StringVar(&flags.password, "keychain-pw", "", "macOS keychain password (visible in ps and shell history)")
-	command.Flags().BoolVar(&flags.passwordStdin, "keychain-pw-stdin", false,
-		"read the macOS keychain password from the first line of stdin")
-	command.MarkFlagsMutuallyExclusive("keychain-pw", "keychain-pw-stdin")
-}
-
-// firefoxFlags say where a Firefox primary password comes from; both empty means the empty password, the common case.
-type firefoxFlags struct {
-	password      string
-	passwordStdin bool
-}
-
-func addFirefoxPasswordFlags(command *cobra.Command, flags *firefoxFlags) {
-	command.Flags().StringVar(&flags.password, "firefox-pw", "", "Firefox primary password (visible in ps and shell history)")
-	command.Flags().BoolVar(&flags.passwordStdin, "firefox-pw-stdin", false,
-		"read the Firefox primary password from the first line of stdin")
-	command.MarkFlagsMutuallyExclusive("firefox-pw", "firefox-pw-stdin")
+// addPasswordFlags defines --<name> and --<name>-stdin for the password that what names.
+func addPasswordFlags(command *cobra.Command, flags *passwordFlags, name, what string) {
+	command.Flags().StringVar(&flags.value, name, "", what+" (visible in ps and shell history)")
+	command.Flags().BoolVar(&flags.fromStdin, name+"-stdin", false, "read the "+what+" from the first line of stdin")
+	command.MarkFlagsMutuallyExclusive(name, name+"-stdin")
 }
 
 // firefoxPasswordFunc reads a flag, else the first line of stdin; nil means the empty password, and it never prompts.
-func firefoxPasswordFunc(flags firefoxFlags, stdin *os.File) func(context.Context) (string, error) {
+func firefoxPasswordFunc(flags passwordFlags, stdin *os.File) func(context.Context) (string, error) {
 	switch {
-	case flags.password != "":
-		password := flags.password
+	case flags.value != "":
+		password := flags.value
 		return func(context.Context) (string, error) { return password, nil }
-	case flags.passwordStdin:
+	case flags.fromStdin:
 		return func(ctx context.Context) (string, error) {
 			return untilDone(ctx, func() (string, error) { return firstLine(stdin) })
 		}
@@ -57,12 +45,12 @@ func firefoxPasswordFunc(flags firefoxFlags, stdin *os.File) func(context.Contex
 var errNoPassword = errors.New("macOS login password not given and stdin is not a terminal")
 
 // keychainPasswordFunc is read lazily: a flag, else a no-echo prompt on a terminal, else none (metadata only).
-func keychainPasswordFunc(flags keychainFlags, stdin *os.File) func(context.Context) (string, error) {
+func keychainPasswordFunc(flags passwordFlags, stdin *os.File) func(context.Context) (string, error) {
 	switch {
-	case flags.password != "":
-		password := flags.password
+	case flags.value != "":
+		password := flags.value
 		return func(context.Context) (string, error) { return password, nil }
-	case flags.passwordStdin:
+	case flags.fromStdin:
 		return func(ctx context.Context) (string, error) {
 			return untilDone(ctx, func() (string, error) { return firstLine(stdin) })
 		}

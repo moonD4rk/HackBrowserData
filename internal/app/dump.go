@@ -7,27 +7,26 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
-	"github.com/moond4rk/hackbrowserdata/internal/export"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
 // DumpFlags are dump's command-line values as cobra parsed them.
 type DumpFlags struct {
-	Browser         string
-	Categories      string
-	Format          string
-	OutputDir       string
-	Zip             bool
-	ProfilePath     string
-	MaxStorageValue int
+	Browser     string
+	ProfilePath string
+	Categories  string
+	Output      OutputFlags
 }
 
 type DumpOptions struct {
-	Target          Target
-	Categories      []category.Category
-	Output          OutputOptions
-	Keychain        KeychainConfig
-	FirefoxPassword func(ctx context.Context) (string, error) // nil is the empty password; Execute reads it at most once
+	Browsers    []browser.Browser
+	ProfilePath string // -p, for the one browser in Browsers; "" when not given
+	HomeDir     string
+	Categories  []category.Category
+	Output      OutputOptions
+	// KeychainPassword runs when the macOS login keychain first opens; "" leaves it locked. Other systems ignore it.
+	KeychainPassword func(ctx context.Context) (string, error)
+	FirefoxPassword  func(ctx context.Context) (string, error) // nil is the empty password; Dump reads it at most once
 }
 
 // ValidateDump checks every flag before any browser or secret is touched, so a bad flag fails fast.
@@ -40,18 +39,12 @@ func ValidateDump(flags DumpFlags, keychainPassword, firefoxPassword func(contex
 	if err != nil {
 		return DumpOptions{}, err
 	}
-	format, err := export.ParseFormat(flags.Format)
+	output, err := parseOutput(flags.Output)
 	if err != nil {
-		return DumpOptions{}, err
-	}
-	if err := checkOutputDir(flags.OutputDir); err != nil {
 		return DumpOptions{}, err
 	}
 	profilePath, err := checkProfilePath(browsers, flags.ProfilePath)
 	if err != nil {
-		return DumpOptions{}, err
-	}
-	if err := checkMaxStorageValue(flags.MaxStorageValue); err != nil {
 		return DumpOptions{}, err
 	}
 	home, err := homeDir()
@@ -59,11 +52,13 @@ func ValidateDump(flags DumpFlags, keychainPassword, firefoxPassword func(contex
 		return DumpOptions{}, err
 	}
 	return DumpOptions{
-		Target:          Target{Browsers: browsers, ProfilePath: profilePath, HomeDir: home},
-		Categories:      categories,
-		Output:          OutputOptions{Dir: flags.OutputDir, Format: format, Zip: flags.Zip, MaxStorageValue: flags.MaxStorageValue},
-		Keychain:        KeychainConfig{Path: loginKeychainPath(home), Password: keychainPassword},
-		FirefoxPassword: firefoxPassword,
+		Browsers:         browsers,
+		ProfilePath:      profilePath,
+		HomeDir:          home,
+		Categories:       categories,
+		Output:           output,
+		KeychainPassword: keychainPassword,
+		FirefoxPassword:  firefoxPassword,
 	}, nil
 }
 
@@ -84,4 +79,23 @@ func checkProfilePath(browsers []browser.Browser, path string) (string, error) {
 		return "", fmt.Errorf("profile path %s: not a directory", path)
 	}
 	return path, nil
+}
+
+// Dump exports what it finds on this machine, retrieving each dir's master keys here. A Discovery without dirs means
+// nothing ran and nothing was created. An error means the run never started; one that ended early sets Summary.Err.
+func Dump(ctx context.Context, options DumpOptions) (Discovery, Summary, error) {
+	discovery := discover(ctx, options.Browsers, browser.DiscoverOptions{HomeDir: options.HomeDir, ProfilePath: options.ProfilePath})
+	if len(discovery.Dirs) == 0 {
+		return discovery, Summary{}, nil
+	}
+	keychain := newLoginKeychain(loginKeychainPath(options.HomeDir), options.KeychainPassword)
+	fromMachine := runner{
+		extractors: extractorsFor, retrieveKeys: keysFromMachine(keychain), loginKeychain: keychain,
+		firefoxPassword: readOnce(options.FirefoxPassword),
+	}
+	summary, err := execute(ctx, discovery, options.Categories, options.Output, fromMachine)
+	if err != nil {
+		return Discovery{}, Summary{}, err
+	}
+	return discovery, summary, nil
 }

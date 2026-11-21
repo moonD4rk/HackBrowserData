@@ -17,7 +17,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/golden"
 
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
-	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
+	"github.com/moond4rk/hackbrowserdata/internal/zipfile"
 )
 
 // TestRestoreGolden checks that restore writes what dump writes: the extract golden, with each browser's display name.
@@ -28,13 +28,13 @@ func TestRestoreGolden(t *testing.T) {
 	want := golden.Read(t, "extract-json.golden")
 
 	t.Run("data-dir", func(t *testing.T) {
-		out := restoreGolden(t, app.RestoreFlags{KeyFile: keys, DataDir: data, OutputDir: t.TempDir()})
+		out := restoreGolden(t, app.RestoreFlags{KeyFile: keys, DataDir: data, Output: app.OutputFlags{Dir: t.TempDir()}})
 		assert.Equal(t, want, golden.ConcatDir(t, out))
 	})
 
 	t.Run("zip", func(t *testing.T) {
 		out := filepath.Join(t.TempDir(), "results")
-		restoreGolden(t, app.RestoreFlags{KeyFile: keys, DataDir: data, OutputDir: out, Zip: true})
+		restoreGolden(t, app.RestoreFlags{KeyFile: keys, DataDir: data, Output: app.OutputFlags{Dir: out, Zip: true}})
 
 		entries, err := os.ReadDir(out)
 		require.NoError(t, err)
@@ -43,18 +43,17 @@ func TestRestoreGolden(t *testing.T) {
 
 		archive := filepath.Join(out, "results.zip")
 		golden.Assert(t, "restore-zip.golden", golden.ZipListing(t, archive))
-		unzipped, err := snapshot.Unzip(archive)
-		require.NoError(t, err)
-		defer unzipped.Close()
-		assert.Equal(t, want, golden.ConcatDir(t, unzipped.Path()))
+		unzipped := t.TempDir()
+		require.NoError(t, zipfile.Extract(archive, unzipped))
+		assert.Equal(t, want, golden.ConcatDir(t, unzipped))
 	})
 
 	// An archive v1.1.0 wrote is the same <browser-name>/ layout, which the vaults resolve.
 	t.Run("data-zip", func(t *testing.T) {
 		dataZip := filepath.Join(t.TempDir(), "data.zip")
-		require.NoError(t, snapshot.Open(data).Zip(dataZip))
+		browsertest.ZipDir(t, data, dataZip)
 
-		out := restoreGolden(t, app.RestoreFlags{KeyFile: keys, DataZip: dataZip, OutputDir: t.TempDir()})
+		out := restoreGolden(t, app.RestoreFlags{KeyFile: keys, DataZip: dataZip, Output: app.OutputFlags{Dir: t.TempDir()}})
 		assert.Equal(t, want, golden.ConcatDir(t, out))
 	})
 }
@@ -67,14 +66,14 @@ func TestArchiveRestoreRoundTrip(t *testing.T) {
 		require.True(t, ok, fixture.Name)
 		browsertest.WriteChromiumUserDataDir(t, filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirPaths[0])), fixture.Name)
 	}
-	options, err := app.ValidateArchive(app.ArchiveFlags{Browser: "all", Categories: "all"})
-	require.NoError(t, err)
-	options.Target.HomeDir = home
 	archive := filepath.Join(t.TempDir(), "data.zip")
-	_, err = app.Archive(context.Background(), app.Discover(context.Background(), options.Target), options.Categories, archive)
+	options, err := app.ValidateArchive(app.ArchiveFlags{Browser: "all", Categories: "all", OutputPath: archive})
+	require.NoError(t, err)
+	options.HomeDir = home
+	_, _, err = app.Archive(context.Background(), options)
 	require.NoError(t, err)
 
-	out := restoreGolden(t, app.RestoreFlags{KeyFile: chromiumKeyFile(t), DataZip: archive, OutputDir: t.TempDir()})
+	out := restoreGolden(t, app.RestoreFlags{KeyFile: chromiumKeyFile(t), DataZip: archive, Output: app.OutputFlags{Dir: t.TempDir()}})
 	assert.Equal(t, golden.Read(t, "extract-json.golden"), golden.ConcatDir(t, out))
 }
 
@@ -112,23 +111,15 @@ func restoreGolden(t *testing.T, flags app.RestoreFlags) string {
 	if flags.Categories == "" {
 		flags.Categories = "all"
 	}
-	if flags.Format == "" {
-		flags.Format = "json"
+	if flags.Output.Format == "" {
+		flags.Output.Format = "json"
 	}
-	flags.MaxStorageValue = app.DefaultMaxStorageValue // match the extract goldens, which cap at the default
+	flags.Output.MaxStorageValue = app.DefaultMaxStorageValue // match the extract goldens, which cap at the default
 	options, err := app.ValidateRestore(flags, nil)
 	require.NoError(t, err)
 
-	root := snapshot.Open(flags.DataDir)
-	if flags.DataZip != "" {
-		root, err = snapshot.Unzip(flags.DataZip)
-		require.NoError(t, err)
-	}
-	defer root.Close()
-
-	discovery, keys, err := app.DiscoverRestore(root.Path(), options.Vaults)
+	_, summary, err := app.Restore(context.Background(), options)
 	require.NoError(t, err)
-	_, err = app.ExecuteWithKeys(context.Background(), discovery, options.Categories, options.Output, keys)
-	require.NoError(t, err)
-	return flags.OutputDir
+	require.NoError(t, summary.Err)
+	return flags.Output.Dir
 }

@@ -13,8 +13,8 @@ import (
 func newDumpCommand() *cobra.Command {
 	var (
 		flags    app.DumpFlags
-		keychain keychainFlags
-		firefox  firefoxFlags
+		keychain passwordFlags
+		firefox  passwordFlags
 	)
 
 	command := &cobra.Command{
@@ -32,31 +32,31 @@ func newDumpCommand() *cobra.Command {
 
 	command.Flags().StringVarP(&flags.Browser, "browser", "b", "all", "target browser: all|"+browserNames())
 	command.Flags().StringVarP(&flags.Categories, "category", "c", "all", "data categories (comma-separated): all|"+categoryNames())
-	command.Flags().StringVarP(&flags.Format, "format", "f", "json", "output format: csv|json|cookie-editor")
-	command.Flags().StringVarP(&flags.OutputDir, "dir", "d", "results", "output directory")
 	command.Flags().StringVarP(&flags.ProfilePath, "profile-path", "p", "", "custom profile dir path, get with chrome://version")
-	addKeychainPasswordFlags(command, &keychain)
-	addFirefoxPasswordFlags(command, &firefox)
-	command.Flags().BoolVar(&flags.Zip, "zip", false, "compress output to zip")
-	command.Flags().IntVar(&flags.MaxStorageValue, "max-storage-value", app.DefaultMaxStorageValue, "max storage value chars, 0=unlimited")
+	addOutputFlags(command, &flags.Output)
+	addPasswordFlags(command, &keychain, "keychain-pw", "macOS keychain password")
+	addPasswordFlags(command, &firefox, "firefox-pw", "Firefox primary password")
 	command.MarkFlagsMutuallyExclusive("keychain-pw-stdin", "firefox-pw-stdin")
 
 	return command
 }
 
-func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychain keychainFlags, firefox firefoxFlags) error {
+func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychain, firefox passwordFlags) error {
 	options, err := app.ValidateDump(flags, keychainPasswordFunc(keychain, os.Stdin), firefoxPasswordFunc(firefox, os.Stdin))
 	if err != nil {
 		return err
 	}
-	discovery := app.Discover(ctx, options.Target)
-	if warnIfNothingFound(stderr, discovery, "no browsers found") {
+	discovery, summary, err := app.Dump(ctx, options)
+	if err != nil {
+		return err
+	}
+	if len(discovery.Dirs) == 0 {
+		printNothingFound(stderr, discovery, "no browsers found")
 		return nil
 	}
-	summary, err := app.Execute(ctx, discovery, options.Categories, options.Output, options.Keychain, options.FirefoxPassword)
 	printExported(stderr, summary.Exported)
 	if ctx.Err() == nil {
 		printSummary(stderr, summary)
 	}
-	return err
+	return summary.Err
 }

@@ -8,10 +8,7 @@ import (
 )
 
 func newArchiveCommand() *cobra.Command {
-	var (
-		flags      app.ArchiveFlags
-		outputPath string
-	)
+	var flags app.ArchiveFlags
 
 	command := &cobra.Command{
 		Use:   "archive",
@@ -23,22 +20,22 @@ func newArchiveCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			discovery := app.Discover(command.Context(), options.Target)
-			if warnIfNothingFound(command.ErrOrStderr(), discovery, "no browsers found") {
-				return nil
-			}
-			fileCount, err := app.Archive(command.Context(), discovery, options.Categories, outputPath)
+			discovery, fileCount, err := app.Archive(command.Context(), options)
 			if err != nil {
 				return err
 			}
-			log.Infof("Archived %d entries to %s", fileCount, outputPath)
+			if len(discovery.Dirs) == 0 {
+				printNothingFound(command.ErrOrStderr(), discovery, "no browsers found")
+				return nil
+			}
+			log.Infof("Archived %d entries to %s", fileCount, options.ArchivePath)
 			return nil
 		},
 	}
 
 	command.Flags().StringVarP(&flags.Browser, "browser", "b", "all", "target browser: all|"+browserNames())
 	command.Flags().StringVarP(&flags.Categories, "category", "c", "all", "data categories (comma-separated): all|"+categoryNames())
-	command.Flags().StringVarP(&outputPath, "output", "o", "browser-data.zip", "output archive of decryption-relevant browser files")
+	command.Flags().StringVarP(&flags.OutputPath, "output", "o", "browser-data.zip", "output archive of decryption-relevant browser files")
 
 	return command
 }
