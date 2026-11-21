@@ -67,7 +67,7 @@ func otherOSBrowser(t *testing.T) string {
 	for _, name := range []string{"sogou", "safari"} {
 		namedBrowser, ok := browser.Lookup(name)
 		require.True(t, ok, name)
-		if len(namedBrowser.Platform().UserDataDirs) == 0 {
+		if len(namedBrowser.Platform().UserDataDirPaths) == 0 {
 			return name
 		}
 	}

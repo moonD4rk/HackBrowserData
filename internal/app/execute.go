@@ -19,7 +19,7 @@ import (
 // dir's copies are on disk. Its error means the run ended early; like os.ReadDir, it still returns the Summary of what
 // ran before it, with the files written, so the caller can list them.
 func Execute(
-	ctx context.Context, discovery Discovery, categories []category.Category, output Output, keychainConfig KeychainConfig,
+	ctx context.Context, discovery Discovery, categories []category.Category, output OutputOptions, keychainConfig KeychainConfig,
 	firefoxPassword func(context.Context) (string, error),
 ) (Summary, error) {
 	keychain := newLoginKeychain(keychainConfig)
@@ -46,13 +46,16 @@ func readOnce(read func(context.Context) (string, error)) func(context.Context) 
 
 // ExecuteWithKeys decrypts with a key file's keys, so it never reads this machine's secret stores.
 func ExecuteWithKeys(
-	ctx context.Context, discovery Discovery, categories []category.Category, output Output, keys map[browser.UserDataDirID]masterkey.Set,
+	ctx context.Context, discovery Discovery, categories []category.Category, output OutputOptions,
+	keys map[browser.UserDataDirID]masterkey.Set,
 ) (Summary, error) {
 	return execute(ctx, discovery, categories, output, runner{extractors: extractorsFor, retrieveKeys: keysFromFile(keys)})
 }
 
 // execute gives the runner the run's writer; the caller sets where its extractors, keys, and keychain come from.
-func execute(ctx context.Context, discovery Discovery, categories []category.Category, output Output, dirRunner runner) (Summary, error) {
+func execute(
+	ctx context.Context, discovery Discovery, categories []category.Category, output OutputOptions, dirRunner runner,
+) (Summary, error) {
 	writer, err := export.NewWriter(output.Dir, output.Format, output.Zip)
 	if err != nil {
 		return Summary{}, err
@@ -106,7 +109,7 @@ func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories 
 		log.Infof("Extracting %s...", dir.Browser.DisplayName)
 	}
 
-	root, err := snapshot.Temp()
+	root, err := snapshot.NewRoot()
 	if err != nil {
 		summary.Results = append(summary.Results, failAll(plan.extractions, err)...)
 		return summary, nil

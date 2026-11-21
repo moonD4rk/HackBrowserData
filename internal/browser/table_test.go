@@ -41,7 +41,7 @@ func TestTableRows(t *testing.T) {
 		assert.Contains(t, []Base{Chromium, Firefox, Safari}, browser.Base, browser.Name)
 
 		for goos, platform := range platformOf {
-			for _, dir := range platform(browser).UserDataDirs {
+			for _, dir := range platform(browser).UserDataDirPaths {
 				assert.Truef(t, dir != "" && !path.IsAbs(dir) && !strings.Contains(dir, `\`),
 					"%s %s: user data dir %q must be slash-separated and relative to the home dir", browser.Name, goos, dir)
 			}

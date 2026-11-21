@@ -32,7 +32,7 @@ func userDataDir(t *testing.T) string {
 }
 
 func TestTemp_IsPrivateAndCloseRemovesIt(t *testing.T) {
-	root, err := Temp()
+	root, err := NewRoot()
 	require.NoError(t, err)
 	info, err := os.Stat(root.Path())
 	require.NoError(t, err)
@@ -59,7 +59,7 @@ func TestOpen_ReadsInPlaceAndCloseLeavesIt(t *testing.T) {
 
 func TestCapture_FilesWithSidecarsAndDirsWithoutLocks(t *testing.T) {
 	from := userDataDir(t)
-	root, err := Temp()
+	root, err := NewRoot()
 	require.NoError(t, err)
 	defer root.Close()
 
@@ -88,7 +88,7 @@ func TestCapture_FilesWithSidecarsAndDirsWithoutLocks(t *testing.T) {
 
 func TestCapture_KeepsGoingPastFailedFiles(t *testing.T) {
 	from := userDataDir(t)
-	root, err := Temp()
+	root, err := NewRoot()
 	require.NoError(t, err)
 	defer root.Close()
 
@@ -112,7 +112,7 @@ func TestCapture_KeepsGoingPastFailedFiles(t *testing.T) {
 
 func TestCapture_StopsWhenCancelled(t *testing.T) {
 	from := userDataDir(t)
-	root, err := Temp()
+	root, err := NewRoot()
 	require.NoError(t, err)
 	defer root.Close()
 
@@ -127,7 +127,7 @@ func TestCapture_StopsWhenCancelled(t *testing.T) {
 
 func TestCapture_StaysInsideItsOwnSnapshot(t *testing.T) {
 	from := userDataDir(t)
-	root, err := Temp()
+	root, err := NewRoot()
 	require.NoError(t, err)
 	defer root.Close()
 
@@ -147,7 +147,7 @@ func TestCapture_StaysInsideItsOwnSnapshot(t *testing.T) {
 }
 
 func TestSnapshot_UncapturedFileIsNotExist(t *testing.T) {
-	root, err := Temp()
+	root, err := NewRoot()
 	require.NoError(t, err)
 	defer root.Close()
 
@@ -157,7 +157,7 @@ func TestSnapshot_UncapturedFileIsNotExist(t *testing.T) {
 
 func TestCapture_ALaterCaptureReplacesAnEarlierFailure(t *testing.T) {
 	from := t.TempDir()
-	root, err := Temp()
+	root, err := NewRoot()
 	require.NoError(t, err)
 	defer root.Close()
 

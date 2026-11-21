@@ -32,7 +32,7 @@ func sourcePaths(profile browser.Profile, extractors browser.Extractors) map[cat
 	got := make(map[category.Category][]string, len(extractors))
 	for dataCategory, extractor := range extractors {
 		for _, source := range extractor.Sources {
-			for _, relativePath := range source.Paths() {
+			for _, relativePath := range source.RelativePaths() {
 				got[dataCategory] = append(got[dataCategory], path.Join(profile.RelativePath, relativePath))
 			}
 		}

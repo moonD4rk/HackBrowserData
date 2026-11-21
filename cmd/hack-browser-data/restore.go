@@ -63,9 +63,9 @@ func runRestore(ctx context.Context, stderr io.Writer, flags app.RestoreFlags) e
 		return nil
 	}
 	summary, err := app.ExecuteWithKeys(ctx, discovery, options.Categories, options.Output, keys)
-	announceExport(stderr, summary.Exported)
+	printExported(stderr, summary.Exported)
 	if ctx.Err() == nil {
-		report(stderr, summary)
+		printSummary(stderr, summary)
 	}
 	return err
 }

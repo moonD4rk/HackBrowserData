@@ -27,8 +27,8 @@ func TestExtractors_OverridesFollowTheBrowserNotTheDirectory(t *testing.T) {
 	yandex, ok := browser.Lookup("yandex")
 	require.True(t, ok)
 	extractors := Extractors(browser.UserDataDir{ID: "yandex-2", Browser: yandex}, browser.Profile{})
-	assert.Equal(t, "Ya Passman Data", extractors[category.Password].Sources[0].Path)
-	assert.Equal(t, "Ya Credit Cards", extractors[category.CreditCard].Sources[0].Path)
+	assert.Equal(t, "Ya Passman Data", extractors[category.Password].Sources[0].RelativePath)
+	assert.Equal(t, "Ya Credit Cards", extractors[category.CreditCard].Sources[0].RelativePath)
 }
 
 // TestExtractors_EachProfileReadsItsOwnFiles reads one snapshot shared by every profile; each must get its own files.

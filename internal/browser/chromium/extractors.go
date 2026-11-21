@@ -11,19 +11,19 @@ import (
 )
 
 var (
-	localState          = browser.Source{Path: "Local State", Shared: true, Optional: true}
-	loginData           = browser.Source{Path: "Login Data", Optional: true}
-	loginDataForAccount = browser.Source{Path: accountLoginData, Optional: true}
-	cookies             = browser.Source{Path: "Network/Cookies", Fallbacks: []string{"Cookies"}}
-	bookmarks           = browser.Source{Path: "Bookmarks"}
-	history             = browser.Source{Path: "History"}
-	webData             = browser.Source{Path: "Web Data"}
-	securePreferences   = browser.Source{Path: "Secure Preferences"}
-	preferences         = browser.Source{Path: "Preferences", Optional: true}
-	localStorage        = browser.Source{Path: "Local Storage/leveldb", IsDir: true}
-	sessionStorage      = browser.Source{Path: "Session Storage", IsDir: true}
-	yaPassmanData       = browser.Source{Path: "Ya Passman Data"}
-	yaCreditCards       = browser.Source{Path: "Ya Credit Cards"}
+	localState          = browser.Source{RelativePath: "Local State", Shared: true, Optional: true}
+	loginData           = browser.Source{RelativePath: "Login Data", Optional: true}
+	loginDataForAccount = browser.Source{RelativePath: accountLoginData, Optional: true}
+	cookies             = browser.Source{RelativePath: "Network/Cookies", Fallbacks: []string{"Cookies"}}
+	bookmarks           = browser.Source{RelativePath: "Bookmarks"}
+	history             = browser.Source{RelativePath: "History"}
+	webData             = browser.Source{RelativePath: "Web Data"}
+	securePreferences   = browser.Source{RelativePath: "Secure Preferences"}
+	preferences         = browser.Source{RelativePath: "Preferences", Optional: true}
+	localStorage        = browser.Source{RelativePath: "Local Storage/leveldb", IsDir: true}
+	sessionStorage      = browser.Source{RelativePath: "Session Storage", IsDir: true}
+	yaPassmanData       = browser.Source{RelativePath: "Ya Passman Data"}
+	yaCreditCards       = browser.Source{RelativePath: "Ya Credit Cards"}
 )
 
 var defaultExtractors = browser.Extractors{

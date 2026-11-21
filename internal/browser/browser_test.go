@@ -17,7 +17,7 @@ var platformOf = map[string]func(Browser) Platform{
 func namesOn(platform func(Browser) Platform) []string {
 	var names []string
 	for _, browser := range browsers {
-		if len(platform(browser).UserDataDirs) > 0 {
+		if len(platform(browser).UserDataDirPaths) > 0 {
 			names = append(names, browser.Name)
 		}
 	}

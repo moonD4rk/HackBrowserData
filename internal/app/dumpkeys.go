@@ -100,14 +100,14 @@ func dumpKeysWith(ctx context.Context, discovery Discovery, keys dirKeysFunc) (m
 }
 
 func retrieveDirKeys(ctx context.Context, dir browser.UserDataDir, keys dirKeysFunc) (masterkey.Set, error) {
-	root, err := snapshot.Temp()
+	root, err := snapshot.NewRoot()
 	if err != nil {
 		return nil, err
 	}
 	defer closeRoot(root)
 	var files []snapshot.File
 	for _, source := range chromium.KeySources() {
-		if file, ok, err := firstOnDisk(dir, source.Paths(), source.IsDir); err == nil && ok {
+		if file, ok, err := firstOnDisk(dir, source.RelativePaths(), source.IsDir); err == nil && ok {
 			files = append(files, file)
 		}
 	}

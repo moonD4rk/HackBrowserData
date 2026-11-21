@@ -12,8 +12,8 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
-// report prints the run's summary; it is not part of the output, so failing to print it never fails the run.
-func report(stderr io.Writer, summary app.Summary) {
+// printSummary is not part of the output, so failing to print it never fails the run.
+func printSummary(stderr io.Writer, summary app.Summary) {
 	table := tabwriter.NewWriter(stderr, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(table, "Browser\tProfile\tCategory\tResult\tRecords\tDetail")
 	for _, failure := range summary.DirFailures {
@@ -45,14 +45,14 @@ func warnIfNothingFound(stderr io.Writer, discovery app.Discovery, message strin
 		return false
 	}
 	if len(discovery.DirFailures) > 0 {
-		report(stderr, app.Summary{DirFailures: discovery.DirFailures})
+		printSummary(stderr, app.Summary{DirFailures: discovery.DirFailures})
 	}
 	log.Warnf("%s", message)
 	return true
 }
 
-// announceExport lists the files a run wrote, even when it stopped early, so the user finds what it left.
-func announceExport(stderr io.Writer, exported export.Listing) {
+// printExported lists the files a run wrote, even when it stopped early, so the user finds what it left.
+func printExported(stderr io.Writer, exported export.Listing) {
 	if len(exported.Files) == 0 {
 		return
 	}

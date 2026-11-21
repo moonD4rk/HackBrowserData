@@ -32,7 +32,7 @@ type RestoreFlags struct {
 type RestoreOptions struct {
 	Vaults     []masterkey.Vault // the key file's vaults that -b selects
 	Categories []category.Category
-	Output     Output
+	Output     OutputOptions
 }
 
 // ValidateRestore checks restore's flags and reads its keys, from stdin for "-", before any data is opened. A restore's
@@ -72,7 +72,7 @@ func ValidateRestore(flags RestoreFlags, stdin io.Reader) (RestoreOptions, error
 	return RestoreOptions{
 		Vaults:     vaults,
 		Categories: categories,
-		Output:     Output{Dir: flags.OutputDir, Format: format, Zip: flags.Zip, MaxStorageValue: flags.MaxStorageValue},
+		Output:     OutputOptions{Dir: flags.OutputDir, Format: format, Zip: flags.Zip, MaxStorageValue: flags.MaxStorageValue},
 	}, nil
 }
 

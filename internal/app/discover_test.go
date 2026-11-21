@@ -16,8 +16,8 @@ import (
 func writeUserDataDir(t *testing.T, home, browserName string) string {
 	t.Helper()
 	namedBrowser := lookup(t, browserName)
-	require.NotEmpty(t, namedBrowser.Platform().UserDataDirs, browserName)
-	path := filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirs[0]))
+	require.NotEmpty(t, namedBrowser.Platform().UserDataDirPaths, browserName)
+	path := filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirPaths[0]))
 	touch(t, path, "Default", "Preferences")
 	touch(t, path, "Default", "History")
 	return path
