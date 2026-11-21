@@ -32,6 +32,11 @@ func ValidateDumpKeys(flags DumpKeysFlags, keychainPassword func(context.Context
 	if err != nil {
 		return DumpKeysOptions{}, err
 	}
+	if flags.OutputPath != "" {
+		if err := checkOutputFile(flags.OutputPath); err != nil {
+			return DumpKeysOptions{}, err
+		}
+	}
 	home, err := homeDir()
 	if err != nil {
 		return DumpKeysOptions{}, err

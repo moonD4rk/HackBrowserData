@@ -121,3 +121,24 @@ func checkOutputDir(outputDir string) error {
 		path = parent
 	}
 }
+
+// checkOutputFile creates nothing: -o is written whole and renamed into place, so its directory must already exist.
+func checkOutputFile(path string) error {
+	parent := filepath.Dir(path)
+	info, err := os.Stat(parent)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return fmt.Errorf("output file %s: directory %s does not exist", path, parent)
+	case err != nil:
+		return fmt.Errorf("output file %s: %w", path, err)
+	case !info.IsDir():
+		return fmt.Errorf("output file %s: %s is not a directory", path, parent)
+	}
+	if err := canCreateIn(parent); err != nil {
+		return fmt.Errorf("output file %s: %w", path, err)
+	}
+	if existing, err := os.Stat(path); err == nil && existing.IsDir() {
+		return fmt.Errorf("output file %s: is a directory", path)
+	}
+	return nil
+}

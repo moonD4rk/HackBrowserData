@@ -36,6 +36,9 @@ func ValidateArchive(flags ArchiveFlags) (ArchiveOptions, error) {
 	if err != nil {
 		return ArchiveOptions{}, err
 	}
+	if err := checkOutputFile(flags.OutputPath); err != nil {
+		return ArchiveOptions{}, err
+	}
 	home, err := homeDir()
 	if err != nil {
 		return ArchiveOptions{}, err
