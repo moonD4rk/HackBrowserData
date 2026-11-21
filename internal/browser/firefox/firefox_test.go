@@ -19,7 +19,7 @@ import (
 )
 
 func testBrowser(userDataDirs ...string) browser.Browser {
-	platform := browser.Platform{UserDataDirs: userDataDirs}
+	platform := browser.Platform{UserDataDirPaths: userDataDirs}
 	return browser.Browser{Name: "firefox", DisplayName: "Firefox", Base: browser.Firefox, Darwin: platform, Linux: platform, Windows: platform}
 }
 

@@ -50,7 +50,7 @@ func Archive(ctx context.Context, discovery Discovery, categories []category.Cat
 	}
 	files := archiveFiles(dirs, categories)
 
-	root, err := snapshot.Temp()
+	root, err := snapshot.NewRoot()
 	if err != nil {
 		return 0, err
 	}

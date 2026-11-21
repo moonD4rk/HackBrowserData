@@ -29,15 +29,15 @@ func TestInputPath(t *testing.T) {
 	dirSnapshot := snapshot.Open(root).Snapshot("chrome")
 	input := NewInput(dirSnapshot, Profile{Name: "Default", RelativePath: "Default"}, nil, nil)
 
-	got, err := input.Path(Source{Path: "Network/Cookies", Fallbacks: []string{"Cookies"}})
+	got, err := input.Path(Source{RelativePath: "Network/Cookies", Fallbacks: []string{"Cookies"}})
 	require.NoError(t, err)
 	assert.Equal(t, legacyCookies, got, "a candidate that was never captured is skipped")
 
-	got, err = input.Path(Source{Path: "Local State", Shared: true})
+	got, err = input.Path(Source{RelativePath: "Local State", Shared: true})
 	require.NoError(t, err)
 	assert.Equal(t, localState, got, "a shared source resolves under the user data dir, not the profile")
 
-	_, err = input.Path(Source{Path: "History"})
+	_, err = input.Path(Source{RelativePath: "History"})
 	require.ErrorIs(t, err, fs.ErrNotExist)
 }
 
@@ -46,7 +46,7 @@ func TestInputPath_FlatLayoutProfile(t *testing.T) {
 	history := writeSnapshotFile(t, root, "opera/History")
 	input := NewInput(snapshot.Open(root).Snapshot("opera"), Profile{Name: "Opera Stable"}, nil, nil)
 
-	got, err := input.Path(Source{Path: "History"})
+	got, err := input.Path(Source{RelativePath: "History"})
 	require.NoError(t, err)
 	assert.Equal(t, history, got)
 }
@@ -57,7 +57,7 @@ func TestInputPath_FailedCopyIsReported(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(from, "Default", "Network", "Cookies"), 0o700))
 	writeSnapshotFile(t, from, "Default/Cookies")
 
-	root, err := snapshot.Temp()
+	root, err := snapshot.NewRoot()
 	require.NoError(t, err)
 	defer func() { require.NoError(t, root.Close()) }()
 	require.NoError(t, root.Capture(context.Background(), []snapshot.File{
@@ -66,7 +66,7 @@ func TestInputPath_FailedCopyIsReported(t *testing.T) {
 	}))
 
 	input := NewInput(root.Snapshot("chrome"), Profile{Name: "Default", RelativePath: "Default"}, nil, nil)
-	_, err = input.Path(Source{Path: "Network/Cookies", Fallbacks: []string{"Cookies"}})
+	_, err = input.Path(Source{RelativePath: "Network/Cookies", Fallbacks: []string{"Cookies"}})
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, fs.ErrNotExist)
 }
@@ -87,8 +87,8 @@ func TestInputMasterKeys(t *testing.T) {
 
 func TestSourceCandidatePaths(t *testing.T) {
 	profile := Profile{Name: "Default", RelativePath: "Default"}
-	assert.Equal(t, []string{"Default/Network/Cookies", "Default/Cookies"}, Source{Path: "Network/Cookies", Fallbacks: []string{"Cookies"}}.CandidatePaths(profile))
-	assert.Equal(t, []string{"Local State"}, Source{Path: "Local State", Shared: true}.CandidatePaths(profile))
-	assert.Equal(t, []string{"History"}, Source{Path: "History"}.CandidatePaths(Profile{Name: "default"}),
+	assert.Equal(t, []string{"Default/Network/Cookies", "Default/Cookies"}, Source{RelativePath: "Network/Cookies", Fallbacks: []string{"Cookies"}}.CandidatePaths(profile))
+	assert.Equal(t, []string{"Local State"}, Source{RelativePath: "Local State", Shared: true}.CandidatePaths(profile))
+	assert.Equal(t, []string{"History"}, Source{RelativePath: "History"}.CandidatePaths(Profile{Name: "default"}),
 		"a user data dir that is itself the profile")
 }

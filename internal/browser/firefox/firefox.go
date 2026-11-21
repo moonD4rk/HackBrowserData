@@ -14,12 +14,12 @@ import (
 )
 
 var (
-	loginsJSON     = browser.Source{Path: "logins.json"}
-	keyStore       = browser.Source{Path: "key4.db", Optional: true}
-	placesDB       = browser.Source{Path: "places.sqlite"}
-	cookiesDB      = browser.Source{Path: "cookies.sqlite"}
-	extensionsJSON = browser.Source{Path: "extensions.json"}
-	webappsStore   = browser.Source{Path: "webappsstore.sqlite"}
+	loginsJSON     = browser.Source{RelativePath: "logins.json"}
+	keyStore       = browser.Source{RelativePath: "key4.db", Optional: true}
+	placesDB       = browser.Source{RelativePath: "places.sqlite"}
+	cookiesDB      = browser.Source{RelativePath: "cookies.sqlite"}
+	extensionsJSON = browser.Source{RelativePath: "extensions.json"}
+	webappsStore   = browser.Source{RelativePath: "webappsstore.sqlite"}
 )
 
 // defaultExtractors has no credit card or session storage extractor, because Firefox keeps none that HBD reads.
@@ -71,8 +71,8 @@ func profileAt(firefoxBrowser browser.Browser, path string) []browser.UserDataDi
 }
 
 func userDataDirPaths(firefoxBrowser browser.Browser, options browser.DiscoverOptions) []string {
-	paths := make([]string, 0, len(firefoxBrowser.Platform().UserDataDirs))
-	for _, relativePath := range firefoxBrowser.Platform().UserDataDirs {
+	paths := make([]string, 0, len(firefoxBrowser.Platform().UserDataDirPaths))
+	for _, relativePath := range firefoxBrowser.Platform().UserDataDirPaths {
 		paths = append(paths, filepath.Join(options.HomeDir, filepath.FromSlash(relativePath)))
 	}
 	return paths
@@ -99,7 +99,7 @@ func hasDataFile(path string) bool {
 			if source.Optional {
 				continue
 			}
-			for _, relativePath := range source.Paths() {
+			for _, relativePath := range source.RelativePaths() {
 				if _, err := os.Stat(filepath.Join(path, filepath.FromSlash(relativePath))); err == nil {
 					return true
 				}

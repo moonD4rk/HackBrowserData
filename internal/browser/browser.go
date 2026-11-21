@@ -28,9 +28,9 @@ const (
 	Safari
 )
 
-// Platform is one OS's half of a Browser; one without UserDataDirs means the browser is not supported there.
+// Platform is one OS's half of a Browser; one without UserDataDirPaths means the browser is not supported there.
 type Platform struct {
-	UserDataDirs        []string // slash-separated, relative to the home directory; globs allowed
+	UserDataDirPaths    []string // slash-separated, relative to the home directory; globs allowed
 	SecretLabel         string   // macOS Keychain account / Linux Secret Service label; "" = none
 	PortalAppID         string   // Linux: the app id whose XDG portal secret decrypts v12 values; "" = none
 	Executable          string   // Windows: the program the ABE payload is injected into
@@ -42,7 +42,7 @@ type Platform struct {
 func Supported() []Browser {
 	var out []Browser
 	for _, browser := range browsers {
-		if len(browser.Platform().UserDataDirs) > 0 {
+		if len(browser.Platform().UserDataDirPaths) > 0 {
 			out = append(out, browser)
 		}
 	}

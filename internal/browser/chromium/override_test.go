@@ -60,7 +60,7 @@ func TestDiscoverAt_ReadsAnUnknownBrowserInItsVaultKind(t *testing.T) {
 	dir, err := DiscoverAt(nightly, "chromium-yandex", "nightly", t.TempDir())
 	require.NoError(t, err)
 	assert.Equal(t, nightly, dir.Browser)
-	assert.Equal(t, "Ya Passman Data", Extractors(dir, browser.Profile{})[category.Password].Sources[0].Path)
+	assert.Equal(t, "Ya Passman Data", Extractors(dir, browser.Profile{})[category.Password].Sources[0].RelativePath)
 
 	_, err = DiscoverAt(nightly, "bogus", "nightly", t.TempDir())
 	require.Error(t, err)

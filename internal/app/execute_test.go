@@ -22,7 +22,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-var history = browser.Source{Path: "History"}
+var history = browser.Source{RelativePath: "History"}
 
 type extractFunc func(ctx context.Context, input browser.Input, out browser.Collector) error
 
@@ -56,7 +56,7 @@ func chromeDir(t *testing.T, id browser.UserDataDirID, profiles ...string) brows
 
 func run(t *testing.T, base extractorsFunc, keys dirKeysFunc, categories []category.Category, dirs ...browser.UserDataDir) (Summary, string) {
 	t.Helper()
-	output := Output{Dir: t.TempDir()}
+	output := OutputOptions{Dir: t.TempDir()}
 	summary, err := execute(context.Background(), Discovery{Dirs: dirs}, categories, output, runner{extractors: base, retrieveKeys: keys})
 	require.NoError(t, err)
 	return summary, output.Dir
@@ -136,7 +136,7 @@ func TestExecute_ReportsEachDirWhatNeverRanFirst(t *testing.T) {
 	categories := []category.Category{category.Password, category.History}
 	discovery := Discovery{Dirs: []browser.UserDataDir{chrome, brave}, DirFailures: []DirFailure{failed}}
 
-	summary, err := execute(context.Background(), discovery, categories, Output{Dir: t.TempDir()}, runner{extractors: base, retrieveKeys: noKeys(t)})
+	summary, err := execute(context.Background(), discovery, categories, OutputOptions{Dir: t.TempDir()}, runner{extractors: base, retrieveKeys: noKeys(t)})
 	require.NoError(t, err)
 	assert.Equal(t, []DirFailure{failed}, summary.DirFailures, "discovery's failures are reported with the run's")
 	var got []string
@@ -233,7 +233,7 @@ func TestExecute_StopEndsTheRunBeforeTheNextExtractionAndRemovesTheCopy(t *testi
 	categories := []category.Category{category.History, category.Download}
 	discovery := Discovery{Dirs: []browser.UserDataDir{chromeDir(t, "chrome", "Default"), chromeDir(t, "chrome-2", "Default")}}
 
-	_, err := execute(ctx, discovery, categories, Output{Dir: t.TempDir()}, runner{extractors: base, retrieveKeys: noKeys(t)})
+	_, err := execute(ctx, discovery, categories, OutputOptions{Dir: t.TempDir()}, runner{extractors: base, retrieveKeys: noKeys(t)})
 	require.ErrorIs(t, err, context.Canceled)
 	require.Len(t, copied, 1, "the next user data dir is never captured")
 	_, statErr := os.Stat(copied[0])
@@ -258,7 +258,7 @@ func TestExecute_OutputFailureStopsTheRunAndLeavesNoCopies(t *testing.T) {
 			return nil
 		},
 	})
-	output := Output{Dir: t.TempDir()}
+	output := OutputOptions{Dir: t.TempDir()}
 	require.NoError(t, os.Chmod(output.Dir, 0o500))
 	defer func() { require.NoError(t, os.Chmod(output.Dir, 0o700)) }()
 
@@ -275,7 +275,7 @@ func TestExecute_FirefoxPasswordReadOnce(t *testing.T) {
 	home := t.TempDir()
 	firefoxBrowser, ok := browser.Lookup("firefox")
 	require.True(t, ok)
-	profilesDir := filepath.Join(home, filepath.FromSlash(firefoxBrowser.Platform().UserDataDirs[0]))
+	profilesDir := filepath.Join(home, filepath.FromSlash(firefoxBrowser.Platform().UserDataDirPaths[0]))
 	globalSalt, masterKey := bytes.Repeat([]byte("16-byte-salt-abc"), 3), []byte("firefox-pw-master-key-24")
 	for _, profile := range []string{"a.default", "b.work"} {
 		browsertest.WriteFirefoxPrimaryPasswordProfile(t, filepath.Join(profilesDir, profile), globalSalt, []byte("hunter2"), [][]byte{masterKey})
@@ -287,7 +287,7 @@ func TestExecute_FirefoxPasswordReadOnce(t *testing.T) {
 	}
 
 	discovery := Discover(context.Background(), Target{Browsers: []browser.Browser{firefoxBrowser}, HomeDir: home})
-	summary, err := Execute(context.Background(), discovery, []category.Category{category.Password}, Output{Dir: t.TempDir()}, KeychainConfig{}, password)
+	summary, err := Execute(context.Background(), discovery, []category.Category{category.Password}, OutputOptions{Dir: t.TempDir()}, KeychainConfig{}, password)
 	require.NoError(t, err)
 	require.Len(t, summary.Results, 2)
 	for _, result := range summary.Results {

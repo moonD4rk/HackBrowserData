@@ -9,17 +9,17 @@ var browsers = []Browser{
 		DisplayName: "Chrome",
 		Base:        Chromium,
 		Darwin: Platform{
-			UserDataDirs: []string{"Library/Application Support/Google/Chrome"},
-			SecretLabel:  "Chrome",
+			UserDataDirPaths: []string{"Library/Application Support/Google/Chrome"},
+			SecretLabel:      "Chrome",
 		},
 		Linux: Platform{
-			UserDataDirs: []string{".config/google-chrome"},
-			SecretLabel:  "Chrome Safe Storage",
-			PortalAppID:  "com.google.Chrome",
+			UserDataDirPaths: []string{".config/google-chrome"},
+			SecretLabel:      "Chrome Safe Storage",
+			PortalAppID:      "com.google.Chrome",
 		},
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Local/Google/Chrome/User Data"},
-			Executable:   "chrome.exe",
+			UserDataDirPaths: []string{"AppData/Local/Google/Chrome/User Data"},
+			Executable:       "chrome.exe",
 			ExecutableFallbacks: []string{
 				`%ProgramFiles%\Google\Chrome\Application\chrome.exe`,
 				`%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe`,
@@ -33,16 +33,16 @@ var browsers = []Browser{
 		DisplayName: "Microsoft Edge",
 		Base:        Chromium,
 		Darwin: Platform{
-			UserDataDirs: []string{"Library/Application Support/Microsoft Edge"},
-			SecretLabel:  "Microsoft Edge",
+			UserDataDirPaths: []string{"Library/Application Support/Microsoft Edge"},
+			SecretLabel:      "Microsoft Edge",
 		},
 		Linux: Platform{
-			UserDataDirs: []string{".config/microsoft-edge"},
-			SecretLabel:  "Chromium Safe Storage",
+			UserDataDirPaths: []string{".config/microsoft-edge"},
+			SecretLabel:      "Chromium Safe Storage",
 		},
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Local/Microsoft/Edge/User Data"},
-			Executable:   "msedge.exe",
+			UserDataDirPaths: []string{"AppData/Local/Microsoft/Edge/User Data"},
+			Executable:       "msedge.exe",
 			ExecutableFallbacks: []string{
 				`%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe`,
 				`%ProgramFiles%\Microsoft\Edge\Application\msedge.exe`,
@@ -55,16 +55,16 @@ var browsers = []Browser{
 		DisplayName: "Chromium",
 		Base:        Chromium,
 		Darwin: Platform{
-			UserDataDirs: []string{"Library/Application Support/Chromium"},
-			SecretLabel:  "Chromium",
+			UserDataDirPaths: []string{"Library/Application Support/Chromium"},
+			SecretLabel:      "Chromium",
 		},
 		Linux: Platform{
-			UserDataDirs: []string{".config/chromium"},
-			SecretLabel:  "Chromium Safe Storage",
-			PortalAppID:  "org.chromium.Chromium",
+			UserDataDirPaths: []string{".config/chromium"},
+			SecretLabel:      "Chromium Safe Storage",
+			PortalAppID:      "org.chromium.Chromium",
 		},
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Local/Chromium/User Data"},
+			UserDataDirPaths: []string{"AppData/Local/Chromium/User Data"},
 		},
 	},
 	{
@@ -72,17 +72,17 @@ var browsers = []Browser{
 		DisplayName: "Chrome Beta",
 		Base:        Chromium,
 		Darwin: Platform{
-			UserDataDirs: []string{"Library/Application Support/Google/Chrome Beta"},
-			SecretLabel:  "Chrome",
+			UserDataDirPaths: []string{"Library/Application Support/Google/Chrome Beta"},
+			SecretLabel:      "Chrome",
 		},
 		Linux: Platform{
-			UserDataDirs: []string{".config/google-chrome-beta"},
-			SecretLabel:  "Chrome Safe Storage",
-			PortalAppID:  "com.google.Chrome.beta",
+			UserDataDirPaths: []string{".config/google-chrome-beta"},
+			SecretLabel:      "Chrome Safe Storage",
+			PortalAppID:      "com.google.Chrome.beta",
 		},
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Local/Google/Chrome Beta/User Data"},
-			Executable:   "chrome.exe",
+			UserDataDirPaths: []string{"AppData/Local/Google/Chrome Beta/User Data"},
+			Executable:       "chrome.exe",
 			ExecutableFallbacks: []string{
 				`%ProgramFiles%\Google\Chrome Beta\Application\chrome.exe`,
 				`%ProgramFiles(x86)%\Google\Chrome Beta\Application\chrome.exe`,
@@ -96,15 +96,15 @@ var browsers = []Browser{
 		DisplayName: "Opera",
 		Base:        Chromium,
 		Darwin: Platform{
-			UserDataDirs: []string{"Library/Application Support/com.operasoftware.Opera"},
-			SecretLabel:  "Opera",
+			UserDataDirPaths: []string{"Library/Application Support/com.operasoftware.Opera"},
+			SecretLabel:      "Opera",
 		},
 		Linux: Platform{
-			UserDataDirs: []string{".config/opera"},
-			SecretLabel:  "Chromium Safe Storage",
+			UserDataDirPaths: []string{".config/opera"},
+			SecretLabel:      "Chromium Safe Storage",
 		},
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Roaming/Opera Software/Opera Stable"},
+			UserDataDirPaths: []string{"AppData/Roaming/Opera Software/Opera Stable"},
 		},
 	},
 	{
@@ -112,11 +112,11 @@ var browsers = []Browser{
 		DisplayName: "OperaGX",
 		Base:        Chromium,
 		Darwin: Platform{
-			UserDataDirs: []string{"Library/Application Support/com.operasoftware.OperaGX"},
-			SecretLabel:  "Opera",
+			UserDataDirPaths: []string{"Library/Application Support/com.operasoftware.OperaGX"},
+			SecretLabel:      "Opera",
 		},
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Roaming/Opera Software/Opera GX Stable"},
+			UserDataDirPaths: []string{"AppData/Roaming/Opera Software/Opera GX Stable"},
 		},
 	},
 	{
@@ -124,7 +124,7 @@ var browsers = []Browser{
 		DisplayName: "Browser from Vought",
 		Base:        Chromium,
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Roaming/Browser from Vought"},
+			UserDataDirPaths: []string{"AppData/Roaming/Browser from Vought"},
 		},
 	},
 	{
@@ -132,15 +132,15 @@ var browsers = []Browser{
 		DisplayName: "Vivaldi",
 		Base:        Chromium,
 		Darwin: Platform{
-			UserDataDirs: []string{"Library/Application Support/Vivaldi"},
-			SecretLabel:  "Vivaldi",
+			UserDataDirPaths: []string{"Library/Application Support/Vivaldi"},
+			SecretLabel:      "Vivaldi",
 		},
 		Linux: Platform{
-			UserDataDirs: []string{".config/vivaldi"},
-			SecretLabel:  "Chrome Safe Storage",
+			UserDataDirPaths: []string{".config/vivaldi"},
+			SecretLabel:      "Chrome Safe Storage",
 		},
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Local/Vivaldi/User Data"},
+			UserDataDirPaths: []string{"AppData/Local/Vivaldi/User Data"},
 		},
 	},
 	{
@@ -148,12 +148,12 @@ var browsers = []Browser{
 		DisplayName: "CocCoc",
 		Base:        Chromium,
 		Darwin: Platform{
-			UserDataDirs: []string{"Library/Application Support/Coccoc"},
-			SecretLabel:  "CocCoc",
+			UserDataDirPaths: []string{"Library/Application Support/Coccoc"},
+			SecretLabel:      "CocCoc",
 		},
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Local/CocCoc/Browser/User Data"},
-			Executable:   "browser.exe",
+			UserDataDirPaths: []string{"AppData/Local/CocCoc/Browser/User Data"},
+			Executable:       "browser.exe",
 			ExecutableFallbacks: []string{
 				`%ProgramFiles%\CocCoc\Browser\Application\browser.exe`,
 				`%ProgramFiles(x86)%\CocCoc\Browser\Application\browser.exe`,
@@ -167,17 +167,17 @@ var browsers = []Browser{
 		DisplayName: "Brave",
 		Base:        Chromium,
 		Darwin: Platform{
-			UserDataDirs: []string{"Library/Application Support/BraveSoftware/Brave-Browser"},
-			SecretLabel:  "Brave",
+			UserDataDirPaths: []string{"Library/Application Support/BraveSoftware/Brave-Browser"},
+			SecretLabel:      "Brave",
 		},
 		Linux: Platform{
-			UserDataDirs: []string{".config/BraveSoftware/Brave-Browser"},
-			SecretLabel:  "Brave Safe Storage",
-			PortalAppID:  "com.brave.Browser",
+			UserDataDirPaths: []string{".config/BraveSoftware/Brave-Browser"},
+			SecretLabel:      "Brave Safe Storage",
+			PortalAppID:      "com.brave.Browser",
 		},
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Local/BraveSoftware/Brave-Browser/User Data"},
-			Executable:   "brave.exe",
+			UserDataDirPaths: []string{"AppData/Local/BraveSoftware/Brave-Browser/User Data"},
+			Executable:       "brave.exe",
 			ExecutableFallbacks: []string{
 				`%ProgramFiles%\BraveSoftware\Brave-Browser\Application\brave.exe`,
 				`%ProgramFiles(x86)%\BraveSoftware\Brave-Browser\Application\brave.exe`,
@@ -191,11 +191,11 @@ var browsers = []Browser{
 		DisplayName: "Yandex",
 		Base:        Chromium,
 		Darwin: Platform{
-			UserDataDirs: []string{"Library/Application Support/Yandex/YandexBrowser"},
-			SecretLabel:  "Yandex",
+			UserDataDirPaths: []string{"Library/Application Support/Yandex/YandexBrowser"},
+			SecretLabel:      "Yandex",
 		},
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Local/Yandex/YandexBrowser/User Data"},
+			UserDataDirPaths: []string{"AppData/Local/Yandex/YandexBrowser/User Data"},
 		},
 	},
 	{
@@ -203,7 +203,7 @@ var browsers = []Browser{
 		DisplayName: "360 Speed X",
 		Base:        Chromium,
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Local/360ChromeX/Chrome/User Data"},
+			UserDataDirPaths: []string{"AppData/Local/360ChromeX/Chrome/User Data"},
 		},
 	},
 	{
@@ -211,7 +211,7 @@ var browsers = []Browser{
 		DisplayName: "360 Speed",
 		Base:        Chromium,
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Local/360chrome/Chrome/User Data"},
+			UserDataDirPaths: []string{"AppData/Local/360chrome/Chrome/User Data"},
 		},
 	},
 	{
@@ -219,7 +219,7 @@ var browsers = []Browser{
 		DisplayName: "QQ",
 		Base:        Chromium,
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Local/Tencent/QQBrowser/User Data"},
+			UserDataDirPaths: []string{"AppData/Local/Tencent/QQBrowser/User Data"},
 		},
 	},
 	{
@@ -227,7 +227,7 @@ var browsers = []Browser{
 		DisplayName: "DC",
 		Base:        Chromium,
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Local/DCBrowser/User Data"},
+			UserDataDirPaths: []string{"AppData/Local/DCBrowser/User Data"},
 		},
 	},
 	{
@@ -235,7 +235,7 @@ var browsers = []Browser{
 		DisplayName: "Sogou",
 		Base:        Chromium,
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Local/Sogou/SogouExplorer/User Data"},
+			UserDataDirPaths: []string{"AppData/Local/Sogou/SogouExplorer/User Data"},
 		},
 	},
 	{
@@ -243,11 +243,11 @@ var browsers = []Browser{
 		DisplayName: "Arc",
 		Base:        Chromium,
 		Darwin: Platform{
-			UserDataDirs: []string{"Library/Application Support/Arc/User Data"},
-			SecretLabel:  "Arc",
+			UserDataDirPaths: []string{"Library/Application Support/Arc/User Data"},
+			SecretLabel:      "Arc",
 		},
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Local/Packages/TheBrowserCompany.Arc_*/LocalCache/Local/Arc/User Data"},
+			UserDataDirPaths: []string{"AppData/Local/Packages/TheBrowserCompany.Arc_*/LocalCache/Local/Arc/User Data"},
 		},
 	},
 	{
@@ -255,7 +255,7 @@ var browsers = []Browser{
 		DisplayName: "DuckDuckGo",
 		Base:        Chromium,
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Local/Packages/DuckDuckGo.DesktopBrowser_*/LocalState/EBWebView"},
+			UserDataDirPaths: []string{"AppData/Local/Packages/DuckDuckGo.DesktopBrowser_*/LocalState/EBWebView"},
 		},
 	},
 	{
@@ -263,13 +263,13 @@ var browsers = []Browser{
 		DisplayName: "Firefox",
 		Base:        Firefox,
 		Darwin: Platform{
-			UserDataDirs: []string{"Library/Application Support/Firefox/Profiles"},
+			UserDataDirPaths: []string{"Library/Application Support/Firefox/Profiles"},
 		},
 		Linux: Platform{
-			UserDataDirs: []string{".mozilla/firefox"},
+			UserDataDirPaths: []string{".mozilla/firefox"},
 		},
 		Windows: Platform{
-			UserDataDirs: []string{"AppData/Roaming/Mozilla/Firefox/Profiles"},
+			UserDataDirPaths: []string{"AppData/Roaming/Mozilla/Firefox/Profiles"},
 		},
 	},
 	{
@@ -277,7 +277,7 @@ var browsers = []Browser{
 		DisplayName: "Safari",
 		Base:        Safari,
 		Darwin: Platform{
-			UserDataDirs: []string{"Library/Safari"},
+			UserDataDirPaths: []string{"Library/Safari"},
 		},
 	},
 }

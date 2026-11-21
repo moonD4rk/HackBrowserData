@@ -13,10 +13,10 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
-func TestReport(t *testing.T) {
+func TestPrintSummary(t *testing.T) {
 	cookie := app.Extraction{UserDataDirID: "chrome", ProfileName: "Default", Category: category.Cookie}
 	var buffer bytes.Buffer
-	report(&buffer, app.Summary{
+	printSummary(&buffer, app.Summary{
 		Results: []app.Result{
 			{Extraction: cookie, Outcome: app.OutcomePartial, Records: 224, Failures: 4},
 			{

@@ -60,5 +60,5 @@ func userDataDirOf(t *testing.T, home, browserName string) string {
 	t.Helper()
 	namedBrowser, ok := browser.Lookup(browserName)
 	require.True(t, ok, browserName)
-	return filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirs[0]))
+	return filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirPaths[0]))
 }

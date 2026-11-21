@@ -184,7 +184,7 @@ func insertCreditCard(name string, month, year int, encNumberHex, nickName, addr
 }
 
 func testBrowser(name string, userDataDirs ...string) browser.Browser {
-	platform := browser.Platform{UserDataDirs: userDataDirs, SecretLabel: "Test Safe Storage"}
+	platform := browser.Platform{UserDataDirPaths: userDataDirs, SecretLabel: "Test Safe Storage"}
 	return browser.Browser{Name: name, DisplayName: name, Base: browser.Chromium, Darwin: platform, Linux: platform, Windows: platform}
 }
 

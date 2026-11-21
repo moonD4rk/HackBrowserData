@@ -21,8 +21,8 @@ type Target struct {
 	HomeDir     string
 }
 
-// Output is where and how Execute writes records.
-type Output struct {
+// OutputOptions is where and how Execute writes records.
+type OutputOptions struct {
 	Dir             string
 	Format          export.Format
 	Zip             bool
@@ -99,24 +99,24 @@ func parseCategories(value string) ([]category.Category, error) {
 }
 
 // checkOutputDir creates nothing: -d, or its nearest existing ancestor, must be a directory we can create in.
-func checkOutputDir(dir string) error {
-	path := filepath.Clean(dir)
+func checkOutputDir(outputDir string) error {
+	path := filepath.Clean(outputDir)
 	for {
 		info, err := os.Stat(path)
 		switch {
 		case err == nil && info.IsDir():
 			if err := canCreateIn(path); err != nil {
-				return fmt.Errorf("output dir %s: %w", dir, err)
+				return fmt.Errorf("output dir %s: %w", outputDir, err)
 			}
 			return nil
 		case err == nil:
-			return fmt.Errorf("output dir %s: %s is not a directory", dir, path)
+			return fmt.Errorf("output dir %s: %s is not a directory", outputDir, path)
 		case !errors.Is(err, fs.ErrNotExist):
-			return fmt.Errorf("output dir %s: %w", dir, err)
+			return fmt.Errorf("output dir %s: %w", outputDir, err)
 		}
 		parent := filepath.Dir(path)
 		if parent == path {
-			return fmt.Errorf("output dir %s: no existing parent directory", dir)
+			return fmt.Errorf("output dir %s: no existing parent directory", outputDir)
 		}
 		path = parent
 	}

@@ -24,7 +24,7 @@ func TestExtractGolden(t *testing.T) {
 		namedBrowser, ok := browser.Lookup(fixture.Name)
 		require.True(t, ok, fixture.Name)
 		require.Equal(t, fixture.DisplayName, namedBrowser.DisplayName, "records carry the table's display name")
-		browsertest.WriteChromiumUserDataDir(t, filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirs[0])), fixture.Name)
+		browsertest.WriteChromiumUserDataDir(t, filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirPaths[0])), fixture.Name)
 		keys[browser.UserDataDirID(fixture.Name)] = browsertest.ChromiumKeys
 	}
 
@@ -37,7 +37,7 @@ func TestExtractGoldenFirefox(t *testing.T) {
 	home := t.TempDir()
 	firefoxBrowser, ok := browser.Lookup("firefox")
 	require.True(t, ok)
-	browsertest.WriteFirefoxUserDataDir(t, filepath.Join(home, filepath.FromSlash(firefoxBrowser.Platform().UserDataDirs[0])))
+	browsertest.WriteFirefoxUserDataDir(t, filepath.Join(home, filepath.FromSlash(firefoxBrowser.Platform().UserDataDirPaths[0])))
 
 	assertExtractGoldens(t, "extract-firefox", func(t *testing.T, format string) string {
 		return extractGoldenRun(t, home, nil, format)

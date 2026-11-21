@@ -17,21 +17,21 @@ import (
 
 // Source is one file or directory an extractor reads.
 type Source struct {
-	Path      string   // slash-separated, relative to the profile dir, or to the user data dir when Shared
-	Fallbacks []string // older locations, read only when Path is absent
-	IsDir     bool
-	Shared    bool // belongs to the whole user data dir, such as Local State, so it is captured once per dir
-	Optional  bool // the extraction still runs without it
+	RelativePath string   // slash-separated, relative to the profile dir, or to the user data dir when Shared
+	Fallbacks    []string // older locations, read only when RelativePath is absent
+	IsDir        bool
+	Shared       bool // belongs to the whole user data dir, such as Local State, so it is captured once per dir
+	Optional     bool // the extraction still runs without it
 }
 
-// Paths lists Path and then its Fallbacks, the order they are tried in.
-func (s Source) Paths() []string {
-	return append([]string{s.Path}, s.Fallbacks...)
+// RelativePaths lists RelativePath and then its Fallbacks, the order they are tried in.
+func (s Source) RelativePaths() []string {
+	return append([]string{s.RelativePath}, s.Fallbacks...)
 }
 
-// CandidatePaths are the Paths for a profile, relative to the user data dir.
+// CandidatePaths are the RelativePaths for a profile, relative to the user data dir.
 func (s Source) CandidatePaths(profile Profile) []string {
-	paths := s.Paths()
+	paths := s.RelativePaths()
 	if !s.Shared {
 		for i, relativePath := range paths {
 			paths[i] = path.Join(profile.RelativePath, relativePath)
@@ -84,7 +84,7 @@ func (in Input) Path(source Source) (string, error) {
 		}
 		return capturedPath, err
 	}
-	return "", fmt.Errorf("%s: %w", strings.Join(source.Paths(), " or "), fs.ErrNotExist)
+	return "", fmt.Errorf("%s: %w", strings.Join(source.RelativePaths(), " or "), fs.ErrNotExist)
 }
 
 // MasterKeys may block on its first call; a key version that could not be retrieved is absent from the Set.

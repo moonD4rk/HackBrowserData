@@ -42,8 +42,8 @@ func addFile(zipWriter *zip.Writer, path, name string) error {
 	return err
 }
 
-// Extract unpacks archivePath into dir, refusing any entry that would land outside it.
-func Extract(archivePath, dir string) error {
+// Extract unpacks archivePath into targetDir, refusing any entry that would land outside it.
+func Extract(archivePath, targetDir string) error {
 	zipReader, err := zip.OpenReader(archivePath)
 	if err != nil {
 		return fmt.Errorf("open zip %s: %w", archivePath, err)
@@ -55,7 +55,7 @@ func Extract(archivePath, dir string) error {
 		if !filepath.IsLocal(name) {
 			return fmt.Errorf("zip entry %q escapes destination", zipFile.Name)
 		}
-		target := filepath.Join(dir, name)
+		target := filepath.Join(targetDir, name)
 		if zipFile.FileInfo().IsDir() {
 			if err := os.MkdirAll(target, 0o700); err != nil {
 				return err

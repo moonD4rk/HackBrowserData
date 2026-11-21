@@ -15,7 +15,7 @@ import (
 )
 
 func testBrowser() browser.Browser {
-	platform := browser.Platform{UserDataDirs: []string{"Library/Safari"}}
+	platform := browser.Platform{UserDataDirPaths: []string{"Library/Safari"}}
 	return browser.Browser{Name: "safari", DisplayName: "Safari", Base: browser.Safari, Darwin: platform, Linux: platform, Windows: platform}
 }
 

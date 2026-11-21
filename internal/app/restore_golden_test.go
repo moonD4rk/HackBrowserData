@@ -65,7 +65,7 @@ func TestArchiveRestoreRoundTrip(t *testing.T) {
 	for _, fixture := range browsertest.ChromiumUserDataDirs {
 		namedBrowser, ok := browser.Lookup(fixture.Name)
 		require.True(t, ok, fixture.Name)
-		browsertest.WriteChromiumUserDataDir(t, filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirs[0])), fixture.Name)
+		browsertest.WriteChromiumUserDataDir(t, filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirPaths[0])), fixture.Name)
 	}
 	options, err := app.ValidateArchive(app.ArchiveFlags{Browser: "all", Categories: "all"})
 	require.NoError(t, err)

@@ -39,7 +39,7 @@ func namedProfiles(ctx context.Context, library string, id browser.UserDataDirID
 
 // readNamedProfilesFromDB reads a copy, never Safari's live file; (nil, err) means unreadable, and any slice is final.
 func readNamedProfilesFromDB(ctx context.Context, library string, id browser.UserDataDirID) ([]browser.Profile, error) {
-	root, err := snapshot.Temp()
+	root, err := snapshot.NewRoot()
 	if err != nil {
 		return nil, err
 	}

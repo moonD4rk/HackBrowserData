@@ -80,7 +80,7 @@ func TestArchiveGolden(t *testing.T) {
 	home := t.TempDir()
 	namedBrowser, ok := browser.Lookup(archiveLayoutBrowser)
 	require.True(t, ok)
-	archiveLayoutUserData(t, filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirs[0])))
+	archiveLayoutUserData(t, filepath.Join(home, filepath.FromSlash(namedBrowser.Platform().UserDataDirPaths[0])))
 
 	tests := []struct {
 		name       string

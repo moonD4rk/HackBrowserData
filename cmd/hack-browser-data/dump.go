@@ -54,9 +54,9 @@ func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychai
 		return nil
 	}
 	summary, err := app.Execute(ctx, discovery, options.Categories, options.Output, options.Keychain, options.FirefoxPassword)
-	announceExport(stderr, summary.Exported)
+	printExported(stderr, summary.Exported)
 	if ctx.Err() == nil {
-		report(stderr, summary)
+		printSummary(stderr, summary)
 	}
 	return err
 }

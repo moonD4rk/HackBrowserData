@@ -25,7 +25,7 @@ type DumpFlags struct {
 type DumpOptions struct {
 	Target          Target
 	Categories      []category.Category
-	Output          Output
+	Output          OutputOptions
 	Keychain        KeychainConfig
 	FirefoxPassword func(ctx context.Context) (string, error) // nil is the empty password; Execute reads it at most once
 }
@@ -61,7 +61,7 @@ func ValidateDump(flags DumpFlags, keychainPassword, firefoxPassword func(contex
 	return DumpOptions{
 		Target:          Target{Browsers: browsers, ProfilePath: profilePath, HomeDir: home},
 		Categories:      categories,
-		Output:          Output{Dir: flags.OutputDir, Format: format, Zip: flags.Zip, MaxStorageValue: flags.MaxStorageValue},
+		Output:          OutputOptions{Dir: flags.OutputDir, Format: format, Zip: flags.Zip, MaxStorageValue: flags.MaxStorageValue},
 		Keychain:        KeychainConfig{Path: loginKeychainPath(home), Password: keychainPassword},
 		FirefoxPassword: firefoxPassword,
 	}, nil

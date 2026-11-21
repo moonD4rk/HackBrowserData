@@ -26,8 +26,8 @@ type Root struct {
 	failed map[string]error // keyed by the cleaned <UserDataDirID>/<RelativePath>, so any spelling of a file finds its failure
 }
 
-// Temp creates a private temporary snapshot directory, which Close removes.
-func Temp() (*Root, error) {
+// NewRoot creates a private temporary snapshot directory, which Close removes.
+func NewRoot() (*Root, error) {
 	path, err := os.MkdirTemp("", "hbd-snapshot-*")
 	if err != nil {
 		return nil, fmt.Errorf("create snapshot dir: %w", err)
@@ -42,7 +42,7 @@ func Open(path string) *Root {
 
 // Unzip extracts an archive into a temporary snapshot directory, rejecting entries that would land outside it.
 func Unzip(archivePath string) (*Root, error) {
-	root, err := Temp()
+	root, err := NewRoot()
 	if err != nil {
 		return nil, err
 	}

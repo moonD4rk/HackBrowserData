@@ -50,8 +50,8 @@ func userDataDirPaths(safariBrowser browser.Browser, options browser.DiscoverOpt
 	if options.ProfilePath != "" {
 		return []string{filepath.Clean(options.ProfilePath)}
 	}
-	paths := make([]string, 0, len(safariBrowser.Platform().UserDataDirs))
-	for _, relativePath := range safariBrowser.Platform().UserDataDirs {
+	paths := make([]string, 0, len(safariBrowser.Platform().UserDataDirPaths))
+	for _, relativePath := range safariBrowser.Platform().UserDataDirPaths {
 		paths = append(paths, filepath.Join(options.HomeDir, filepath.FromSlash(relativePath)))
 	}
 	return paths
@@ -68,16 +68,16 @@ func Extractors(dir browser.UserDataDir, profile browser.Profile) browser.Extrac
 
 func defaultProfileExtractors(profile browser.Profile) browser.Extractors {
 	var (
-		history = browser.Source{Path: "History.db"}
+		history = browser.Source{RelativePath: "History.db"}
 		cookies = browser.Source{
-			Path:      fromLibrary(profile, containerDir+"/Cookies/Cookies.binarycookies"),
-			Fallbacks: []string{fromLibrary(profile, "Cookies/Cookies.binarycookies")},
+			RelativePath: fromLibrary(profile, containerDir+"/Cookies/Cookies.binarycookies"),
+			Fallbacks:    []string{fromLibrary(profile, "Cookies/Cookies.binarycookies")},
 		}
-		bookmarks     = browser.Source{Path: "Bookmarks.plist"}
-		downloads     = browser.Source{Path: "Downloads.plist"}
-		localStorage  = browser.Source{Path: fromLibrary(profile, containerDir+"/WebKit/WebsiteData/Default"), IsDir: true}
-		appExtensions = browser.Source{Path: fromLibrary(profile, containerDir+"/Safari/AppExtensions/Extensions.plist"), Optional: true}
-		webExtensions = browser.Source{Path: fromLibrary(profile, containerDir+"/Safari/WebExtensions/Extensions.plist"), Optional: true}
+		bookmarks     = browser.Source{RelativePath: "Bookmarks.plist"}
+		downloads     = browser.Source{RelativePath: "Downloads.plist"}
+		localStorage  = browser.Source{RelativePath: fromLibrary(profile, containerDir+"/WebKit/WebsiteData/Default"), IsDir: true}
+		appExtensions = browser.Source{RelativePath: fromLibrary(profile, containerDir+"/Safari/AppExtensions/Extensions.plist"), Optional: true}
+		webExtensions = browser.Source{RelativePath: fromLibrary(profile, containerDir+"/Safari/WebExtensions/Extensions.plist"), Optional: true}
 	)
 	return browser.Extractors{
 		category.Password:     {Extract: extractPasswords},
@@ -93,10 +93,10 @@ func defaultProfileExtractors(profile browser.Profile) browser.Extractors {
 func namedProfileExtractors(dir browser.UserDataDir, profile browser.Profile, uuid string) browser.Extractors {
 	store := containerDir + "/WebKit/WebsiteDataStore/" + strings.ToLower(uuid)
 	var (
-		history      = browser.Source{Path: "History.db"}
-		cookies      = browser.Source{Path: fromLibrary(profile, store+"/Cookies/Cookies.binarycookies")}
-		downloads    = browser.Source{Path: fromLibrary(profile, defaultProfileDir(dir)+"/Downloads.plist")}
-		localStorage = browser.Source{Path: fromLibrary(profile, store+"/Origins"), IsDir: true}
+		history      = browser.Source{RelativePath: "History.db"}
+		cookies      = browser.Source{RelativePath: fromLibrary(profile, store+"/Cookies/Cookies.binarycookies")}
+		downloads    = browser.Source{RelativePath: fromLibrary(profile, defaultProfileDir(dir)+"/Downloads.plist")}
+		localStorage = browser.Source{RelativePath: fromLibrary(profile, store+"/Origins"), IsDir: true}
 	)
 	return browser.Extractors{
 		category.History:      newPlainExtractor(extractHistories, history),

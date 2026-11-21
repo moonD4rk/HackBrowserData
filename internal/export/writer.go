@@ -42,12 +42,12 @@ type categoryFile struct {
 	count    int
 }
 
-// NewWriter creates dir. With zip, Close packs the files it wrote into <dir>/<base of dir>.zip.
-func NewWriter(dir string, format Format, zip bool) (*Writer, error) {
-	if err := os.MkdirAll(dir, 0o750); err != nil {
+// NewWriter creates outputDir. With zip, Close packs the files it wrote into <outputDir>/<base of outputDir>.zip.
+func NewWriter(outputDir string, format Format, zip bool) (*Writer, error) {
+	if err := os.MkdirAll(outputDir, 0o750); err != nil {
 		return nil, fmt.Errorf("create output dir: %w", err)
 	}
-	return &Writer{dir: dir, format: format, zip: zip, files: make(map[category.Category]*categoryFile)}, nil
+	return &Writer{dir: outputDir, format: format, zip: zip, files: make(map[category.Category]*categoryFile)}, nil
 }
 
 // Write reorders records in place.

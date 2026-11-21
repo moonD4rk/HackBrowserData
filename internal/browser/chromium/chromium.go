@@ -58,7 +58,7 @@ func DiscoverAt(chromiumBrowser browser.Browser, vaultKind string, id browser.Us
 
 // profileAt takes chrome://version's path: a profile dir without Local State selects that profile of its parent.
 func profileAt(chromiumBrowser browser.Browser, path string) (browser.UserDataDir, bool) {
-	if path == "" || !isProfileDir(path) || hasAnyFile(path, localState.Paths()) {
+	if path == "" || !isProfileDir(path) || hasAnyFile(path, localState.RelativePaths()) {
 		return browser.UserDataDir{}, false
 	}
 	clean := filepath.Clean(path)
@@ -80,7 +80,7 @@ func userDataDirPaths(chromiumBrowser browser.Browser, options browser.DiscoverO
 		paths []string
 		errs  []error
 	)
-	for _, relativePath := range chromiumBrowser.Platform().UserDataDirs {
+	for _, relativePath := range chromiumBrowser.Platform().UserDataDirPaths {
 		matches, err := filepath.Glob(options.HomeDir + "/" + relativePath)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("user data dir %q: %w", relativePath, err))
@@ -144,7 +144,7 @@ func profileFilePaths(dir browser.UserDataDir) []string {
 	for _, extractor := range kindExtractors(vaultKindOf(dir)) {
 		for _, source := range extractor.Sources {
 			if !source.Shared {
-				paths = append(paths, source.Paths()...)
+				paths = append(paths, source.RelativePaths()...)
 			}
 		}
 	}
@@ -167,7 +167,7 @@ func KeyLocator(dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterk
 		SecretLabel: platform.SecretLabel, Executable: platform.Executable, ExecutableFallbacks: platform.ExecutableFallbacks, ABE: platform.ABE,
 		PortalAppID: portalAppID(dir.Path, platform.PortalAppID),
 	}
-	path, err := dirSnapshot.Path(localState.Path)
+	path, err := dirSnapshot.Path(localState.RelativePath)
 	switch {
 	case err == nil:
 		locator.LocalState = path
@@ -205,7 +205,7 @@ func KeySources() []browser.Source {
 func ArchiveSources() []browser.Source {
 	sources := KeySources()
 	for _, marker := range profileMarkers {
-		sources = append(sources, browser.Source{Path: marker, Optional: true})
+		sources = append(sources, browser.Source{RelativePath: marker, Optional: true})
 	}
 	return sources
 }
