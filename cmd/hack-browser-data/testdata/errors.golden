@@ -1,0 +1,51 @@
+$ hack-browser-data -b nosuch
+Error: unknown browser "nosuch", available: all|<browsers>
+<usage: hack-browser-data>
+
+$ hack-browser-data dump -b nosuch
+Error: unknown browser "nosuch", available: all|<browsers>
+<usage: hack-browser-data dump>
+
+$ hack-browser-data dump -c nosuch
+Error: unknown category: "nosuch", available: all|password,cookie,bookmark,history,download,creditcard,extension,localstorage,sessionstorage
+<usage: hack-browser-data dump>
+
+$ hack-browser-data dump -f xml
+Error: unsupported format: xml
+<usage: hack-browser-data dump>
+
+$ hack-browser-data dump --max-storage-value -1
+Error: --max-storage-value must be >= 0 (0 means unlimited), got -1
+<usage: hack-browser-data dump>
+
+$ hack-browser-data dump --keychain-pw secret --keychain-pw-stdin
+Error: if any flags in the group [keychain-pw keychain-pw-stdin] are set none of the others can be; [keychain-pw keychain-pw-stdin] were all set
+<usage: hack-browser-data dump>
+
+$ hack-browser-data dumpkeys -b nosuch
+Error: unknown browser "nosuch", available: all|<browsers>
+<usage: hack-browser-data dumpkeys>
+
+$ hack-browser-data archive -c nosuch
+Error: unknown category: "nosuch", available: all|password,cookie,bookmark,history,download,creditcard,extension,localstorage,sessionstorage
+<usage: hack-browser-data archive>
+
+$ hack-browser-data restore
+Error: required flag(s) "keys" not set
+<usage: hack-browser-data restore>
+
+$ hack-browser-data restore --keys keys.json
+Error: exactly one of --data-dir or --data-zip is required
+<usage: hack-browser-data restore>
+
+$ hack-browser-data restore --keys keys.json --data-dir data --data-zip data.zip
+Error: if any flags in the group [data-dir data-zip] are set none of the others can be; [data-dir data-zip] were all set
+<usage: hack-browser-data restore>
+
+$ hack-browser-data list --nosuch
+Error: unknown flag: --nosuch
+<usage: hack-browser-data list>
+
+$ hack-browser-data nosuch
+Error: unknown command "nosuch" for "hack-browser-data"
+Run 'hack-browser-data --help' for usage.

@@ -1,0 +1,154 @@
+$ hack-browser-data -h
+hack-browser-data decrypts and exports browser data from Chromium-based
+browsers, Firefox, and Safari on Windows, macOS, and Linux.
+
+GitHub: https://github.com/moonD4rk/HackBrowserData
+
+Usage:
+  hack-browser-data [flags]
+  hack-browser-data [command]
+
+Available Commands:
+  archive     Pack decryption-relevant profile files into a zip for cross-host restore
+  dump        Extract and decrypt browser data (default command)
+  dumpkeys    Export Chromium master keys as JSON for cross-host decryption
+  help        Help about any command
+  list        List detected browsers and profiles
+  restore     Decrypt copied profile data using exported master keys
+  version     Print version information
+
+Flags:
+  -b, --browser string                   target browser: all|<browsers> (default "all")
+  -c, --category string                  data categories (comma-separated): all|password,cookie,bookmark,history,download,creditcard,extension,localstorage,sessionstorage (default "all")
+  -d, --dir string                       output directory (default "results")
+      --firefox-pw string                Firefox primary password (visible in ps and shell history)
+      --firefox-pw-stdin[=true|false]    read the Firefox primary password from the first line of stdin
+  -f, --format string                    output format: csv|json|cookie-editor (default "json")
+  -h, --help[=true|false]                help for hack-browser-data
+      --keychain-pw string               macOS keychain password (visible in ps and shell history)
+      --keychain-pw-stdin[=true|false]   read the macOS keychain password from the first line of stdin
+      --max-storage-value int            max storage value chars, 0=unlimited (default 2048)
+  -p, --profile-path string              custom profile dir path, get with chrome://version
+  -v, --verbose[=true|false]             enable debug logging
+      --zip[=true|false]                 compress output to zip
+
+Use "hack-browser-data [command] --help" for more information about a command.
+$ hack-browser-data dump -h
+Extract and decrypt browser data (default command)
+
+Usage:
+  hack-browser-data dump [flags]
+
+Examples:
+  hack-browser-data dump
+  hack-browser-data dump -b chrome -c password,cookie
+  hack-browser-data dump -b chrome -f json -d output
+  hack-browser-data dump -f cookie-editor
+  hack-browser-data dump --zip
+
+Flags:
+  -b, --browser string                   target browser: all|<browsers> (default "all")
+  -c, --category string                  data categories (comma-separated): all|password,cookie,bookmark,history,download,creditcard,extension,localstorage,sessionstorage (default "all")
+  -d, --dir string                       output directory (default "results")
+      --firefox-pw string                Firefox primary password (visible in ps and shell history)
+      --firefox-pw-stdin[=true|false]    read the Firefox primary password from the first line of stdin
+  -f, --format string                    output format: csv|json|cookie-editor (default "json")
+  -h, --help[=true|false]                help for dump
+      --keychain-pw string               macOS keychain password (visible in ps and shell history)
+      --keychain-pw-stdin[=true|false]   read the macOS keychain password from the first line of stdin
+      --max-storage-value int            max storage value chars, 0=unlimited (default 2048)
+  -p, --profile-path string              custom profile dir path, get with chrome://version
+      --zip[=true|false]                 compress output to zip
+
+Global Flags:
+  -v, --verbose[=true|false]   enable debug logging
+$ hack-browser-data dumpkeys -h
+Export Chromium master keys as JSON for cross-host decryption
+
+Usage:
+  hack-browser-data dumpkeys [flags]
+
+Examples:
+  hack-browser-data dumpkeys -o keys.json
+  hack-browser-data dumpkeys -b chrome
+
+Flags:
+  -b, --browser string                   target browser: all|<browsers> (default "all")
+  -h, --help[=true|false]                help for dumpkeys
+      --keychain-pw string               macOS keychain password (visible in ps and shell history)
+      --keychain-pw-stdin[=true|false]   read the macOS keychain password from the first line of stdin
+  -o, --output string                    output file (default: stdout)
+
+Global Flags:
+  -v, --verbose[=true|false]   enable debug logging
+$ hack-browser-data archive -h
+Pack decryption-relevant profile files into a zip for cross-host restore
+
+Usage:
+  hack-browser-data archive [flags]
+
+Examples:
+  hack-browser-data archive
+  hack-browser-data archive -b chrome -c cookie -o chrome-cookies.zip
+
+Flags:
+  -b, --browser string      target browser: all|<browsers> (default "all")
+  -c, --category string     data categories (comma-separated): all|password,cookie,bookmark,history,download,creditcard,extension,localstorage,sessionstorage (default "all")
+  -h, --help[=true|false]   help for archive
+  -o, --output string       output archive of decryption-relevant browser files (default "browser-data.zip")
+
+Global Flags:
+  -v, --verbose[=true|false]   enable debug logging
+$ hack-browser-data restore -h
+Decrypt copied profile data using exported master keys
+
+Usage:
+  hack-browser-data restore [flags]
+
+Examples:
+  hack-browser-data restore --keys keys.json --data-zip data.zip
+  hack-browser-data restore --keys keys.json --data-dir ./data -b chrome -c cookie
+  hack-browser-data restore --keys keys.json --data-dir ./chrome-userdata -b chrome
+  ssh origin "hack-browser-data dumpkeys" | hack-browser-data restore --keys - --data-zip data.zip
+
+Flags:
+  -b, --browser string          restore only this browser (optional; must match a vault in --keys)
+  -c, --category string         data categories (comma-separated): all|password,cookie,bookmark,history,download,creditcard,extension,localstorage,sessionstorage (default "all")
+      --data-dir string         copied profile data dir (archive layout, or one browser's User Data with -b)
+      --data-zip string         zip produced by the archive command (alternative to --data-dir)
+  -d, --dir string              output directory (default "results")
+  -f, --format string           output format: csv|json|cookie-editor (default "json")
+  -h, --help[=true|false]       help for restore
+      --keys string             keys file from dumpkeys (use - for stdin)
+      --max-storage-value int   max storage value chars, 0=unlimited (default 2048)
+      --zip[=true|false]        compress output to zip
+
+Global Flags:
+  -v, --verbose[=true|false]   enable debug logging
+$ hack-browser-data list -h
+List detected browsers and profiles
+
+Usage:
+  hack-browser-data list [flags]
+
+Examples:
+  hack-browser-data list
+  hack-browser-data list --detail
+
+Flags:
+      --detail[=true|false]   show per-category entry counts
+  -h, --help[=true|false]     help for list
+
+Global Flags:
+  -v, --verbose[=true|false]   enable debug logging
+$ hack-browser-data version -h
+Print version information
+
+Usage:
+  hack-browser-data version [flags]
+
+Flags:
+  -h, --help[=true|false]   help for version
+
+Global Flags:
+  -v, --verbose[=true|false]   enable debug logging
