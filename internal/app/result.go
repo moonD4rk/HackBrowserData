@@ -9,7 +9,7 @@ import (
 // Extraction is plain data, so a Result prints as it is and list can key record counts by it.
 type Extraction struct {
 	UserDataDirID browser.UserDataDirID
-	ProfileName   string // Profile.Name
+	Profile       browser.Profile
 	Category      category.Category
 }
 

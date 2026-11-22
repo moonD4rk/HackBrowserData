@@ -11,45 +11,34 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// dirPlan is what runDir does for one user data dir, decided from which files exist before anything is copied.
-type dirPlan struct {
-	extractions     []plannedExtraction // to run, in output order
-	files           []snapshot.File     // what they read, each copied once
-	skipped         []Result            // requested extractions that will not run, and why
-	needsMasterKeys bool                // an extraction decrypts with the dir's master keys, so they are retrieved once
-}
-
-type plannedExtraction struct {
-	Extraction
-	profile browser.Profile
-}
-
-func planDir(dir browser.UserDataDir, categories []category.Category) dirPlan {
-	var plan dirPlan
+// planExtractions decides from which files exist, before anything is copied. It returns the extractions to run in
+// output order, the files they read, each listed once, and a Result for each requested extraction that cannot run.
+func planExtractions(
+	dir browser.UserDataDir, categories []category.Category,
+) (extractions []Extraction, files []snapshot.File, skipped []Result) {
 	captured := make(map[snapshot.File]bool)
 	for _, profile := range dir.Profiles {
 		profileSources := sourcesFor(dir, profile)
 		for _, dataCategory := range categories {
-			extraction := Extraction{UserDataDirID: dir.ID, ProfileName: profile.Name, Category: dataCategory}
+			extraction := Extraction{UserDataDirID: dir.ID, Profile: profile, Category: dataCategory}
 			categorySources, supported := profileSources[dataCategory]
 			if !supported {
-				plan.skipped = append(plan.skipped, Result{Extraction: extraction, Outcome: OutcomeUnsupported})
+				skipped = append(skipped, Result{Extraction: extraction, Outcome: OutcomeUnsupported})
 				continue
 			}
-			files, present, err := locate(dir, profile, categorySources)
+			located, present, err := locate(dir, profile, categorySources)
 			switch {
 			case err != nil:
-				plan.skipped = append(plan.skipped, Result{Extraction: extraction, Outcome: OutcomeError, Err: err})
+				skipped = append(skipped, Result{Extraction: extraction, Outcome: OutcomeError, Err: err})
 			case !present:
-				plan.skipped = append(plan.skipped, Result{Extraction: extraction, Outcome: OutcomeAbsent})
+				skipped = append(skipped, Result{Extraction: extraction, Outcome: OutcomeAbsent})
 			default:
-				plan.extractions = append(plan.extractions, plannedExtraction{Extraction: extraction, profile: profile})
-				plan.files = appendNew(plan.files, captured, files...)
-				plan.needsMasterKeys = plan.needsMasterKeys || needsMasterKeys(dir, dataCategory)
+				extractions = append(extractions, extraction)
+				files = appendNew(files, captured, located...)
 			}
 		}
 	}
-	return plan
+	return extractions, files, skipped
 }
 
 func appendNew(files []snapshot.File, seen map[snapshot.File]bool, more ...snapshot.File) []snapshot.File {

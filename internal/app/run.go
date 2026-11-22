@@ -64,9 +64,9 @@ func (r runner) run(ctx context.Context, discovery Discovery, categories []categ
 }
 
 func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories []category.Category) Summary {
-	plan := planDir(dir, categories)
-	summary := Summary{Results: plan.skipped}
-	if len(plan.extractions) == 0 {
+	extractions, files, skipped := planExtractions(dir, categories)
+	summary := Summary{Results: skipped}
+	if len(extractions) == 0 {
 		return summary
 	}
 	if r.logProgress {
@@ -75,34 +75,34 @@ func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories 
 
 	root, err := snapshot.NewRoot()
 	if err != nil {
-		summary.Results = append(summary.Results, failAll(plan.extractions, err)...)
+		summary.Results = append(summary.Results, failAll(extractions, err)...)
 		return summary
 	}
 	defer closeRoot(root)
-	if err := root.Capture(ctx, plan.files); err != nil {
+	if err := root.Capture(ctx, files); err != nil {
 		if ctx.Err() != nil {
 			summary.Err = err
 			return summary
 		}
-		summary.Results = append(summary.Results, failAll(plan.extractions, err)...)
+		summary.Results = append(summary.Results, failAll(extractions, err)...)
 		return summary
 	}
 	dirSnapshot := root.Snapshot(string(dir.ID))
 
 	var masterKeys masterkey.Set
-	if plan.needsMasterKeys {
+	if needsMasterKeys(dir, extractions) {
 		retrieval := r.keySource.MasterKeys(ctx, dir, dirSnapshot)
 		masterKeys = retrieval.Keys
 		if retrieval.Err != nil {
 			summary.DirFailures = []DirFailure{{UserDataDirID: dir.ID, Err: fmt.Errorf("master key retrieval: %w", retrieval.Err)}}
 		}
 	}
-	for _, extraction := range plan.extractions {
+	for _, extraction := range extractions {
 		if err := ctx.Err(); err != nil {
 			summary.Err = fmt.Errorf("run stopped: %w", err)
 			return summary
 		}
-		captured := browser.NewProfileSnapshot(dir, extraction.profile, dirSnapshot)
+		captured := browser.NewProfileSnapshot(dir, extraction.Profile, dirSnapshot)
 		result, err := r.runExtraction(ctx, extraction, captured, masterKeys)
 		if err != nil {
 			summary.Err = err
@@ -115,22 +115,22 @@ func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories 
 
 // runExtraction exports the records emitted before an extraction failed, as they always were; its error stops the run.
 func (r runner) runExtraction(
-	ctx context.Context, extraction plannedExtraction, captured browser.ProfileSnapshot, masterKeys masterkey.Set,
+	ctx context.Context, extraction Extraction, captured browser.ProfileSnapshot, masterKeys masterkey.Set,
 ) (Result, error) {
 	recordCollector := &collector{
-		browserName: captured.UserDataDir.Browser.DisplayName, profileName: extraction.ProfileName, maxStorageValue: r.maxStorageValue,
+		browserName: captured.UserDataDir.Browser.DisplayName, profileName: extraction.Profile.Name, maxStorageValue: r.maxStorageValue,
 	}
 	err := r.extract(ctx, captured, masterKeys, extraction.Category, recordCollector)
 	if writeErr := r.writer.Write(extraction.Category, recordCollector.records); writeErr != nil {
 		return Result{}, writeErr
 	}
-	return recordCollector.result(extraction.Extraction, err), nil
+	return recordCollector.result(extraction, err), nil
 }
 
-func failAll(extractions []plannedExtraction, err error) []Result {
+func failAll(extractions []Extraction, err error) []Result {
 	results := make([]Result, len(extractions))
 	for i, extraction := range extractions {
-		results[i] = Result{Extraction: extraction.Extraction, Outcome: OutcomeError, Err: err}
+		results[i] = Result{Extraction: extraction, Outcome: OutcomeError, Err: err}
 	}
 	return results
 }

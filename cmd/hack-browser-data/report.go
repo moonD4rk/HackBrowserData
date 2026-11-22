@@ -21,7 +21,7 @@ func printSummary(stderr io.Writer, summary app.Summary) {
 	}
 	for _, result := range summary.Results {
 		fmt.Fprintf(table, "%s\t%s\t%s\t%s\t%d\t%s\n",
-			result.UserDataDirID, result.ProfileName, result.Category, result.Outcome, result.Records, resultDetail(result))
+			result.UserDataDirID, result.Profile.Name, result.Category, result.Outcome, result.Records, resultDetail(result))
 	}
 	if err := table.Flush(); err != nil {
 		log.Warnf("print summary: %v", err)
@@ -90,7 +90,7 @@ func printRecordCounts(out io.Writer, discovery app.Discovery, summary app.Summa
 		for _, profile := range dir.Profiles {
 			fmt.Fprintf(table, "%s\t%s", dir.Browser.DisplayName, profile.Name)
 			for _, dataCategory := range category.All() {
-				fmt.Fprintf(table, "\t%d", counts[app.Extraction{UserDataDirID: dir.ID, ProfileName: profile.Name, Category: dataCategory}])
+				fmt.Fprintf(table, "\t%d", counts[app.Extraction{UserDataDirID: dir.ID, Profile: profile, Category: dataCategory}])
 			}
 			fmt.Fprintln(table)
 		}

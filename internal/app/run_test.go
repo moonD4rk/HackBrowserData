@@ -239,6 +239,6 @@ func TestDump_FirefoxPrimaryPasswordOpensEveryProtectedProfile(t *testing.T) {
 	require.NoError(t, summary.Err)
 	require.Len(t, summary.Results, 2)
 	for _, result := range summary.Results {
-		assert.Equal(t, OutcomeOK, result.Outcome, result.ProfileName)
+		assert.Equal(t, OutcomeOK, result.Outcome, result.Profile.Name)
 	}
 }

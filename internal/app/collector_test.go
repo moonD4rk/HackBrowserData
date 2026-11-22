@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
@@ -16,7 +17,7 @@ func TestCollectorResult(t *testing.T) {
 	notDecrypted := errors.New("value not decrypted")
 	corrupt := errors.New("corrupt")
 	gone := fmt.Errorf("History: %w", fs.ErrNotExist)
-	extraction := Extraction{UserDataDirID: "chrome", ProfileName: "Default", Category: category.Cookie}
+	extraction := Extraction{UserDataDirID: "chrome", Profile: browser.Profile{Name: "Default", RelativePath: "Default"}, Category: category.Cookie}
 	tests := []struct {
 		name     string
 		records  int
