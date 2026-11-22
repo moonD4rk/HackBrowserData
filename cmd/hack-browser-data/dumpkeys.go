@@ -11,9 +11,8 @@ import (
 
 func newDumpKeysCommand() *cobra.Command {
 	var (
-		flags      app.DumpKeysFlags
-		keychain   keychainFlags
-		outputPath string
+		flags    app.DumpKeysFlags
+		keychain passwordFlags
 	)
 
 	command := &cobra.Command{
@@ -26,8 +25,7 @@ func newDumpKeysCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			discovery := app.Discover(command.Context(), options.Target)
-			vaultCount, err := app.DumpKeys(command.Context(), discovery, options.Keychain, command.OutOrStdout(), outputPath)
+			vaultCount, err := app.DumpKeys(command.Context(), options, command.OutOrStdout())
 			if err != nil {
 				return err
 			}
@@ -37,8 +35,8 @@ func newDumpKeysCommand() *cobra.Command {
 	}
 
 	command.Flags().StringVarP(&flags.Browser, "browser", "b", "all", "target browser: all|"+browserNames())
-	command.Flags().StringVarP(&outputPath, "output", "o", "", "output file (default: stdout)")
-	addKeychainPasswordFlags(command, &keychain)
+	command.Flags().StringVarP(&flags.OutputPath, "output", "o", "", "output file (default: stdout)")
+	addPasswordFlags(command, &keychain, "keychain-pw", "macOS keychain password")
 
 	return command
 }

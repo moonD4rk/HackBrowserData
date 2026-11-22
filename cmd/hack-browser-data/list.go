@@ -16,11 +16,10 @@ func newListCommand() *cobra.Command {
 		Example: `  hack-browser-data list
   hack-browser-data list --detail`,
 		RunE: func(command *cobra.Command, args []string) error {
-			options, err := app.ValidateList()
+			discovery, summary, err := app.List(command.Context(), detail)
 			if err != nil {
 				return err
 			}
-			discovery := app.Discover(command.Context(), options.Target)
 			for _, failure := range discovery.DirFailures {
 				log.Warnf("%s: %v", failure.UserDataDirID, failure.Err)
 			}
@@ -30,10 +29,6 @@ func newListCommand() *cobra.Command {
 			}
 			if !detail {
 				return printProfiles(command.OutOrStdout(), discovery)
-			}
-			summary, err := app.CountRecords(command.Context(), discovery, options.Keychain)
-			if err != nil {
-				return err
 			}
 			return printRecordCounts(command.OutOrStdout(), discovery, summary)
 		},

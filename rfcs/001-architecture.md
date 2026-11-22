@@ -12,7 +12,7 @@ A run is a fixed, one-way sequence of stages, and no stage reaches back:
 6. **Export** — append each extraction's records to the output files.
 7. **Report** — summarize every outcome.
 
-Plan, Capture, Extract, and Export run once per data directory: a directory is planned right before its files are copied, and at most one directory's copies are on disk at a time. Every command is a cut of this pipeline: `list` stops after discovery, `list --detail` counts records instead of exporting them, `archive` captures and zips, `dumpkeys` retrieves keys only, and `restore` extracts from a snapshot it is given.
+Plan, Capture, Extract, and Export run once per data directory: a directory is planned right before its files are copied, and at most one directory's copies are on disk at a time. Every command is a cut of this pipeline: `list` stops after discovery, `list --detail` counts records instead of exporting them, `archive` captures and zips, `dumpkeys` retrieves keys only, and `restore` discovers its directories in an archive and takes its keys from a file.
 
 **Why.** When each browser runs the whole flow itself, every concern is solved several times, and bugs hide where nothing else checks them. Named stages implement each concern once; a browser contributes only where its files are and how to read them.
 
@@ -22,7 +22,7 @@ Every extraction — one category from one profile of one data directory — end
 
 ## Layers
 
-- The command layer wires flags into the pipeline, prints what it returns, and holds what lives as long as the process: signals, the console window, the data a restore reads.
+- The command layer wires flags into the pipeline, prints what it returns, and holds what lives as long as the process: signals and the console window.
 - The pipeline orchestrates, and it is the only place that knows every browser base.
 - Each browser base knows its own discovery and file formats.
 - Shared services sit below them: secret retrieval, pure crypto primitives, snapshot capture, and export.

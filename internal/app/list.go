@@ -8,28 +8,24 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-type ListOptions struct {
-	Target   Target
-	Keychain KeychainConfig
-}
-
-// ValidateList targets every browser and leaves the keychain without a password, so counting never prompts.
-func ValidateList() (ListOptions, error) {
+// List finds every browser of this OS. With detail it also counts each profile's records, running every category with
+// no key and the keychain locked, so counting never prompts.
+func List(ctx context.Context, detail bool) (Discovery, Summary, error) {
 	home, err := homeDir()
 	if err != nil {
-		return ListOptions{}, err
+		return Discovery{}, Summary{}, err
 	}
-	return ListOptions{
-		Target:   Target{Browsers: browser.Supported(), HomeDir: home},
-		Keychain: KeychainConfig{Path: loginKeychainPath(home)},
-	}, nil
-}
-
-// CountRecords runs every category with no key and the keychain locked, counting records instead of exporting them.
-func CountRecords(ctx context.Context, discovery Discovery, keychainConfig KeychainConfig) (Summary, error) {
-	keychain := newLoginKeychain(keychainConfig)
+	discovery := discover(ctx, browser.Supported(), browser.DiscoverOptions{HomeDir: home})
+	if !detail || len(discovery.Dirs) == 0 {
+		return discovery, Summary{}, nil
+	}
+	keychain := newLoginKeychain(loginKeychainPath(home), nil)
 	counter := runner{writer: discard{}, extractors: extractorsFor, retrieveKeys: keysFromFile(nil), loginKeychain: keychain}
-	return counter.run(ctx, discovery, category.All())
+	summary := counter.run(ctx, discovery, category.All())
+	if summary.Err != nil {
+		return Discovery{}, Summary{}, summary.Err
+	}
+	return discovery, summary, nil
 }
 
 type discard struct{}

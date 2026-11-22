@@ -1,2 +1,3 @@
-// Package app runs the pipeline's stages: the Validate functions, Discover, and Execute; cmd prints what they return.
+// Package app runs the commands: each has a Validate function, which turns its flags into options, and a function
+// named for it; cmd prints what they return.
 package app

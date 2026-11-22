@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -11,26 +12,25 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/chromium"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
-	"github.com/moond4rk/hackbrowserdata/internal/export"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
+	"github.com/moond4rk/hackbrowserdata/internal/zipfile"
 )
 
 // RestoreFlags are restore's command-line values as cobra parsed them.
 type RestoreFlags struct {
-	KeyFile         string // a keys.json path, or "-" for stdin
-	DataDir         string
-	DataZip         string
-	Browser         string
-	Categories      string
-	Format          string
-	OutputDir       string
-	Zip             bool
-	MaxStorageValue int
+	KeyFile    string // a keys.json path, or "-" for stdin
+	DataDir    string
+	DataZip    string
+	Browser    string
+	Categories string
+	Output     OutputFlags
 }
 
 type RestoreOptions struct {
 	Vaults     []masterkey.Vault // the key file's vaults that -b selects
+	DataDir    string            // the copied data: an archive's layout or one browser's User Data; "" with DataZip
+	DataZip    string            // an archive from the archive command; "" with DataDir
 	Categories []category.Category
 	Output     OutputOptions
 }
@@ -48,14 +48,8 @@ func ValidateRestore(flags RestoreFlags, stdin io.Reader) (RestoreOptions, error
 	if err != nil {
 		return RestoreOptions{}, err
 	}
-	format, err := export.ParseFormat(flags.Format)
+	output, err := parseOutput(flags.Output)
 	if err != nil {
-		return RestoreOptions{}, err
-	}
-	if err := checkOutputDir(flags.OutputDir); err != nil {
-		return RestoreOptions{}, err
-	}
-	if err := checkMaxStorageValue(flags.MaxStorageValue); err != nil {
 		return RestoreOptions{}, err
 	}
 	if err := checkRestoreData(flags.DataDir, flags.DataZip); err != nil {
@@ -69,11 +63,52 @@ func ValidateRestore(flags RestoreFlags, stdin io.Reader) (RestoreOptions, error
 	if err != nil {
 		return RestoreOptions{}, err
 	}
-	return RestoreOptions{
-		Vaults:     vaults,
-		Categories: categories,
-		Output:     OutputOptions{Dir: flags.OutputDir, Format: format, Zip: flags.Zip, MaxStorageValue: flags.MaxStorageValue},
-	}, nil
+	return RestoreOptions{Vaults: vaults, DataDir: flags.DataDir, DataZip: flags.DataZip, Categories: categories, Output: output}, nil
+}
+
+// Restore exports the copied data with the key file's keys, so it never reads this machine's secret stores. It returns
+// what Dump returns: a Discovery without dirs means nothing ran, and a run that ended early says so in Summary.Err.
+func Restore(ctx context.Context, options RestoreOptions) (Discovery, Summary, error) {
+	archiveDir := options.DataDir
+	if options.DataZip != "" {
+		unzipped, err := unzipArchive(options.DataZip)
+		if err != nil {
+			return Discovery{}, Summary{}, err
+		}
+		defer removeUnzipped(unzipped)
+		archiveDir = unzipped
+	}
+	discovery, keys, err := discoverArchive(archiveDir, options.Vaults)
+	if err != nil {
+		return Discovery{}, Summary{}, err
+	}
+	if len(discovery.Dirs) == 0 {
+		return discovery, Summary{}, nil
+	}
+	fromKeyFile := runner{extractors: extractorsFor, retrieveKeys: keysFromFile(keys)}
+	summary, err := execute(ctx, discovery, options.Categories, options.Output, fromKeyFile)
+	if err != nil {
+		return Discovery{}, Summary{}, err
+	}
+	return discovery, summary, nil
+}
+
+// unzipArchive extracts into a private temporary directory, rejecting entries that would land outside it.
+func unzipArchive(archivePath string) (string, error) {
+	unzipped, err := os.MkdirTemp("", "hbd-restore-*")
+	if err != nil {
+		return "", fmt.Errorf("extract %s: %w", archivePath, err)
+	}
+	if err := zipfile.Extract(archivePath, unzipped); err != nil {
+		return "", errors.Join(fmt.Errorf("extract %s: %w", archivePath, err), os.RemoveAll(unzipped))
+	}
+	return unzipped, nil
+}
+
+func removeUnzipped(unzipped string) {
+	if err := os.RemoveAll(unzipped); err != nil {
+		log.Warnf("restore: remove %s: %v", unzipped, err)
+	}
 }
 
 // selectVaults keeps the vaults of the browser -b names, or every vault when it names none.
@@ -124,12 +159,12 @@ func readKeyFile(path string, stdin io.Reader) (masterkey.KeyFile, error) {
 	return keyFile, nil
 }
 
-// DiscoverRestore rebuilds the user data dirs under root, and their keys, from the vaults: each vault names a
-// subdirectory of root, or root is one browser's User Data.
-func DiscoverRestore(root string, vaults []masterkey.Vault) (Discovery, map[browser.UserDataDirID]masterkey.Set, error) {
+// discoverArchive rebuilds the user data dirs under archiveDir, and their keys, from the vaults: each vault names a
+// subdirectory of archiveDir, or archiveDir is one browser's User Data.
+func discoverArchive(archiveDir string, vaults []masterkey.Vault) (Discovery, map[browser.UserDataDirID]masterkey.Set, error) {
 	archived := false
 	for _, vault := range vaults {
-		if dirExists(filepath.Join(root, string(vaultUserDataDirID(vault)))) {
+		if dirExists(filepath.Join(archiveDir, string(vaultUserDataDirID(vault)))) {
 			archived = true
 			break
 		}
@@ -137,7 +172,7 @@ func DiscoverRestore(root string, vaults []masterkey.Vault) (Discovery, map[brow
 	if !archived && len(vaults) > 1 {
 		return Discovery{}, nil, fmt.Errorf("--data-dir %q has no per-browser subdir but keys has %d browsers; "+
 			"point it at the archive root, or use -b <browser> for one browser's User Data (have: %s)",
-			root, len(vaults), vaultBrowserNames(vaults))
+			archiveDir, len(vaults), vaultBrowserNames(vaults))
 	}
 	var discovery Discovery
 	keys := make(map[browser.UserDataDirID]masterkey.Set)
@@ -147,9 +182,9 @@ func DiscoverRestore(root string, vaults []masterkey.Vault) (Discovery, map[brow
 			log.Warnf("restore: keys hold %s twice, restoring the first", id)
 			continue
 		}
-		path := root
+		path := archiveDir
 		if archived {
-			path = filepath.Join(root, string(id))
+			path = filepath.Join(archiveDir, string(id))
 			if !dirExists(path) {
 				log.Warnf("restore: %s has no data under %s, skipping", vault.Browser, path)
 				continue
