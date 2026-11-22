@@ -42,7 +42,10 @@ var defaultExtractors = map[category.Category]extractor{
 // Discover takes -p as one profile: its parent is the Profiles directory, and only that profile is selected.
 func Discover(firefoxBrowser browser.Browser, options browser.DiscoverOptions) ([]browser.UserDataDir, error) {
 	if options.ProfilePath != "" {
-		return profileAt(firefoxBrowser, options.ProfilePath), nil
+		if dir, ok := dirFromProfilePath(firefoxBrowser, options.ProfilePath); ok {
+			return []browser.UserDataDir{dir}, nil
+		}
+		return nil, nil
 	}
 	var errs []error
 	var dirs []browser.UserDataDir
@@ -62,18 +65,18 @@ func Discover(firefoxBrowser browser.Browser, options browser.DiscoverOptions) (
 	return dirs, errors.Join(errs...)
 }
 
-func profileAt(firefoxBrowser browser.Browser, path string) []browser.UserDataDir {
+func dirFromProfilePath(firefoxBrowser browser.Browser, path string) (browser.UserDataDir, bool) {
 	clean := filepath.Clean(path)
 	if !hasDataFile(clean) {
-		return nil
+		return browser.UserDataDir{}, false
 	}
 	name := filepath.Base(clean)
-	return []browser.UserDataDir{{
+	return browser.UserDataDir{
 		ID:       firefoxBrowser.UserDataDirID(0),
 		Browser:  firefoxBrowser,
 		Path:     filepath.Dir(clean),
 		Profiles: []browser.Profile{{Name: name, RelativePath: name}},
-	}}
+	}, true
 }
 
 func userDataDirPaths(firefoxBrowser browser.Browser, options browser.DiscoverOptions) []string {

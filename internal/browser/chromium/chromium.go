@@ -19,7 +19,7 @@ var profileMarkers = []string{"Preferences", "Preferences_02"}
 
 // Discover yields nothing for a missing user data dir; any other failure is returned beside whatever was found.
 func Discover(chromiumBrowser browser.Browser, options browser.DiscoverOptions) ([]browser.UserDataDir, error) {
-	if dir, ok := profileAt(chromiumBrowser, options.ProfilePath); ok {
+	if dir, ok := dirFromProfilePath(chromiumBrowser, options.ProfilePath); ok {
 		return []browser.UserDataDir{dir}, nil
 	}
 	paths, err := userDataDirPaths(chromiumBrowser, options)
@@ -54,8 +54,8 @@ func DiscoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
 	return profiles, nil
 }
 
-// profileAt takes chrome://version's path: a profile dir without Local State selects that profile of its parent.
-func profileAt(chromiumBrowser browser.Browser, path string) (browser.UserDataDir, bool) {
+// dirFromProfilePath takes chrome://version's path: a profile dir without Local State selects that profile of its parent.
+func dirFromProfilePath(chromiumBrowser browser.Browser, path string) (browser.UserDataDir, bool) {
 	if path == "" || !isProfileDir(path) || hasAnyFile(path, localState.RelativePaths()) {
 		return browser.UserDataDir{}, false
 	}

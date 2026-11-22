@@ -123,7 +123,7 @@ func defaultProfileExtractors() map[category.Category]extractor {
 		category.History:      newPlainExtractor(extractHistories, history),
 		category.Cookie:       newPlainExtractor(extractCookies, cookies),
 		category.Bookmark:     newPlainExtractor(extractBookmarks, bookmarks),
-		category.Download:     newPlainExtractor(downloadsOf(defaultProfileSentinel), downloads),
+		category.Download:     newDownloadExtractor(downloads, defaultProfileSentinel),
 		category.LocalStorage: newPlainExtractor(extractLocalStorage, localStorage),
 		category.Extension:    newExtensionExtractor(appExtensions, webExtensions),
 	}
@@ -140,7 +140,7 @@ func namedProfileExtractors(dir browser.UserDataDir, uuid string) map[category.C
 	return map[category.Category]extractor{
 		category.History:      newPlainExtractor(extractHistories, history),
 		category.Cookie:       newPlainExtractor(extractCookies, cookies),
-		category.Download:     newPlainExtractor(downloadsOf(uuid), downloads),
+		category.Download:     newDownloadExtractor(downloads, uuid),
 		category.LocalStorage: newPlainExtractor(extractLocalStorage, localStorage),
 	}
 }
@@ -175,8 +175,11 @@ func newPlainExtractor(parse func(string, browser.Collector) error, source brows
 	}
 }
 
-func downloadsOf(profileUUID string) func(string, browser.Collector) error {
-	return func(path string, out browser.Collector) error { return extractDownloads(path, profileUUID, out) }
+// newDownloadExtractor keeps one profile's entries, because Downloads.plist holds every profile's.
+func newDownloadExtractor(source browser.Source, profileUUID string) extractor {
+	return newPlainExtractor(func(path string, out browser.Collector) error {
+		return extractDownloads(path, profileUUID, out)
+	}, source)
 }
 
 // newExtensionExtractor merges every plist, so the extensions come out sorted across both stores.
