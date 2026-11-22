@@ -44,7 +44,7 @@ func dropEmptyProfiles(dirs []browser.UserDataDir) []browser.UserDataDir {
 }
 
 func hasData(dir browser.UserDataDir, profile browser.Profile) bool {
-	for _, categorySources := range sourcesFor(dir, profile) {
+	for _, categorySources := range profileSources(dir, profile) {
 		if len(categorySources) == 0 {
 			continue
 		}

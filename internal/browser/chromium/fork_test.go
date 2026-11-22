@@ -12,28 +12,28 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-func TestOverrides_NameChromiumBrowsers(t *testing.T) {
-	for _, fork := range overrides {
+func TestForks_NameChromiumBrowsers(t *testing.T) {
+	for _, fork := range forks {
 		for _, name := range fork.browserNames {
 			chromiumBrowser, ok := browser.Lookup(name)
-			if assert.Truef(t, ok, "override %q names no browser", name) {
-				assert.Equalf(t, browser.Chromium, chromiumBrowser.Base, "override %q is not a Chromium browser", name)
+			if assert.Truef(t, ok, "fork %q names no browser", name) {
+				assert.Equalf(t, browser.Chromium, chromiumBrowser.Base, "fork %q is not a Chromium browser", name)
 			}
 		}
 	}
 }
 
-// TestOverrides_KindsAndNamesAreUnique keeps overrideFor and overrideForVaultKind from depending on table order.
-func TestOverrides_KindsAndNamesAreUnique(t *testing.T) {
+// TestForks_KindsAndNamesAreUnique keeps findForkByName and findForkByVaultKind from depending on table order.
+func TestForks_KindsAndNamesAreUnique(t *testing.T) {
 	kinds := map[string]bool{vaultKindChromium: true}
 	names := map[string]bool{}
-	for _, fork := range overrides {
+	for _, fork := range forks {
 		if fork.vaultKind != "" {
 			assert.Falsef(t, kinds[fork.vaultKind], "kind %q is used twice", fork.vaultKind)
 			kinds[fork.vaultKind] = true
 		}
 		for _, name := range fork.browserNames {
-			assert.Falsef(t, names[name], "browser %q is in two overrides", name)
+			assert.Falsef(t, names[name], "browser %q is in two forks", name)
 			names[name] = true
 		}
 	}
@@ -41,23 +41,23 @@ func TestOverrides_KindsAndNamesAreUnique(t *testing.T) {
 
 // TestVaultKind_RoundTripsEveryFork checks a kind leads back to its fork, or restore would parse it as plain Chromium.
 func TestVaultKind_RoundTripsEveryFork(t *testing.T) {
-	for _, fork := range overrides {
+	for _, fork := range forks {
 		for _, name := range fork.browserNames {
 			kind := VaultKind(browser.Browser{Name: name})
 			if fork.vaultKind == "" {
-				assert.Equalf(t, vaultKindChromium, kind, "override %q keeps Chromium's kind", name)
+				assert.Equalf(t, vaultKindChromium, kind, "fork %q keeps Chromium's kind", name)
 				continue
 			}
-			require.Equalf(t, fork.vaultKind, kind, "override %q", name)
-			restored, ok := overrideForVaultKind(kind)
+			require.Equalf(t, fork.vaultKind, kind, "fork %q", name)
+			restored, ok := findForkByVaultKind(kind)
 			require.True(t, ok, kind)
 			assert.Equalf(t, categoriesOf(fork.extractors), categoriesOf(restored.extractors), "kind %s of %q", kind, name)
 		}
 	}
 	assert.Equal(t, vaultKindChromium, VaultKind(browser.Browser{Name: "chrome"}))
-	assert.True(t, isVaultKind(vaultKindChromium))
-	assert.False(t, isVaultKind("bogus"))
-	assert.False(t, isVaultKind(""))
+	assert.True(t, isKnownVaultKind(vaultKindChromium))
+	assert.False(t, isKnownVaultKind("bogus"))
+	assert.False(t, isKnownVaultKind(""))
 }
 
 // TestDiscoverProfiles_ReadsAnUnknownBrowserInItsVaultKind covers a restored fork this build does not know by name.

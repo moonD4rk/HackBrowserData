@@ -14,7 +14,7 @@ import (
 )
 
 func TestExtractors_CoverEveryCategory(t *testing.T) {
-	extractors := extractorsFor(browser.UserDataDir{Browser: testBrowser("chrome")})
+	extractors := dirExtractors(browser.UserDataDir{Browser: testBrowser("chrome")})
 	for _, dataCategory := range category.All() {
 		extractor, ok := extractors[dataCategory]
 		if assert.Truef(t, ok, "no extractor for %s", dataCategory) {

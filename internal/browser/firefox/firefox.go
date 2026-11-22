@@ -28,8 +28,8 @@ type extractor struct {
 	extract func(captured browser.ProfileSnapshot, primaryPassword string, out browser.Collector) error
 }
 
-// defaultExtractors has no credit card or session storage extractor, because Firefox keeps none that HBD reads.
-var defaultExtractors = map[category.Category]extractor{
+// extractors has no credit card or session storage extractor, because Firefox keeps none that HBD reads.
+var extractors = map[category.Category]extractor{
 	category.Password:     newDecryptingExtractor(extractPasswords, loginsJSON),
 	category.Cookie:       newPlainExtractor(extractCookies, cookiesDB),
 	category.Bookmark:     newPlainExtractor(extractBookmarks, placesDB),
@@ -103,7 +103,7 @@ func discoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
 }
 
 func hasDataFile(path string) bool {
-	for _, extractor := range defaultExtractors {
+	for _, extractor := range extractors {
 		for _, source := range extractor.sources {
 			if source.Optional {
 				continue
@@ -120,8 +120,8 @@ func hasDataFile(path string) bool {
 
 // Sources lists the files of each category Firefox supports; every profile reads the same ones.
 func Sources(_ browser.UserDataDir, _ browser.Profile) map[category.Category][]browser.Source {
-	sources := make(map[category.Category][]browser.Source, len(defaultExtractors))
-	for dataCategory, extractor := range defaultExtractors {
+	sources := make(map[category.Category][]browser.Source, len(extractors))
+	for dataCategory, extractor := range extractors {
 		sources[dataCategory] = extractor.sources
 	}
 	return sources
@@ -131,14 +131,14 @@ func Sources(_ browser.UserDataDir, _ browser.Profile) map[category.Category][]b
 func Extract(
 	_ context.Context, captured browser.ProfileSnapshot, primaryPassword string, dataCategory category.Category, out browser.Collector,
 ) error {
-	extractor, ok := defaultExtractors[dataCategory]
+	extractor, ok := extractors[dataCategory]
 	if !ok {
 		return fmt.Errorf("%s has no %s extractor", captured.UserDataDir.Browser.Name, dataCategory)
 	}
 	return extractor.extract(captured, primaryPassword, out)
 }
 
-func newPlainExtractor(parse func(string, browser.Collector) error, source browser.Source) extractor {
+func newPlainExtractor(extractFile func(string, browser.Collector) error, source browser.Source) extractor {
 	return extractor{
 		sources: []browser.Source{source},
 		extract: func(captured browser.ProfileSnapshot, _ string, out browser.Collector) error {
@@ -146,13 +146,13 @@ func newPlainExtractor(parse func(string, browser.Collector) error, source brows
 			if err != nil {
 				return err
 			}
-			return parse(path, out)
+			return extractFile(path, out)
 		},
 	}
 }
 
 // newDecryptingExtractor also captures key4.db, the profile's own key store.
-func newDecryptingExtractor(parse func(func() ([]byte, error), string, browser.Collector) error, source browser.Source) extractor {
+func newDecryptingExtractor(extractFile func(func() ([]byte, error), string, browser.Collector) error, source browser.Source) extractor {
 	return extractor{
 		sources: []browser.Source{source, keyStore},
 		extract: func(captured browser.ProfileSnapshot, primaryPassword string, out browser.Collector) error {
@@ -161,7 +161,7 @@ func newDecryptingExtractor(parse func(func() ([]byte, error), string, browser.C
 				return err
 			}
 			masterKey := func() ([]byte, error) { return profileKey(captured, path, primaryPassword) }
-			return parse(masterKey, path, out)
+			return extractFile(masterKey, path, out)
 		},
 	}
 }

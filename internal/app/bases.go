@@ -26,7 +26,7 @@ func discoverBrowser(ctx context.Context, targetBrowser browser.Browser, options
 	}
 }
 
-func sourcesFor(dir browser.UserDataDir, profile browser.Profile) map[category.Category][]browser.Source {
+func profileSources(dir browser.UserDataDir, profile browser.Profile) map[category.Category][]browser.Source {
 	switch dir.Browser.Base {
 	case browser.Chromium:
 		return chromium.Sources(dir, profile)

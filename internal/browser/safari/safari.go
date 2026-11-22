@@ -71,7 +71,7 @@ type extractor struct {
 
 // Sources lists the files of each category a profile supports; a named profile supports fewer than the default one.
 func Sources(dir browser.UserDataDir, profile browser.Profile) map[category.Category][]browser.Source {
-	extractors := extractorsFor(dir, profile)
+	extractors := profileExtractors(dir, profile)
 	sources := make(map[category.Category][]browser.Source, len(extractors))
 	for dataCategory, extractor := range extractors {
 		sources[dataCategory] = extractor.sources
@@ -83,17 +83,17 @@ func Sources(dir browser.UserDataDir, profile browser.Profile) map[category.Cate
 func Extract(
 	ctx context.Context, captured browser.ProfileSnapshot, loginKeychain LoginKeychain, dataCategory category.Category, out browser.Collector,
 ) error {
-	extractor, ok := extractorsFor(captured.UserDataDir, captured.Profile)[dataCategory]
+	extractor, ok := profileExtractors(captured.UserDataDir, captured.Profile)[dataCategory]
 	if !ok {
 		return fmt.Errorf("%s profile %s has no %s extractor", captured.UserDataDir.Browser.Name, captured.Profile.Name, dataCategory)
 	}
 	return extractor.extract(ctx, captured, loginKeychain, out)
 }
 
-// extractorsFor builds a named profile's sources from Profile.RelativePath; its files sit under two dirs named for its
-// UUID. The keychain, Bookmarks.plist, and the extension plists carry no profile tag, so only the default profile reads
-// them.
-func extractorsFor(dir browser.UserDataDir, profile browser.Profile) map[category.Category]extractor {
+// profileExtractors builds a named profile's sources from Profile.RelativePath; its files sit under two dirs named for
+// its UUID. The keychain, Bookmarks.plist, and the extension plists carry no profile tag, so only the default profile
+// reads them.
+func profileExtractors(dir browser.UserDataDir, profile browser.Profile) map[category.Category]extractor {
 	if uuid, named := namedProfileUUID(profile); named {
 		return namedProfileExtractors(dir, uuid)
 	}
@@ -162,7 +162,7 @@ func defaultProfileDir(dir browser.UserDataDir) string {
 	return "Safari"
 }
 
-func newPlainExtractor(parse func(string, browser.Collector) error, source browser.Source) extractor {
+func newPlainExtractor(extractFile func(string, browser.Collector) error, source browser.Source) extractor {
 	return extractor{
 		sources: []browser.Source{source},
 		extract: func(_ context.Context, captured browser.ProfileSnapshot, _ LoginKeychain, out browser.Collector) error {
@@ -170,7 +170,7 @@ func newPlainExtractor(parse func(string, browser.Collector) error, source brows
 			if err != nil {
 				return err
 			}
-			return parse(capturedPath, out)
+			return extractFile(capturedPath, out)
 		},
 	}
 }

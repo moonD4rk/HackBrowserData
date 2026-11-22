@@ -108,7 +108,7 @@ func TestDiscover_ProfilePathWithoutDataFindsNothing(t *testing.T) {
 
 func TestExtractors_CoverFirefoxCategories(t *testing.T) {
 	for _, dataCategory := range category.All() {
-		extractor, ok := defaultExtractors[dataCategory]
+		extractor, ok := extractors[dataCategory]
 		if dataCategory == category.CreditCard || dataCategory == category.SessionStorage {
 			assert.Falsef(t, ok, "Firefox has no %s extractor", dataCategory)
 			continue
@@ -128,7 +128,7 @@ func TestDecryptingExtractor_WithoutKeyStore(t *testing.T) {
 	captured := profileP(snapshotOf(t, map[string]string{"p/logins.json": logins}))
 
 	var out testCollector
-	require.NoError(t, defaultExtractors[category.Password].extract(captured, "", &out))
+	require.NoError(t, extractors[category.Password].extract(captured, "", &out))
 	got := collected[record.Login](t, &out)
 	require.Len(t, got, 1)
 	assert.Equal(t, "https://a.test", got[0].URL)
@@ -146,7 +146,7 @@ func TestDecryptingExtractor_NoLoginsNeverReadsTheKey(t *testing.T) {
 	}))
 
 	var out testCollector
-	require.NoError(t, defaultExtractors[category.Password].extract(captured, "", &out))
+	require.NoError(t, extractors[category.Password].extract(captured, "", &out))
 	assert.Empty(t, out.records)
 	assert.Empty(t, out.fails)
 }

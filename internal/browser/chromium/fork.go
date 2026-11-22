@@ -5,20 +5,20 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
-// vaultKindChromium is the keys.json kind of every Chromium browser no override covers.
+// vaultKindChromium is the keys.json kind of every Chromium browser not listed in forks.
 const vaultKindChromium = "chromium"
 
-// override is a fork that stores data its own way: its browsers, its keys.json kind, the extractors it swaps, and the
-// categories its files do not hold.
-type override struct {
+// fork is a Chromium fork that stores data its own way: its browsers, its keys.json kind, the extractors it swaps, and
+// the categories its files do not hold.
+type fork struct {
 	browserNames []string
 	vaultKind    string // "" keeps vaultKindChromium
 	extractors   map[category.Category]extractor
 	unsupported  []category.Category
 }
 
-// overrides match Browser.Name, never UserDataDirID, which differs for a second user data dir of one browser.
-var overrides = []override{
+// forks match Browser.Name, never UserDataDirID, which differs for a second user data dir of one browser.
+var forks = []fork{
 	{
 		browserNames: []string{"yandex"},
 		vaultKind:    "chromium-yandex",
@@ -41,43 +41,43 @@ var overrides = []override{
 	},
 }
 
-func overrideFor(browserName string) (override, bool) {
-	for _, fork := range overrides {
-		for _, name := range fork.browserNames {
+func findForkByName(browserName string) (fork, bool) {
+	for _, candidate := range forks {
+		for _, name := range candidate.browserNames {
 			if name == browserName {
-				return fork, true
+				return candidate, true
 			}
 		}
 	}
-	return override{}, false
+	return fork{}, false
 }
 
-func overrideForVaultKind(vaultKind string) (override, bool) {
-	for _, fork := range overrides {
-		if fork.vaultKind != "" && fork.vaultKind == vaultKind {
-			return fork, true
+func findForkByVaultKind(vaultKind string) (fork, bool) {
+	for _, candidate := range forks {
+		if candidate.vaultKind != "" && candidate.vaultKind == vaultKind {
+			return candidate, true
 		}
 	}
-	return override{}, false
+	return fork{}, false
 }
 
-func isVaultKind(vaultKind string) bool {
-	_, ok := overrideForVaultKind(vaultKind)
+func isKnownVaultKind(vaultKind string) bool {
+	_, ok := findForkByVaultKind(vaultKind)
 	return ok || vaultKind == vaultKindChromium
 }
 
 // VaultKind names a vault's on-disk format, so a reader without the browser in its table still picks its files.
 func VaultKind(chromiumBrowser browser.Browser) string {
-	if fork, ok := overrideFor(chromiumBrowser.Name); ok && fork.vaultKind != "" {
+	if fork, ok := findForkByName(chromiumBrowser.Name); ok && fork.vaultKind != "" {
 		return fork.vaultKind
 	}
 	return vaultKindChromium
 }
 
-// overrideForDir matches the browser's name first; a restored browser this build does not know matches by its kind.
-func overrideForDir(dir browser.UserDataDir) (override, bool) {
-	if fork, ok := overrideFor(dir.Browser.Name); ok {
+// findFork matches the browser's name first; a restored browser this build does not know matches by its kind.
+func findFork(dir browser.UserDataDir) (fork, bool) {
+	if fork, ok := findForkByName(dir.Browser.Name); ok {
 		return fork, true
 	}
-	return overrideForVaultKind(dir.VaultKind)
+	return findForkByVaultKind(dir.VaultKind)
 }

@@ -44,7 +44,7 @@ func Discover(chromiumBrowser browser.Browser, options browser.DiscoverOptions) 
 // DiscoverProfiles reads the profiles of a user data dir the table does not name, such as a copy restore was given, in
 // the on-disk format dir.VaultKind names.
 func DiscoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
-	if !isVaultKind(dir.VaultKind) {
+	if !isKnownVaultKind(dir.VaultKind) {
 		return nil, fmt.Errorf("unknown vault kind %q", dir.VaultKind)
 	}
 	profiles, err := discoverProfiles(dir)
@@ -139,7 +139,7 @@ func isSkippedProfileDir(name string) bool {
 
 func profileFilePaths(dir browser.UserDataDir) []string {
 	var paths []string
-	for _, extractor := range extractorsFor(dir) {
+	for _, extractor := range dirExtractors(dir) {
 		for _, source := range extractor.sources {
 			if !source.FromUserDataDir {
 				paths = append(paths, source.RelativePaths()...)
