@@ -19,7 +19,7 @@ func discover(ctx context.Context, browsers []browser.Browser, options browser.D
 		dirs, err := discoverBrowser(ctx, targetBrowser, options)
 		discovery.Dirs = append(discovery.Dirs, withData(dirs)...)
 		if err != nil {
-			discovery.DirFailures = append(discovery.DirFailures, DirFailure{UserDataDirID: browser.UserDataDirID(targetBrowser.Name), Err: err})
+			discovery.DirFailures = append(discovery.DirFailures, DirFailure{UserDataDirID: targetBrowser.UserDataDirID(0), Err: err})
 		}
 	}
 	return discovery

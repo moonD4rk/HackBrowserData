@@ -84,7 +84,7 @@ func archiveFiles(dirs []browser.UserDataDir, categories []category.Category) []
 	for _, dir := range dirs {
 		for _, profile := range dir.Profiles {
 			for _, source := range chromium.ArchiveSources() {
-				if file, ok, err := firstOnDisk(dir, source.CandidatePaths(profile), source.IsDir); err == nil && ok {
+				if file, ok, err := firstOnDisk(dir, source.DirRelativePaths(profile), source.IsDir); err == nil && ok {
 					files = appendNew(files, seen, file)
 				}
 			}

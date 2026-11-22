@@ -51,7 +51,7 @@ func ValidateDumpKeys(flags DumpKeysFlags) (DumpKeysOptions, error) {
 func DumpKeys(ctx context.Context, options DumpKeysOptions, stdout io.Writer) (int, error) {
 	discovery := discover(ctx, options.Browsers, browser.DiscoverOptions{HomeDir: options.HomeDir})
 	loginKeychain := newLoginKeychain(loginKeychainPath(options.HomeDir), options.KeychainPassword)
-	keyFile, err := dumpKeysWith(ctx, discovery, machineKeys{loginKeychain: loginKeychain})
+	keyFile, err := buildKeyFile(ctx, discovery, machineKeys{loginKeychain: loginKeychain})
 	if err != nil {
 		return 0, err
 	}
@@ -73,9 +73,9 @@ func writeKeyFile(outputPath string, keyFile masterkey.KeyFile) error {
 	return nil
 }
 
-// dumpKeysWith keeps the keys that worked when a dir's others fail, and leaves out a dir with none.
+// buildKeyFile keeps the keys that worked when a dir's others fail, and leaves out a dir with none.
 // It fails only when the run is stopped.
-func dumpKeysWith(ctx context.Context, discovery Discovery, keySource keySource) (masterkey.KeyFile, error) {
+func buildKeyFile(ctx context.Context, discovery Discovery, keySource keySource) (masterkey.KeyFile, error) {
 	keyFile := masterkey.NewKeyFile()
 	for _, dir := range discovery.Dirs {
 		if dir.Browser.Base != browser.Chromium {

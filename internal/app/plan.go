@@ -69,7 +69,7 @@ func locate(dir browser.UserDataDir, profile browser.Profile, sources []browser.
 		return nil, true, nil
 	}
 	for _, source := range sources {
-		file, ok, err := firstOnDisk(dir, source.CandidatePaths(profile), source.IsDir)
+		file, ok, err := firstOnDisk(dir, source.DirRelativePaths(profile), source.IsDir)
 		switch {
 		case err != nil:
 			return nil, false, err

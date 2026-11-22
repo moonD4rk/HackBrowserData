@@ -22,7 +22,7 @@ func dirOf(t *testing.T, userDataDirID browser.UserDataDirID, browserName string
 	return dir
 }
 
-func TestDumpKeysWith(t *testing.T) {
+func TestBuildKeyFile(t *testing.T) {
 	chrome := chromeDir(t, "Default", "Profile 1")
 	touch(t, chrome.Path, "Local State")
 	arc2, opera, vivaldi, brave := dirOf(t, "arc-2", "arc"), dirOf(t, "opera", "opera"), dirOf(t, "vivaldi", "vivaldi"), dirOf(t, "brave", "brave")
@@ -43,7 +43,7 @@ func TestDumpKeysWith(t *testing.T) {
 		return masterkey.Retrieval{Keys: masterkey.Set{masterkey.V10: []byte(dir.ID)}}
 	})
 	discovery := Discovery{Dirs: []browser.UserDataDir{chrome, firefox, arc2, opera, vivaldi, brave}}
-	keyFile, err := dumpKeysWith(context.Background(), discovery, keys)
+	keyFile, err := buildKeyFile(context.Background(), discovery, keys)
 	require.NoError(t, err)
 
 	assert.Equal(t, []masterkey.Vault{
@@ -66,7 +66,7 @@ func TestDumpKeysWith(t *testing.T) {
 	}, keyFile.Vaults, "a failed dir is left out, a partly failed one keeps what it has")
 }
 
-func TestDumpKeysWith_StoppedRunReturnsNoKeyFile(t *testing.T) {
+func TestBuildKeyFile_StoppedRunReturnsNoKeyFile(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	chrome, brave := chromeDir(t, "Default"), dirOf(t, "brave", "brave")
@@ -77,7 +77,7 @@ func TestDumpKeysWith_StoppedRunReturnsNoKeyFile(t *testing.T) {
 		return masterkey.Retrieval{Keys: masterkey.Set{masterkey.V10: []byte("chrome")}}
 	})
 
-	keyFile, err := dumpKeysWith(ctx, Discovery{Dirs: []browser.UserDataDir{chrome, brave}}, keys)
+	keyFile, err := buildKeyFile(ctx, Discovery{Dirs: []browser.UserDataDir{chrome, brave}}, keys)
 	require.ErrorIs(t, err, context.Canceled)
 	assert.Empty(t, keyFile.Vaults)
 }

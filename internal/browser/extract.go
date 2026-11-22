@@ -26,8 +26,8 @@ func (s Source) RelativePaths() []string {
 	return append([]string{s.RelativePath}, s.Fallbacks...)
 }
 
-// CandidatePaths are the RelativePaths for a profile, relative to the user data dir.
-func (s Source) CandidatePaths(profile Profile) []string {
+// DirRelativePaths are the RelativePaths for a profile, relative to the user data dir.
+func (s Source) DirRelativePaths(profile Profile) []string {
 	paths := s.RelativePaths()
 	if !s.FromUserDataDir {
 		for i, relativePath := range paths {
@@ -56,7 +56,7 @@ func NewProfileSnapshot(dir UserDataDir, profile Profile, dirSnapshot snapshot.S
 
 // Path skips a candidate that was never captured but returns the error of one whose copy failed.
 func (s ProfileSnapshot) Path(source Source) (string, error) {
-	for _, relativePath := range source.CandidatePaths(s.Profile) {
+	for _, relativePath := range source.DirRelativePaths(s.Profile) {
 		capturedPath, err := s.dirSnapshot.Path(relativePath)
 		if errors.Is(err, fs.ErrNotExist) {
 			continue

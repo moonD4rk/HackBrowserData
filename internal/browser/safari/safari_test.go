@@ -31,7 +31,7 @@ func sourcePaths(profile browser.Profile, sources map[category.Category][]browse
 	got := make(map[category.Category][]string, len(sources))
 	for dataCategory, categorySources := range sources {
 		for _, source := range categorySources {
-			got[dataCategory] = append(got[dataCategory], source.CandidatePaths(profile)...)
+			got[dataCategory] = append(got[dataCategory], source.DirRelativePaths(profile)...)
 		}
 	}
 	return got

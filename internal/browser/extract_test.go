@@ -70,10 +70,10 @@ func TestProfileSnapshotPath_FailedCopyIsReported(t *testing.T) {
 	assert.NotErrorIs(t, err, fs.ErrNotExist)
 }
 
-func TestSourceCandidatePaths(t *testing.T) {
+func TestSourceDirRelativePaths(t *testing.T) {
 	profile := Profile{Name: "Default", RelativePath: "Default"}
-	assert.Equal(t, []string{"Default/Network/Cookies", "Default/Cookies"}, Source{RelativePath: "Network/Cookies", Fallbacks: []string{"Cookies"}}.CandidatePaths(profile))
-	assert.Equal(t, []string{"Local State"}, Source{RelativePath: "Local State", FromUserDataDir: true}.CandidatePaths(profile))
-	assert.Equal(t, []string{"History"}, Source{RelativePath: "History"}.CandidatePaths(Profile{Name: "default"}),
+	assert.Equal(t, []string{"Default/Network/Cookies", "Default/Cookies"}, Source{RelativePath: "Network/Cookies", Fallbacks: []string{"Cookies"}}.DirRelativePaths(profile))
+	assert.Equal(t, []string{"Local State"}, Source{RelativePath: "Local State", FromUserDataDir: true}.DirRelativePaths(profile))
+	assert.Equal(t, []string{"History"}, Source{RelativePath: "History"}.DirRelativePaths(Profile{Name: "default"}),
 		"a user data dir that is itself the profile")
 }
