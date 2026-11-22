@@ -10,8 +10,7 @@ import (
 )
 
 // extractPasswords reads no file, so it always runs; without a usable password the keychain yields metadata only.
-func extractPasswords(ctx context.Context, input browser.Input, out browser.Collector) error {
-	loginKeychain := input.LoginKeychain()
+func extractPasswords(ctx context.Context, _ browser.ProfileSnapshot, loginKeychain LoginKeychain, out browser.Collector) error {
 	if loginKeychain == nil {
 		return errNoKeychain
 	}

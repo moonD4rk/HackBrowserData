@@ -14,7 +14,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// execute gives the runner the run's writer; the caller sets where its extractors, keys, and keychain come from.
+// execute gives the runner the run's writer; the caller sets its bases and where its master keys come from.
 // It handles one user data dir at a time, so at most one dir's copies are on disk. Its error means nothing ran.
 func execute(
 	ctx context.Context, discovery Discovery, categories []category.Category, output OutputOptions, dirRunner runner,
@@ -37,13 +37,11 @@ type recordWriter interface {
 
 // runner is what every user data dir of one run shares; logProgress logs each dir as it starts.
 type runner struct {
-	writer                 recordWriter
-	extractors             extractorsFunc
-	keySource              keySource
-	loginKeychain          browser.LoginKeychain
-	firefoxPrimaryPassword string
-	logProgress            bool
-	maxStorageValue        int
+	writer          recordWriter
+	bases           bases
+	keySource       keySource
+	logProgress     bool
+	maxStorageValue int
 }
 
 // run ends at the first dir whose Summary has an Err, keeping what ran before it.
@@ -66,7 +64,7 @@ func (r runner) run(ctx context.Context, discovery Discovery, categories []categ
 }
 
 func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories []category.Category) Summary {
-	plan := planDir(dir, categories, r.extractors)
+	plan := planDir(dir, categories, r.bases.sources)
 	summary := Summary{Results: plan.skipped}
 	if len(plan.extractions) == 0 {
 		return summary
@@ -104,8 +102,8 @@ func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories 
 			summary.Err = fmt.Errorf("run stopped: %w", err)
 			return summary
 		}
-		input := browser.NewInput(dirSnapshot, extraction.profile, masterKeys, r.loginKeychain).WithFirefoxPassword(r.firefoxPrimaryPassword)
-		result, err := r.runExtraction(ctx, extraction, input, dir.Browser.DisplayName)
+		captured := browser.NewProfileSnapshot(dir, extraction.profile, dirSnapshot)
+		result, err := r.runExtraction(ctx, extraction, captured, masterKeys)
 		if err != nil {
 			summary.Err = err
 			return summary
@@ -117,10 +115,12 @@ func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories 
 
 // runExtraction exports the records emitted before an extraction failed, as they always were; its error stops the run.
 func (r runner) runExtraction(
-	ctx context.Context, extraction plannedExtraction, input browser.Input, browserName string,
+	ctx context.Context, extraction plannedExtraction, captured browser.ProfileSnapshot, masterKeys masterkey.Set,
 ) (Result, error) {
-	recordCollector := &collector{browserName: browserName, profileName: extraction.ProfileName, maxStorageValue: r.maxStorageValue}
-	err := extraction.extractor.Extract(ctx, input, recordCollector)
+	recordCollector := &collector{
+		browserName: captured.UserDataDir.Browser.DisplayName, profileName: extraction.ProfileName, maxStorageValue: r.maxStorageValue,
+	}
+	err := r.bases.extract(ctx, captured, masterKeys, extraction.Category, recordCollector)
 	if writeErr := r.writer.Write(extraction.Category, recordCollector.records); writeErr != nil {
 		return Result{}, writeErr
 	}

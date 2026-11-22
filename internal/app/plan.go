@@ -19,35 +19,33 @@ type dirPlan struct {
 	needsMasterKeys bool                // an extraction decrypts with the dir's master keys, so they are retrieved once
 }
 
-// plannedExtraction keeps the extractor that planning checked, so the run uses that same extractor.
 type plannedExtraction struct {
 	Extraction
-	profile   browser.Profile
-	extractor browser.Extractor
+	profile browser.Profile
 }
 
-type extractorsFunc func(browser.UserDataDir, browser.Profile) browser.Extractors
+type sourcesFunc func(dir browser.UserDataDir, profile browser.Profile) map[category.Category][]browser.Source
 
-func planDir(dir browser.UserDataDir, categories []category.Category, extractors extractorsFunc) dirPlan {
+func planDir(dir browser.UserDataDir, categories []category.Category, sources sourcesFunc) dirPlan {
 	var plan dirPlan
 	captured := make(map[snapshot.File]bool)
 	for _, profile := range dir.Profiles {
-		profileExtractors := extractors(dir, profile)
+		profileSources := sources(dir, profile)
 		for _, dataCategory := range categories {
 			extraction := Extraction{UserDataDirID: dir.ID, ProfileName: profile.Name, Category: dataCategory}
-			extractor, supported := profileExtractors[dataCategory]
+			categorySources, supported := profileSources[dataCategory]
 			if !supported {
 				plan.skipped = append(plan.skipped, Result{Extraction: extraction, Outcome: OutcomeUnsupported})
 				continue
 			}
-			files, present, err := locate(dir, profile, extractor.Sources)
+			files, present, err := locate(dir, profile, categorySources)
 			switch {
 			case err != nil:
 				plan.skipped = append(plan.skipped, Result{Extraction: extraction, Outcome: OutcomeError, Err: err})
 			case !present:
 				plan.skipped = append(plan.skipped, Result{Extraction: extraction, Outcome: OutcomeAbsent})
 			default:
-				plan.extractions = append(plan.extractions, plannedExtraction{Extraction: extraction, profile: profile, extractor: extractor})
+				plan.extractions = append(plan.extractions, plannedExtraction{Extraction: extraction, profile: profile})
 				plan.files = appendNew(plan.files, captured, files...)
 				plan.needsMasterKeys = plan.needsMasterKeys || needsMasterKeys(dir, dataCategory)
 			}

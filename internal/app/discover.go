@@ -2,12 +2,8 @@ package app
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
-	"github.com/moond4rk/hackbrowserdata/internal/browser/chromium"
-	"github.com/moond4rk/hackbrowserdata/internal/browser/firefox"
-	"github.com/moond4rk/hackbrowserdata/internal/browser/safari"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
@@ -35,7 +31,7 @@ func withData(dirs []browser.UserDataDir) []browser.UserDataDir {
 	for _, dir := range dirs {
 		var profiles []browser.Profile
 		for _, profile := range dir.Profiles {
-			if hasData(dir, profile, extractorsFor(dir, profile)) {
+			if hasData(dir, profile, sourcesFor(dir, profile)) {
 				profiles = append(profiles, profile)
 			}
 		}
@@ -47,47 +43,14 @@ func withData(dirs []browser.UserDataDir) []browser.UserDataDir {
 	return out
 }
 
-func hasData(dir browser.UserDataDir, profile browser.Profile, extractors browser.Extractors) bool {
-	for _, extractor := range extractors {
-		if len(extractor.Sources) == 0 {
+func hasData(dir browser.UserDataDir, profile browser.Profile, sources map[category.Category][]browser.Source) bool {
+	for _, categorySources := range sources {
+		if len(categorySources) == 0 {
 			continue
 		}
-		if _, ok, err := locate(dir, profile, extractor.Sources); ok || err != nil {
+		if _, ok, err := locate(dir, profile, categorySources); ok || err != nil {
 			return true
 		}
 	}
 	return false
-}
-
-// discoverBrowser dispatches on Base here, not in browser, because the base packages import browser.
-func discoverBrowser(ctx context.Context, targetBrowser browser.Browser, options browser.DiscoverOptions) ([]browser.UserDataDir, error) {
-	switch targetBrowser.Base {
-	case browser.Chromium:
-		return chromium.Discover(targetBrowser, options)
-	case browser.Firefox:
-		return firefox.Discover(targetBrowser, options)
-	case browser.Safari:
-		return safari.Discover(ctx, targetBrowser, options)
-	default:
-		return nil, fmt.Errorf("%s: no base package", targetBrowser.Name)
-	}
-}
-
-// extractorsFor dispatches on Base here for the same reason discoverBrowser does.
-func extractorsFor(dir browser.UserDataDir, profile browser.Profile) browser.Extractors {
-	switch dir.Browser.Base {
-	case browser.Chromium:
-		return chromium.Extractors(dir, profile)
-	case browser.Firefox:
-		return firefox.Extractors(dir, profile)
-	case browser.Safari:
-		return safari.Extractors(dir, profile)
-	default:
-		return nil
-	}
-}
-
-// needsMasterKeys dispatches on Base for the same reason; Chromium is the one base whose dir holds master keys.
-func needsMasterKeys(dir browser.UserDataDir, dataCategory category.Category) bool {
-	return dir.Browser.Base == browser.Chromium && chromium.NeedsMasterKeys(dataCategory)
 }

@@ -89,7 +89,7 @@ func archiveFiles(dirs []browser.UserDataDir, categories []category.Category) []
 				}
 			}
 		}
-		files = appendNew(files, seen, planDir(dir, categories, extractorsFor).files...)
+		files = appendNew(files, seen, planDir(dir, categories, sourcesFor).files...)
 	}
 	return files
 }

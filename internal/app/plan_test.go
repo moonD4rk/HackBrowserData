@@ -50,7 +50,7 @@ func TestPlanDir(t *testing.T) {
 	}
 	categories := []category.Category{category.Password, category.Cookie, category.History, category.Download, category.CreditCard}
 
-	plan := planDir(dir, categories, extractorsFor)
+	plan := planDir(dir, categories, sourcesFor)
 
 	file := func(relativePath string) snapshot.File {
 		return snapshot.File{UserDataDirID: "chrome", UserDataDirPath: path, RelativePath: relativePath}
@@ -85,11 +85,11 @@ func TestPlanDir_PicksTheFirstCandidateOnDisk(t *testing.T) {
 	touch(t, path, "Default", "Cookies")
 	dir := browser.UserDataDir{ID: "chrome", Browser: lookup(t, "chrome"), Path: path, Profiles: []browser.Profile{{Name: "Default", RelativePath: "Default"}}}
 
-	plan := planDir(dir, []category.Category{category.Cookie}, extractorsFor)
+	plan := planDir(dir, []category.Category{category.Cookie}, sourcesFor)
 	assert.Equal(t, []snapshot.File{{UserDataDirID: "chrome", UserDataDirPath: path, RelativePath: "Default/Cookies"}}, plan.files)
 
 	touch(t, path, "Default", "Network", "Cookies")
-	plan = planDir(dir, []category.Category{category.Cookie}, extractorsFor)
+	plan = planDir(dir, []category.Category{category.Cookie}, sourcesFor)
 	assert.Equal(t, []snapshot.File{{UserDataDirID: "chrome", UserDataDirPath: path, RelativePath: "Default/Network/Cookies"}}, plan.files,
 		"a leftover legacy Cookies never wins")
 }
@@ -99,14 +99,14 @@ func TestPlanDir_FlatLayoutProfile(t *testing.T) {
 	touch(t, path, "History")
 	dir := browser.UserDataDir{ID: "opera", Browser: lookup(t, "opera"), Path: path, Profiles: []browser.Profile{{Name: "Opera Stable"}}}
 
-	plan := planDir(dir, []category.Category{category.History}, extractorsFor)
+	plan := planDir(dir, []category.Category{category.History}, sourcesFor)
 	assert.Equal(t, []snapshot.File{{UserDataDirID: "opera", UserDataDirPath: path, RelativePath: "History"}}, plan.files)
 	assert.Equal(t, []Extraction{{UserDataDirID: "opera", ProfileName: "Opera Stable", Category: category.History}}, extractionsOf(plan))
 }
 
 func TestPlanDir_UnsupportedCategory(t *testing.T) {
 	dir := browser.UserDataDir{ID: "x", Path: t.TempDir(), Profiles: []browser.Profile{{Name: "Default", RelativePath: "Default"}}}
-	none := func(browser.UserDataDir, browser.Profile) browser.Extractors { return browser.Extractors{} }
+	none := func(browser.UserDataDir, browser.Profile) map[category.Category][]browser.Source { return nil }
 
 	plan := planDir(dir, []category.Category{category.CreditCard}, none)
 	assert.Equal(t, []Result{{Extraction: Extraction{UserDataDirID: "x", ProfileName: "Default", Category: category.CreditCard}, Outcome: OutcomeUnsupported}},
@@ -114,11 +114,11 @@ func TestPlanDir_UnsupportedCategory(t *testing.T) {
 	assert.Empty(t, plan.extractions)
 }
 
-// TestPlanDir_ExtractorWithoutSourcesRuns covers Safari's passwords: read from the keychain, they are never absent.
-func TestPlanDir_ExtractorWithoutSourcesRuns(t *testing.T) {
+// TestPlanDir_CategoryWithoutSourcesRuns covers Safari's passwords: read from the keychain, they are never absent.
+func TestPlanDir_CategoryWithoutSourcesRuns(t *testing.T) {
 	dir := browser.UserDataDir{ID: "safari", Path: t.TempDir(), Profiles: []browser.Profile{{Name: "default", RelativePath: "Safari"}}}
-	keychainOnly := func(browser.UserDataDir, browser.Profile) browser.Extractors {
-		return browser.Extractors{category.Password: {}}
+	keychainOnly := func(browser.UserDataDir, browser.Profile) map[category.Category][]browser.Source {
+		return map[category.Category][]browser.Source{category.Password: nil}
 	}
 
 	plan := planDir(dir, []category.Category{category.Password}, keychainOnly)
@@ -143,9 +143,7 @@ func lock(t *testing.T, dir string) {
 func TestPlanDir_UnreadableFileIsAnError(t *testing.T) {
 	dir := chromeDir(t, "chrome", "Default")
 	lock(t, filepath.Join(dir.Path, "Default"))
-	base := fakeBase(map[category.Category]extractFunc{category.History: nil})
-
-	plan := planDir(dir, []category.Category{category.History}, base)
+	plan := planDir(dir, []category.Category{category.History}, fakeBases{category.History: nil}.sources)
 
 	require.Len(t, plan.skipped, 1)
 	assert.Equal(t, OutcomeError, plan.skipped[0].Outcome)

@@ -8,11 +8,13 @@ import (
 // vaultKindChromium is the keys.json kind of every Chromium browser no override covers.
 const vaultKindChromium = "chromium"
 
-// override is a fork that stores data its own way: its browsers, its keys.json kind, and the extractors it swaps.
+// override is a fork that stores data its own way: its browsers, its keys.json kind, the extractors it swaps, and the
+// categories its files do not hold.
 type override struct {
 	browserNames []string
-	vaultKind    string
-	extractors   browser.Extractors
+	vaultKind    string // "" keeps vaultKindChromium
+	extractors   map[category.Category]extractor
+	unsupported  []category.Category
 }
 
 // overrides match Browser.Name, never UserDataDirID, which differs for a second user data dir of one browser.
@@ -20,7 +22,7 @@ var overrides = []override{
 	{
 		browserNames: []string{"yandex"},
 		vaultKind:    "chromium-yandex",
-		extractors: browser.Extractors{
+		extractors: map[category.Category]extractor{
 			category.Password:   newDecryptingExtractor(extractYandexPasswords, yaPassmanData),
 			category.CreditCard: newDecryptingExtractor(extractYandexCreditCards, yaCreditCards),
 		},
@@ -28,9 +30,14 @@ var overrides = []override{
 	{
 		browserNames: []string{"opera", "opera-gx", "vought"},
 		vaultKind:    "chromium-opera",
-		extractors: browser.Extractors{
+		extractors: map[category.Category]extractor{
 			category.Extension: newExtensionExtractor(extractOperaExtensions),
 		},
+	},
+	{
+		// QQ and Sogou keep no extension list in their Preferences files.
+		browserNames: []string{"qq", "sogou"},
+		unsupported:  []category.Category{category.Extension},
 	},
 }
 
@@ -47,7 +54,7 @@ func overrideFor(browserName string) (override, bool) {
 
 func overrideForVaultKind(vaultKind string) (override, bool) {
 	for _, fork := range overrides {
-		if fork.vaultKind == vaultKind {
+		if fork.vaultKind != "" && fork.vaultKind == vaultKind {
 			return fork, true
 		}
 	}
@@ -61,16 +68,16 @@ func isVaultKind(vaultKind string) bool {
 
 // VaultKind names a vault's on-disk format, so a reader without the browser in its table still picks its files.
 func VaultKind(chromiumBrowser browser.Browser) string {
-	if fork, ok := overrideFor(chromiumBrowser.Name); ok {
+	if fork, ok := overrideFor(chromiumBrowser.Name); ok && fork.vaultKind != "" {
 		return fork.vaultKind
 	}
 	return vaultKindChromium
 }
 
-// vaultKindOf is a restored dir's own kind, or else its browser's.
-func vaultKindOf(dir browser.UserDataDir) string {
-	if dir.VaultKind != "" {
-		return dir.VaultKind
+// overrideForDir matches the browser's name first; a restored browser this build does not know matches by its kind.
+func overrideForDir(dir browser.UserDataDir) (override, bool) {
+	if fork, ok := overrideFor(dir.Browser.Name); ok {
+		return fork, true
 	}
-	return VaultKind(dir.Browser)
+	return overrideForVaultKind(dir.VaultKind)
 }

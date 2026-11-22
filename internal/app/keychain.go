@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 
-	"github.com/moond4rk/hackbrowserdata/internal/browser"
+	"github.com/moond4rk/hackbrowserdata/internal/browser/safari"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
@@ -11,7 +11,7 @@ import (
 // loginKeychain is the run's one login keychain, shared by Chromium's v10 key and Safari's passwords; nil off macOS.
 type loginKeychain interface {
 	masterkey.LoginKeychain
-	browser.LoginKeychain
+	safari.LoginKeychain
 	Err() error
 }
 

@@ -1,7 +1,6 @@
 package chromium
 
 import (
-	"context"
 	"errors"
 	"io/fs"
 	"os"
@@ -9,6 +8,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
@@ -21,13 +21,13 @@ var extensionJSONPaths = []string{
 var errNoExtensionList = errors.New("cannot find extensions in settings")
 
 // newExtensionExtractor falls back to Preferences, where Linux builds and forks such as 360 keep the list.
-func newExtensionExtractor(parse func(string, browser.Collector) error) browser.Extractor {
+func newExtensionExtractor(parse func(string, browser.Collector) error) extractor {
 	sources := []browser.Source{securePreferences, preferences}
-	return browser.Extractor{
-		Sources: sources,
-		Extract: func(_ context.Context, input browser.Input, out browser.Collector) error {
+	return extractor{
+		sources: sources,
+		extract: func(captured browser.ProfileSnapshot, _ masterkey.Set, out browser.Collector) error {
 			for _, source := range sources {
-				path, err := input.Path(source)
+				path, err := captured.Path(source)
 				if errors.Is(err, fs.ErrNotExist) {
 					continue
 				}

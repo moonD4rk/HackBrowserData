@@ -13,6 +13,7 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
+	"github.com/moond4rk/hackbrowserdata/internal/keychain"
 )
 
 // Paths below are relative to the user data dir, ~/Library.
@@ -57,30 +58,68 @@ func userDataDirPaths(safariBrowser browser.Browser, options browser.DiscoverOpt
 	return paths
 }
 
-// Extractors builds a named profile's sources from Profile.RelativePath; its files sit under two dirs named for its UUID.
-// The keychain, Bookmarks.plist, and the extension plists carry no profile tag, so only the default profile reads them.
-func Extractors(dir browser.UserDataDir, profile browser.Profile) browser.Extractors {
-	if uuid, named := namedProfileUUID(profile); named {
-		return namedProfileExtractors(dir, profile, uuid)
-	}
-	return defaultProfileExtractors(profile)
+// LoginKeychain is what Safari's password extraction reads from the run's macOS login keychain.
+type LoginKeychain interface {
+	InternetPasswords(ctx context.Context) ([]keychain.InternetPassword, error)
 }
 
-func defaultProfileExtractors(profile browser.Profile) browser.Extractors {
+// extractor is how one category is read: the files it needs, and how it parses them; passwords come from the keychain.
+type extractor struct {
+	sources []browser.Source
+	extract func(ctx context.Context, captured browser.ProfileSnapshot, loginKeychain LoginKeychain, out browser.Collector) error
+}
+
+// Sources lists the files of each category a profile supports; a named profile supports fewer than the default one.
+func Sources(dir browser.UserDataDir, profile browser.Profile) map[category.Category][]browser.Source {
+	extractors := extractorsFor(dir, profile)
+	sources := make(map[category.Category][]browser.Source, len(extractors))
+	for dataCategory, extractor := range extractors {
+		sources[dataCategory] = extractor.sources
+	}
+	return sources
+}
+
+// Extract reads passwords from loginKeychain, which is nil off macOS; locked, it yields metadata only.
+func Extract(
+	ctx context.Context, captured browser.ProfileSnapshot, loginKeychain LoginKeychain, dataCategory category.Category, out browser.Collector,
+) error {
+	extractor, ok := extractorsFor(captured.UserDataDir, captured.Profile)[dataCategory]
+	if !ok {
+		return fmt.Errorf("%s profile %s has no %s extractor", captured.UserDataDir.Browser.Name, captured.Profile.Name, dataCategory)
+	}
+	return extractor.extract(ctx, captured, loginKeychain, out)
+}
+
+// extractorsFor builds a named profile's sources from Profile.RelativePath; its files sit under two dirs named for its
+// UUID. The keychain, Bookmarks.plist, and the extension plists carry no profile tag, so only the default profile reads
+// them.
+func extractorsFor(dir browser.UserDataDir, profile browser.Profile) map[category.Category]extractor {
+	if uuid, named := namedProfileUUID(profile); named {
+		return namedProfileExtractors(dir, uuid)
+	}
+	return defaultProfileExtractors()
+}
+
+func defaultProfileExtractors() map[category.Category]extractor {
 	var (
 		history = browser.Source{RelativePath: "History.db"}
 		cookies = browser.Source{
-			RelativePath: fromLibrary(profile, containerDir+"/Cookies/Cookies.binarycookies"),
-			Fallbacks:    []string{fromLibrary(profile, "Cookies/Cookies.binarycookies")},
+			RelativePath:    containerDir + "/Cookies/Cookies.binarycookies",
+			Fallbacks:       []string{"Cookies/Cookies.binarycookies"},
+			FromUserDataDir: true,
 		}
 		bookmarks     = browser.Source{RelativePath: "Bookmarks.plist"}
 		downloads     = browser.Source{RelativePath: "Downloads.plist"}
-		localStorage  = browser.Source{RelativePath: fromLibrary(profile, containerDir+"/WebKit/WebsiteData/Default"), IsDir: true}
-		appExtensions = browser.Source{RelativePath: fromLibrary(profile, containerDir+"/Safari/AppExtensions/Extensions.plist"), Optional: true}
-		webExtensions = browser.Source{RelativePath: fromLibrary(profile, containerDir+"/Safari/WebExtensions/Extensions.plist"), Optional: true}
+		localStorage  = browser.Source{RelativePath: containerDir + "/WebKit/WebsiteData/Default", IsDir: true, FromUserDataDir: true}
+		appExtensions = browser.Source{
+			RelativePath: containerDir + "/Safari/AppExtensions/Extensions.plist", FromUserDataDir: true, Optional: true,
+		}
+		webExtensions = browser.Source{
+			RelativePath: containerDir + "/Safari/WebExtensions/Extensions.plist", FromUserDataDir: true, Optional: true,
+		}
 	)
-	return browser.Extractors{
-		category.Password:     {Extract: extractPasswords},
+	return map[category.Category]extractor{
+		category.Password:     {extract: extractPasswords},
 		category.History:      newPlainExtractor(extractHistories, history),
 		category.Cookie:       newPlainExtractor(extractCookies, cookies),
 		category.Bookmark:     newPlainExtractor(extractBookmarks, bookmarks),
@@ -90,15 +129,15 @@ func defaultProfileExtractors(profile browser.Profile) browser.Extractors {
 	}
 }
 
-func namedProfileExtractors(dir browser.UserDataDir, profile browser.Profile, uuid string) browser.Extractors {
+func namedProfileExtractors(dir browser.UserDataDir, uuid string) map[category.Category]extractor {
 	store := containerDir + "/WebKit/WebsiteDataStore/" + strings.ToLower(uuid)
 	var (
 		history      = browser.Source{RelativePath: "History.db"}
-		cookies      = browser.Source{RelativePath: fromLibrary(profile, store+"/Cookies/Cookies.binarycookies")}
-		downloads    = browser.Source{RelativePath: fromLibrary(profile, defaultProfileDir(dir)+"/Downloads.plist")}
-		localStorage = browser.Source{RelativePath: fromLibrary(profile, store+"/Origins"), IsDir: true}
+		cookies      = browser.Source{RelativePath: store + "/Cookies/Cookies.binarycookies", FromUserDataDir: true}
+		downloads    = browser.Source{RelativePath: defaultProfileDir(dir) + "/Downloads.plist", FromUserDataDir: true}
+		localStorage = browser.Source{RelativePath: store + "/Origins", IsDir: true, FromUserDataDir: true}
 	)
-	return browser.Extractors{
+	return map[category.Category]extractor{
 		category.History:      newPlainExtractor(extractHistories, history),
 		category.Cookie:       newPlainExtractor(extractCookies, cookies),
 		category.Download:     newPlainExtractor(downloadsOf(uuid), downloads),
@@ -123,23 +162,15 @@ func defaultProfileDir(dir browser.UserDataDir) string {
 	return "Safari"
 }
 
-// fromLibrary turns a path under ~/Library into one relative to profile.RelativePath, which sources are joined with.
-func fromLibrary(profile browser.Profile, relativePath string) string {
-	if profile.RelativePath == "" {
-		return relativePath
-	}
-	return strings.Repeat("../", strings.Count(profile.RelativePath, "/")+1) + relativePath
-}
-
-func newPlainExtractor(parse func(string, browser.Collector) error, source browser.Source) browser.Extractor {
-	return browser.Extractor{
-		Sources: []browser.Source{source},
-		Extract: func(_ context.Context, input browser.Input, out browser.Collector) error {
-			captured, err := input.Path(source)
+func newPlainExtractor(parse func(string, browser.Collector) error, source browser.Source) extractor {
+	return extractor{
+		sources: []browser.Source{source},
+		extract: func(_ context.Context, captured browser.ProfileSnapshot, _ LoginKeychain, out browser.Collector) error {
+			capturedPath, err := captured.Path(source)
 			if err != nil {
 				return err
 			}
-			return parse(captured, out)
+			return parse(capturedPath, out)
 		},
 	}
 }
@@ -149,20 +180,20 @@ func downloadsOf(profileUUID string) func(string, browser.Collector) error {
 }
 
 // newExtensionExtractor merges every plist, so the extensions come out sorted across both stores.
-func newExtensionExtractor(sources ...browser.Source) browser.Extractor {
-	return browser.Extractor{
-		Sources: sources,
-		Extract: func(_ context.Context, input browser.Input, out browser.Collector) error {
+func newExtensionExtractor(sources ...browser.Source) extractor {
+	return extractor{
+		sources: sources,
+		extract: func(_ context.Context, captured browser.ProfileSnapshot, _ LoginKeychain, out browser.Collector) error {
 			var paths []string
 			for _, source := range sources {
-				captured, err := input.Path(source)
+				capturedPath, err := captured.Path(source)
 				if errors.Is(err, fs.ErrNotExist) {
 					continue
 				}
 				if err != nil {
 					return err
 				}
-				paths = append(paths, captured)
+				paths = append(paths, capturedPath)
 			}
 			return extractExtensions(paths, out)
 		},

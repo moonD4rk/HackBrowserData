@@ -22,8 +22,14 @@ var (
 	webappsStore   = browser.Source{RelativePath: "webappsstore.sqlite"}
 )
 
+// extractor is how one category is read: the files it needs, and how it parses them with the user's primary password.
+type extractor struct {
+	sources []browser.Source
+	extract func(captured browser.ProfileSnapshot, primaryPassword string, out browser.Collector) error
+}
+
 // defaultExtractors has no credit card or session storage extractor, because Firefox keeps none that HBD reads.
-var defaultExtractors = browser.Extractors{
+var defaultExtractors = map[category.Category]extractor{
 	category.Password:     newDecryptingExtractor(extractPasswords, loginsJSON),
 	category.Cookie:       newPlainExtractor(extractCookies, cookiesDB),
 	category.Bookmark:     newPlainExtractor(extractBookmarks, placesDB),
@@ -95,7 +101,7 @@ func discoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
 
 func hasDataFile(path string) bool {
 	for _, extractor := range defaultExtractors {
-		for _, source := range extractor.Sources {
+		for _, source := range extractor.sources {
 			if source.Optional {
 				continue
 			}
@@ -109,19 +115,31 @@ func hasDataFile(path string) bool {
 	return false
 }
 
-func Extractors(_ browser.UserDataDir, _ browser.Profile) browser.Extractors {
-	extractors := make(browser.Extractors, len(defaultExtractors))
+// Sources lists the files of each category Firefox supports; every profile reads the same ones.
+func Sources(_ browser.UserDataDir, _ browser.Profile) map[category.Category][]browser.Source {
+	sources := make(map[category.Category][]browser.Source, len(defaultExtractors))
 	for dataCategory, extractor := range defaultExtractors {
-		extractors[dataCategory] = extractor
+		sources[dataCategory] = extractor.sources
 	}
-	return extractors
+	return sources
 }
 
-func newPlainExtractor(parse func(string, browser.Collector) error, source browser.Source) browser.Extractor {
-	return browser.Extractor{
-		Sources: []browser.Source{source},
-		Extract: func(_ context.Context, input browser.Input, out browser.Collector) error {
-			path, err := input.Path(source)
+// Extract opens a protected profile's key store with primaryPassword, "" when the user gave none.
+func Extract(
+	_ context.Context, captured browser.ProfileSnapshot, primaryPassword string, dataCategory category.Category, out browser.Collector,
+) error {
+	extractor, ok := defaultExtractors[dataCategory]
+	if !ok {
+		return fmt.Errorf("%s has no %s extractor", captured.UserDataDir.Browser.Name, dataCategory)
+	}
+	return extractor.extract(captured, primaryPassword, out)
+}
+
+func newPlainExtractor(parse func(string, browser.Collector) error, source browser.Source) extractor {
+	return extractor{
+		sources: []browser.Source{source},
+		extract: func(captured browser.ProfileSnapshot, _ string, out browser.Collector) error {
+			path, err := captured.Path(source)
 			if err != nil {
 				return err
 			}
@@ -131,24 +149,24 @@ func newPlainExtractor(parse func(string, browser.Collector) error, source brows
 }
 
 // newDecryptingExtractor also captures key4.db, the profile's own key store.
-func newDecryptingExtractor(parse func(func() ([]byte, error), string, browser.Collector) error, source browser.Source) browser.Extractor {
-	return browser.Extractor{
-		Sources: []browser.Source{source, keyStore},
-		Extract: func(_ context.Context, input browser.Input, out browser.Collector) error {
-			path, err := input.Path(source)
+func newDecryptingExtractor(parse func(func() ([]byte, error), string, browser.Collector) error, source browser.Source) extractor {
+	return extractor{
+		sources: []browser.Source{source, keyStore},
+		extract: func(captured browser.ProfileSnapshot, primaryPassword string, out browser.Collector) error {
+			path, err := captured.Path(source)
 			if err != nil {
 				return err
 			}
-			masterKey := func() ([]byte, error) { return profileKey(input, path) }
+			masterKey := func() ([]byte, error) { return profileKey(captured, path, primaryPassword) }
 			return parse(masterKey, path, out)
 		},
 	}
 }
 
-func profileKey(input browser.Input, loginsPath string) ([]byte, error) {
-	key4Path, err := input.Path(keyStore)
+func profileKey(captured browser.ProfileSnapshot, loginsPath, primaryPassword string) ([]byte, error) {
+	key4Path, err := captured.Path(keyStore)
 	if err != nil {
 		return nil, err
 	}
-	return retrieveMasterKey(key4Path, loginsPath, []byte(input.FirefoxPrimaryPassword()))
+	return retrieveMasterKey(key4Path, loginsPath, []byte(primaryPassword))
 }

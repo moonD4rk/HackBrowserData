@@ -141,9 +141,9 @@ func isSkippedProfileDir(name string) bool {
 
 func profileFilePaths(dir browser.UserDataDir) []string {
 	var paths []string
-	for _, extractor := range kindExtractors(vaultKindOf(dir)) {
-		for _, source := range extractor.Sources {
-			if !source.Shared {
+	for _, extractor := range extractorsFor(dir) {
+		for _, source := range extractor.sources {
+			if !source.FromUserDataDir {
 				paths = append(paths, source.RelativePaths()...)
 			}
 		}
