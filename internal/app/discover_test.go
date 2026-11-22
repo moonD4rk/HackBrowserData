@@ -81,7 +81,7 @@ func TestDiscover_UnreadableDirIsReported(t *testing.T) {
 	discovery := discover(context.Background(), browser.Supported(), browser.DiscoverOptions{HomeDir: home})
 	assert.Empty(t, discovery.Dirs)
 	require.Len(t, discovery.DirFailures, 1)
-	assert.Equal(t, browser.UserDataDirID("chrome"), discovery.DirFailures[0].UserDataDirID)
+	assert.Equal(t, browser.UserDataDirID("chrome"), discovery.DirFailures[0].DirID)
 	assert.Error(t, discovery.DirFailures[0].Err)
 }
 

@@ -17,11 +17,11 @@ func printSummary(stderr io.Writer, summary app.Summary) {
 	table := tabwriter.NewWriter(stderr, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(table, "Browser\tProfile\tCategory\tResult\tRecords\tDetail")
 	for _, failure := range summary.DirFailures {
-		fmt.Fprintf(table, "%s\t-\t-\t%s\t0\t%s\n", failure.UserDataDirID, app.OutcomeError, failure.Err)
+		fmt.Fprintf(table, "%s\t-\t-\t%s\t0\t%s\n", failure.DirID, app.OutcomeError, failure.Err)
 	}
 	for _, result := range summary.Results {
 		fmt.Fprintf(table, "%s\t%s\t%s\t%s\t%d\t%s\n",
-			result.UserDataDirID, result.Profile.Name, result.Category, result.Outcome, result.Records, resultDetail(result))
+			result.DirID, result.Profile.Name, result.Category, result.Outcome, result.Records, resultDetail(result))
 	}
 	if err := table.Flush(); err != nil {
 		log.Warnf("print summary: %v", err)
@@ -90,7 +90,7 @@ func printRecordCounts(out io.Writer, discovery app.Discovery, summary app.Summa
 		for _, profile := range dir.Profiles {
 			fmt.Fprintf(table, "%s\t%s", dir.Browser.DisplayName, profile.Name)
 			for _, dataCategory := range category.All() {
-				fmt.Fprintf(table, "\t%d", counts[app.Extraction{UserDataDirID: dir.ID, Profile: profile, Category: dataCategory}])
+				fmt.Fprintf(table, "\t%d", counts[app.Extraction{DirID: dir.ID, Profile: profile, Category: dataCategory}])
 			}
 			fmt.Fprintln(table)
 		}

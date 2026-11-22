@@ -77,7 +77,7 @@ func parseCategories(value string) ([]category.Category, error) {
 		return category.All(), nil
 	}
 	var categories []category.Category
-	seen := make(map[category.Category]bool)
+	added := make(map[category.Category]bool)
 	for _, name := range strings.Split(value, ",") {
 		name = strings.TrimSpace(strings.ToLower(name))
 		if name == "" {
@@ -87,8 +87,8 @@ func parseCategories(value string) ([]category.Category, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%w, available: all|%s", err, strings.Join(category.Names(), ","))
 		}
-		if !seen[dataCategory] {
-			seen[dataCategory] = true
+		if !added[dataCategory] {
+			added[dataCategory] = true
 			categories = append(categories, dataCategory)
 		}
 	}

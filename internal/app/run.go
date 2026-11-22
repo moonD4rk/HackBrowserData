@@ -52,7 +52,7 @@ func (r runner) run(ctx context.Context, discovery Discovery, categories []categ
 			summary.Err = fmt.Errorf("run stopped: %w", err)
 			return summary
 		}
-		dirSummary := r.runDir(ctx, dir, categories)
+		dirSummary := r.runExtractions(ctx, dir, categories)
 		summary.Results = append(summary.Results, dirSummary.Results...)
 		summary.DirFailures = append(summary.DirFailures, dirSummary.DirFailures...)
 		if dirSummary.Err != nil {
@@ -63,7 +63,7 @@ func (r runner) run(ctx context.Context, discovery Discovery, categories []categ
 	return summary
 }
 
-func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories []category.Category) Summary {
+func (r runner) runExtractions(ctx context.Context, dir browser.UserDataDir, categories []category.Category) Summary {
 	extractions, files, skipped := planExtractions(dir, categories)
 	summary := Summary{Results: skipped}
 	if len(extractions) == 0 {
@@ -94,7 +94,7 @@ func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories 
 		retrieval := r.keySource.MasterKeys(ctx, dir, dirSnapshot)
 		masterKeys = retrieval.Keys
 		if retrieval.Err != nil {
-			summary.DirFailures = []DirFailure{{UserDataDirID: dir.ID, Err: fmt.Errorf("master key retrieval: %w", retrieval.Err)}}
+			summary.DirFailures = []DirFailure{{DirID: dir.ID, Err: fmt.Errorf("master key retrieval: %w", retrieval.Err)}}
 		}
 	}
 	for _, extraction := range extractions {

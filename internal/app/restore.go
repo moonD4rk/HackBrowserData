@@ -164,7 +164,7 @@ func readKeyFile(path string, stdin io.Reader) (masterkey.KeyFile, error) {
 func discoverArchive(archiveDir string, vaults []masterkey.Vault) (Discovery, map[browser.UserDataDirID]masterkey.Set, error) {
 	archived := false
 	for _, vault := range vaults {
-		if dirExists(filepath.Join(archiveDir, string(vaultUserDataDirID(vault)))) {
+		if dirExists(filepath.Join(archiveDir, string(vaultDirID(vault)))) {
 			archived = true
 			break
 		}
@@ -177,7 +177,7 @@ func discoverArchive(archiveDir string, vaults []masterkey.Vault) (Discovery, ma
 	var discovery Discovery
 	keys := make(map[browser.UserDataDirID]masterkey.Set)
 	for _, vault := range vaults {
-		id := vaultUserDataDirID(vault)
+		id := vaultDirID(vault)
 		if _, duplicate := keys[id]; duplicate {
 			log.Warnf("restore: keys hold %s twice, restoring the first", id)
 			continue
@@ -226,8 +226,8 @@ func vaultBrowser(vault masterkey.Vault) (restored browser.Browser, vaultKind st
 	return browser.Browser{Name: name, DisplayName: vault.Browser, Base: browser.Chromium}, vault.Kind
 }
 
-// vaultUserDataDirID is the vault's directory in an archive: its ID for a second user data dir, else its browser name.
-func vaultUserDataDirID(vault masterkey.Vault) browser.UserDataDirID {
+// vaultDirID is the vault's directory in an archive: its ID for a second user data dir, else its browser name.
+func vaultDirID(vault masterkey.Vault) browser.UserDataDirID {
 	if vault.ID != "" {
 		return browser.UserDataDirID(vault.ID)
 	}

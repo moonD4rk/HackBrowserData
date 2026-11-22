@@ -47,7 +47,7 @@ func TestPlanExtractions(t *testing.T) {
 		return snapshot.File{UserDataDirID: "chrome", UserDataDirPath: path, RelativePath: relativePath}
 	}
 	extraction := func(profile browser.Profile, dataCategory category.Category) Extraction {
-		return Extraction{UserDataDirID: "chrome", Profile: profile, Category: dataCategory}
+		return Extraction{DirID: "chrome", Profile: profile, Category: dataCategory}
 	}
 	absent := func(profile browser.Profile, dataCategory category.Category) Result {
 		return Result{Extraction: extraction(profile, dataCategory), Outcome: OutcomeAbsent}
@@ -92,7 +92,7 @@ func TestPlanExtractions_FlatLayoutProfile(t *testing.T) {
 
 	extractions, files, _ := planExtractions(dir, []category.Category{category.History})
 	assert.Equal(t, []snapshot.File{{UserDataDirID: "opera", UserDataDirPath: path, RelativePath: "History"}}, files)
-	assert.Equal(t, []Extraction{{UserDataDirID: "opera", Profile: profile, Category: category.History}}, extractions)
+	assert.Equal(t, []Extraction{{DirID: "opera", Profile: profile, Category: category.History}}, extractions)
 }
 
 // TestPlanExtractions_UnsupportedCategory covers Firefox's credit cards, which it keeps nowhere HBD reads.
@@ -101,7 +101,7 @@ func TestPlanExtractions_UnsupportedCategory(t *testing.T) {
 	dir := browser.UserDataDir{ID: "firefox", Browser: lookup(t, "firefox"), Path: t.TempDir(), Profiles: []browser.Profile{profile}}
 
 	extractions, _, skipped := planExtractions(dir, []category.Category{category.CreditCard})
-	unsupported := Extraction{UserDataDirID: "firefox", Profile: profile, Category: category.CreditCard}
+	unsupported := Extraction{DirID: "firefox", Profile: profile, Category: category.CreditCard}
 	assert.Equal(t, []Result{{Extraction: unsupported, Outcome: OutcomeUnsupported}}, skipped)
 	assert.Empty(t, extractions)
 }
@@ -112,7 +112,7 @@ func TestPlanExtractions_CategoryWithoutSourcesRuns(t *testing.T) {
 	dir := browser.UserDataDir{ID: "safari", Browser: lookup(t, "safari"), Path: t.TempDir(), Profiles: []browser.Profile{profile}}
 
 	extractions, files, skipped := planExtractions(dir, []category.Category{category.Password})
-	assert.Equal(t, []Extraction{{UserDataDirID: "safari", Profile: profile, Category: category.Password}}, extractions)
+	assert.Equal(t, []Extraction{{DirID: "safari", Profile: profile, Category: category.Password}}, extractions)
 	assert.Empty(t, files)
 	assert.Empty(t, skipped)
 }

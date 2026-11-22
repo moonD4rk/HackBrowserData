@@ -80,17 +80,17 @@ func Archive(ctx context.Context, options ArchiveOptions) (Discovery, int, error
 
 func archiveFiles(dirs []browser.UserDataDir, categories []category.Category) []snapshot.File {
 	var files []snapshot.File
-	seen := make(map[snapshot.File]bool)
+	added := make(map[snapshot.File]bool)
 	for _, dir := range dirs {
 		for _, profile := range dir.Profiles {
 			for _, source := range chromium.ArchiveSources() {
 				if file, ok, err := firstOnDisk(dir, source.DirRelativePaths(profile), source.IsDir); err == nil && ok {
-					files = appendNew(files, seen, file)
+					files = appendNew(files, added, file)
 				}
 			}
 		}
 		_, categoryFiles, _ := planExtractions(dir, categories)
-		files = appendNew(files, seen, categoryFiles...)
+		files = appendNew(files, added, categoryFiles...)
 	}
 	return files
 }

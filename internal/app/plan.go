@@ -16,11 +16,11 @@ import (
 func planExtractions(
 	dir browser.UserDataDir, categories []category.Category,
 ) (extractions []Extraction, files []snapshot.File, skipped []Result) {
-	captured := make(map[snapshot.File]bool)
+	added := make(map[snapshot.File]bool)
 	for _, profile := range dir.Profiles {
 		profileSources := sourcesFor(dir, profile)
 		for _, dataCategory := range categories {
-			extraction := Extraction{UserDataDirID: dir.ID, Profile: profile, Category: dataCategory}
+			extraction := Extraction{DirID: dir.ID, Profile: profile, Category: dataCategory}
 			categorySources, supported := profileSources[dataCategory]
 			if !supported {
 				skipped = append(skipped, Result{Extraction: extraction, Outcome: OutcomeUnsupported})
@@ -34,17 +34,17 @@ func planExtractions(
 				skipped = append(skipped, Result{Extraction: extraction, Outcome: OutcomeAbsent})
 			default:
 				extractions = append(extractions, extraction)
-				files = appendNew(files, captured, located...)
+				files = appendNew(files, added, located...)
 			}
 		}
 	}
 	return extractions, files, skipped
 }
 
-func appendNew(files []snapshot.File, seen map[snapshot.File]bool, more ...snapshot.File) []snapshot.File {
+func appendNew(files []snapshot.File, added map[snapshot.File]bool, more ...snapshot.File) []snapshot.File {
 	for _, file := range more {
-		if !seen[file] {
-			seen[file] = true
+		if !added[file] {
+			added[file] = true
 			files = append(files, file)
 		}
 	}

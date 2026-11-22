@@ -17,7 +17,7 @@ func TestCollectorResult(t *testing.T) {
 	notDecrypted := errors.New("value not decrypted")
 	corrupt := errors.New("corrupt")
 	gone := fmt.Errorf("History: %w", fs.ErrNotExist)
-	extraction := Extraction{UserDataDirID: "chrome", Profile: browser.Profile{Name: "Default", RelativePath: "Default"}, Category: category.Cookie}
+	extraction := Extraction{DirID: "chrome", Profile: browser.Profile{Name: "Default", RelativePath: "Default"}, Category: category.Cookie}
 	tests := []struct {
 		name     string
 		records  int

@@ -101,7 +101,7 @@ func TestRun_ExportsTheRecordsReadBeforeAnError(t *testing.T) {
 }
 
 func TestRun_ReportsEachDirWhatNeverRanFirst(t *testing.T) {
-	failed := DirFailure{UserDataDirID: "edge", Err: errors.New("permission denied")}
+	failed := DirFailure{DirID: "edge", Err: errors.New("permission denied")}
 	chrome, second := chromeDirWithData(t, "chrome"), chromeDirWithData(t, "chrome-2")
 	for _, dir := range []*browser.UserDataDir{&chrome, &second} {
 		dir.Profiles = dir.Profiles[:1]
@@ -116,7 +116,7 @@ func TestRun_ReportsEachDirWhatNeverRanFirst(t *testing.T) {
 	assert.Equal(t, []DirFailure{failed}, summary.DirFailures, "discovery's failures are reported with the run's")
 	var got []string
 	for _, result := range summary.Results {
-		got = append(got, fmt.Sprintf("%s/%s %s", result.UserDataDirID, result.Category, result.Outcome))
+		got = append(got, fmt.Sprintf("%s/%s %s", result.DirID, result.Category, result.Outcome))
 	}
 	assert.Equal(t, []string{
 		"chrome/bookmark absent", "chrome/history ok",
@@ -138,7 +138,7 @@ func TestRun_KeysAreRetrievedOncePerUserDataDir(t *testing.T) {
 
 	assert.Equal(t, 1, calls, "two profiles and two categories share one retrieval")
 	require.Len(t, summary.DirFailures, 1, "a retrieval error is reported once, for the dir")
-	assert.Equal(t, browser.UserDataDirID("chrome"), summary.DirFailures[0].UserDataDirID)
+	assert.Equal(t, browser.UserDataDirID("chrome"), summary.DirFailures[0].DirID)
 	require.ErrorContains(t, summary.DirFailures[0].Err, "v20: no ABE")
 	assert.Len(t, summary.Results, 4)
 	data, err := os.ReadFile(filepath.Join(out, "cookie.json"))
