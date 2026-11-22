@@ -32,7 +32,7 @@ func addPasswordFlags(command *cobra.Command, flags *passwordFlags, name, what s
 // readFirefoxPassword takes the flag, else the first line of stdin; "" is the empty password, and it never prompts.
 func readFirefoxPassword(ctx context.Context, flags passwordFlags, stdin io.Reader) (string, error) {
 	if flags.fromStdin {
-		return untilDone(ctx, func() (string, error) { return firstLine(stdin) })
+		return readContext(ctx, func() (string, error) { return firstLine(stdin) })
 	}
 	return flags.value, nil
 }
@@ -47,7 +47,7 @@ func keychainPasswordFunc(flags passwordFlags, stdin *os.File) keychain.Password
 		return func(context.Context) (string, error) { return password, nil }
 	case flags.fromStdin:
 		return func(ctx context.Context) (string, error) {
-			return untilDone(ctx, func() (string, error) { return firstLine(stdin) })
+			return readContext(ctx, func() (string, error) { return firstLine(stdin) })
 		}
 	case term.IsTerminal(int(stdin.Fd())):
 		return func(ctx context.Context) (string, error) { return promptPassword(ctx, stdin) }
@@ -71,7 +71,7 @@ func promptPassword(ctx context.Context, stdin *os.File) (string, error) {
 		return "", fmt.Errorf("read the password: %w", err)
 	}
 	fmt.Fprint(os.Stderr, "Enter macOS login password: ")
-	password, err := untilDone(ctx, func() (string, error) {
+	password, err := readContext(ctx, func() (string, error) {
 		entered, err := term.ReadPassword(fileDescriptor)
 		return string(entered), err
 	})
@@ -86,8 +86,8 @@ func promptPassword(ctx context.Context, stdin *os.File) (string, error) {
 	return password, nil
 }
 
-// untilDone stops waiting when the run is stopped; the read itself stays blocked until the process ends.
-func untilDone(ctx context.Context, read func() (string, error)) (string, error) {
+// readContext stops waiting when the run is stopped; the read itself stays blocked until the process ends.
+func readContext(ctx context.Context, read func() (string, error)) (string, error) {
 	type answer struct {
 		value string
 		err   error

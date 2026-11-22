@@ -77,7 +77,7 @@ func parseCategories(value string) ([]category.Category, error) {
 		return category.All(), nil
 	}
 	var categories []category.Category
-	seen := make(map[category.Category]bool)
+	added := make(map[category.Category]bool)
 	for _, name := range strings.Split(value, ",") {
 		name = strings.TrimSpace(strings.ToLower(name))
 		if name == "" {
@@ -87,8 +87,8 @@ func parseCategories(value string) ([]category.Category, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%w, available: all|%s", err, strings.Join(category.Names(), ","))
 		}
-		if !seen[dataCategory] {
-			seen[dataCategory] = true
+		if !added[dataCategory] {
+			added[dataCategory] = true
 			categories = append(categories, dataCategory)
 		}
 	}
@@ -105,7 +105,7 @@ func checkOutputDir(outputDir string) error {
 		info, err := os.Stat(path)
 		switch {
 		case err == nil && info.IsDir():
-			if err := canCreateIn(path); err != nil {
+			if err := checkWritable(path); err != nil {
 				return fmt.Errorf("output dir %s: %w", outputDir, err)
 			}
 			return nil
@@ -134,7 +134,7 @@ func checkOutputFile(path string) error {
 	case !info.IsDir():
 		return fmt.Errorf("output file %s: %s is not a directory", path, parent)
 	}
-	if err := canCreateIn(parent); err != nil {
+	if err := checkWritable(parent); err != nil {
 		return fmt.Errorf("output file %s: %w", path, err)
 	}
 	if existing, err := os.Stat(path); err == nil && existing.IsDir() {

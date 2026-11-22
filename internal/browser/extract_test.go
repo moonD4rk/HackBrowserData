@@ -21,37 +21,37 @@ func writeSnapshotFile(t *testing.T, root, relativePath string) string {
 	return path
 }
 
-func TestInputPath(t *testing.T) {
+func TestProfileSnapshotPath(t *testing.T) {
 	root := t.TempDir()
 	legacyCookies := writeSnapshotFile(t, root, "chrome/Default/Cookies")
 	localState := writeSnapshotFile(t, root, "chrome/Local State")
 	dirSnapshot := snapshot.Open(root).Snapshot("chrome")
-	input := NewInput(dirSnapshot, Profile{Name: "Default", RelativePath: "Default"}, nil, nil)
+	captured := NewProfileSnapshot(UserDataDir{ID: "chrome"}, Profile{Name: "Default", RelativePath: "Default"}, dirSnapshot)
 
-	got, err := input.Path(Source{RelativePath: "Network/Cookies", Fallbacks: []string{"Cookies"}})
+	got, err := captured.Path(Source{RelativePath: "Network/Cookies", Fallbacks: []string{"Cookies"}})
 	require.NoError(t, err)
 	assert.Equal(t, legacyCookies, got, "a candidate that was never captured is skipped")
 
-	got, err = input.Path(Source{RelativePath: "Local State", Shared: true})
+	got, err = captured.Path(Source{RelativePath: "Local State", FromUserDataDir: true})
 	require.NoError(t, err)
-	assert.Equal(t, localState, got, "a shared source resolves under the user data dir, not the profile")
+	assert.Equal(t, localState, got, "a source from the user data dir resolves there, not under the profile")
 
-	_, err = input.Path(Source{RelativePath: "History"})
+	_, err = captured.Path(Source{RelativePath: "History"})
 	require.ErrorIs(t, err, fs.ErrNotExist)
 }
 
-func TestInputPath_FlatLayoutProfile(t *testing.T) {
+func TestProfileSnapshotPath_FlatLayoutProfile(t *testing.T) {
 	root := t.TempDir()
 	history := writeSnapshotFile(t, root, "opera/History")
-	input := NewInput(snapshot.Open(root).Snapshot("opera"), Profile{Name: "Opera Stable"}, nil, nil)
+	captured := NewProfileSnapshot(UserDataDir{ID: "opera"}, Profile{Name: "Opera Stable"}, snapshot.Open(root).Snapshot("opera"))
 
-	got, err := input.Path(Source{RelativePath: "History"})
+	got, err := captured.Path(Source{RelativePath: "History"})
 	require.NoError(t, err)
 	assert.Equal(t, history, got)
 }
 
-// TestInputPath_FailedCopyIsReported makes a failed copy an error, not a reason to read a lower candidate.
-func TestInputPath_FailedCopyIsReported(t *testing.T) {
+// TestProfileSnapshotPath_FailedCopyIsReported makes a failed copy an error, not a reason to read a lower candidate.
+func TestProfileSnapshotPath_FailedCopyIsReported(t *testing.T) {
 	from := t.TempDir()
 	require.NoError(t, os.MkdirAll(filepath.Join(from, "Default", "Network", "Cookies"), 0o700))
 	writeSnapshotFile(t, from, "Default/Cookies")
@@ -64,16 +64,16 @@ func TestInputPath_FailedCopyIsReported(t *testing.T) {
 		{UserDataDirID: "chrome", UserDataDirPath: from, RelativePath: "Default/Cookies"},
 	}))
 
-	input := NewInput(root.Snapshot("chrome"), Profile{Name: "Default", RelativePath: "Default"}, nil, nil)
-	_, err = input.Path(Source{RelativePath: "Network/Cookies", Fallbacks: []string{"Cookies"}})
+	captured := NewProfileSnapshot(UserDataDir{ID: "chrome"}, Profile{Name: "Default", RelativePath: "Default"}, root.Snapshot("chrome"))
+	_, err = captured.Path(Source{RelativePath: "Network/Cookies", Fallbacks: []string{"Cookies"}})
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, fs.ErrNotExist)
 }
 
-func TestSourceCandidatePaths(t *testing.T) {
+func TestSourceDirRelativePaths(t *testing.T) {
 	profile := Profile{Name: "Default", RelativePath: "Default"}
-	assert.Equal(t, []string{"Default/Network/Cookies", "Default/Cookies"}, Source{RelativePath: "Network/Cookies", Fallbacks: []string{"Cookies"}}.CandidatePaths(profile))
-	assert.Equal(t, []string{"Local State"}, Source{RelativePath: "Local State", Shared: true}.CandidatePaths(profile))
-	assert.Equal(t, []string{"History"}, Source{RelativePath: "History"}.CandidatePaths(Profile{Name: "default"}),
+	assert.Equal(t, []string{"Default/Network/Cookies", "Default/Cookies"}, Source{RelativePath: "Network/Cookies", Fallbacks: []string{"Cookies"}}.DirRelativePaths(profile))
+	assert.Equal(t, []string{"Local State"}, Source{RelativePath: "Local State", FromUserDataDir: true}.DirRelativePaths(profile))
+	assert.Equal(t, []string{"History"}, Source{RelativePath: "History"}.DirRelativePaths(Profile{Name: "default"}),
 		"a user data dir that is itself the profile")
 }

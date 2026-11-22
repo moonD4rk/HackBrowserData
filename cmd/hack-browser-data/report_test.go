@@ -10,22 +10,24 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moond4rk/hackbrowserdata/internal/app"
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
 func TestPrintSummary(t *testing.T) {
-	cookie := app.Extraction{UserDataDirID: "chrome", ProfileName: "Default", Category: category.Cookie}
+	defaultProfile := browser.Profile{Name: "Default", RelativePath: "Default"}
+	cookie := app.Extraction{DirID: "chrome", Profile: defaultProfile, Category: category.Cookie}
 	var buffer bytes.Buffer
 	printSummary(&buffer, app.Summary{
 		Results: []app.Result{
 			{Extraction: cookie, Outcome: app.OutcomePartial, Records: 224, Failures: 4},
 			{
-				Extraction: app.Extraction{UserDataDirID: "chrome", ProfileName: "Default", Category: category.Password},
+				Extraction: app.Extraction{DirID: "chrome", Profile: defaultProfile, Category: category.Password},
 				Outcome:    app.OutcomeError, Failures: 2, Err: errors.New("password not decrypted"),
 			},
-			{Extraction: app.Extraction{UserDataDirID: "edge", ProfileName: "Default", Category: category.Password}},
+			{Extraction: app.Extraction{DirID: "edge", Profile: defaultProfile, Category: category.Password}},
 		},
-		DirFailures: []app.DirFailure{{UserDataDirID: "arc-2", Err: errors.New("permission denied")}},
+		DirFailures: []app.DirFailure{{DirID: "arc-2", Err: errors.New("permission denied")}},
 	})
 
 	lines := strings.Split(strings.TrimSpace(buffer.String()), "\n")

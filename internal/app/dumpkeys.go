@@ -24,11 +24,12 @@ type DumpKeysOptions struct {
 	Browsers   []browser.Browser
 	HomeDir    string
 	OutputPath string // "" writes the key file to stdout
-	// KeychainPassword runs when the macOS login keychain first opens; "" leaves it locked. Other systems ignore it.
+	// KeychainPassword is set by the caller once ValidateDumpKeys passes. It runs when the macOS login keychain first
+	// opens; "" leaves it locked. Other systems ignore it.
 	KeychainPassword keychain.PasswordFunc
 }
 
-func ValidateDumpKeys(flags DumpKeysFlags, keychainPassword keychain.PasswordFunc) (DumpKeysOptions, error) {
+func ValidateDumpKeys(flags DumpKeysFlags) (DumpKeysOptions, error) {
 	browsers, err := parseBrowsers(flags.Browser)
 	if err != nil {
 		return DumpKeysOptions{}, err
@@ -42,26 +43,33 @@ func ValidateDumpKeys(flags DumpKeysFlags, keychainPassword keychain.PasswordFun
 	if err != nil {
 		return DumpKeysOptions{}, err
 	}
-	return DumpKeysOptions{Browsers: browsers, HomeDir: home, OutputPath: flags.OutputPath, KeychainPassword: keychainPassword}, nil
+	return DumpKeysOptions{Browsers: browsers, HomeDir: home, OutputPath: flags.OutputPath}, nil
 }
 
-// DumpKeys writes the key file to options.OutputPath, or to stdout when it is "", and returns how many vaults it holds.
-// A stopped run writes nothing, so it never leaves a keys.json behind.
-func DumpKeys(ctx context.Context, options DumpKeysOptions, stdout io.Writer) (int, error) {
+// KeyFileSummary is what DumpKeys reports about the key file it wrote.
+type KeyFileSummary struct {
+	Vaults      int   // vaults in the key file
+	KeychainErr error // why the macOS login keychain stayed locked; nil when it opened or was never read
+}
+
+// DumpKeys writes the key file to options.OutputPath, or to stdout when it is "". A stopped run writes nothing, so it
+// never leaves a keys.json behind.
+func DumpKeys(ctx context.Context, options DumpKeysOptions, stdout io.Writer) (KeyFileSummary, error) {
 	discovery := discover(ctx, options.Browsers, browser.DiscoverOptions{HomeDir: options.HomeDir})
 	loginKeychain := newLoginKeychain(loginKeychainPath(options.HomeDir), options.KeychainPassword)
-	keyFile, err := dumpKeysWith(ctx, discovery, machineKeys{loginKeychain: loginKeychain})
+	keyFile, err := buildKeyFile(ctx, discovery, machineKeys{loginKeychain: loginKeychain})
 	if err != nil {
-		return 0, err
+		return KeyFileSummary{}, err
 	}
-	warnIfLocked(ctx, loginKeychain, "keys only it holds are missing from the key file")
 	if options.OutputPath == "" {
-		return len(keyFile.Vaults), keyFile.Write(stdout)
+		err = keyFile.Write(stdout)
+	} else {
+		err = writeKeyFile(options.OutputPath, keyFile)
 	}
-	if err := writeKeyFile(options.OutputPath, keyFile); err != nil {
-		return 0, err
+	if err != nil {
+		return KeyFileSummary{}, err
 	}
-	return len(keyFile.Vaults), nil
+	return KeyFileSummary{Vaults: len(keyFile.Vaults), KeychainErr: keychainErr(loginKeychain)}, nil
 }
 
 // writeKeyFile replaces outputPath only once the file is complete, so a failure keeps the old keys.json.
@@ -72,9 +80,9 @@ func writeKeyFile(outputPath string, keyFile masterkey.KeyFile) error {
 	return nil
 }
 
-// dumpKeysWith keeps the keys that worked when a dir's others fail, and leaves out a dir with none.
+// buildKeyFile keeps the keys that worked when a dir's others fail, and leaves out a dir with none.
 // It fails only when the run is stopped.
-func dumpKeysWith(ctx context.Context, discovery Discovery, keySource keySource) (masterkey.KeyFile, error) {
+func buildKeyFile(ctx context.Context, discovery Discovery, keySource keySource) (masterkey.KeyFile, error) {
 	keyFile := masterkey.NewKeyFile()
 	for _, dir := range discovery.Dirs {
 		if dir.Browser.Base != browser.Chromium {

@@ -4,6 +4,6 @@ package app
 
 import "golang.org/x/sys/unix"
 
-func canCreateIn(dir string) error {
-	return unix.Access(dir, unix.W_OK|unix.X_OK)
+func checkWritable(directory string) error {
+	return unix.Access(directory, unix.W_OK|unix.X_OK)
 }

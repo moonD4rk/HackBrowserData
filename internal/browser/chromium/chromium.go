@@ -19,7 +19,7 @@ var profileMarkers = []string{"Preferences", "Preferences_02"}
 
 // Discover yields nothing for a missing user data dir; any other failure is returned beside whatever was found.
 func Discover(chromiumBrowser browser.Browser, options browser.DiscoverOptions) ([]browser.UserDataDir, error) {
-	if dir, ok := profileAt(chromiumBrowser, options.ProfilePath); ok {
+	if dir, ok := dirFromProfilePath(chromiumBrowser, options.ProfilePath); ok {
 		return []browser.UserDataDir{dir}, nil
 	}
 	paths, err := userDataDirPaths(chromiumBrowser, options)
@@ -41,23 +41,21 @@ func Discover(chromiumBrowser browser.Browser, options browser.DiscoverOptions) 
 	return dirs, errors.Join(errs...)
 }
 
-// DiscoverAt reads the profiles of a user data dir the table does not name, such as a copy restore was given, in the
-// on-disk format vaultKind names.
-func DiscoverAt(chromiumBrowser browser.Browser, vaultKind string, id browser.UserDataDirID, path string) (browser.UserDataDir, error) {
-	if !isVaultKind(vaultKind) {
-		return browser.UserDataDir{}, fmt.Errorf("unknown vault kind %q", vaultKind)
+// DiscoverProfiles reads the profiles of a user data dir the table does not name, such as a copy restore was given, in
+// the on-disk format dir.VaultKind names.
+func DiscoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
+	if !isKnownVaultKind(dir.VaultKind) {
+		return nil, fmt.Errorf("unknown vault kind %q", dir.VaultKind)
 	}
-	dir := browser.UserDataDir{ID: id, Browser: chromiumBrowser, Path: path, VaultKind: vaultKind}
 	profiles, err := discoverProfiles(dir)
 	if err != nil {
-		return dir, fmt.Errorf("read %s: %w", path, err)
+		return nil, fmt.Errorf("read %s: %w", dir.Path, err)
 	}
-	dir.Profiles = profiles
-	return dir, nil
+	return profiles, nil
 }
 
-// profileAt takes chrome://version's path: a profile dir without Local State selects that profile of its parent.
-func profileAt(chromiumBrowser browser.Browser, path string) (browser.UserDataDir, bool) {
+// dirFromProfilePath takes chrome://version's path: a profile dir without Local State selects that profile of its parent.
+func dirFromProfilePath(chromiumBrowser browser.Browser, path string) (browser.UserDataDir, bool) {
 	if path == "" || !isProfileDir(path) || hasAnyFile(path, localState.RelativePaths()) {
 		return browser.UserDataDir{}, false
 	}
@@ -141,9 +139,9 @@ func isSkippedProfileDir(name string) bool {
 
 func profileFilePaths(dir browser.UserDataDir) []string {
 	var paths []string
-	for _, extractor := range kindExtractors(vaultKindOf(dir)) {
-		for _, source := range extractor.Sources {
-			if !source.Shared {
+	for _, extractor := range dirExtractors(dir) {
+		for _, source := range extractor.sources {
+			if !source.FromUserDataDir {
 				paths = append(paths, source.RelativePaths()...)
 			}
 		}

@@ -21,7 +21,7 @@ func newListCommand() *cobra.Command {
 				return err
 			}
 			for _, failure := range discovery.DirFailures {
-				log.Warnf("%s: %v", failure.UserDataDirID, failure.Err)
+				log.Warnf("%s: %v", failure.DirID, failure.Err)
 			}
 			if len(discovery.Dirs) == 0 {
 				command.Println("No browsers found.")

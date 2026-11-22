@@ -2,12 +2,8 @@ package app
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
-	"github.com/moond4rk/hackbrowserdata/internal/browser/chromium"
-	"github.com/moond4rk/hackbrowserdata/internal/browser/firefox"
-	"github.com/moond4rk/hackbrowserdata/internal/browser/safari"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
@@ -21,73 +17,42 @@ func discover(ctx context.Context, browsers []browser.Browser, options browser.D
 	var discovery Discovery
 	for _, targetBrowser := range browsers {
 		dirs, err := discoverBrowser(ctx, targetBrowser, options)
-		discovery.Dirs = append(discovery.Dirs, withData(dirs)...)
+		discovery.Dirs = append(discovery.Dirs, dropEmptyProfiles(dirs)...)
 		if err != nil {
-			discovery.DirFailures = append(discovery.DirFailures, DirFailure{UserDataDirID: browser.UserDataDirID(targetBrowser.Name), Err: err})
+			discovery.DirFailures = append(discovery.DirFailures, DirFailure{DirID: targetBrowser.UserDataDirID(0), Err: err})
 		}
 	}
 	return discovery
 }
 
-// withData drops profiles holding no file any category reads, such as a bare Preferences, but keeps unreadable ones.
-func withData(dirs []browser.UserDataDir) []browser.UserDataDir {
-	var out []browser.UserDataDir
+// dropEmptyProfiles drops profiles holding no file any category reads, such as a bare Preferences, and a dir left with
+// none. It keeps an unreadable profile, so the failure is reported.
+func dropEmptyProfiles(dirs []browser.UserDataDir) []browser.UserDataDir {
+	var kept []browser.UserDataDir
 	for _, dir := range dirs {
 		var profiles []browser.Profile
 		for _, profile := range dir.Profiles {
-			if hasData(dir, profile, extractorsFor(dir, profile)) {
+			if hasData(dir, profile) {
 				profiles = append(profiles, profile)
 			}
 		}
 		if len(profiles) > 0 {
 			dir.Profiles = profiles
-			out = append(out, dir)
+			kept = append(kept, dir)
 		}
 	}
-	return out
+	return kept
 }
 
-func hasData(dir browser.UserDataDir, profile browser.Profile, extractors browser.Extractors) bool {
-	for _, extractor := range extractors {
-		if len(extractor.Sources) == 0 {
+func hasData(dir browser.UserDataDir, profile browser.Profile) bool {
+	for _, dataCategory := range category.All() {
+		sources, _ := lookupSources(dir, profile, dataCategory)
+		if len(sources) == 0 {
 			continue
 		}
-		if _, ok, err := locate(dir, profile, extractor.Sources); ok || err != nil {
+		if _, ok, err := locate(dir, profile, sources); ok || err != nil {
 			return true
 		}
 	}
 	return false
-}
-
-// discoverBrowser dispatches on Base here, not in browser, because the base packages import browser.
-func discoverBrowser(ctx context.Context, targetBrowser browser.Browser, options browser.DiscoverOptions) ([]browser.UserDataDir, error) {
-	switch targetBrowser.Base {
-	case browser.Chromium:
-		return chromium.Discover(targetBrowser, options)
-	case browser.Firefox:
-		return firefox.Discover(targetBrowser, options)
-	case browser.Safari:
-		return safari.Discover(ctx, targetBrowser, options)
-	default:
-		return nil, fmt.Errorf("%s: no base package", targetBrowser.Name)
-	}
-}
-
-// extractorsFor dispatches on Base here for the same reason discoverBrowser does.
-func extractorsFor(dir browser.UserDataDir, profile browser.Profile) browser.Extractors {
-	switch dir.Browser.Base {
-	case browser.Chromium:
-		return chromium.Extractors(dir, profile)
-	case browser.Firefox:
-		return firefox.Extractors(dir, profile)
-	case browser.Safari:
-		return safari.Extractors(dir, profile)
-	default:
-		return nil
-	}
-}
-
-// needsMasterKeys dispatches on Base for the same reason; Chromium is the one base whose dir holds master keys.
-func needsMasterKeys(dir browser.UserDataDir, dataCategory category.Category) bool {
-	return dir.Browser.Base == browser.Chromium && chromium.NeedsMasterKeys(dataCategory)
 }

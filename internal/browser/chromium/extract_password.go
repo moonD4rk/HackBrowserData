@@ -15,12 +15,9 @@ const (
 	defaultLoginQuery = `SELECT origin_url, username_value, password_value, date_created FROM logins`
 )
 
-// accountLoginData holds the signed-in account's logins, which Chrome keeps apart from Login Data.
-const accountLoginData = "Login Data For Account"
-
 func extractPasswords(masterKeys masterkey.Set, path string, out browser.Collector) error {
 	store := record.StoreLocal
-	if filepath.Base(path) == accountLoginData {
+	if filepath.Base(path) == accountLoginData.RelativePath {
 		store = record.StoreAccount
 	}
 	database, err := sqlitex.Open(path)

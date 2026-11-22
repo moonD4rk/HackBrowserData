@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/moond4rk/hackbrowserdata/internal/app"
+	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
 func newRestoreCommand() *cobra.Command {
@@ -48,10 +49,11 @@ func runRestore(ctx context.Context, stderr io.Writer, flags app.RestoreFlags) e
 		return err
 	}
 	if len(discovery.Dirs) == 0 {
-		printNothingFound(stderr, discovery, "no browsers to restore from the supplied keys and data")
+		printDirFailures(stderr, discovery.DirFailures)
+		log.Warnf("no browsers to restore from the supplied keys and data")
 		return nil
 	}
-	printExported(stderr, summary.Exported)
+	printExportedFiles(stderr, summary.Exported)
 	if ctx.Err() == nil {
 		printSummary(stderr, summary)
 	}

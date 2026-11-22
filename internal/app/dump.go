@@ -25,14 +25,14 @@ type DumpOptions struct {
 	HomeDir     string
 	Categories  []category.Category
 	Output      OutputOptions
+	// The caller sets both passwords once ValidateDump passes, so a bad flag never consumes stdin.
 	// KeychainPassword runs when the macOS login keychain first opens; "" leaves it locked. Other systems ignore it.
-	KeychainPassword keychain.PasswordFunc
-	// FirefoxPrimaryPassword is set by the caller once ValidateDump passes, so a bad flag never consumes stdin.
+	KeychainPassword       keychain.PasswordFunc
 	FirefoxPrimaryPassword string
 }
 
 // ValidateDump checks every flag before any browser or secret is touched, so a bad flag fails fast.
-func ValidateDump(flags DumpFlags, keychainPassword keychain.PasswordFunc) (DumpOptions, error) {
+func ValidateDump(flags DumpFlags) (DumpOptions, error) {
 	browsers, err := parseBrowsers(flags.Browser)
 	if err != nil {
 		return DumpOptions{}, err
@@ -45,7 +45,7 @@ func ValidateDump(flags DumpFlags, keychainPassword keychain.PasswordFunc) (Dump
 	if err != nil {
 		return DumpOptions{}, err
 	}
-	profilePath, err := checkProfilePath(browsers, flags.ProfilePath)
+	profilePath, err := parseProfilePath(browsers, flags.ProfilePath)
 	if err != nil {
 		return DumpOptions{}, err
 	}
@@ -53,18 +53,11 @@ func ValidateDump(flags DumpFlags, keychainPassword keychain.PasswordFunc) (Dump
 	if err != nil {
 		return DumpOptions{}, err
 	}
-	return DumpOptions{
-		Browsers:         browsers,
-		ProfilePath:      profilePath,
-		HomeDir:          home,
-		Categories:       categories,
-		Output:           output,
-		KeychainPassword: keychainPassword,
-	}, nil
+	return DumpOptions{Browsers: browsers, ProfilePath: profilePath, HomeDir: home, Categories: categories, Output: output}, nil
 }
 
-// checkProfilePath keeps -p only for one browser; with -b all it is ignored, as it always was, but now said.
-func checkProfilePath(browsers []browser.Browser, path string) (string, error) {
+// parseProfilePath keeps -p only for one browser; with -b all it is ignored, as it always was, but now said.
+func parseProfilePath(browsers []browser.Browser, path string) (string, error) {
 	if path == "" {
 		return "", nil
 	}
@@ -91,13 +84,14 @@ func Dump(ctx context.Context, options DumpOptions) (Discovery, Summary, error) 
 	}
 	loginKeychain := newLoginKeychain(loginKeychainPath(options.HomeDir), options.KeychainPassword)
 	fromMachine := runner{
-		extractors: extractorsFor, keySource: machineKeys{loginKeychain: loginKeychain}, loginKeychain: loginKeychain,
+		keySource:              machineKeys{loginKeychain: loginKeychain},
 		firefoxPrimaryPassword: options.FirefoxPrimaryPassword,
+		loginKeychain:          loginKeychain,
 	}
-	summary, err := execute(ctx, discovery, options.Categories, options.Output, fromMachine)
+	summary, err := fromMachine.export(ctx, discovery, options.Categories, options.Output)
 	if err != nil {
 		return Discovery{}, Summary{}, err
 	}
-	warnIfLocked(ctx, loginKeychain, "keychain-protected data was exported as metadata only")
+	summary.KeychainErr = keychainErr(loginKeychain)
 	return discovery, summary, nil
 }

@@ -40,7 +40,7 @@ func TestExtractPasswords(t *testing.T) {
 
 // TestExtractPasswords_UndecryptableBlobStillListed keeps such a login, or a missing key would shrink the export.
 func TestExtractPasswords_UndecryptableBlobStillListed(t *testing.T) {
-	path := createTestDB(t, accountLoginData, loginsSchema,
+	path := createTestDB(t, accountLoginData.RelativePath, loginsSchema,
 		insertLogin("https://enc.com", "https://enc.com/login", "carol", "763130deadbeef", 13350000000000000),
 	)
 

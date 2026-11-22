@@ -17,11 +17,11 @@ func printSummary(stderr io.Writer, summary app.Summary) {
 	table := tabwriter.NewWriter(stderr, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(table, "Browser\tProfile\tCategory\tResult\tRecords\tDetail")
 	for _, failure := range summary.DirFailures {
-		fmt.Fprintf(table, "%s\t-\t-\t%s\t0\t%s\n", failure.UserDataDirID, app.OutcomeError, failure.Err)
+		fmt.Fprintf(table, "%s\t-\t-\t%s\t0\t%s\n", failure.DirID, app.OutcomeError, failure.Err)
 	}
 	for _, result := range summary.Results {
 		fmt.Fprintf(table, "%s\t%s\t%s\t%s\t%d\t%s\n",
-			result.UserDataDirID, result.ProfileName, result.Category, result.Outcome, result.Records, resultDetail(result))
+			result.DirID, result.Profile.Name, result.Category, result.Outcome, result.Records, resultDetail(result))
 	}
 	if err := table.Flush(); err != nil {
 		log.Warnf("print summary: %v", err)
@@ -39,16 +39,15 @@ func resultDetail(result app.Result) string {
 	}
 }
 
-// printNothingFound lists discovery's failures first, the likely reason a run found no browser data.
-func printNothingFound(stderr io.Writer, discovery app.Discovery, message string) {
-	if len(discovery.DirFailures) > 0 {
-		printSummary(stderr, app.Summary{DirFailures: discovery.DirFailures})
+// printDirFailures lists discovery's failures, the likely reason a run found no browser data.
+func printDirFailures(stderr io.Writer, failures []app.DirFailure) {
+	if len(failures) > 0 {
+		printSummary(stderr, app.Summary{DirFailures: failures})
 	}
-	log.Warnf("%s", message)
 }
 
-// printExported lists the files a run wrote, even when it stopped early, so the user finds what it left.
-func printExported(stderr io.Writer, exported export.Listing) {
+// printExportedFiles lists the files a run wrote, even when it stopped early, so the user finds what it left.
+func printExportedFiles(stderr io.Writer, exported export.Listing) {
 	if len(exported.Files) == 0 {
 		return
 	}
@@ -90,7 +89,7 @@ func printRecordCounts(out io.Writer, discovery app.Discovery, summary app.Summa
 		for _, profile := range dir.Profiles {
 			fmt.Fprintf(table, "%s\t%s", dir.Browser.DisplayName, profile.Name)
 			for _, dataCategory := range category.All() {
-				fmt.Fprintf(table, "\t%d", counts[app.Extraction{UserDataDirID: dir.ID, ProfileName: profile.Name, Category: dataCategory}])
+				fmt.Fprintf(table, "\t%d", counts[app.Extraction{DirID: dir.ID, Profile: profile, Category: dataCategory}])
 			}
 			fmt.Fprintln(table)
 		}

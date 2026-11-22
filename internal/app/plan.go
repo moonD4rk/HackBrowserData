@@ -11,55 +11,39 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// dirPlan is what runDir does for one user data dir, decided from which files exist before anything is copied.
-type dirPlan struct {
-	extractions     []plannedExtraction // to run, in output order
-	files           []snapshot.File     // what they read, each copied once
-	skipped         []Result            // requested extractions that will not run, and why
-	needsMasterKeys bool                // an extraction decrypts with the dir's master keys, so they are retrieved once
-}
-
-// plannedExtraction keeps the extractor that planning checked, so the run uses that same extractor.
-type plannedExtraction struct {
-	Extraction
-	profile   browser.Profile
-	extractor browser.Extractor
-}
-
-type extractorsFunc func(browser.UserDataDir, browser.Profile) browser.Extractors
-
-func planDir(dir browser.UserDataDir, categories []category.Category, extractors extractorsFunc) dirPlan {
-	var plan dirPlan
-	captured := make(map[snapshot.File]bool)
+// planExtractions decides from which files exist, before anything is copied. It returns the extractions to run in
+// output order, the files they read, each listed once, and a Result for each requested extraction that cannot run.
+func planExtractions(
+	dir browser.UserDataDir, categories []category.Category,
+) (extractions []Extraction, files []snapshot.File, skipped []Result) {
+	added := make(map[snapshot.File]bool)
 	for _, profile := range dir.Profiles {
-		profileExtractors := extractors(dir, profile)
 		for _, dataCategory := range categories {
-			extraction := Extraction{UserDataDirID: dir.ID, ProfileName: profile.Name, Category: dataCategory}
-			extractor, supported := profileExtractors[dataCategory]
+			extraction := Extraction{DirID: dir.ID, Profile: profile, Category: dataCategory}
+			sources, supported := lookupSources(dir, profile, dataCategory)
 			if !supported {
-				plan.skipped = append(plan.skipped, Result{Extraction: extraction, Outcome: OutcomeUnsupported})
+				skipped = append(skipped, Result{Extraction: extraction, Outcome: OutcomeUnsupported})
 				continue
 			}
-			files, present, err := locate(dir, profile, extractor.Sources)
+			located, present, err := locate(dir, profile, sources)
 			switch {
 			case err != nil:
-				plan.skipped = append(plan.skipped, Result{Extraction: extraction, Outcome: OutcomeError, Err: err})
+				skipped = append(skipped, Result{Extraction: extraction, Outcome: OutcomeError, Err: err})
 			case !present:
-				plan.skipped = append(plan.skipped, Result{Extraction: extraction, Outcome: OutcomeAbsent})
+				skipped = append(skipped, Result{Extraction: extraction, Outcome: OutcomeAbsent})
 			default:
-				plan.extractions = append(plan.extractions, plannedExtraction{Extraction: extraction, profile: profile, extractor: extractor})
-				plan.files = appendNew(plan.files, captured, files...)
-				plan.needsMasterKeys = plan.needsMasterKeys || needsMasterKeys(dir, dataCategory)
+				extractions = append(extractions, extraction)
+				files = appendNew(files, added, located...)
 			}
 		}
 	}
-	return plan
+	return extractions, files, skipped
 }
 
-func appendNew(files []snapshot.File, seen map[snapshot.File]bool, more ...snapshot.File) []snapshot.File {
+func appendNew(files []snapshot.File, added map[snapshot.File]bool, more ...snapshot.File) []snapshot.File {
 	for _, file := range more {
-		if !seen[file] {
-			seen[file] = true
+		if !added[file] {
+			added[file] = true
 			files = append(files, file)
 		}
 	}
@@ -73,7 +57,7 @@ func locate(dir browser.UserDataDir, profile browser.Profile, sources []browser.
 		return nil, true, nil
 	}
 	for _, source := range sources {
-		file, ok, err := firstOnDisk(dir, source.CandidatePaths(profile), source.IsDir)
+		file, ok, err := firstOnDisk(dir, source.DirRelativePaths(profile), source.IsDir)
 		switch {
 		case err != nil:
 			return nil, false, err

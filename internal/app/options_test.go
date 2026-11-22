@@ -28,11 +28,11 @@ func TestCheckOutputFile(t *testing.T) {
 // TestValidate_RejectsAnOutputFileItCannotWrite: -o fails before any browser is read, not after the work is done.
 func TestValidate_RejectsAnOutputFileItCannotWrite(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "missing", "out")
-	_, err := ValidateDumpKeys(DumpKeysFlags{Browser: "all", OutputPath: missing}, nil)
+	_, err := ValidateDumpKeys(DumpKeysFlags{Browser: "all", OutputPath: missing})
 	require.Error(t, err)
 	_, err = ValidateArchive(ArchiveFlags{Browser: "all", Categories: "all", OutputPath: missing})
 	require.Error(t, err)
 
-	_, err = ValidateDumpKeys(DumpKeysFlags{Browser: "all"}, nil)
+	_, err = ValidateDumpKeys(DumpKeysFlags{Browser: "all"})
 	require.NoError(t, err, "without -o the key file goes to stdout")
 }

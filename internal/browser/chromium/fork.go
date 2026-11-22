@@ -1,0 +1,83 @@
+package chromium
+
+import (
+	"github.com/moond4rk/hackbrowserdata/internal/browser"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
+)
+
+// vaultKindChromium is the keys.json kind of every Chromium browser not listed in forks.
+const vaultKindChromium = "chromium"
+
+// fork is a Chromium fork that stores data its own way: its browsers, its keys.json kind, the extractors it swaps, and
+// the categories its files do not hold.
+type fork struct {
+	browserNames []string
+	vaultKind    string // "" keeps vaultKindChromium
+	extractors   map[category.Category]extractor
+	unsupported  []category.Category
+}
+
+// forks match Browser.Name, never UserDataDirID, which differs for a second user data dir of one browser.
+var forks = []fork{
+	{
+		browserNames: []string{"yandex"},
+		vaultKind:    "chromium-yandex",
+		extractors: map[category.Category]extractor{
+			category.Password:   newDecryptingExtractor(extractYandexPasswords, yaPassmanData),
+			category.CreditCard: newDecryptingExtractor(extractYandexCreditCards, yaCreditCards),
+		},
+	},
+	{
+		browserNames: []string{"opera", "opera-gx", "vought"},
+		vaultKind:    "chromium-opera",
+		extractors: map[category.Category]extractor{
+			category.Extension: newExtensionExtractor("extensions.opsettings"),
+		},
+	},
+	{
+		// QQ and Sogou keep no extension list in their Preferences files.
+		browserNames: []string{"qq", "sogou"},
+		unsupported:  []category.Category{category.Extension},
+	},
+}
+
+func findForkByName(browserName string) (fork, bool) {
+	for _, candidate := range forks {
+		for _, name := range candidate.browserNames {
+			if name == browserName {
+				return candidate, true
+			}
+		}
+	}
+	return fork{}, false
+}
+
+func findForkByVaultKind(vaultKind string) (fork, bool) {
+	for _, candidate := range forks {
+		if candidate.vaultKind != "" && candidate.vaultKind == vaultKind {
+			return candidate, true
+		}
+	}
+	return fork{}, false
+}
+
+func isKnownVaultKind(vaultKind string) bool {
+	_, ok := findForkByVaultKind(vaultKind)
+	return ok || vaultKind == vaultKindChromium
+}
+
+// VaultKind names a vault's on-disk format, so a reader without the browser in its table still picks its files.
+func VaultKind(chromiumBrowser browser.Browser) string {
+	if fork, ok := findForkByName(chromiumBrowser.Name); ok && fork.vaultKind != "" {
+		return fork.vaultKind
+	}
+	return vaultKindChromium
+}
+
+// findFork matches the browser's name first; a restored browser this build does not know matches by its kind.
+func findFork(dir browser.UserDataDir) (fork, bool) {
+	if fork, ok := findForkByName(dir.Browser.Name); ok {
+		return fork, true
+	}
+	return findForkByVaultKind(dir.VaultKind)
+}

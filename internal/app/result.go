@@ -8,9 +8,9 @@ import (
 
 // Extraction is plain data, so a Result prints as it is and list can key record counts by it.
 type Extraction struct {
-	UserDataDirID browser.UserDataDirID
-	ProfileName   string // Profile.Name
-	Category      category.Category
+	DirID    browser.UserDataDirID
+	Profile  browser.Profile
+	Category category.Category
 }
 
 // Outcome is how one extraction ended. It starts at 1, so a result whose outcome was never set does not read as ok.
@@ -52,8 +52,8 @@ type Result struct {
 
 // DirFailure is a whole user data dir that could not be read, or whose master keys could not be retrieved.
 type DirFailure struct {
-	UserDataDirID browser.UserDataDirID
-	Err           error
+	DirID browser.UserDataDirID
+	Err   error
 }
 
 // Summary lists each dir's results in turn, what never ran before what ran, and the dirs that failed as a whole.
@@ -61,5 +61,6 @@ type Summary struct {
 	Results     []Result
 	DirFailures []DirFailure
 	Exported    export.Listing // the files the run wrote; empty when nothing was exported
+	KeychainErr error          // why the macOS login keychain stayed locked; nil when it opened or was never read
 	Err         error          // why the run ended early: it was stopped, or its output could not be written
 }

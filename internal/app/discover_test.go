@@ -81,13 +81,13 @@ func TestDiscover_UnreadableDirIsReported(t *testing.T) {
 	discovery := discover(context.Background(), browser.Supported(), browser.DiscoverOptions{HomeDir: home})
 	assert.Empty(t, discovery.Dirs)
 	require.Len(t, discovery.DirFailures, 1)
-	assert.Equal(t, browser.UserDataDirID("chrome"), discovery.DirFailures[0].UserDataDirID)
+	assert.Equal(t, browser.UserDataDirID("chrome"), discovery.DirFailures[0].DirID)
 	assert.Error(t, discovery.DirFailures[0].Err)
 }
 
-// TestWithData_KeepsAProfileItCannotCheck keeps it for the plan to report, since dropping it would hide the failure.
-func TestWithData_KeepsAProfileItCannotCheck(t *testing.T) {
-	dir := chromeDir(t, "chrome", "Default")
+// TestDropEmptyProfiles_KeepsAProfileItCannotCheck keeps it for the plan to report, since dropping it would hide the failure.
+func TestDropEmptyProfiles_KeepsAProfileItCannotCheck(t *testing.T) {
+	dir := chromeDir(t, "Default")
 	lock(t, filepath.Join(dir.Path, "Default"))
-	assert.Len(t, withData([]browser.UserDataDir{dir}), 1)
+	assert.Len(t, dropEmptyProfiles([]browser.UserDataDir{dir}), 1)
 }

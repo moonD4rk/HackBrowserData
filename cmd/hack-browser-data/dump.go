@@ -8,13 +8,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/moond4rk/hackbrowserdata/internal/app"
+	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
 func newDumpCommand() *cobra.Command {
 	var (
-		flags    app.DumpFlags
-		keychain passwordFlags
-		firefox  passwordFlags
+		flags         app.DumpFlags
+		keychainFlags passwordFlags
+		firefoxFlags  passwordFlags
 	)
 
 	command := &cobra.Command{
@@ -26,7 +27,7 @@ func newDumpCommand() *cobra.Command {
   hack-browser-data dump -f cookie-editor
   hack-browser-data dump --zip`,
 		RunE: func(command *cobra.Command, args []string) error {
-			return runDump(command.Context(), command.ErrOrStderr(), flags, keychain, firefox)
+			return runDump(command.Context(), command.ErrOrStderr(), flags, keychainFlags, firefoxFlags)
 		},
 	}
 
@@ -34,19 +35,20 @@ func newDumpCommand() *cobra.Command {
 	command.Flags().StringVarP(&flags.Categories, "category", "c", "all", "data categories (comma-separated): all|"+categoryNames())
 	command.Flags().StringVarP(&flags.ProfilePath, "profile-path", "p", "", "custom profile dir path, get with chrome://version")
 	addOutputFlags(command, &flags.Output)
-	addPasswordFlags(command, &keychain, "keychain-pw", "macOS keychain password")
-	addPasswordFlags(command, &firefox, "firefox-pw", "Firefox primary password")
+	addPasswordFlags(command, &keychainFlags, "keychain-pw", "macOS keychain password")
+	addPasswordFlags(command, &firefoxFlags, "firefox-pw", "Firefox primary password")
 	command.MarkFlagsMutuallyExclusive("keychain-pw-stdin", "firefox-pw-stdin")
 
 	return command
 }
 
-func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychain, firefox passwordFlags) error {
-	options, err := app.ValidateDump(flags, keychainPasswordFunc(keychain, os.Stdin))
+func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychainFlags, firefoxFlags passwordFlags) error {
+	options, err := app.ValidateDump(flags)
 	if err != nil {
 		return err
 	}
-	if options.FirefoxPrimaryPassword, err = readFirefoxPassword(ctx, firefox, os.Stdin); err != nil {
+	options.KeychainPassword = keychainPasswordFunc(keychainFlags, os.Stdin)
+	if options.FirefoxPrimaryPassword, err = readFirefoxPassword(ctx, firefoxFlags, os.Stdin); err != nil {
 		return err
 	}
 	discovery, summary, err := app.Dump(ctx, options)
@@ -54,10 +56,15 @@ func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychai
 		return err
 	}
 	if len(discovery.Dirs) == 0 {
-		printNothingFound(stderr, discovery, "no browsers found")
+		printDirFailures(stderr, discovery.DirFailures)
+		log.Warnf("no browsers found")
 		return nil
 	}
-	printExported(stderr, summary.Exported)
+	// A stopped run says nothing of the keychain: the stop itself may be what left it locked.
+	if summary.KeychainErr != nil && ctx.Err() == nil {
+		log.Warnf("%v; keychain-protected data was exported as metadata only", summary.KeychainErr)
+	}
+	printExportedFiles(stderr, summary.Exported)
 	if ctx.Err() == nil {
 		printSummary(stderr, summary)
 	}
