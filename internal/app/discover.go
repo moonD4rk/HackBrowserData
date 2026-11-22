@@ -8,6 +8,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/browser/chromium"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/firefox"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/safari"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
 // Discovery keeps a failure per browser whose data could not be read, so it is reported, not taken as absence.
@@ -84,4 +85,9 @@ func extractorsFor(dir browser.UserDataDir, profile browser.Profile) browser.Ext
 	default:
 		return nil
 	}
+}
+
+// needsMasterKeys dispatches on Base for the same reason; Chromium is the one base whose dir holds master keys.
+func needsMasterKeys(dir browser.UserDataDir, dataCategory category.Category) bool {
+	return dir.Browser.Base == browser.Chromium && chromium.NeedsMasterKeys(dataCategory)
 }

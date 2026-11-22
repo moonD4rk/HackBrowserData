@@ -134,25 +134,21 @@ func newPlainExtractor(parse func(string, browser.Collector) error, source brows
 func newDecryptingExtractor(parse func(func() ([]byte, error), string, browser.Collector) error, source browser.Source) browser.Extractor {
 	return browser.Extractor{
 		Sources: []browser.Source{source, keyStore},
-		Extract: func(ctx context.Context, input browser.Input, out browser.Collector) error {
+		Extract: func(_ context.Context, input browser.Input, out browser.Collector) error {
 			path, err := input.Path(source)
 			if err != nil {
 				return err
 			}
-			masterKey := func() ([]byte, error) { return profileKey(ctx, input, path) }
+			masterKey := func() ([]byte, error) { return profileKey(input, path) }
 			return parse(masterKey, path, out)
 		},
 	}
 }
 
-func profileKey(ctx context.Context, input browser.Input, loginsPath string) ([]byte, error) {
+func profileKey(input browser.Input, loginsPath string) ([]byte, error) {
 	key4Path, err := input.Path(keyStore)
 	if err != nil {
 		return nil, err
 	}
-	primaryPassword := func() ([]byte, error) {
-		password, err := input.FirefoxPrimaryPassword(ctx)
-		return []byte(password), err
-	}
-	return retrieveMasterKey(key4Path, loginsPath, primaryPassword)
+	return retrieveMasterKey(key4Path, loginsPath, []byte(input.FirefoxPrimaryPassword()))
 }

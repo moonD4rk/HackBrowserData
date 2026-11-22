@@ -12,7 +12,6 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/browsertest"
-	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
@@ -258,9 +257,4 @@ func collected[T any](t *testing.T, collector *testCollector) []T {
 		got = append(got, *value)
 	}
 	return got
-}
-
-// keysOf hands an extractor fixed master keys, as a dir whose keys were already retrieved would.
-func keysOf(masterKeys masterkey.Set) masterKeysFunc {
-	return func() masterkey.Set { return masterKeys }
 }

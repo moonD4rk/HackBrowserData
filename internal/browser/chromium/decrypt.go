@@ -90,13 +90,3 @@ func decryptCBC(key, ciphertext []byte) ([]byte, error) {
 	}
 	return nil, err
 }
-
-// masterKeysFunc returns the dir's master keys, which the first call may retrieve; an empty value never calls it.
-type masterKeysFunc func() masterkey.Set
-
-func (keys masterKeysFunc) decrypt(ciphertext []byte) ([]byte, error) {
-	if len(ciphertext) == 0 {
-		return nil, nil
-	}
-	return decryptValue(keys(), ciphertext)
-}

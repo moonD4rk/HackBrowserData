@@ -102,7 +102,7 @@ func TestExtractYandexPasswords(t *testing.T) {
 	)
 
 	var out testCollector
-	err := extractYandexPasswords(keysOf(masterkey.Set{masterkey.V10: masterKey}), path, &out)
+	err := extractYandexPasswords(masterkey.Set{masterkey.V10: masterKey}, path, &out)
 	got := collected[record.Login](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
@@ -128,7 +128,7 @@ func TestExtractYandexPasswords_MasterPasswordKeepsTheLogins(t *testing.T) {
 	)
 
 	var out testCollector
-	require.NoError(t, extractYandexPasswords(keysOf(masterkey.Set{masterkey.V10: masterKey}), path, &out))
+	require.NoError(t, extractYandexPasswords(masterkey.Set{masterkey.V10: masterKey}, path, &out))
 	logins := collected[record.Login](t, &out)
 	require.Len(t, logins, 1)
 	assert.Equal(t, "alice", logins[0].Username)
@@ -146,7 +146,7 @@ func TestExtractYandexPasswords_WithoutAKeyKeepsTheLogins(t *testing.T) {
 	)
 
 	var out testCollector
-	require.NoError(t, extractYandexPasswords(keysOf(nil), path, &out))
+	require.NoError(t, extractYandexPasswords(nil, path, &out))
 	logins := collected[record.Login](t, &out)
 	require.Len(t, logins, 2)
 	for _, login := range logins {
@@ -169,7 +169,7 @@ func TestExtractYandexPasswords_WrongMasterKey(t *testing.T) {
 
 	// A wrong master key fails at the intermediate step, so the login exports without its password.
 	var out testCollector
-	require.NoError(t, extractYandexPasswords(keysOf(masterkey.Set{masterkey.V10: wrongKey}), path, &out))
+	require.NoError(t, extractYandexPasswords(masterkey.Set{masterkey.V10: wrongKey}, path, &out))
 	logins := collected[record.Login](t, &out)
 	require.Len(t, logins, 1)
 	assert.Empty(t, logins[0].Password)
@@ -222,7 +222,7 @@ func TestExtractYandexCreditCards(t *testing.T) {
 	)
 
 	var out testCollector
-	err := extractYandexCreditCards(keysOf(masterkey.Set{masterkey.V10: masterKey}), path, &out)
+	err := extractYandexCreditCards(masterkey.Set{masterkey.V10: masterKey}, path, &out)
 	got := collected[record.CreditCard](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
@@ -258,7 +258,7 @@ func TestExtractYandexCreditCards_WrongMasterKey(t *testing.T) {
 	)
 
 	var out testCollector
-	require.NoError(t, extractYandexCreditCards(keysOf(masterkey.Set{masterkey.V10: wrongKey}), path, &out))
+	require.NoError(t, extractYandexCreditCards(masterkey.Set{masterkey.V10: wrongKey}, path, &out))
 	cards := collected[record.CreditCard](t, &out)
 	require.Len(t, cards, 1, "the card exports without its number")
 	assert.Equal(t, "g1", cards[0].GUID)
@@ -274,14 +274,9 @@ func TestYandexCardAAD(t *testing.T) {
 	assert.Equal(t, "gID", string(got))
 }
 
-func TestExtractYandexPasswords_EmptyTableFetchesNoKey(t *testing.T) {
+func TestExtractYandexPasswords_EmptyTableNeedsNoKey(t *testing.T) {
 	path := setupYandexPasswordDB(t, bytes.Repeat([]byte{0x11}, 32), bytes.Repeat([]byte{0x22}, 32), false)
-	fetched := false
-	keys := masterKeysFunc(func() masterkey.Set {
-		fetched = true
-		return nil
-	})
 	var out testCollector
-	require.NoError(t, extractYandexPasswords(keys, path, &out))
-	assert.False(t, fetched, "a table without rows must not trigger key retrieval")
+	require.NoError(t, extractYandexPasswords(nil, path, &out))
+	assert.Empty(t, out.fails, "a table without rows loads no data key, so a missing master key fails nothing")
 }

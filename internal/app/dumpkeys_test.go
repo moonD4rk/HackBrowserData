@@ -28,20 +28,20 @@ func TestDumpKeysWith(t *testing.T) {
 	arc2, opera, vivaldi, brave := dirOf(t, "arc-2", "arc"), dirOf(t, "opera", "opera"), dirOf(t, "vivaldi", "vivaldi"), dirOf(t, "brave", "brave")
 	firefox := dirOf(t, "firefox", "firefox")
 
-	keys := func(_ context.Context, dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterkey.Set, error) {
+	keys := keySourceFunc(func(_ context.Context, dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) masterkey.Retrieval {
 		switch dir.ID {
 		case "chrome":
 			_, err := dirSnapshot.Path("Local State")
 			require.NoError(t, err, "key retrieval reads the captured Local State")
 		case "vivaldi":
-			return nil, errors.New("v10 failed")
+			return masterkey.Retrieval{Err: errors.New("v10 failed")}
 		case "brave":
-			return masterkey.Set{masterkey.V10: []byte("brave")}, errors.New("v20 failed")
+			return masterkey.Retrieval{Keys: masterkey.Set{masterkey.V10: []byte("brave")}, Err: errors.New("v20 failed")}
 		case "firefox":
 			t.Error("Firefox has no keys.json vault")
 		}
-		return masterkey.Set{masterkey.V10: []byte(dir.ID)}, nil
-	}
+		return masterkey.Retrieval{Keys: masterkey.Set{masterkey.V10: []byte(dir.ID)}}
+	})
 	discovery := Discovery{Dirs: []browser.UserDataDir{chrome, firefox, arc2, opera, vivaldi, brave}}
 	keyFile, err := dumpKeysWith(context.Background(), discovery, keys)
 	require.NoError(t, err)
@@ -71,11 +71,11 @@ func TestDumpKeysWith_StoppedRunReturnsNoKeyFile(t *testing.T) {
 	defer cancel()
 	chrome, brave := chromeDir(t, "chrome", "Default"), dirOf(t, "brave", "brave")
 	touch(t, chrome.Path, "Local State")
-	keys := func(_ context.Context, dir browser.UserDataDir, _ snapshot.Snapshot) (masterkey.Set, error) {
+	keys := keySourceFunc(func(_ context.Context, dir browser.UserDataDir, _ snapshot.Snapshot) masterkey.Retrieval {
 		require.Equal(t, browser.UserDataDirID("chrome"), dir.ID, "keys were retrieved after the stop")
 		cancel()
-		return masterkey.Set{masterkey.V10: []byte("chrome")}, nil
-	}
+		return masterkey.Retrieval{Keys: masterkey.Set{masterkey.V10: []byte("chrome")}}
+	})
 
 	keyFile, err := dumpKeysWith(ctx, Discovery{Dirs: []browser.UserDataDir{chrome, brave}}, keys)
 	require.ErrorIs(t, err, context.Canceled)

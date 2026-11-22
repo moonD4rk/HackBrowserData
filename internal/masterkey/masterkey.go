@@ -59,12 +59,18 @@ const (
 	ABEAvast
 )
 
-// RetrieveAll keeps the first key per version and reports an error only when every retriever of that version fails.
-func RetrieveAll(ctx context.Context, locator Locator) (Set, error) {
+// Retrieval keeps the keys that worked beside Err, since one version failing never discards another.
+type Retrieval struct {
+	Keys Set
+	Err  error // the versions whose every retriever failed; nil when none did
+}
+
+// RetrieveAll keeps the first key per version; a version fails only when every one of its retrievers fails.
+func RetrieveAll(ctx context.Context, locator Locator) Retrieval {
 	return retrieveAll(ctx, locator, platformRetrievers)
 }
 
-func retrieveAll(ctx context.Context, locator Locator, retrievers []keyRetriever) (Set, error) {
+func retrieveAll(ctx context.Context, locator Locator, retrievers []keyRetriever) Retrieval {
 	keys := make(Set)
 	var versions []Version
 	failures := make(map[Version][]error)
@@ -94,5 +100,5 @@ func retrieveAll(ctx context.Context, locator Locator, retrievers []keyRetriever
 			errs = append(errs, fmt.Errorf("%s: %w", version, errors.Join(failures[version]...)))
 		}
 	}
-	return keys, errors.Join(errs...)
+	return Retrieval{Keys: keys, Err: errors.Join(errs...)}
 }

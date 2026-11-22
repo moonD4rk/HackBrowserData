@@ -38,6 +38,17 @@ var defaultExtractors = browser.Extractors{
 	category.SessionStorage: newPlainExtractor(extractSessionStorage, sessionStorage),
 }
 
+// NeedsMasterKeys reports whether dataCategory's values are sealed with the dir's master keys, so a run that asks only
+// for the others never retrieves a key.
+func NeedsMasterKeys(dataCategory category.Category) bool {
+	switch dataCategory {
+	case category.Password, category.Cookie, category.CreditCard:
+		return true
+	default:
+		return false
+	}
+}
+
 // withoutExtensionList names forks whose Preferences files hold no extension list, so extensions are unsupported there.
 var withoutExtensionList = map[string]bool{"qq": true, "sogou": true}
 
@@ -63,11 +74,11 @@ func kindExtractors(vaultKind string) browser.Extractors {
 }
 
 // newDecryptingExtractor parses each file in turn, so a store that is missing or broken keeps the others' records.
-func newDecryptingExtractor(parse func(masterKeysFunc, string, browser.Collector) error, sources ...browser.Source) browser.Extractor {
+func newDecryptingExtractor(parse func(masterkey.Set, string, browser.Collector) error, sources ...browser.Source) browser.Extractor {
 	return browser.Extractor{
 		// The dir's master keys come from KeySources, so a decrypting extraction must find them in the snapshot too.
 		Sources: append(sources, KeySources()...),
-		Extract: func(ctx context.Context, input browser.Input, out browser.Collector) error {
+		Extract: func(_ context.Context, input browser.Input, out browser.Collector) error {
 			var errs []error
 			for _, source := range sources {
 				path, err := input.Path(source)
@@ -75,17 +86,13 @@ func newDecryptingExtractor(parse func(masterKeysFunc, string, browser.Collector
 					continue
 				}
 				if err == nil {
-					err = parse(masterKeysOf(ctx, input), path, out)
+					err = parse(input.MasterKeys(), path, out)
 				}
 				errs = append(errs, err)
 			}
 			return errors.Join(errs...)
 		},
 	}
-}
-
-func masterKeysOf(ctx context.Context, input browser.Input) masterKeysFunc {
-	return func() masterkey.Set { return input.MasterKeys(ctx) }
 }
 
 func newPlainExtractor(parse func(string, browser.Collector) error, source browser.Source) browser.Extractor {

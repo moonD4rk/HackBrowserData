@@ -22,7 +22,7 @@ func TestExtractPasswords(t *testing.T) {
 	path := setupLoginDB(t)
 
 	var out testCollector
-	err := extractPasswords(keysOf(masterkey.Set{}), path, &out)
+	err := extractPasswords(masterkey.Set{}, path, &out)
 	got := collected[record.Login](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
@@ -45,7 +45,7 @@ func TestExtractPasswords_UndecryptableBlobStillListed(t *testing.T) {
 	)
 
 	var out testCollector
-	err := extractPasswords(keysOf(masterkey.Set{}), path, &out)
+	err := extractPasswords(masterkey.Set{}, path, &out)
 	got := collected[record.Login](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 1)

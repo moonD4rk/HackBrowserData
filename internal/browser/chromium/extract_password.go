@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 	"github.com/moond4rk/hackbrowserdata/internal/timeconv"
@@ -17,7 +18,7 @@ const (
 // accountLoginData holds the signed-in account's logins, which Chrome keeps apart from Login Data.
 const accountLoginData = "Login Data For Account"
 
-func extractPasswords(masterKeys masterKeysFunc, path string, out browser.Collector) error {
+func extractPasswords(masterKeys masterkey.Set, path string, out browser.Collector) error {
 	store := record.StoreLocal
 	if filepath.Base(path) == accountLoginData {
 		store = record.StoreAccount
@@ -42,7 +43,7 @@ func extractPasswords(masterKeys masterKeysFunc, path string, out browser.Collec
 			out.Fail(err)
 			continue
 		}
-		password, err := masterKeys.decrypt(encryptedPassword)
+		password, err := decryptValue(masterKeys, encryptedPassword)
 		if err != nil {
 			out.Fail(fmt.Errorf("decrypt password for %s: %w", url, err))
 		}

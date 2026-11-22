@@ -59,11 +59,11 @@ func extractGoldenRun(t *testing.T, home string, keys map[browser.UserDataDirID]
 	t.Helper()
 	out := t.TempDir()
 	flags := DumpFlags{Browser: "all", Categories: "all", Output: OutputFlags{Format: format, Dir: out, MaxStorageValue: DefaultMaxStorageValue}}
-	options, err := ValidateDump(flags, nil, nil)
+	options, err := ValidateDump(flags, nil)
 	require.NoError(t, err)
 
 	discovery := discover(context.Background(), options.Browsers, browser.DiscoverOptions{HomeDir: home})
-	fromFixture := runner{extractors: extractorsFor, retrieveKeys: keysFromFile(keys)}
+	fromFixture := runner{extractors: extractorsFor, keySource: keyFileKeys(keys)}
 	summary, err := execute(context.Background(), discovery, options.Categories, options.Output, fromFixture)
 	require.NoError(t, err)
 	require.NoError(t, summary.Err)

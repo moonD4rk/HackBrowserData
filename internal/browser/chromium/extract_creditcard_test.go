@@ -23,7 +23,7 @@ func TestExtractCreditCards(t *testing.T) {
 	path := setupCreditCardDB(t)
 
 	var out testCollector
-	err := extractCreditCards(keysOf(masterkey.Set{}), path, &out)
+	err := extractCreditCards(masterkey.Set{}, path, &out)
 	got := collected[record.CreditCard](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)

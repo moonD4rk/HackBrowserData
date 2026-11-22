@@ -1,7 +1,13 @@
 // Package keychain owns the user's macOS login keychain: one handle per run, opened on first use.
 package keychain
 
-import "time"
+import (
+	"context"
+	"time"
+)
+
+// PasswordFunc yields the login password; "" means none was supplied.
+type PasswordFunc func(ctx context.Context) (string, error)
 
 // InternetPassword is one internet password item; Password is empty while the keychain stays locked.
 type InternetPassword struct {

@@ -62,16 +62,14 @@ type LoginKeychain interface {
 type Input struct {
 	Profile         Profile
 	snapshot        snapshot.Snapshot
-	masterKeys      func(ctx context.Context) masterkey.Set
+	masterKeys      masterkey.Set
 	loginKeychain   LoginKeychain
-	firefoxPassword func(ctx context.Context) (string, error)
+	firefoxPassword string
 }
 
-// NewInput takes masterKeys, the dir's call-once retrieval, nil for bases that keep no Chromium keys, and the run's
-// login keychain, nil off macOS and in a restore.
-func NewInput(
-	dirSnapshot snapshot.Snapshot, profile Profile, masterKeys func(context.Context) masterkey.Set, loginKeychain LoginKeychain,
-) Input {
+// NewInput takes the dir's master keys, nil for bases that keep none, and the run's login keychain, nil off macOS and
+// in a restore.
+func NewInput(dirSnapshot snapshot.Snapshot, profile Profile, masterKeys masterkey.Set, loginKeychain LoginKeychain) Input {
 	return Input{Profile: profile, snapshot: dirSnapshot, masterKeys: masterKeys, loginKeychain: loginKeychain}
 }
 
@@ -87,28 +85,22 @@ func (in Input) Path(source Source) (string, error) {
 	return "", fmt.Errorf("%s: %w", strings.Join(source.RelativePaths(), " or "), fs.ErrNotExist)
 }
 
-// MasterKeys may block on its first call; a key version that could not be retrieved is absent from the Set.
-func (in Input) MasterKeys(ctx context.Context) masterkey.Set {
-	if in.masterKeys == nil {
-		return nil
-	}
-	return in.masterKeys(ctx)
+// MasterKeys lacks each key version that could not be retrieved.
+func (in Input) MasterKeys() masterkey.Set {
+	return in.masterKeys
 }
 
 func (in Input) LoginKeychain() LoginKeychain {
 	return in.loginKeychain
 }
 
-// WithFirefoxPassword sets the lazy Firefox primary-password source; only the dump path supplies one.
-func (in Input) WithFirefoxPassword(password func(context.Context) (string, error)) Input {
+// WithFirefoxPassword sets the Firefox primary password; only the dump path supplies one.
+func (in Input) WithFirefoxPassword(password string) Input {
 	in.firefoxPassword = password
 	return in
 }
 
-// FirefoxPrimaryPassword is the user's primary password, "" when none was given; it may block on first use.
-func (in Input) FirefoxPrimaryPassword(ctx context.Context) (string, error) {
-	if in.firefoxPassword == nil {
-		return "", nil
-	}
-	return in.firefoxPassword(ctx)
+// FirefoxPrimaryPassword is the user's primary password, "" when none was given.
+func (in Input) FirefoxPrimaryPassword() string {
+	return in.firefoxPassword
 }

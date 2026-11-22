@@ -11,6 +11,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
+
+	"github.com/moond4rk/hackbrowserdata/internal/keychain"
 )
 
 // passwordFlags say where one password comes from: its flag, or the first line of stdin. Neither leaves it to the
@@ -27,25 +29,18 @@ func addPasswordFlags(command *cobra.Command, flags *passwordFlags, name, what s
 	command.MarkFlagsMutuallyExclusive(name, name+"-stdin")
 }
 
-// firefoxPasswordFunc reads a flag, else the first line of stdin; nil means the empty password, and it never prompts.
-func firefoxPasswordFunc(flags passwordFlags, stdin *os.File) func(context.Context) (string, error) {
-	switch {
-	case flags.value != "":
-		password := flags.value
-		return func(context.Context) (string, error) { return password, nil }
-	case flags.fromStdin:
-		return func(ctx context.Context) (string, error) {
-			return untilDone(ctx, func() (string, error) { return firstLine(stdin) })
-		}
-	default:
-		return nil
+// readFirefoxPassword takes the flag, else the first line of stdin; "" is the empty password, and it never prompts.
+func readFirefoxPassword(ctx context.Context, flags passwordFlags, stdin io.Reader) (string, error) {
+	if flags.fromStdin {
+		return untilDone(ctx, func() (string, error) { return firstLine(stdin) })
 	}
+	return flags.value, nil
 }
 
 var errNoPassword = errors.New("macOS login password not given and stdin is not a terminal")
 
 // keychainPasswordFunc is read lazily: a flag, else a no-echo prompt on a terminal, else none (metadata only).
-func keychainPasswordFunc(flags passwordFlags, stdin *os.File) func(context.Context) (string, error) {
+func keychainPasswordFunc(flags passwordFlags, stdin *os.File) keychain.PasswordFunc {
 	switch {
 	case flags.value != "":
 		password := flags.value

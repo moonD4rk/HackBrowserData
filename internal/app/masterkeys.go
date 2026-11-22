@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"sync"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/chromium"
@@ -10,47 +9,35 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// loginKeychain is the run's one login keychain, shared by Chromium's v10 key and Safari's passwords; nil off macOS.
-type loginKeychain interface {
-	masterkey.LoginKeychain
-	browser.LoginKeychain
+// keySource is where a run gets each Chromium dir's master keys: this machine, a key file, or nowhere.
+type keySource interface {
+	MasterKeys(ctx context.Context, dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) masterkey.Retrieval
 }
 
-type dirKeysFunc func(ctx context.Context, dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterkey.Set, error)
-
-// dirKeys retrieves a dir's keys on first use, for all its profiles; Go 1.20 has no sync.OnceValues.
-type dirKeys struct {
-	once        sync.Once
-	retrieve    dirKeysFunc // nil for a dir whose base keeps no master keys
-	dir         browser.UserDataDir
-	dirSnapshot snapshot.Snapshot
-	keys        masterkey.Set
-	err         error
+// machineKeys asks this machine's secret stores; on macOS that includes the run's login keychain.
+type machineKeys struct {
+	loginKeychain masterkey.LoginKeychain
 }
 
-func (k *dirKeys) get(ctx context.Context) masterkey.Set {
-	k.once.Do(func() {
-		if k.retrieve != nil {
-			k.keys, k.err = k.retrieve(ctx, k.dir, k.dirSnapshot)
-		}
-	})
-	return k.keys
-}
-
-// keysFromMachine asks this machine's secret stores; on macOS that includes the run's login keychain.
-func keysFromMachine(keychain masterkey.LoginKeychain) dirKeysFunc {
-	return func(ctx context.Context, dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterkey.Set, error) {
-		locator, err := chromium.KeyLocator(dir, dirSnapshot)
-		if err != nil {
-			return nil, err
-		}
-		locator.Keychain = keychain
-		return masterkey.RetrieveAll(ctx, locator)
+func (k machineKeys) MasterKeys(ctx context.Context, dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) masterkey.Retrieval {
+	locator, err := chromium.KeyLocator(dir, dirSnapshot)
+	if err != nil {
+		return masterkey.Retrieval{Err: err}
 	}
+	locator.Keychain = k.loginKeychain
+	return masterkey.RetrieveAll(ctx, locator)
 }
 
-func keysFromFile(keys map[browser.UserDataDirID]masterkey.Set) dirKeysFunc {
-	return func(_ context.Context, dir browser.UserDataDir, _ snapshot.Snapshot) (masterkey.Set, error) {
-		return keys[dir.ID], nil
-	}
+// keyFileKeys are a key file's master keys by dir; a dir it lacks gets none, so its encrypted values stay empty.
+type keyFileKeys map[browser.UserDataDirID]masterkey.Set
+
+func (k keyFileKeys) MasterKeys(_ context.Context, dir browser.UserDataDir, _ snapshot.Snapshot) masterkey.Retrieval {
+	return masterkey.Retrieval{Keys: k[dir.ID]}
+}
+
+// noKeys lets list --detail count encrypted rows without retrieving a key, so counting never prompts.
+type noKeys struct{}
+
+func (noKeys) MasterKeys(context.Context, browser.UserDataDir, snapshot.Snapshot) masterkey.Retrieval {
+	return masterkey.Retrieval{}
 }
