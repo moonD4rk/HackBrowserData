@@ -4,29 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/export"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
-
-// readOnce lets every protected Firefox profile of a run share one read, since stdin yields the password only once.
-func readOnce(read func(context.Context) (string, error)) func(context.Context) (string, error) {
-	if read == nil {
-		return nil
-	}
-	var once sync.Once
-	var password string
-	var err error
-	return func(ctx context.Context) (string, error) {
-		once.Do(func() { password, err = read(ctx) })
-		return password, err
-	}
-}
 
 // execute gives the runner the run's writer; the caller sets where its extractors, keys, and keychain come from.
 // It handles one user data dir at a time, so at most one dir's copies are on disk. Its error means nothing ran.
@@ -51,13 +37,13 @@ type recordWriter interface {
 
 // runner is what every user data dir of one run shares; logProgress logs each dir as it starts.
 type runner struct {
-	writer          recordWriter
-	extractors      extractorsFunc
-	retrieveKeys    dirKeysFunc
-	loginKeychain   browser.LoginKeychain
-	firefoxPassword func(context.Context) (string, error)
-	logProgress     bool
-	maxStorageValue int
+	writer                 recordWriter
+	extractors             extractorsFunc
+	keySource              keySource
+	loginKeychain          browser.LoginKeychain
+	firefoxPrimaryPassword string
+	logProgress            bool
+	maxStorageValue        int
 }
 
 // run ends at the first dir whose Summary has an Err, keeping what ran before it.
@@ -105,26 +91,26 @@ func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories 
 	}
 	dirSnapshot := root.Snapshot(string(dir.ID))
 
-	keys := &dirKeys{dir: dir, dirSnapshot: dirSnapshot}
-	if dir.Browser.Base == browser.Chromium {
-		keys.retrieve = r.retrieveKeys
+	var masterKeys masterkey.Set
+	if plan.needsMasterKeys {
+		retrieval := r.keySource.MasterKeys(ctx, dir, dirSnapshot)
+		masterKeys = retrieval.Keys
+		if retrieval.Err != nil {
+			summary.DirFailures = []DirFailure{{UserDataDirID: dir.ID, Err: fmt.Errorf("master key retrieval: %w", retrieval.Err)}}
+		}
 	}
 	for _, extraction := range plan.extractions {
 		if err := ctx.Err(); err != nil {
 			summary.Err = fmt.Errorf("run stopped: %w", err)
 			return summary
 		}
-		input := browser.NewInput(dirSnapshot, extraction.profile, keys.get, r.loginKeychain).WithFirefoxPassword(r.firefoxPassword)
+		input := browser.NewInput(dirSnapshot, extraction.profile, masterKeys, r.loginKeychain).WithFirefoxPassword(r.firefoxPrimaryPassword)
 		result, err := r.runExtraction(ctx, extraction, input, dir.Browser.DisplayName)
 		if err != nil {
 			summary.Err = err
 			return summary
 		}
 		summary.Results = append(summary.Results, result)
-	}
-	if keys.err != nil {
-		keyErr := fmt.Errorf("master key retrieval: %w", keys.err)
-		summary.DirFailures = []DirFailure{{UserDataDirID: dir.ID, Err: keyErr}}
 	}
 	return summary
 }

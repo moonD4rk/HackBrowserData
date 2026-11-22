@@ -7,6 +7,7 @@ import (
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
+	"github.com/moond4rk/hackbrowserdata/internal/keychain"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
@@ -25,12 +26,13 @@ type DumpOptions struct {
 	Categories  []category.Category
 	Output      OutputOptions
 	// KeychainPassword runs when the macOS login keychain first opens; "" leaves it locked. Other systems ignore it.
-	KeychainPassword func(ctx context.Context) (string, error)
-	FirefoxPassword  func(ctx context.Context) (string, error) // nil is the empty password; Dump reads it at most once
+	KeychainPassword keychain.PasswordFunc
+	// FirefoxPrimaryPassword is set by the caller once ValidateDump passes, so a bad flag never consumes stdin.
+	FirefoxPrimaryPassword string
 }
 
 // ValidateDump checks every flag before any browser or secret is touched, so a bad flag fails fast.
-func ValidateDump(flags DumpFlags, keychainPassword, firefoxPassword func(context.Context) (string, error)) (DumpOptions, error) {
+func ValidateDump(flags DumpFlags, keychainPassword keychain.PasswordFunc) (DumpOptions, error) {
 	browsers, err := parseBrowsers(flags.Browser)
 	if err != nil {
 		return DumpOptions{}, err
@@ -58,7 +60,6 @@ func ValidateDump(flags DumpFlags, keychainPassword, firefoxPassword func(contex
 		Categories:       categories,
 		Output:           output,
 		KeychainPassword: keychainPassword,
-		FirefoxPassword:  firefoxPassword,
 	}, nil
 }
 
@@ -88,14 +89,15 @@ func Dump(ctx context.Context, options DumpOptions) (Discovery, Summary, error) 
 	if len(discovery.Dirs) == 0 {
 		return discovery, Summary{}, nil
 	}
-	keychain := newLoginKeychain(loginKeychainPath(options.HomeDir), options.KeychainPassword)
+	loginKeychain := newLoginKeychain(loginKeychainPath(options.HomeDir), options.KeychainPassword)
 	fromMachine := runner{
-		extractors: extractorsFor, retrieveKeys: keysFromMachine(keychain), loginKeychain: keychain,
-		firefoxPassword: readOnce(options.FirefoxPassword),
+		extractors: extractorsFor, keySource: machineKeys{loginKeychain: loginKeychain}, loginKeychain: loginKeychain,
+		firefoxPrimaryPassword: options.FirefoxPrimaryPassword,
 	}
 	summary, err := execute(ctx, discovery, options.Categories, options.Output, fromMachine)
 	if err != nil {
 		return Discovery{}, Summary{}, err
 	}
+	warnIfLocked(ctx, loginKeychain, "keychain-protected data was exported as metadata only")
 	return discovery, summary, nil
 }

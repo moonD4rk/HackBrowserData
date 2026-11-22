@@ -131,7 +131,7 @@ const yandexLoginQuery = `SELECT origin_url, username_element, username_value,
 		password_element, password_value, signon_realm, date_created FROM logins`
 
 // extractYandexPasswords reads origin_url, which the per-row AAD covers, not action_url.
-func extractYandexPasswords(masterKeys masterKeysFunc, path string, out browser.Collector) error {
+func extractYandexPasswords(masterKeys masterkey.Set, path string, out browser.Collector) error {
 	database, err := sqlitex.Open(path)
 	if err != nil {
 		return err
@@ -164,7 +164,7 @@ func extractYandexPasswords(masterKeys masterKeysFunc, path string, out browser.
 			Store:     record.StoreLocal,
 		}
 		if dataKey == nil && keyErr == nil {
-			dataKey, keyErr = loadYandexDataKey(path, masterKeys()[masterkey.V10])
+			dataKey, keyErr = loadYandexDataKey(path, masterKeys[masterkey.V10])
 		}
 		if dataKey == nil {
 			out.Fail(fmt.Errorf("yandex: password for %s: %w", originURL, keyErr))
@@ -200,7 +200,7 @@ type yandexPrivateData struct {
 }
 
 // extractYandexCreditCards reads the records table (not Chromium's credit_cards). AAD = guid.
-func extractYandexCreditCards(masterKeys masterKeysFunc, path string, out browser.Collector) error {
+func extractYandexCreditCards(masterKeys masterkey.Set, path string, out browser.Collector) error {
 	database, err := sqlitex.Open(path)
 	if err != nil {
 		return err
@@ -240,7 +240,7 @@ func extractYandexCreditCards(masterKeys masterKeysFunc, path string, out browse
 			NickName: public.CardTitle,
 		}
 		if dataKey == nil && keyErr == nil {
-			dataKey, keyErr = loadYandexDataKey(path, masterKeys()[masterkey.V10])
+			dataKey, keyErr = loadYandexDataKey(path, masterKeys[masterkey.V10])
 		}
 		if dataKey == nil {
 			out.Fail(fmt.Errorf("yandex: card %s: %w", guid, keyErr))

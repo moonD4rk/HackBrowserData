@@ -15,9 +15,7 @@ import (
 )
 
 // retrieveMasterKey derives the key candidates in key4.db and returns the one that opens the logins in loginsPath.
-// primaryPassword is read only when a profile turns out to have one, so a run of mostly-unprotected profiles never
-// blocks on stdin or a prompt it does not need.
-func retrieveMasterKey(key4Path, loginsPath string, primaryPassword func() ([]byte, error)) ([]byte, error) {
+func retrieveMasterKey(key4Path, loginsPath string, primaryPassword []byte) ([]byte, error) {
 	key4, err := readKey4DB(key4Path)
 	if err != nil {
 		return nil, err
@@ -96,7 +94,7 @@ var (
 	errPrimaryPasswordWrong    = errors.New("primary password is incorrect")
 )
 
-func (k *key4DB) deriveKeys(primaryPassword func() ([]byte, error)) ([][]byte, error) {
+func (k *key4DB) deriveKeys(primaryPassword []byte) ([][]byte, error) {
 	password, err := k.selectPassword(primaryPassword)
 	if err != nil {
 		return nil, err
@@ -117,10 +115,9 @@ func (k *key4DB) deriveKeys(primaryPassword func() ([]byte, error)) ([][]byte, e
 	return keys, nil
 }
 
-// selectPassword uses the empty password for a profile with no primary password, else the user's once it checks out,
-// reading primaryPassword (which may block) only when the empty one does not fit. A passwordCheck that will not parse
-// is a corrupt DB, reported as such rather than as a wrong password.
-func (k *key4DB) selectPassword(primaryPassword func() ([]byte, error)) ([]byte, error) {
+// selectPassword uses the empty password for a profile with no primary password, else the user's once it checks out.
+// A passwordCheck that will not parse is a corrupt DB, reported as such rather than as a wrong password.
+func (k *key4DB) selectPassword(primaryPassword []byte) ([]byte, error) {
 	pbe, err := crypto.NewASN1PBE(k.passwordCheck)
 	if err != nil {
 		return nil, fmt.Errorf("parse key4.db password check: %w", err)
@@ -128,14 +125,10 @@ func (k *key4DB) selectPassword(primaryPassword func() ([]byte, error)) ([]byte,
 	if passwordChecks(pbe, crypto.NSSPasswordKey(k.globalSalt, nil)) {
 		return nil, nil
 	}
-	password, err := primaryPassword()
-	if err != nil {
-		return nil, err
+	if len(primaryPassword) > 0 && passwordChecks(pbe, crypto.NSSPasswordKey(k.globalSalt, primaryPassword)) {
+		return primaryPassword, nil
 	}
-	if len(password) > 0 && passwordChecks(pbe, crypto.NSSPasswordKey(k.globalSalt, password)) {
-		return password, nil
-	}
-	if len(password) == 0 {
+	if len(primaryPassword) == 0 {
 		return nil, errPrimaryPasswordRequired
 	}
 	return nil, errPrimaryPasswordWrong

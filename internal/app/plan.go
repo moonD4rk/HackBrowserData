@@ -13,9 +13,10 @@ import (
 
 // dirPlan is what runDir does for one user data dir, decided from which files exist before anything is copied.
 type dirPlan struct {
-	extractions []plannedExtraction // to run, in output order
-	files       []snapshot.File     // what they read, each copied once
-	skipped     []Result            // requested extractions that will not run, and why
+	extractions     []plannedExtraction // to run, in output order
+	files           []snapshot.File     // what they read, each copied once
+	skipped         []Result            // requested extractions that will not run, and why
+	needsMasterKeys bool                // an extraction decrypts with the dir's master keys, so they are retrieved once
 }
 
 // plannedExtraction keeps the extractor that planning checked, so the run uses that same extractor.
@@ -48,6 +49,7 @@ func planDir(dir browser.UserDataDir, categories []category.Category, extractors
 			default:
 				plan.extractions = append(plan.extractions, plannedExtraction{Extraction: extraction, profile: profile, extractor: extractor})
 				plan.files = appendNew(plan.files, captured, files...)
+				plan.needsMasterKeys = plan.needsMasterKeys || needsMasterKeys(dir, dataCategory)
 			}
 		}
 	}

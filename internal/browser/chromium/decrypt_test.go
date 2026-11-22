@@ -235,14 +235,8 @@ func TestDecrypt_ShortCiphertext(t *testing.T) {
 	require.ErrorIs(t, err, errShortCiphertext)
 }
 
-func TestMasterKeysFuncDecrypt_EmptyValueFetchesNoKey(t *testing.T) {
-	fetched := false
-	keys := masterKeysFunc(func() masterkey.Set {
-		fetched = true
-		return nil
-	})
-	plaintext, err := keys.decrypt(nil)
-	require.NoError(t, err)
+func TestDecryptValue_EmptyValueNeedsNoKey(t *testing.T) {
+	plaintext, err := decryptValue(nil, nil)
+	require.NoError(t, err, "an empty column is not a failed decryption")
 	assert.Nil(t, plaintext)
-	assert.False(t, fetched, "an empty value must not trigger key retrieval")
 }

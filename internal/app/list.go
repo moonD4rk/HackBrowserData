@@ -19,8 +19,8 @@ func List(ctx context.Context, detail bool) (Discovery, Summary, error) {
 	if !detail || len(discovery.Dirs) == 0 {
 		return discovery, Summary{}, nil
 	}
-	keychain := newLoginKeychain(loginKeychainPath(home), nil)
-	counter := runner{writer: discard{}, extractors: extractorsFor, retrieveKeys: keysFromFile(nil), loginKeychain: keychain}
+	loginKeychain := newLoginKeychain(loginKeychainPath(home), noPassword)
+	counter := runner{writer: discard{}, extractors: extractorsFor, keySource: noKeys{}, loginKeychain: loginKeychain}
 	summary := counter.run(ctx, discovery, category.All())
 	if summary.Err != nil {
 		return Discovery{}, Summary{}, summary.Err
@@ -31,3 +31,6 @@ func List(ctx context.Context, detail bool) (Discovery, Summary, error) {
 type discard struct{}
 
 func (discard) Write(category.Category, []record.Record) error { return nil }
+
+// noPassword leaves the keychain locked, so counting never prompts.
+func noPassword(context.Context) (string, error) { return "", nil }

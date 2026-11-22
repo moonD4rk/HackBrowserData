@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
@@ -69,20 +68,6 @@ func TestInputPath_FailedCopyIsReported(t *testing.T) {
 	_, err = input.Path(Source{RelativePath: "Network/Cookies", Fallbacks: []string{"Cookies"}})
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, fs.ErrNotExist)
-}
-
-func TestInputMasterKeys(t *testing.T) {
-	dirSnapshot := snapshot.Open(t.TempDir()).Snapshot("chrome")
-	assert.Nil(t, NewInput(dirSnapshot, Profile{}, nil, nil).MasterKeys(context.Background()))
-
-	calls := 0
-	want := masterkey.Set{masterkey.V10: []byte("k")}
-	input := NewInput(dirSnapshot, Profile{}, func(context.Context) masterkey.Set {
-		calls++
-		return want
-	}, nil)
-	assert.Equal(t, want, input.MasterKeys(context.Background()))
-	assert.Equal(t, 1, calls)
 }
 
 func TestSourceCandidatePaths(t *testing.T) {

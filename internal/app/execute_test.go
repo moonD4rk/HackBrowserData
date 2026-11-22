@@ -37,11 +37,17 @@ func fakeBase(extractFuncs map[category.Category]extractFunc) extractorsFunc {
 	}
 }
 
-func noKeys(t *testing.T) dirKeysFunc {
-	return func(context.Context, browser.UserDataDir, snapshot.Snapshot) (masterkey.Set, error) {
+type keySourceFunc func(ctx context.Context, dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) masterkey.Retrieval
+
+func (f keySourceFunc) MasterKeys(ctx context.Context, dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) masterkey.Retrieval {
+	return f(ctx, dir, dirSnapshot)
+}
+
+func keysNeverRetrieved(t *testing.T) keySource {
+	return keySourceFunc(func(context.Context, browser.UserDataDir, snapshot.Snapshot) masterkey.Retrieval {
 		t.Error("keys were retrieved")
-		return nil, nil
-	}
+		return masterkey.Retrieval{}
+	})
 }
 
 func chromeDir(t *testing.T, id browser.UserDataDirID, profiles ...string) browser.UserDataDir {
@@ -54,10 +60,10 @@ func chromeDir(t *testing.T, id browser.UserDataDirID, profiles ...string) brows
 	return dir
 }
 
-func run(t *testing.T, base extractorsFunc, keys dirKeysFunc, categories []category.Category, dirs ...browser.UserDataDir) (Summary, string) {
+func run(t *testing.T, base extractorsFunc, keys keySource, categories []category.Category, dirs ...browser.UserDataDir) (Summary, string) {
 	t.Helper()
 	output := OutputOptions{Dir: t.TempDir()}
-	summary, err := execute(context.Background(), Discovery{Dirs: dirs}, categories, output, runner{extractors: base, retrieveKeys: keys})
+	summary, err := execute(context.Background(), Discovery{Dirs: dirs}, categories, output, runner{extractors: base, keySource: keys})
 	require.NoError(t, err)
 	require.NoError(t, summary.Err)
 	return summary, output.Dir
@@ -104,7 +110,7 @@ func TestExecute_Outcomes(t *testing.T) {
 		category.Cookie, category.Password, category.History, category.Bookmark, category.Download, category.Extension,
 		category.CreditCard,
 	}
-	summary, out := run(t, base, noKeys(t), categories, chromeDir(t, "chrome", "Default"))
+	summary, out := run(t, base, noKeys{}, categories, chromeDir(t, "chrome", "Default"))
 
 	got := outcomes(summary)
 	assert.Equal(t, OutcomePartial, got[category.Cookie].Outcome)
@@ -137,7 +143,7 @@ func TestExecute_ReportsEachDirWhatNeverRanFirst(t *testing.T) {
 	categories := []category.Category{category.Password, category.History}
 	discovery := Discovery{Dirs: []browser.UserDataDir{chrome, brave}, DirFailures: []DirFailure{failed}}
 
-	summary, err := execute(context.Background(), discovery, categories, OutputOptions{Dir: t.TempDir()}, runner{extractors: base, retrieveKeys: noKeys(t)})
+	summary, err := execute(context.Background(), discovery, categories, OutputOptions{Dir: t.TempDir()}, runner{extractors: base, keySource: noKeys{}})
 	require.NoError(t, err)
 	require.NoError(t, summary.Err)
 	assert.Equal(t, []DirFailure{failed}, summary.DirFailures, "discovery's failures are reported with the run's")
@@ -152,21 +158,21 @@ func TestExecute_ReportsEachDirWhatNeverRanFirst(t *testing.T) {
 }
 
 func TestExecute_KeysAreRetrievedOncePerUserDataDir(t *testing.T) {
-	cookie := func(ctx context.Context, input browser.Input, out browser.Collector) error {
-		out.Add(&record.Cookie{Value: string(input.MasterKeys(ctx)[masterkey.V10])})
+	cookie := func(_ context.Context, input browser.Input, out browser.Collector) error {
+		out.Add(&record.Cookie{Value: string(input.MasterKeys()[masterkey.V10])})
 		return nil
 	}
-	login := func(ctx context.Context, input browser.Input, out browser.Collector) error {
-		out.Add(&record.Login{Password: string(input.MasterKeys(ctx)[masterkey.V10])})
+	login := func(_ context.Context, input browser.Input, out browser.Collector) error {
+		out.Add(&record.Login{Password: string(input.MasterKeys()[masterkey.V10])})
 		return nil
 	}
 	calls := 0
-	keys := func(_ context.Context, dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) (masterkey.Set, error) {
+	keys := keySourceFunc(func(_ context.Context, dir browser.UserDataDir, dirSnapshot snapshot.Snapshot) masterkey.Retrieval {
 		calls++
 		_, err := dirSnapshot.Path("Default/History")
 		require.NoError(t, err, "keys are read from the dir's own snapshot")
-		return masterkey.Set{masterkey.V10: []byte(dir.ID)}, errors.New("v20: no ABE")
-	}
+		return masterkey.Retrieval{Keys: masterkey.Set{masterkey.V10: []byte(dir.ID)}, Err: errors.New("v20: no ABE")}
+	})
 	base := fakeBase(map[category.Category]extractFunc{category.Cookie: cookie, category.Password: login})
 	categories := []category.Category{category.Cookie, category.Password}
 
@@ -189,7 +195,7 @@ func TestExecute_HistoryNeverRetrievesKeys(t *testing.T) {
 	touch(t, path, "Default", "History")
 	dir := browser.UserDataDir{ID: "chrome", Browser: lookup(t, "chrome"), Path: path, Profiles: []browser.Profile{{Name: "Default", RelativePath: "Default"}}}
 
-	run(t, extractorsFor, noKeys(t), []category.Category{category.History, category.Download}, dir)
+	run(t, extractorsFor, keysNeverRetrieved(t), []category.Category{category.History, category.Download}, dir)
 }
 
 func TestExecute_RemovesEachSnapshotBeforeTheNextDir(t *testing.T) {
@@ -206,7 +212,7 @@ func TestExecute_RemovesEachSnapshotBeforeTheNextDir(t *testing.T) {
 			return nil
 		},
 	})
-	run(t, base, noKeys(t), []category.Category{category.History}, chromeDir(t, "chrome", "Default"), chromeDir(t, "chrome-2", "Default"))
+	run(t, base, keysNeverRetrieved(t), []category.Category{category.History}, chromeDir(t, "chrome", "Default"), chromeDir(t, "chrome-2", "Default"))
 
 	require.Len(t, captured, 2)
 	for _, path := range captured {
@@ -235,7 +241,7 @@ func TestExecute_StopEndsTheRunBeforeTheNextExtractionAndRemovesTheCopy(t *testi
 	categories := []category.Category{category.History, category.Download}
 	discovery := Discovery{Dirs: []browser.UserDataDir{chromeDir(t, "chrome", "Default"), chromeDir(t, "chrome-2", "Default")}}
 
-	summary, err := execute(ctx, discovery, categories, OutputOptions{Dir: t.TempDir()}, runner{extractors: base, retrieveKeys: noKeys(t)})
+	summary, err := execute(ctx, discovery, categories, OutputOptions{Dir: t.TempDir()}, runner{extractors: base, keySource: keysNeverRetrieved(t)})
 	require.NoError(t, err)
 	require.ErrorIs(t, summary.Err, context.Canceled)
 	require.Len(t, summary.Results, 1, "what ran before the stop is still reported")
@@ -267,7 +273,7 @@ func TestExecute_OutputFailureStopsTheRunAndLeavesNoCopies(t *testing.T) {
 	defer func() { require.NoError(t, os.Chmod(output.Dir, 0o700)) }()
 
 	discovery := Discovery{Dirs: []browser.UserDataDir{chromeDir(t, "chrome", "Default")}}
-	summary, err := execute(context.Background(), discovery, []category.Category{category.History, category.Download}, output, runner{extractors: base, retrieveKeys: noKeys(t)})
+	summary, err := execute(context.Background(), discovery, []category.Category{category.History, category.Download}, output, runner{extractors: base, keySource: keysNeverRetrieved(t)})
 	require.NoError(t, err)
 	require.Error(t, summary.Err)
 	require.NotEmpty(t, copied)
@@ -275,8 +281,7 @@ func TestExecute_OutputFailureStopsTheRunAndLeavesNoCopies(t *testing.T) {
 	assert.ErrorIs(t, statErr, fs.ErrNotExist)
 }
 
-// TestDump_FirefoxPasswordReadOnce: stdin yields the password once, yet every protected profile of the run needs it.
-func TestDump_FirefoxPasswordReadOnce(t *testing.T) {
+func TestDump_FirefoxPrimaryPasswordOpensEveryProtectedProfile(t *testing.T) {
 	home := t.TempDir()
 	firefoxBrowser, ok := browser.Lookup("firefox")
 	require.True(t, ok)
@@ -285,15 +290,10 @@ func TestDump_FirefoxPasswordReadOnce(t *testing.T) {
 	for _, profile := range []string{"a.default", "b.work"} {
 		browsertest.WriteFirefoxPrimaryPasswordProfile(t, filepath.Join(profilesDir, profile), globalSalt, []byte("hunter2"), [][]byte{masterKey})
 	}
-	reads := 0
-	password := func(context.Context) (string, error) {
-		reads++
-		return "hunter2", nil
-	}
 
 	_, summary, err := Dump(context.Background(), DumpOptions{
 		Browsers: []browser.Browser{firefoxBrowser}, HomeDir: home, Categories: []category.Category{category.Password},
-		Output: OutputOptions{Dir: t.TempDir()}, FirefoxPassword: password,
+		Output: OutputOptions{Dir: t.TempDir()}, FirefoxPrimaryPassword: "hunter2",
 	})
 	require.NoError(t, err)
 	require.NoError(t, summary.Err)
@@ -301,5 +301,4 @@ func TestDump_FirefoxPasswordReadOnce(t *testing.T) {
 	for _, result := range summary.Results {
 		assert.Equal(t, OutcomeOK, result.Outcome, result.ProfileName)
 	}
-	assert.Equal(t, 1, reads, "one read serves every protected profile of the run")
 }

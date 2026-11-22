@@ -8,7 +8,7 @@ A run is a fixed, one-way sequence of stages, and no stage reaches back:
 2. **Discover** — find each browser's data directories and their profiles.
 3. **Plan** — cross one directory's profiles with the requested categories into extractions, record why each skipped one cannot run, and list the files to copy.
 4. **Capture** — copy one directory's planned files into a temporary snapshot.
-5. **Extract** — parse the snapshot into records, fetching a secret only when a record needs it.
+5. **Extract** — parse the snapshot into records, fetching a secret once for its scope, and only when one of the scope's extractions needs it.
 6. **Export** — append each extraction's records to the output files.
 7. **Report** — summarize every outcome.
 

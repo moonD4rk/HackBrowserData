@@ -8,6 +8,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/atomicfile"
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
 	"github.com/moond4rk/hackbrowserdata/internal/browser/chromium"
+	"github.com/moond4rk/hackbrowserdata/internal/keychain"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
@@ -24,10 +25,10 @@ type DumpKeysOptions struct {
 	HomeDir    string
 	OutputPath string // "" writes the key file to stdout
 	// KeychainPassword runs when the macOS login keychain first opens; "" leaves it locked. Other systems ignore it.
-	KeychainPassword func(ctx context.Context) (string, error)
+	KeychainPassword keychain.PasswordFunc
 }
 
-func ValidateDumpKeys(flags DumpKeysFlags, keychainPassword func(context.Context) (string, error)) (DumpKeysOptions, error) {
+func ValidateDumpKeys(flags DumpKeysFlags, keychainPassword keychain.PasswordFunc) (DumpKeysOptions, error) {
 	browsers, err := parseBrowsers(flags.Browser)
 	if err != nil {
 		return DumpKeysOptions{}, err
@@ -48,11 +49,12 @@ func ValidateDumpKeys(flags DumpKeysFlags, keychainPassword func(context.Context
 // A stopped run writes nothing, so it never leaves a keys.json behind.
 func DumpKeys(ctx context.Context, options DumpKeysOptions, stdout io.Writer) (int, error) {
 	discovery := discover(ctx, options.Browsers, browser.DiscoverOptions{HomeDir: options.HomeDir})
-	keychain := newLoginKeychain(loginKeychainPath(options.HomeDir), options.KeychainPassword)
-	keyFile, err := dumpKeysWith(ctx, discovery, keysFromMachine(keychain))
+	loginKeychain := newLoginKeychain(loginKeychainPath(options.HomeDir), options.KeychainPassword)
+	keyFile, err := dumpKeysWith(ctx, discovery, machineKeys{loginKeychain: loginKeychain})
 	if err != nil {
 		return 0, err
 	}
+	warnIfLocked(ctx, loginKeychain, "keys only it holds are missing from the key file")
 	if options.OutputPath == "" {
 		return len(keyFile.Vaults), keyFile.Write(stdout)
 	}
@@ -72,24 +74,24 @@ func writeKeyFile(outputPath string, keyFile masterkey.KeyFile) error {
 
 // dumpKeysWith keeps the keys that worked when a dir's others fail, and leaves out a dir with none.
 // It fails only when the run is stopped.
-func dumpKeysWith(ctx context.Context, discovery Discovery, keys dirKeysFunc) (masterkey.KeyFile, error) {
+func dumpKeysWith(ctx context.Context, discovery Discovery, keySource keySource) (masterkey.KeyFile, error) {
 	keyFile := masterkey.NewKeyFile()
 	for _, dir := range discovery.Dirs {
 		if dir.Browser.Base != browser.Chromium {
 			continue
 		}
-		set, err := retrieveDirKeys(ctx, dir, keys)
+		retrieval := retrieveDirKeys(ctx, dir, keySource)
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return masterkey.KeyFile{}, fmt.Errorf("run stopped: %w", ctxErr)
 		}
-		if err != nil {
+		if retrieval.Err != nil {
 			status := "partial"
-			if len(set) == 0 {
+			if len(retrieval.Keys) == 0 {
 				status = "failed"
 			}
-			log.Warnf("dumpkeys: %s %s: %v", dir.Browser.DisplayName, status, err)
+			log.Warnf("dumpkeys: %s %s: %v", dir.Browser.DisplayName, status, retrieval.Err)
 		}
-		if len(set) == 0 {
+		if len(retrieval.Keys) == 0 {
 			continue
 		}
 		vault := masterkey.Vault{
@@ -97,7 +99,7 @@ func dumpKeysWith(ctx context.Context, discovery Discovery, keys dirKeysFunc) (m
 			Kind:        chromium.VaultKind(dir.Browser),
 			UserDataDir: dir.Path,
 			Profiles:    profileNames(dir),
-			Keys:        set,
+			Keys:        retrieval.Keys,
 		}
 		if string(dir.ID) != dir.Browser.Name {
 			vault.ID = string(dir.ID)
@@ -107,10 +109,10 @@ func dumpKeysWith(ctx context.Context, discovery Discovery, keys dirKeysFunc) (m
 	return keyFile, nil
 }
 
-func retrieveDirKeys(ctx context.Context, dir browser.UserDataDir, keys dirKeysFunc) (masterkey.Set, error) {
+func retrieveDirKeys(ctx context.Context, dir browser.UserDataDir, keySource keySource) masterkey.Retrieval {
 	root, err := snapshot.NewRoot()
 	if err != nil {
-		return nil, err
+		return masterkey.Retrieval{Err: err}
 	}
 	defer closeRoot(root)
 	var files []snapshot.File
@@ -120,9 +122,9 @@ func retrieveDirKeys(ctx context.Context, dir browser.UserDataDir, keys dirKeysF
 		}
 	}
 	if err := root.Capture(ctx, files); err != nil {
-		return nil, err
+		return masterkey.Retrieval{Err: err}
 	}
-	return keys(ctx, dir, root.Snapshot(string(dir.ID)))
+	return keySource.MasterKeys(ctx, dir, root.Snapshot(string(dir.ID)))
 }
 
 func profileNames(dir browser.UserDataDir) []string {

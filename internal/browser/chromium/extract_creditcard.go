@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
+	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 	"github.com/moond4rk/hackbrowserdata/internal/sqlitex"
 )
@@ -13,7 +14,7 @@ const (
 		card_number_encrypted, COALESCE(nickname, ''), COALESCE(billing_address_id, '') FROM credit_cards`
 )
 
-func extractCreditCards(masterKeys masterKeysFunc, path string, out browser.Collector) error {
+func extractCreditCards(masterKeys masterkey.Set, path string, out browser.Collector) error {
 	database, err := sqlitex.Open(path)
 	if err != nil {
 		return err
@@ -33,7 +34,7 @@ func extractCreditCards(masterKeys masterKeysFunc, path string, out browser.Coll
 			out.Fail(err)
 			continue
 		}
-		number, err := masterKeys.decrypt(encryptedNumber)
+		number, err := decryptValue(masterKeys, encryptedNumber)
 		if err != nil {
 			out.Fail(fmt.Errorf("decrypt card %s: %w", guid, err))
 		}

@@ -24,7 +24,7 @@ func TestExtractCookies(t *testing.T) {
 	path := setupCookieDB(t)
 
 	var out testCollector
-	err := extractCookies(keysOf(masterkey.Set{}), path, &out)
+	err := extractCookies(masterkey.Set{}, path, &out)
 	got := collected[record.Cookie](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
@@ -51,7 +51,7 @@ func TestExtractCookies_UndecryptableValueStillListed(t *testing.T) {
 		insertCookie("SID", ".enc.com", "/", "763130deadbeef", 13350000000000000, 13360000000000000, 1, 1))
 
 	var out testCollector
-	require.NoError(t, extractCookies(keysOf(masterkey.Set{}), path, &out))
+	require.NoError(t, extractCookies(masterkey.Set{}, path, &out))
 	got := collected[record.Cookie](t, &out)
 	require.Len(t, got, 1)
 	assert.Equal(t, "SID", got[0].Name)

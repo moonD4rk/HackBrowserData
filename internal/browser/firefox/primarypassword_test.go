@@ -30,28 +30,19 @@ func passwordCheckFor(t *testing.T, globalSalt, password []byte) []byte {
 	return append(append([]byte(nil), blob[:len(blob)-len(cipher)]...), cipher...)
 }
 
-func constPassword(password string) func() ([]byte, error) {
-	return func() ([]byte, error) {
-		if password == "" {
-			return nil, nil
-		}
-		return []byte(password), nil
-	}
-}
-
 func TestSelectPassword_PrimaryPassword(t *testing.T) {
 	globalSalt := bytes.Repeat([]byte("moond4rk"), 3)
 	const password = "hunter2"
 	key4 := &key4DB{globalSalt: globalSalt, passwordCheck: passwordCheckFor(t, globalSalt, []byte(password))}
 
-	selected, err := key4.selectPassword(constPassword(password))
+	selected, err := key4.selectPassword([]byte(password))
 	require.NoError(t, err)
 	assert.Equal(t, []byte(password), selected, "the right primary password is selected")
 
-	_, err = key4.selectPassword(constPassword(""))
+	_, err = key4.selectPassword(nil)
 	require.ErrorIs(t, err, errPrimaryPasswordRequired, "a protected profile with no password asks for one")
 
-	_, err = key4.selectPassword(constPassword("wrong"))
+	_, err = key4.selectPassword([]byte("wrong"))
 	require.ErrorIs(t, err, errPrimaryPasswordWrong, "a wrong password is reported as wrong")
 }
 
@@ -59,18 +50,15 @@ func TestSelectPassword_NoPrimaryPassword(t *testing.T) {
 	globalSalt := bytes.Repeat([]byte("moond4rk"), 3)
 	key4 := &key4DB{globalSalt: globalSalt, passwordCheck: passwordCheckFor(t, globalSalt, nil)}
 
-	selected, err := key4.selectPassword(func() ([]byte, error) {
-		t.Fatal("must not read the user's password when the empty one fits")
-		return nil, nil
-	})
+	selected, err := key4.selectPassword([]byte("hunter2"))
 	require.NoError(t, err)
-	assert.Nil(t, selected, "the empty password is used")
+	assert.Nil(t, selected, "the empty password fits, so a given one is not used")
 }
 
 func TestSelectPassword_CorruptCheck(t *testing.T) {
 	// A password check that will not parse is a corrupt DB, not a wrong or missing password.
 	key4 := &key4DB{globalSalt: []byte("salt"), passwordCheck: []byte("not a valid pbe blob")}
-	_, err := key4.selectPassword(constPassword("whatever"))
+	_, err := key4.selectPassword([]byte("whatever"))
 	require.Error(t, err)
 	require.NotErrorIs(t, err, errPrimaryPasswordRequired)
 	require.NotErrorIs(t, err, errPrimaryPasswordWrong)
@@ -84,13 +72,13 @@ func TestRetrieveMasterKey_PrimaryPassword(t *testing.T) {
 	browsertest.WriteFirefoxPrimaryPasswordProfile(t, dir, globalSalt, password, [][]byte{masterKey})
 	key4, logins := filepath.Join(dir, "key4.db"), filepath.Join(dir, "logins.json")
 
-	got, err := retrieveMasterKey(key4, logins, constPassword(string(password)))
+	got, err := retrieveMasterKey(key4, logins, password)
 	require.NoError(t, err)
 	assert.Equal(t, masterKey, got, "the right password recovers the master key")
 
-	_, err = retrieveMasterKey(key4, logins, constPassword(""))
+	_, err = retrieveMasterKey(key4, logins, nil)
 	require.ErrorIs(t, err, errPrimaryPasswordRequired, "a protected profile with no password asks for one")
 
-	_, err = retrieveMasterKey(key4, logins, constPassword("wrong"))
+	_, err = retrieveMasterKey(key4, logins, []byte("wrong"))
 	require.ErrorIs(t, err, errPrimaryPasswordWrong, "a wrong password is reported as wrong")
 }

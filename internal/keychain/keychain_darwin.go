@@ -9,9 +9,6 @@ import (
 	"github.com/moond4rk/keychainbreaker"
 )
 
-// PasswordFunc yields the login password; "" means none was supplied.
-type PasswordFunc func(ctx context.Context) (string, error)
-
 // ErrLocked reports that no usable password was supplied, so the keychain yields metadata only.
 var ErrLocked = errors.New("login keychain is locked")
 

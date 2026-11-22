@@ -42,8 +42,11 @@ func newDumpCommand() *cobra.Command {
 }
 
 func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychain, firefox passwordFlags) error {
-	options, err := app.ValidateDump(flags, keychainPasswordFunc(keychain, os.Stdin), firefoxPasswordFunc(firefox, os.Stdin))
+	options, err := app.ValidateDump(flags, keychainPasswordFunc(keychain, os.Stdin))
 	if err != nil {
+		return err
+	}
+	if options.FirefoxPrimaryPassword, err = readFirefoxPassword(ctx, firefox, os.Stdin); err != nil {
 		return err
 	}
 	discovery, summary, err := app.Dump(ctx, options)

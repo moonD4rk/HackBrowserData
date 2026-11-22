@@ -63,9 +63,9 @@ func TestRetrieveAll_OneKeyPerVersion(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			got, err := retrieveAll(context.Background(), Locator{}, asRetrievers(testCase.retrievers))
-			require.NoError(t, err)
-			assert.Equal(t, testCase.want, got)
+			retrieval := retrieveAll(context.Background(), Locator{}, asRetrievers(testCase.retrievers))
+			require.NoError(t, retrieval.Err)
+			assert.Equal(t, testCase.want, retrieval.Keys)
 		})
 	}
 }
@@ -75,50 +75,50 @@ func TestRetrieveAll_FirstKeyWinsAndStopsTheVersion(t *testing.T) {
 	winner := &fakeRetriever{version: V10, key: v10Key}
 	later := &fakeRetriever{version: V10, key: bytes.Repeat([]byte{0xFF}, 16)}
 
-	got, err := retrieveAll(context.Background(), Locator{}, []keyRetriever{failing, winner, later})
-	require.NoError(t, err, "a strategy that failed before a later one succeeded is not an error")
-	assert.Equal(t, Set{V10: v10Key}, got)
+	retrieval := retrieveAll(context.Background(), Locator{}, []keyRetriever{failing, winner, later})
+	require.NoError(t, retrieval.Err, "a strategy that failed before a later one succeeded is not an error")
+	assert.Equal(t, Set{V10: v10Key}, retrieval.Keys)
 	assert.Equal(t, []int{1, 1, 0}, []int{failing.calls, winner.calls, later.calls})
 }
 
 func TestRetrieveAll_VersionsAreIndependent(t *testing.T) {
 	v20Retriever := &fakeRetriever{version: V20, err: errors.New("abe: inject failed")}
-	got, err := retrieveAll(context.Background(), Locator{}, []keyRetriever{
+	retrieval := retrieveAll(context.Background(), Locator{}, []keyRetriever{
 		&fakeRetriever{version: V10, key: v10Key},
 		v20Retriever,
 	})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "v20: abe: inject failed")
-	assert.Equal(t, Set{V10: v10Key}, got, "a v20 failure keeps the v10 key")
+	require.Error(t, retrieval.Err)
+	assert.Contains(t, retrieval.Err.Error(), "v20: abe: inject failed")
+	assert.Equal(t, Set{V10: v10Key}, retrieval.Keys, "a v20 failure keeps the v10 key")
 }
 
 func TestRetrieveAll_ErrorOnlyWhenEveryRetrieverFails(t *testing.T) {
 	first := errors.New("keychain: not found")
 	second := errors.New("security command: denied")
-	_, err := retrieveAll(context.Background(), Locator{}, []keyRetriever{
+	retrieval := retrieveAll(context.Background(), Locator{}, []keyRetriever{
 		&fakeRetriever{version: V10, err: first},
 		&fakeRetriever{version: V10, err: second},
 	})
-	require.Error(t, err)
-	require.ErrorIs(t, err, first)
-	require.ErrorIs(t, err, second)
+	require.Error(t, retrieval.Err)
+	require.ErrorIs(t, retrieval.Err, first)
+	require.ErrorIs(t, retrieval.Err, second)
 }
 
 func TestRetrieveAll_NotApplicableIsSilent(t *testing.T) {
-	got, err := retrieveAll(context.Background(), Locator{}, []keyRetriever{
+	retrieval := retrieveAll(context.Background(), Locator{}, []keyRetriever{
 		&fakeRetriever{version: V10, err: errNotApplicable},
 		&fakeRetriever{version: V20, err: errNotApplicable},
 		&fakeRetriever{version: V11},
 	})
-	require.NoError(t, err)
-	assert.Empty(t, got)
+	require.NoError(t, retrieval.Err)
+	assert.Empty(t, retrieval.Keys)
 }
 
 func TestRetrieveAll_PassesTheLocator(t *testing.T) {
 	retriever := &fakeRetriever{version: V10, key: v10Key}
 	locator := Locator{LocalState: "/tmp/Local State", SecretLabel: "Chrome", Executable: "chrome.exe", ABE: ABEChromeBase}
-	_, err := retrieveAll(context.Background(), locator, []keyRetriever{retriever})
-	require.NoError(t, err)
+	retrieval := retrieveAll(context.Background(), locator, []keyRetriever{retriever})
+	require.NoError(t, retrieval.Err)
 	assert.Equal(t, locator, retriever.gotLoc)
 }
 

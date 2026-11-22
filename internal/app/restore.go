@@ -85,7 +85,7 @@ func Restore(ctx context.Context, options RestoreOptions) (Discovery, Summary, e
 	if len(discovery.Dirs) == 0 {
 		return discovery, Summary{}, nil
 	}
-	fromKeyFile := runner{extractors: extractorsFor, retrieveKeys: keysFromFile(keys)}
+	fromKeyFile := runner{extractors: extractorsFor, keySource: keyFileKeys(keys)}
 	summary, err := execute(ctx, discovery, options.Categories, options.Output, fromKeyFile)
 	if err != nil {
 		return Discovery{}, Summary{}, err
