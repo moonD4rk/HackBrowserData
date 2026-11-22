@@ -60,15 +60,16 @@ func TestVaultKind_RoundTripsEveryFork(t *testing.T) {
 	assert.False(t, isVaultKind(""))
 }
 
-// TestDiscoverAt_ReadsAnUnknownBrowserInItsVaultKind keeps a restored fork's own name while its kind picks the files.
-func TestDiscoverAt_ReadsAnUnknownBrowserInItsVaultKind(t *testing.T) {
+// TestDiscoverProfiles_ReadsAnUnknownBrowserInItsVaultKind covers a restored fork this build does not know by name.
+func TestDiscoverProfiles_ReadsAnUnknownBrowserInItsVaultKind(t *testing.T) {
 	nightly := browser.Browser{Name: "nightly", DisplayName: "Nightly", Base: browser.Chromium}
-	dir, err := DiscoverAt(nightly, "chromium-yandex", "nightly", t.TempDir())
+	dir := browser.UserDataDir{ID: "nightly", Browser: nightly, Path: t.TempDir(), VaultKind: "chromium-yandex"}
+	_, err := DiscoverProfiles(dir)
 	require.NoError(t, err)
-	assert.Equal(t, nightly, dir.Browser)
 	assert.Equal(t, "Ya Passman Data", Sources(dir, browser.Profile{})[category.Password][0].RelativePath)
 
-	_, err = DiscoverAt(nightly, "bogus", "nightly", t.TempDir())
+	dir.VaultKind = "bogus"
+	_, err = DiscoverProfiles(dir)
 	require.Error(t, err)
 }
 

@@ -29,8 +29,9 @@ var (
 
 // extractor is how one category is read: the files it needs, and how it parses them with the dir's master keys.
 type extractor struct {
-	sources []browser.Source
-	extract func(captured browser.ProfileSnapshot, masterKeys masterkey.Set, out browser.Collector) error
+	sources         []browser.Source
+	needsMasterKeys bool
+	extract         func(captured browser.ProfileSnapshot, masterKeys masterkey.Set, out browser.Collector) error
 }
 
 var defaultExtractors = map[category.Category]extractor{
@@ -40,7 +41,7 @@ var defaultExtractors = map[category.Category]extractor{
 	category.History:        newPlainExtractor(extractHistories, history),
 	category.Download:       newPlainExtractor(extractDownloads, history),
 	category.CreditCard:     newDecryptingExtractor(extractCreditCards, webData),
-	category.Extension:      newExtensionExtractor(extractExtensions),
+	category.Extension:      newExtensionExtractor(extensionSettingsKeys...),
 	category.LocalStorage:   newPlainExtractor(extractLocalStorage, localStorage),
 	category.SessionStorage: newPlainExtractor(extractSessionStorage, sessionStorage),
 }
@@ -66,15 +67,10 @@ func Extract(
 	return extractor.extract(captured, masterKeys, out)
 }
 
-// NeedsMasterKeys reports whether dataCategory's values are sealed with the dir's master keys, so a run that asks only
-// for the others never retrieves a key.
-func NeedsMasterKeys(dataCategory category.Category) bool {
-	switch dataCategory {
-	case category.Password, category.Cookie, category.CreditCard:
-		return true
-	default:
-		return false
-	}
+// NeedsMasterKeys reports whether dir seals dataCategory's values with its master keys, so a run that asks only for the
+// other categories never retrieves a key.
+func NeedsMasterKeys(dir browser.UserDataDir, dataCategory category.Category) bool {
+	return extractorsFor(dir)[dataCategory].needsMasterKeys
 }
 
 func extractorsFor(dir browser.UserDataDir) map[category.Category]extractor {
@@ -97,7 +93,8 @@ func extractorsFor(dir browser.UserDataDir) map[category.Category]extractor {
 func newDecryptingExtractor(parse func(masterkey.Set, string, browser.Collector) error, sources ...browser.Source) extractor {
 	return extractor{
 		// The dir's master keys come from KeySources, so a decrypting extraction must find them in the snapshot too.
-		sources: append(sources, KeySources()...),
+		sources:         append(sources, KeySources()...),
+		needsMasterKeys: true,
 		extract: func(captured browser.ProfileSnapshot, masterKeys masterkey.Set, out browser.Collector) error {
 			var errs []error
 			for _, source := range sources {

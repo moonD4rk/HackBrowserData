@@ -12,7 +12,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/record"
 )
 
-var extensionJSONPaths = []string{
+var extensionSettingsKeys = []string{
 	"extensions.settings",
 	"settings.extensions",
 	"settings.settings",
@@ -20,8 +20,9 @@ var extensionJSONPaths = []string{
 
 var errNoExtensionList = errors.New("cannot find extensions in settings")
 
-// newExtensionExtractor falls back to Preferences, where Linux builds and forks such as 360 keep the list.
-func newExtensionExtractor(parse func(string, browser.Collector) error) extractor {
+// newExtensionExtractor takes the settings keys the extension list may sit under, since forks such as Opera move it.
+// It falls back to Preferences, where Linux builds and forks such as 360 keep the list.
+func newExtensionExtractor(settingsKeys ...string) extractor {
 	sources := []browser.Source{securePreferences, preferences}
 	return extractor{
 		sources: sources,
@@ -32,7 +33,7 @@ func newExtensionExtractor(parse func(string, browser.Collector) error) extracto
 					continue
 				}
 				if err == nil {
-					err = parse(path, out)
+					err = extractExtensions(path, settingsKeys, out)
 				}
 				if !errors.Is(err, errNoExtensionList) {
 					return err
@@ -43,19 +44,14 @@ func newExtensionExtractor(parse func(string, browser.Collector) error) extracto
 	}
 }
 
-func extractExtensions(path string, out browser.Collector) error {
-	return extractExtensionsAt(path, extensionJSONPaths, out)
-}
-
-// extractExtensionsAt takes the JSON paths, because variants such as Opera keep extension settings elsewhere.
-func extractExtensionsAt(path string, jsonPaths []string, out browser.Collector) error {
+func extractExtensions(path string, settingsKeys []string, out browser.Collector) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
 	var settings gjson.Result
-	for _, key := range jsonPaths {
+	for _, key := range settingsKeys {
 		settings = gjson.GetBytes(data, key)
 		if settings.Exists() {
 			break
@@ -99,8 +95,4 @@ func isExtensionEnabled(extension gjson.Result) bool {
 		return reasons.IsArray() && len(reasons.Array()) == 0
 	}
 	return extension.Get("state").Int() == 1
-}
-
-func extractOperaExtensions(path string, out browser.Collector) error {
-	return extractExtensionsAt(path, []string{"extensions.opsettings"}, out)
 }

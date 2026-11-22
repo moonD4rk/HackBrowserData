@@ -41,19 +41,17 @@ func Discover(chromiumBrowser browser.Browser, options browser.DiscoverOptions) 
 	return dirs, errors.Join(errs...)
 }
 
-// DiscoverAt reads the profiles of a user data dir the table does not name, such as a copy restore was given, in the
-// on-disk format vaultKind names.
-func DiscoverAt(chromiumBrowser browser.Browser, vaultKind string, id browser.UserDataDirID, path string) (browser.UserDataDir, error) {
-	if !isVaultKind(vaultKind) {
-		return browser.UserDataDir{}, fmt.Errorf("unknown vault kind %q", vaultKind)
+// DiscoverProfiles reads the profiles of a user data dir the table does not name, such as a copy restore was given, in
+// the on-disk format dir.VaultKind names.
+func DiscoverProfiles(dir browser.UserDataDir) ([]browser.Profile, error) {
+	if !isVaultKind(dir.VaultKind) {
+		return nil, fmt.Errorf("unknown vault kind %q", dir.VaultKind)
 	}
-	dir := browser.UserDataDir{ID: id, Browser: chromiumBrowser, Path: path, VaultKind: vaultKind}
 	profiles, err := discoverProfiles(dir)
 	if err != nil {
-		return dir, fmt.Errorf("read %s: %w", path, err)
+		return nil, fmt.Errorf("read %s: %w", dir.Path, err)
 	}
-	dir.Profiles = profiles
-	return dir, nil
+	return profiles, nil
 }
 
 // profileAt takes chrome://version's path: a profile dir without Local State selects that profile of its parent.

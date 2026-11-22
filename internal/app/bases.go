@@ -41,7 +41,7 @@ func sourcesFor(dir browser.UserDataDir, profile browser.Profile) map[category.C
 
 // needsMasterKeys is false outside Chromium, the one base whose dir holds master keys.
 func needsMasterKeys(dir browser.UserDataDir, dataCategory category.Category) bool {
-	return dir.Browser.Base == browser.Chromium && chromium.NeedsMasterKeys(dataCategory)
+	return dir.Browser.Base == browser.Chromium && chromium.NeedsMasterKeys(dir, dataCategory)
 }
 
 // extract hands each base its own secret: Chromium the dir's master keys, Firefox the primary password, and Safari the

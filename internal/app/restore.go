@@ -203,10 +203,12 @@ func discoverArchive(archiveDir string, vaults []masterkey.Vault) (Discovery, ma
 
 func restoredDir(vault masterkey.Vault, id browser.UserDataDirID, path string) (browser.UserDataDir, error) {
 	restoredBrowser, vaultKind := vaultBrowser(vault)
-	dir, err := chromium.DiscoverAt(restoredBrowser, vaultKind, id, path)
+	dir := browser.UserDataDir{ID: id, Browser: restoredBrowser, Path: path, VaultKind: vaultKind}
+	profiles, err := chromium.DiscoverProfiles(dir)
 	if err != nil {
 		return browser.UserDataDir{}, err
 	}
+	dir.Profiles = profiles
 	found := withData([]browser.UserDataDir{dir})
 	if len(found) == 0 {
 		return browser.UserDataDir{}, fmt.Errorf("found no profiles under %s", path)

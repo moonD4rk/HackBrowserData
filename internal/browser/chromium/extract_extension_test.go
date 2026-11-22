@@ -47,7 +47,7 @@ func TestExtractExtensions(t *testing.T) {
 	path := setupExtensionJSON(t)
 
 	var out testCollector
-	err := extractExtensions(path, &out)
+	err := extractExtensions(path, extensionSettingsKeys, &out)
 	got := collected[record.Extension](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 2) // system (location=5) and component (location=10) skipped
@@ -66,7 +66,7 @@ func TestExtractExtensions_NoManifestSkipped(t *testing.T) {
 	}`)
 
 	var out testCollector
-	err := extractExtensions(path, &out)
+	err := extractExtensions(path, extensionSettingsKeys, &out)
 	got := collected[record.Extension](t, &out)
 	require.NoError(t, err)
 	assert.Empty(t, got)
@@ -74,11 +74,11 @@ func TestExtractExtensions_NoManifestSkipped(t *testing.T) {
 
 func TestExtractExtensions_MissingSettingsPath(t *testing.T) {
 	path := createTestJSON(t, "Secure Preferences", `{"something": "else"}`)
-	err := extractExtensions(path, &testCollector{})
+	err := extractExtensions(path, extensionSettingsKeys, &testCollector{})
 	require.Error(t, err)
 }
 
-func TestExtractOperaExtensions(t *testing.T) {
+func TestExtractExtensions_OperaSettingsKey(t *testing.T) {
 	path := createTestJSON(t, "Secure Preferences", `{
 		"extensions": {
 			"opsettings": {
@@ -100,7 +100,7 @@ func TestExtractOperaExtensions(t *testing.T) {
 	}`)
 
 	var out testCollector
-	err := extractOperaExtensions(path, &out)
+	err := extractExtensions(path, []string{"extensions.opsettings"}, &out)
 	got := collected[record.Extension](t, &out)
 	require.NoError(t, err)
 	require.Len(t, got, 1) // system extension skipped
