@@ -26,16 +26,22 @@ func TestExtractors_CoverEveryCategory(t *testing.T) {
 func TestExtractors_OverridesFollowTheBrowserNotTheDirectory(t *testing.T) {
 	yandex, ok := browser.Lookup("yandex")
 	require.True(t, ok)
-	sources := Sources(browser.UserDataDir{ID: "yandex-2", Browser: yandex})
-	assert.Equal(t, "Ya Passman Data", sources[category.Password][0].RelativePath)
-	assert.Equal(t, "Ya Credit Cards", sources[category.CreditCard][0].RelativePath)
+	dir := browser.UserDataDir{ID: "yandex-2", Browser: yandex}
+	for dataCategory, relativePath := range map[category.Category]string{
+		category.Password: "Ya Passman Data", category.CreditCard: "Ya Credit Cards",
+	} {
+		sources, supported := Sources(dir, dataCategory)
+		require.True(t, supported, dataCategory)
+		assert.Equal(t, relativePath, sources[0].RelativePath)
+	}
 }
 
 func TestSources_ForksWithoutAnExtensionList(t *testing.T) {
 	for _, name := range []string{"qq", "sogou"} {
 		chromiumBrowser, ok := browser.Lookup(name)
 		require.True(t, ok, name)
-		assert.NotContains(t, Sources(browser.UserDataDir{Browser: chromiumBrowser}), category.Extension, name)
+		_, supported := Sources(browser.UserDataDir{Browser: chromiumBrowser}, category.Extension)
+		assert.False(t, supported, name)
 	}
 }
 

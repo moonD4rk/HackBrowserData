@@ -45,14 +45,10 @@ var defaultExtractors = map[category.Category]extractor{
 	category.SessionStorage: newPlainExtractor(extractSessionStorage, sessionStorage),
 }
 
-// Sources lists the files of each category the dir's browser supports; every profile of a dir reads the same ones.
-func Sources(dir browser.UserDataDir) map[category.Category][]browser.Source {
-	extractors := dirExtractors(dir)
-	sources := make(map[category.Category][]browser.Source, len(extractors))
-	for dataCategory, extractor := range extractors {
-		sources[dataCategory] = extractor.sources
-	}
-	return sources
+// Sources lists the files dataCategory is read from in any profile of dir; the dir's browser may not support it.
+func Sources(dir browser.UserDataDir, dataCategory category.Category) (sources []browser.Source, supported bool) {
+	extractor, ok := dirExtractors(dir)[dataCategory]
+	return extractor.sources, ok
 }
 
 // Extract decrypts with masterKeys, which lack each key version that could not be retrieved.

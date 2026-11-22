@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
+	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
 // Discovery keeps a failure per browser whose data could not be read, so it is reported, not taken as absence.
@@ -44,11 +45,12 @@ func dropEmptyProfiles(dirs []browser.UserDataDir) []browser.UserDataDir {
 }
 
 func hasData(dir browser.UserDataDir, profile browser.Profile) bool {
-	for _, categorySources := range profileSources(dir, profile) {
-		if len(categorySources) == 0 {
+	for _, dataCategory := range category.All() {
+		sources, _ := lookupSources(dir, profile, dataCategory)
+		if len(sources) == 0 {
 			continue
 		}
-		if _, ok, err := locate(dir, profile, categorySources); ok || err != nil {
+		if _, ok, err := locate(dir, profile, sources); ok || err != nil {
 			return true
 		}
 	}

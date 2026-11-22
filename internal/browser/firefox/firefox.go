@@ -117,13 +117,10 @@ func hasDataFile(path string) bool {
 	return false
 }
 
-// Sources lists the files of each category Firefox supports; every profile reads the same ones.
-func Sources() map[category.Category][]browser.Source {
-	sources := make(map[category.Category][]browser.Source, len(extractors))
-	for dataCategory, extractor := range extractors {
-		sources[dataCategory] = extractor.sources
-	}
-	return sources
+// Sources lists the files dataCategory is read from in any profile; Firefox may not support it.
+func Sources(dataCategory category.Category) (sources []browser.Source, supported bool) {
+	extractor, ok := extractors[dataCategory]
+	return extractor.sources, ok
 }
 
 // Extract opens a protected profile's key store with primaryPassword, "" when the user gave none.

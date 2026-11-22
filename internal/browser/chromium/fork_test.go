@@ -65,7 +65,9 @@ func TestDiscoverProfiles_ReadsAnUnknownBrowserInItsVaultKind(t *testing.T) {
 	dir := browser.UserDataDir{ID: "nightly", Browser: nightly, Path: t.TempDir(), VaultKind: "chromium-yandex"}
 	_, err := DiscoverProfiles(dir)
 	require.NoError(t, err)
-	assert.Equal(t, "Ya Passman Data", Sources(dir)[category.Password][0].RelativePath)
+	sources, supported := Sources(dir, category.Password)
+	require.True(t, supported)
+	assert.Equal(t, "Ya Passman Data", sources[0].RelativePath)
 
 	dir.VaultKind = "bogus"
 	_, err = DiscoverProfiles(dir)

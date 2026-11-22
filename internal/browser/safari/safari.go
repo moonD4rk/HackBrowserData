@@ -69,14 +69,12 @@ type extractor struct {
 	extract func(ctx context.Context, captured browser.ProfileSnapshot, loginKeychain LoginKeychain, out browser.Collector) error
 }
 
-// Sources lists the files of each category a profile supports; a named profile supports fewer than the default one.
-func Sources(dir browser.UserDataDir, profile browser.Profile) map[category.Category][]browser.Source {
-	extractors := profileExtractors(dir, profile)
-	sources := make(map[category.Category][]browser.Source, len(extractors))
-	for dataCategory, extractor := range extractors {
-		sources[dataCategory] = extractor.sources
-	}
-	return sources
+// Sources lists the files dataCategory is read from in profile; a named profile supports fewer than the default one.
+func Sources(
+	dir browser.UserDataDir, profile browser.Profile, dataCategory category.Category,
+) (sources []browser.Source, supported bool) {
+	extractor, ok := profileExtractors(dir, profile)[dataCategory]
+	return extractor.sources, ok
 }
 
 // Extract reads passwords from loginKeychain, which is nil off macOS; locked, it yields metadata only.

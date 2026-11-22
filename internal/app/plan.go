@@ -18,15 +18,14 @@ func planExtractions(
 ) (extractions []Extraction, files []snapshot.File, skipped []Result) {
 	added := make(map[snapshot.File]bool)
 	for _, profile := range dir.Profiles {
-		sources := profileSources(dir, profile)
 		for _, dataCategory := range categories {
 			extraction := Extraction{DirID: dir.ID, Profile: profile, Category: dataCategory}
-			categorySources, supported := sources[dataCategory]
+			sources, supported := lookupSources(dir, profile, dataCategory)
 			if !supported {
 				skipped = append(skipped, Result{Extraction: extraction, Outcome: OutcomeUnsupported})
 				continue
 			}
-			located, present, err := locate(dir, profile, categorySources)
+			located, present, err := locate(dir, profile, sources)
 			switch {
 			case err != nil:
 				skipped = append(skipped, Result{Extraction: extraction, Outcome: OutcomeError, Err: err})

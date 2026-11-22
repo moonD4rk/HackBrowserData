@@ -26,16 +26,18 @@ func discoverBrowser(ctx context.Context, targetBrowser browser.Browser, options
 	}
 }
 
-func profileSources(dir browser.UserDataDir, profile browser.Profile) map[category.Category][]browser.Source {
+func lookupSources(
+	dir browser.UserDataDir, profile browser.Profile, dataCategory category.Category,
+) (sources []browser.Source, supported bool) {
 	switch dir.Browser.Base {
 	case browser.Chromium:
-		return chromium.Sources(dir)
+		return chromium.Sources(dir, dataCategory)
 	case browser.Firefox:
-		return firefox.Sources()
+		return firefox.Sources(dataCategory)
 	case browser.Safari:
-		return safari.Sources(dir, profile)
+		return safari.Sources(dir, profile, dataCategory)
 	default:
-		return nil
+		return nil, false
 	}
 }
 

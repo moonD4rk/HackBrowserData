@@ -27,10 +27,11 @@ var (
 	libraryDir  = browser.UserDataDir{Browser: testBrowser(), Profiles: []browser.Profile{defaultProfile, workProfile}}
 )
 
-func sourcePaths(profile browser.Profile, sources map[category.Category][]browser.Source) map[category.Category][]string {
-	got := make(map[category.Category][]string, len(sources))
-	for dataCategory, categorySources := range sources {
-		for _, source := range categorySources {
+func sourcePaths(dir browser.UserDataDir, profile browser.Profile) map[category.Category][]string {
+	got := make(map[category.Category][]string)
+	for _, dataCategory := range category.All() {
+		sources, _ := Sources(dir, profile, dataCategory)
+		for _, source := range sources {
 			got[dataCategory] = append(got[dataCategory], source.DirRelativePaths(profile)...)
 		}
 	}
@@ -38,7 +39,6 @@ func sourcePaths(profile browser.Profile, sources map[category.Category][]browse
 }
 
 func TestSources_DefaultProfile(t *testing.T) {
-	sources := Sources(libraryDir, defaultProfile)
 	assert.Equal(t, map[category.Category][]string{
 		category.History:  {"Safari/History.db"},
 		category.Cookie:   {containerDir + "/Cookies/Cookies.binarycookies", "Cookies/Cookies.binarycookies"},
@@ -51,9 +51,10 @@ func TestSources_DefaultProfile(t *testing.T) {
 			containerDir + "/Safari/AppExtensions/Extensions.plist",
 			containerDir + "/Safari/WebExtensions/Extensions.plist",
 		},
-	}, sourcePaths(defaultProfile, sources))
-	require.Contains(t, sources, category.Password)
-	assert.Empty(t, sources[category.Password], "passwords come from the keychain, not a file")
+	}, sourcePaths(libraryDir, defaultProfile))
+	passwordSources, supported := Sources(libraryDir, defaultProfile, category.Password)
+	require.True(t, supported)
+	assert.Empty(t, passwordSources, "passwords come from the keychain, not a file")
 }
 
 func TestSources_NamedProfile(t *testing.T) {
@@ -63,10 +64,10 @@ func TestSources_NamedProfile(t *testing.T) {
 		category.Cookie:       {store + "/Cookies/Cookies.binarycookies"},
 		category.Download:     {"Safari/Downloads.plist"},
 		category.LocalStorage: {store + "/Origins"},
-	}, sourcePaths(workProfile, Sources(libraryDir, workProfile)))
+	}, sourcePaths(libraryDir, workProfile))
 
 	copied := browser.UserDataDir{Profiles: []browser.Profile{{Name: "default", RelativePath: "SafariCopy"}, workProfile}}
-	assert.Equal(t, []string{"SafariCopy/Downloads.plist"}, sourcePaths(workProfile, Sources(copied, workProfile))[category.Download],
+	assert.Equal(t, []string{"SafariCopy/Downloads.plist"}, sourcePaths(copied, workProfile)[category.Download],
 		"a named profile's downloads sit in the default profile's dir, whatever -p named it")
 }
 
@@ -95,7 +96,8 @@ func writeTestPlist(t *testing.T, value any) string {
 
 func extract(t *testing.T, dirSnapshot snapshot.Snapshot, profile browser.Profile, loginKeychain LoginKeychain, dataCategory category.Category) (*testCollector, error) {
 	t.Helper()
-	require.Containsf(t, Sources(libraryDir, profile), dataCategory, "no %s extractor for %s", dataCategory, profile.Name)
+	_, supported := Sources(libraryDir, profile, dataCategory)
+	require.Truef(t, supported, "no %s extractor for %s", dataCategory, profile.Name)
 	var out testCollector
 	err := Extract(context.Background(), browser.NewProfileSnapshot(libraryDir, profile, dirSnapshot), loginKeychain, dataCategory, &out)
 	return &out, err
@@ -177,8 +179,8 @@ func TestExtractors_PasswordsWithoutAKeychain(t *testing.T) {
 
 // TestSources_NamedProfileSkipsUserWideSources leaves the keychain and the untagged plists to the default profile.
 func TestSources_NamedProfileSkipsUserWideSources(t *testing.T) {
-	sources := Sources(libraryDir, workProfile)
 	for _, dataCategory := range []category.Category{category.Password, category.Bookmark, category.Extension} {
-		assert.NotContains(t, sources, dataCategory)
+		_, supported := Sources(libraryDir, workProfile, dataCategory)
+		assert.False(t, supported, dataCategory)
 	}
 }
