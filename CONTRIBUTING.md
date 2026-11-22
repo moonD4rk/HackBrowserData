@@ -32,6 +32,27 @@ gofumpt -l -w .
 goimports -w -local github.com/moond4rk/hackbrowserdata .
 ```
 
+## Package Map
+
+Imports point one way: `cmd` → `app` → the three bases → shared packages. A base never imports another base or `app`, and `internal/app` is the only package that knows all three bases.
+
+```text
+cmd/hack-browser-data          the CLI: flags, password prompts, printing
+internal/app                   one file per command, each read top to bottom
+internal/browser               the browser table and the types every base shares
+  chromium, firefox, safari    the bases: find profiles, name their files, parse them
+  browsertest                  fixture profiles for tests
+internal/category, record      data categories and output records
+internal/snapshot              copies of the files, taken before anything reads them
+internal/masterkey, keychain   Chromium master keys and the macOS login keychain
+internal/crypto                pure decryption functions
+internal/export                output files
+internal/abe, winapi           Windows only
+internal/sqlitex, timeconv, zipfile, atomicfile, log, golden    small helpers
+```
+
+To follow a run, start at `internal/app/dump.go`: it discovers the user data dirs, then plans, captures, retrieves keys, extracts, and exports each one in turn, the stages [RFC-001](rfcs/001-architecture.md) describes.
+
 ## Pull Requests
 
 When creating a PR, please follow these guidelines:
