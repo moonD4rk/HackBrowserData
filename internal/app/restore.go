@@ -86,7 +86,7 @@ func Restore(ctx context.Context, options RestoreOptions) (Discovery, Summary, e
 		return discovery, Summary{}, nil
 	}
 	fromKeyFile := runner{bases: browserBases{}, keySource: keyFileKeys(keys)}
-	summary, err := execute(ctx, discovery, options.Categories, options.Output, fromKeyFile)
+	summary, err := fromKeyFile.export(ctx, discovery, options.Categories, options.Output)
 	if err != nil {
 		return Discovery{}, Summary{}, err
 	}

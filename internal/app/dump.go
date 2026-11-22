@@ -94,7 +94,7 @@ func Dump(ctx context.Context, options DumpOptions) (Discovery, Summary, error) 
 		bases:     browserBases{firefoxPrimaryPassword: options.FirefoxPrimaryPassword, loginKeychain: loginKeychain},
 		keySource: machineKeys{loginKeychain: loginKeychain},
 	}
-	summary, err := execute(ctx, discovery, options.Categories, options.Output, fromMachine)
+	summary, err := fromMachine.export(ctx, discovery, options.Categories, options.Output)
 	if err != nil {
 		return Discovery{}, Summary{}, err
 	}

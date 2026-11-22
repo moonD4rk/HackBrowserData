@@ -14,23 +14,6 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/snapshot"
 )
 
-// execute gives the runner the run's writer; the caller sets its bases and where its master keys come from.
-// It handles one user data dir at a time, so at most one dir's copies are on disk. Its error means nothing ran.
-func execute(
-	ctx context.Context, discovery Discovery, categories []category.Category, output OutputOptions, dirRunner runner,
-) (Summary, error) {
-	writer, err := export.NewWriter(output.Dir, output.Format, output.Zip)
-	if err != nil {
-		return Summary{}, err
-	}
-	dirRunner.writer, dirRunner.logProgress = writer, true
-	dirRunner.maxStorageValue = output.MaxStorageValue
-	summary := dirRunner.run(ctx, discovery, categories)
-	summary.Err = errors.Join(summary.Err, writer.Close())
-	summary.Exported = writer.Listing()
-	return summary, nil
-}
-
 type recordWriter interface {
 	Write(dataCategory category.Category, records []record.Record) error
 }
@@ -42,6 +25,21 @@ type runner struct {
 	keySource       keySource
 	logProgress     bool
 	maxStorageValue int
+}
+
+// export gives the run its writer; the caller sets the runner's bases and where its master keys come from.
+// It handles one user data dir at a time, so at most one dir's copies are on disk. Its error means nothing ran.
+func (r runner) export(ctx context.Context, discovery Discovery, categories []category.Category, output OutputOptions) (Summary, error) {
+	writer, err := export.NewWriter(output.Dir, output.Format, output.Zip)
+	if err != nil {
+		return Summary{}, err
+	}
+	r.writer, r.logProgress = writer, true
+	r.maxStorageValue = output.MaxStorageValue
+	summary := r.run(ctx, discovery, categories)
+	summary.Err = errors.Join(summary.Err, writer.Close())
+	summary.Exported = writer.Listing()
+	return summary, nil
 }
 
 // run ends at the first dir whose Summary has an Err, keeping what ran before it.
