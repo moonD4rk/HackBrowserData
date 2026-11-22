@@ -25,14 +25,14 @@ type DumpOptions struct {
 	HomeDir     string
 	Categories  []category.Category
 	Output      OutputOptions
+	// The caller sets both passwords once ValidateDump passes, so a bad flag never consumes stdin.
 	// KeychainPassword runs when the macOS login keychain first opens; "" leaves it locked. Other systems ignore it.
-	KeychainPassword keychain.PasswordFunc
-	// FirefoxPrimaryPassword is set by the caller once ValidateDump passes, so a bad flag never consumes stdin.
+	KeychainPassword       keychain.PasswordFunc
 	FirefoxPrimaryPassword string
 }
 
 // ValidateDump checks every flag before any browser or secret is touched, so a bad flag fails fast.
-func ValidateDump(flags DumpFlags, keychainPassword keychain.PasswordFunc) (DumpOptions, error) {
+func ValidateDump(flags DumpFlags) (DumpOptions, error) {
 	browsers, err := parseBrowsers(flags.Browser)
 	if err != nil {
 		return DumpOptions{}, err
@@ -53,14 +53,7 @@ func ValidateDump(flags DumpFlags, keychainPassword keychain.PasswordFunc) (Dump
 	if err != nil {
 		return DumpOptions{}, err
 	}
-	return DumpOptions{
-		Browsers:         browsers,
-		ProfilePath:      profilePath,
-		HomeDir:          home,
-		Categories:       categories,
-		Output:           output,
-		KeychainPassword: keychainPassword,
-	}, nil
+	return DumpOptions{Browsers: browsers, ProfilePath: profilePath, HomeDir: home, Categories: categories, Output: output}, nil
 }
 
 // checkProfilePath keeps -p only for one browser; with -b all it is ignored, as it always was, but now said.

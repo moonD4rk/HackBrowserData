@@ -11,8 +11,8 @@ import (
 
 func newDumpKeysCommand() *cobra.Command {
 	var (
-		flags    app.DumpKeysFlags
-		keychain passwordFlags
+		flags                 app.DumpKeysFlags
+		keychainPasswordFlags passwordFlags
 	)
 
 	command := &cobra.Command{
@@ -21,10 +21,11 @@ func newDumpKeysCommand() *cobra.Command {
 		Example: `  hack-browser-data dumpkeys -o keys.json
   hack-browser-data dumpkeys -b chrome`,
 		RunE: func(command *cobra.Command, args []string) error {
-			options, err := app.ValidateDumpKeys(flags, keychainPasswordFunc(keychain, os.Stdin))
+			options, err := app.ValidateDumpKeys(flags)
 			if err != nil {
 				return err
 			}
+			options.KeychainPassword = keychainPasswordFunc(keychainPasswordFlags, os.Stdin)
 			vaultCount, err := app.DumpKeys(command.Context(), options, command.OutOrStdout())
 			if err != nil {
 				return err
@@ -36,7 +37,7 @@ func newDumpKeysCommand() *cobra.Command {
 
 	command.Flags().StringVarP(&flags.Browser, "browser", "b", "all", "target browser: all|"+browserNames())
 	command.Flags().StringVarP(&flags.OutputPath, "output", "o", "", "output file (default: stdout)")
-	addPasswordFlags(command, &keychain, "keychain-pw", "macOS keychain password")
+	addPasswordFlags(command, &keychainPasswordFlags, "keychain-pw", "macOS keychain password")
 
 	return command
 }

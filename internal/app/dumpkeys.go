@@ -24,11 +24,12 @@ type DumpKeysOptions struct {
 	Browsers   []browser.Browser
 	HomeDir    string
 	OutputPath string // "" writes the key file to stdout
-	// KeychainPassword runs when the macOS login keychain first opens; "" leaves it locked. Other systems ignore it.
+	// KeychainPassword is set by the caller once ValidateDumpKeys passes. It runs when the macOS login keychain first
+	// opens; "" leaves it locked. Other systems ignore it.
 	KeychainPassword keychain.PasswordFunc
 }
 
-func ValidateDumpKeys(flags DumpKeysFlags, keychainPassword keychain.PasswordFunc) (DumpKeysOptions, error) {
+func ValidateDumpKeys(flags DumpKeysFlags) (DumpKeysOptions, error) {
 	browsers, err := parseBrowsers(flags.Browser)
 	if err != nil {
 		return DumpKeysOptions{}, err
@@ -42,7 +43,7 @@ func ValidateDumpKeys(flags DumpKeysFlags, keychainPassword keychain.PasswordFun
 	if err != nil {
 		return DumpKeysOptions{}, err
 	}
-	return DumpKeysOptions{Browsers: browsers, HomeDir: home, OutputPath: flags.OutputPath, KeychainPassword: keychainPassword}, nil
+	return DumpKeysOptions{Browsers: browsers, HomeDir: home, OutputPath: flags.OutputPath}, nil
 }
 
 // DumpKeys writes the key file to options.OutputPath, or to stdout when it is "", and returns how many vaults it holds.

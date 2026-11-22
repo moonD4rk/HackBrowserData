@@ -59,7 +59,7 @@ func extractGoldenRun(t *testing.T, home string, keys map[browser.UserDataDirID]
 	t.Helper()
 	out := t.TempDir()
 	flags := DumpFlags{Browser: "all", Categories: "all", Output: OutputFlags{Format: format, Dir: out, MaxStorageValue: DefaultMaxStorageValue}}
-	options, err := ValidateDump(flags, nil)
+	options, err := ValidateDump(flags)
 	require.NoError(t, err)
 
 	discovery := discover(context.Background(), options.Browsers, browser.DiscoverOptions{HomeDir: home})

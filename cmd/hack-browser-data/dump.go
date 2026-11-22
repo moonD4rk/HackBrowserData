@@ -12,9 +12,9 @@ import (
 
 func newDumpCommand() *cobra.Command {
 	var (
-		flags    app.DumpFlags
-		keychain passwordFlags
-		firefox  passwordFlags
+		flags                 app.DumpFlags
+		keychainPasswordFlags passwordFlags
+		firefoxPasswordFlags  passwordFlags
 	)
 
 	command := &cobra.Command{
@@ -26,7 +26,7 @@ func newDumpCommand() *cobra.Command {
   hack-browser-data dump -f cookie-editor
   hack-browser-data dump --zip`,
 		RunE: func(command *cobra.Command, args []string) error {
-			return runDump(command.Context(), command.ErrOrStderr(), flags, keychain, firefox)
+			return runDump(command.Context(), command.ErrOrStderr(), flags, keychainPasswordFlags, firefoxPasswordFlags)
 		},
 	}
 
@@ -34,19 +34,20 @@ func newDumpCommand() *cobra.Command {
 	command.Flags().StringVarP(&flags.Categories, "category", "c", "all", "data categories (comma-separated): all|"+categoryNames())
 	command.Flags().StringVarP(&flags.ProfilePath, "profile-path", "p", "", "custom profile dir path, get with chrome://version")
 	addOutputFlags(command, &flags.Output)
-	addPasswordFlags(command, &keychain, "keychain-pw", "macOS keychain password")
-	addPasswordFlags(command, &firefox, "firefox-pw", "Firefox primary password")
+	addPasswordFlags(command, &keychainPasswordFlags, "keychain-pw", "macOS keychain password")
+	addPasswordFlags(command, &firefoxPasswordFlags, "firefox-pw", "Firefox primary password")
 	command.MarkFlagsMutuallyExclusive("keychain-pw-stdin", "firefox-pw-stdin")
 
 	return command
 }
 
-func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychain, firefox passwordFlags) error {
-	options, err := app.ValidateDump(flags, keychainPasswordFunc(keychain, os.Stdin))
+func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychainPasswordFlags, firefoxPasswordFlags passwordFlags) error {
+	options, err := app.ValidateDump(flags)
 	if err != nil {
 		return err
 	}
-	if options.FirefoxPrimaryPassword, err = readFirefoxPassword(ctx, firefox, os.Stdin); err != nil {
+	options.KeychainPassword = keychainPasswordFunc(keychainPasswordFlags, os.Stdin)
+	if options.FirefoxPrimaryPassword, err = readFirefoxPassword(ctx, firefoxPasswordFlags, os.Stdin); err != nil {
 		return err
 	}
 	discovery, summary, err := app.Dump(ctx, options)
