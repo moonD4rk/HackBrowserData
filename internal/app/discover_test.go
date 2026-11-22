@@ -87,7 +87,7 @@ func TestDiscover_UnreadableDirIsReported(t *testing.T) {
 
 // TestWithData_KeepsAProfileItCannotCheck keeps it for the plan to report, since dropping it would hide the failure.
 func TestWithData_KeepsAProfileItCannotCheck(t *testing.T) {
-	dir := chromeDir(t, "chrome", "Default")
+	dir := chromeDir(t, "Default")
 	lock(t, filepath.Join(dir.Path, "Default"))
 	assert.Len(t, withData([]browser.UserDataDir{dir}), 1)
 }

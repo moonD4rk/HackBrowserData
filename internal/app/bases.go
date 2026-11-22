@@ -12,41 +12,7 @@ import (
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
-// bases is how a run reaches the base packages: browserBases in every command, a fake in the tests.
-type bases interface {
-	sources(dir browser.UserDataDir, profile browser.Profile) map[category.Category][]browser.Source
-	extract(
-		ctx context.Context, captured browser.ProfileSnapshot, masterKeys masterkey.Set, dataCategory category.Category, out browser.Collector,
-	) error
-}
-
-// browserBases hands each base its own secret: Chromium the dir's master keys, Firefox the primary password, and
-// Safari the login keychain.
-type browserBases struct {
-	firefoxPrimaryPassword string
-	loginKeychain          safari.LoginKeychain
-}
-
-func (browserBases) sources(dir browser.UserDataDir, profile browser.Profile) map[category.Category][]browser.Source {
-	return sourcesFor(dir, profile)
-}
-
-func (b browserBases) extract(
-	ctx context.Context, captured browser.ProfileSnapshot, masterKeys masterkey.Set, dataCategory category.Category, out browser.Collector,
-) error {
-	switch captured.UserDataDir.Browser.Base {
-	case browser.Chromium:
-		return chromium.Extract(ctx, captured, masterKeys, dataCategory, out)
-	case browser.Firefox:
-		return firefox.Extract(ctx, captured, b.firefoxPrimaryPassword, dataCategory, out)
-	case browser.Safari:
-		return safari.Extract(ctx, captured, b.loginKeychain, dataCategory, out)
-	default:
-		return fmt.Errorf("%s: no base package", captured.UserDataDir.Browser.Name)
-	}
-}
-
-// discoverBrowser dispatches on Base here, not in browser, because the base packages import browser.
+// discoverBrowser, like every function in this file, dispatches on Base here because the base packages import browser.
 func discoverBrowser(ctx context.Context, targetBrowser browser.Browser, options browser.DiscoverOptions) ([]browser.UserDataDir, error) {
 	switch targetBrowser.Base {
 	case browser.Chromium:
@@ -60,7 +26,6 @@ func discoverBrowser(ctx context.Context, targetBrowser browser.Browser, options
 	}
 }
 
-// sourcesFor dispatches on Base for the same reason discoverBrowser does.
 func sourcesFor(dir browser.UserDataDir, profile browser.Profile) map[category.Category][]browser.Source {
 	switch dir.Browser.Base {
 	case browser.Chromium:
@@ -74,7 +39,24 @@ func sourcesFor(dir browser.UserDataDir, profile browser.Profile) map[category.C
 	}
 }
 
-// needsMasterKeys dispatches on Base for the same reason; Chromium is the one base whose dir holds master keys.
+// needsMasterKeys is false outside Chromium, the one base whose dir holds master keys.
 func needsMasterKeys(dir browser.UserDataDir, dataCategory category.Category) bool {
 	return dir.Browser.Base == browser.Chromium && chromium.NeedsMasterKeys(dataCategory)
+}
+
+// extract hands each base its own secret: Chromium the dir's master keys, Firefox the primary password, and Safari the
+// login keychain.
+func (r runner) extract(
+	ctx context.Context, captured browser.ProfileSnapshot, masterKeys masterkey.Set, dataCategory category.Category, out browser.Collector,
+) error {
+	switch captured.UserDataDir.Browser.Base {
+	case browser.Chromium:
+		return chromium.Extract(ctx, captured, masterKeys, dataCategory, out)
+	case browser.Firefox:
+		return firefox.Extract(ctx, captured, r.firefoxPrimaryPassword, dataCategory, out)
+	case browser.Safari:
+		return safari.Extract(ctx, captured, r.loginKeychain, dataCategory, out)
+	default:
+		return fmt.Errorf("%s: no base package", captured.UserDataDir.Browser.Name)
+	}
 }

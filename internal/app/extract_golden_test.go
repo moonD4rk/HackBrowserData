@@ -63,7 +63,7 @@ func extractGoldenRun(t *testing.T, home string, keys map[browser.UserDataDirID]
 	require.NoError(t, err)
 
 	discovery := discover(context.Background(), options.Browsers, browser.DiscoverOptions{HomeDir: home})
-	fromFixture := runner{bases: browserBases{}, keySource: keyFileKeys(keys)}
+	fromFixture := runner{keySource: keyFileKeys(keys)}
 	summary, err := fromFixture.export(context.Background(), discovery, options.Categories, options.Output)
 	require.NoError(t, err)
 	require.NoError(t, summary.Err)

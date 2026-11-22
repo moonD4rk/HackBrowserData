@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
+	"github.com/moond4rk/hackbrowserdata/internal/browser/safari"
 	"github.com/moond4rk/hackbrowserdata/internal/category"
 	"github.com/moond4rk/hackbrowserdata/internal/export"
 	"github.com/moond4rk/hackbrowserdata/internal/log"
@@ -20,14 +21,15 @@ type recordWriter interface {
 
 // runner is what every user data dir of one run shares; logProgress logs each dir as it starts.
 type runner struct {
-	writer          recordWriter
-	bases           bases
-	keySource       keySource
-	logProgress     bool
-	maxStorageValue int
+	keySource              keySource            // Chromium: each dir's master keys
+	firefoxPrimaryPassword string               // Firefox
+	loginKeychain          safari.LoginKeychain // Safari
+	writer                 recordWriter
+	logProgress            bool
+	maxStorageValue        int
 }
 
-// export gives the run its writer; the caller sets the runner's bases and where its master keys come from.
+// export gives the run its writer; the caller sets each base's secret.
 // It handles one user data dir at a time, so at most one dir's copies are on disk. Its error means nothing ran.
 func (r runner) export(ctx context.Context, discovery Discovery, categories []category.Category, output OutputOptions) (Summary, error) {
 	writer, err := export.NewWriter(output.Dir, output.Format, output.Zip)
@@ -62,7 +64,7 @@ func (r runner) run(ctx context.Context, discovery Discovery, categories []categ
 }
 
 func (r runner) runDir(ctx context.Context, dir browser.UserDataDir, categories []category.Category) Summary {
-	plan := planDir(dir, categories, r.bases.sources)
+	plan := planDir(dir, categories)
 	summary := Summary{Results: plan.skipped}
 	if len(plan.extractions) == 0 {
 		return summary
@@ -118,7 +120,7 @@ func (r runner) runExtraction(
 	recordCollector := &collector{
 		browserName: captured.UserDataDir.Browser.DisplayName, profileName: extraction.ProfileName, maxStorageValue: r.maxStorageValue,
 	}
-	err := r.bases.extract(ctx, captured, masterKeys, extraction.Category, recordCollector)
+	err := r.extract(ctx, captured, masterKeys, extraction.Category, recordCollector)
 	if writeErr := r.writer.Write(extraction.Category, recordCollector.records); writeErr != nil {
 		return Result{}, writeErr
 	}

@@ -91,8 +91,9 @@ func Dump(ctx context.Context, options DumpOptions) (Discovery, Summary, error) 
 	}
 	loginKeychain := newLoginKeychain(loginKeychainPath(options.HomeDir), options.KeychainPassword)
 	fromMachine := runner{
-		bases:     browserBases{firefoxPrimaryPassword: options.FirefoxPrimaryPassword, loginKeychain: loginKeychain},
-		keySource: machineKeys{loginKeychain: loginKeychain},
+		keySource:              machineKeys{loginKeychain: loginKeychain},
+		firefoxPrimaryPassword: options.FirefoxPrimaryPassword,
+		loginKeychain:          loginKeychain,
 	}
 	summary, err := fromMachine.export(ctx, discovery, options.Categories, options.Output)
 	if err != nil {

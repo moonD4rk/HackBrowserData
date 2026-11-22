@@ -50,7 +50,7 @@ func TestPlanDir(t *testing.T) {
 	}
 	categories := []category.Category{category.Password, category.Cookie, category.History, category.Download, category.CreditCard}
 
-	plan := planDir(dir, categories, sourcesFor)
+	plan := planDir(dir, categories)
 
 	file := func(relativePath string) snapshot.File {
 		return snapshot.File{UserDataDirID: "chrome", UserDataDirPath: path, RelativePath: relativePath}
@@ -85,11 +85,11 @@ func TestPlanDir_PicksTheFirstCandidateOnDisk(t *testing.T) {
 	touch(t, path, "Default", "Cookies")
 	dir := browser.UserDataDir{ID: "chrome", Browser: lookup(t, "chrome"), Path: path, Profiles: []browser.Profile{{Name: "Default", RelativePath: "Default"}}}
 
-	plan := planDir(dir, []category.Category{category.Cookie}, sourcesFor)
+	plan := planDir(dir, []category.Category{category.Cookie})
 	assert.Equal(t, []snapshot.File{{UserDataDirID: "chrome", UserDataDirPath: path, RelativePath: "Default/Cookies"}}, plan.files)
 
 	touch(t, path, "Default", "Network", "Cookies")
-	plan = planDir(dir, []category.Category{category.Cookie}, sourcesFor)
+	plan = planDir(dir, []category.Category{category.Cookie})
 	assert.Equal(t, []snapshot.File{{UserDataDirID: "chrome", UserDataDirPath: path, RelativePath: "Default/Network/Cookies"}}, plan.files,
 		"a leftover legacy Cookies never wins")
 }
@@ -99,29 +99,28 @@ func TestPlanDir_FlatLayoutProfile(t *testing.T) {
 	touch(t, path, "History")
 	dir := browser.UserDataDir{ID: "opera", Browser: lookup(t, "opera"), Path: path, Profiles: []browser.Profile{{Name: "Opera Stable"}}}
 
-	plan := planDir(dir, []category.Category{category.History}, sourcesFor)
+	plan := planDir(dir, []category.Category{category.History})
 	assert.Equal(t, []snapshot.File{{UserDataDirID: "opera", UserDataDirPath: path, RelativePath: "History"}}, plan.files)
 	assert.Equal(t, []Extraction{{UserDataDirID: "opera", ProfileName: "Opera Stable", Category: category.History}}, extractionsOf(plan))
 }
 
+// TestPlanDir_UnsupportedCategory covers Firefox's credit cards, which it keeps nowhere HBD reads.
 func TestPlanDir_UnsupportedCategory(t *testing.T) {
-	dir := browser.UserDataDir{ID: "x", Path: t.TempDir(), Profiles: []browser.Profile{{Name: "Default", RelativePath: "Default"}}}
-	none := func(browser.UserDataDir, browser.Profile) map[category.Category][]browser.Source { return nil }
+	profile := browser.Profile{Name: "a.default", RelativePath: "a.default"}
+	dir := browser.UserDataDir{ID: "firefox", Browser: lookup(t, "firefox"), Path: t.TempDir(), Profiles: []browser.Profile{profile}}
 
-	plan := planDir(dir, []category.Category{category.CreditCard}, none)
-	assert.Equal(t, []Result{{Extraction: Extraction{UserDataDirID: "x", ProfileName: "Default", Category: category.CreditCard}, Outcome: OutcomeUnsupported}},
-		plan.skipped)
+	plan := planDir(dir, []category.Category{category.CreditCard})
+	unsupported := Extraction{UserDataDirID: "firefox", ProfileName: "a.default", Category: category.CreditCard}
+	assert.Equal(t, []Result{{Extraction: unsupported, Outcome: OutcomeUnsupported}}, plan.skipped)
 	assert.Empty(t, plan.extractions)
 }
 
 // TestPlanDir_CategoryWithoutSourcesRuns covers Safari's passwords: read from the keychain, they are never absent.
 func TestPlanDir_CategoryWithoutSourcesRuns(t *testing.T) {
-	dir := browser.UserDataDir{ID: "safari", Path: t.TempDir(), Profiles: []browser.Profile{{Name: "default", RelativePath: "Safari"}}}
-	keychainOnly := func(browser.UserDataDir, browser.Profile) map[category.Category][]browser.Source {
-		return map[category.Category][]browser.Source{category.Password: nil}
-	}
+	profile := browser.Profile{Name: "default", RelativePath: "Safari"}
+	dir := browser.UserDataDir{ID: "safari", Browser: lookup(t, "safari"), Path: t.TempDir(), Profiles: []browser.Profile{profile}}
 
-	plan := planDir(dir, []category.Category{category.Password}, keychainOnly)
+	plan := planDir(dir, []category.Category{category.Password})
 	assert.Equal(t, []Extraction{{UserDataDirID: "safari", ProfileName: "default", Category: category.Password}}, extractionsOf(plan))
 	assert.Empty(t, plan.files)
 	assert.Empty(t, plan.skipped)
@@ -141,9 +140,9 @@ func lock(t *testing.T, dir string) {
 }
 
 func TestPlanDir_UnreadableFileIsAnError(t *testing.T) {
-	dir := chromeDir(t, "chrome", "Default")
+	dir := chromeDir(t, "Default")
 	lock(t, filepath.Join(dir.Path, "Default"))
-	plan := planDir(dir, []category.Category{category.History}, fakeBases{category.History: nil}.sources)
+	plan := planDir(dir, []category.Category{category.History})
 
 	require.Len(t, plan.skipped, 1)
 	assert.Equal(t, OutcomeError, plan.skipped[0].Outcome)

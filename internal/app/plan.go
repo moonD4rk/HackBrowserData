@@ -24,13 +24,11 @@ type plannedExtraction struct {
 	profile browser.Profile
 }
 
-type sourcesFunc func(dir browser.UserDataDir, profile browser.Profile) map[category.Category][]browser.Source
-
-func planDir(dir browser.UserDataDir, categories []category.Category, sources sourcesFunc) dirPlan {
+func planDir(dir browser.UserDataDir, categories []category.Category) dirPlan {
 	var plan dirPlan
 	captured := make(map[snapshot.File]bool)
 	for _, profile := range dir.Profiles {
-		profileSources := sources(dir, profile)
+		profileSources := sourcesFor(dir, profile)
 		for _, dataCategory := range categories {
 			extraction := Extraction{UserDataDirID: dir.ID, ProfileName: profile.Name, Category: dataCategory}
 			categorySources, supported := profileSources[dataCategory]

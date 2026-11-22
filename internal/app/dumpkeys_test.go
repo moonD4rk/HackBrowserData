@@ -23,7 +23,7 @@ func dirOf(t *testing.T, userDataDirID browser.UserDataDirID, browserName string
 }
 
 func TestDumpKeysWith(t *testing.T) {
-	chrome := chromeDir(t, "chrome", "Default", "Profile 1")
+	chrome := chromeDir(t, "Default", "Profile 1")
 	touch(t, chrome.Path, "Local State")
 	arc2, opera, vivaldi, brave := dirOf(t, "arc-2", "arc"), dirOf(t, "opera", "opera"), dirOf(t, "vivaldi", "vivaldi"), dirOf(t, "brave", "brave")
 	firefox := dirOf(t, "firefox", "firefox")
@@ -69,7 +69,7 @@ func TestDumpKeysWith(t *testing.T) {
 func TestDumpKeysWith_StoppedRunReturnsNoKeyFile(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	chrome, brave := chromeDir(t, "chrome", "Default"), dirOf(t, "brave", "brave")
+	chrome, brave := chromeDir(t, "Default"), dirOf(t, "brave", "brave")
 	touch(t, chrome.Path, "Local State")
 	keys := keySourceFunc(func(_ context.Context, dir browser.UserDataDir, _ snapshot.Snapshot) masterkey.Retrieval {
 		require.Equal(t, browser.UserDataDirID("chrome"), dir.ID, "keys were retrieved after the stop")

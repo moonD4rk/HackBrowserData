@@ -20,7 +20,7 @@ func List(ctx context.Context, detail bool) (Discovery, Summary, error) {
 		return discovery, Summary{}, nil
 	}
 	loginKeychain := newLoginKeychain(loginKeychainPath(home), noPassword)
-	counter := runner{writer: discard{}, bases: browserBases{loginKeychain: loginKeychain}, keySource: noKeys{}}
+	counter := runner{keySource: noKeys{}, loginKeychain: loginKeychain, writer: discard{}}
 	summary := counter.run(ctx, discovery, category.All())
 	if summary.Err != nil {
 		return Discovery{}, Summary{}, summary.Err
