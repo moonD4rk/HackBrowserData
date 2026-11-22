@@ -2,5 +2,5 @@
 
 package app
 
-// canCreateIn accepts every directory: Windows grants writes through ACLs that only the write itself can check.
-func canCreateIn(string) error { return nil }
+// checkWritable accepts every directory: Windows grants writes through ACLs that only the write itself can check.
+func checkWritable(string) error { return nil }

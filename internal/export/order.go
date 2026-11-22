@@ -10,7 +10,7 @@ import (
 // sortRecords is stable, so ties and keyless records keep source order: Safari bookmarks and downloads lack a time.
 func sortRecords(records []record.Record) {
 	sort.SliceStable(records, func(i, j int) bool {
-		return sortKeyOf(records[i]).before(sortKeyOf(records[j]))
+		return newSortKey(records[i]).before(newSortKey(records[j]))
 	})
 }
 
@@ -19,7 +19,7 @@ type sortKey struct {
 	timestamp time.Time
 }
 
-func sortKeyOf(row record.Record) sortKey {
+func newSortKey(row record.Record) sortKey {
 	switch typed := row.(type) {
 	case *record.Login:
 		return sortKey{timestamp: typed.CreatedAt}

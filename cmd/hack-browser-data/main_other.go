@@ -11,7 +11,7 @@ import (
 
 func configureDoubleClickMode() {}
 
-// exitBy ends the process by sig itself, as the signal would have, so a calling shell or script sees it was stopped.
+// exitBy ends the process by the signal itself, as it would have, so a calling shell or script sees it was stopped.
 func exitBy(received os.Signal) {
 	signal.Reset(received)
 	if syscallSignal, ok := received.(syscall.Signal); ok && syscall.Kill(syscall.Getpid(), syscallSignal) == nil {

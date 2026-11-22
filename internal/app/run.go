@@ -75,7 +75,7 @@ func (r runner) runExtractions(ctx context.Context, dir browser.UserDataDir, cat
 
 	root, err := snapshot.NewRoot()
 	if err != nil {
-		summary.Results = append(summary.Results, failAll(extractions, err)...)
+		summary.Results = append(summary.Results, errorResults(extractions, err)...)
 		return summary
 	}
 	defer closeRoot(root)
@@ -84,7 +84,7 @@ func (r runner) runExtractions(ctx context.Context, dir browser.UserDataDir, cat
 			summary.Err = err
 			return summary
 		}
-		summary.Results = append(summary.Results, failAll(extractions, err)...)
+		summary.Results = append(summary.Results, errorResults(extractions, err)...)
 		return summary
 	}
 	dirSnapshot := root.Snapshot(string(dir.ID))
@@ -127,7 +127,7 @@ func (r runner) runExtraction(
 	return recordCollector.result(extraction, err), nil
 }
 
-func failAll(extractions []Extraction, err error) []Result {
+func errorResults(extractions []Extraction, err error) []Result {
 	results := make([]Result, len(extractions))
 	for i, extraction := range extractions {
 		results[i] = Result{Extraction: extraction, Outcome: OutcomeError, Err: err}

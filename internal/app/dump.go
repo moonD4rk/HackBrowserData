@@ -45,7 +45,7 @@ func ValidateDump(flags DumpFlags) (DumpOptions, error) {
 	if err != nil {
 		return DumpOptions{}, err
 	}
-	profilePath, err := checkProfilePath(browsers, flags.ProfilePath)
+	profilePath, err := parseProfilePath(browsers, flags.ProfilePath)
 	if err != nil {
 		return DumpOptions{}, err
 	}
@@ -56,8 +56,8 @@ func ValidateDump(flags DumpFlags) (DumpOptions, error) {
 	return DumpOptions{Browsers: browsers, ProfilePath: profilePath, HomeDir: home, Categories: categories, Output: output}, nil
 }
 
-// checkProfilePath keeps -p only for one browser; with -b all it is ignored, as it always was, but now said.
-func checkProfilePath(browsers []browser.Browser, path string) (string, error) {
+// parseProfilePath keeps -p only for one browser; with -b all it is ignored, as it always was, but now said.
+func parseProfilePath(browsers []browser.Browser, path string) (string, error) {
 	if path == "" {
 		return "", nil
 	}

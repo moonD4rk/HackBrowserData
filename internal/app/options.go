@@ -105,7 +105,7 @@ func checkOutputDir(outputDir string) error {
 		info, err := os.Stat(path)
 		switch {
 		case err == nil && info.IsDir():
-			if err := canCreateIn(path); err != nil {
+			if err := checkWritable(path); err != nil {
 				return fmt.Errorf("output dir %s: %w", outputDir, err)
 			}
 			return nil
@@ -134,7 +134,7 @@ func checkOutputFile(path string) error {
 	case !info.IsDir():
 		return fmt.Errorf("output file %s: %s is not a directory", path, parent)
 	}
-	if err := canCreateIn(parent); err != nil {
+	if err := checkWritable(parent); err != nil {
 		return fmt.Errorf("output file %s: %w", path, err)
 	}
 	if existing, err := os.Stat(path); err == nil && existing.IsDir() {
