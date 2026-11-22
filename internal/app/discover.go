@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/moond4rk/hackbrowserdata/internal/browser"
-	"github.com/moond4rk/hackbrowserdata/internal/category"
 )
 
 // Discovery keeps a failure per browser whose data could not be read, so it is reported, not taken as absence.
@@ -17,7 +16,7 @@ func discover(ctx context.Context, browsers []browser.Browser, options browser.D
 	var discovery Discovery
 	for _, targetBrowser := range browsers {
 		dirs, err := discoverBrowser(ctx, targetBrowser, options)
-		discovery.Dirs = append(discovery.Dirs, withData(dirs)...)
+		discovery.Dirs = append(discovery.Dirs, dropEmptyProfiles(dirs)...)
 		if err != nil {
 			discovery.DirFailures = append(discovery.DirFailures, DirFailure{DirID: targetBrowser.UserDataDirID(0), Err: err})
 		}
@@ -25,26 +24,27 @@ func discover(ctx context.Context, browsers []browser.Browser, options browser.D
 	return discovery
 }
 
-// withData drops profiles holding no file any category reads, such as a bare Preferences, but keeps unreadable ones.
-func withData(dirs []browser.UserDataDir) []browser.UserDataDir {
-	var out []browser.UserDataDir
+// dropEmptyProfiles drops profiles holding no file any category reads, such as a bare Preferences, and a dir left with
+// none. It keeps an unreadable profile, so the failure is reported.
+func dropEmptyProfiles(dirs []browser.UserDataDir) []browser.UserDataDir {
+	var kept []browser.UserDataDir
 	for _, dir := range dirs {
 		var profiles []browser.Profile
 		for _, profile := range dir.Profiles {
-			if hasData(dir, profile, sourcesFor(dir, profile)) {
+			if hasData(dir, profile) {
 				profiles = append(profiles, profile)
 			}
 		}
 		if len(profiles) > 0 {
 			dir.Profiles = profiles
-			out = append(out, dir)
+			kept = append(kept, dir)
 		}
 	}
-	return out
+	return kept
 }
 
-func hasData(dir browser.UserDataDir, profile browser.Profile, sources map[category.Category][]browser.Source) bool {
-	for _, categorySources := range sources {
+func hasData(dir browser.UserDataDir, profile browser.Profile) bool {
+	for _, categorySources := range sourcesFor(dir, profile) {
 		if len(categorySources) == 0 {
 			continue
 		}

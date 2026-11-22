@@ -209,7 +209,7 @@ func restoredDir(vault masterkey.Vault, id browser.UserDataDirID, path string) (
 		return browser.UserDataDir{}, err
 	}
 	dir.Profiles = profiles
-	found := withData([]browser.UserDataDir{dir})
+	found := dropEmptyProfiles([]browser.UserDataDir{dir})
 	if len(found) == 0 {
 		return browser.UserDataDir{}, fmt.Errorf("found no profiles under %s", path)
 	}
