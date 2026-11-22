@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/moond4rk/hackbrowserdata/internal/app"
+	"github.com/moond4rk/hackbrowserdata/internal/log"
 )
 
 func newDumpCommand() *cobra.Command {
@@ -55,8 +56,13 @@ func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychai
 		return err
 	}
 	if len(discovery.Dirs) == 0 {
-		printNothingFound(stderr, discovery, "no browsers found")
+		printDirFailures(stderr, discovery.DirFailures)
+		log.Warnf("no browsers found")
 		return nil
+	}
+	// A stopped run says nothing of the keychain: the stop itself may be what left it locked.
+	if summary.KeychainErr != nil && ctx.Err() == nil {
+		log.Warnf("%v; keychain-protected data was exported as metadata only", summary.KeychainErr)
 	}
 	printExported(stderr, summary.Exported)
 	if ctx.Err() == nil {

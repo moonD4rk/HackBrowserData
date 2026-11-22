@@ -92,6 +92,6 @@ func Dump(ctx context.Context, options DumpOptions) (Discovery, Summary, error) 
 	if err != nil {
 		return Discovery{}, Summary{}, err
 	}
-	warnIfLocked(ctx, loginKeychain, "keychain-protected data was exported as metadata only")
+	summary.KeychainErr = keychainErr(loginKeychain)
 	return discovery, summary, nil
 }

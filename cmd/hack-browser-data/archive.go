@@ -25,7 +25,8 @@ func newArchiveCommand() *cobra.Command {
 				return err
 			}
 			if len(discovery.Dirs) == 0 {
-				printNothingFound(command.ErrOrStderr(), discovery, "no browsers found")
+				printDirFailures(command.ErrOrStderr(), discovery.DirFailures)
+				log.Warnf("no browsers found")
 				return nil
 			}
 			log.Infof("Archived %d entries to %s", fileCount, options.ArchivePath)

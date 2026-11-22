@@ -39,12 +39,11 @@ func resultDetail(result app.Result) string {
 	}
 }
 
-// printNothingFound lists discovery's failures first, the likely reason a run found no browser data.
-func printNothingFound(stderr io.Writer, discovery app.Discovery, message string) {
-	if len(discovery.DirFailures) > 0 {
-		printSummary(stderr, app.Summary{DirFailures: discovery.DirFailures})
+// printDirFailures lists discovery's failures, the likely reason a run found no browser data.
+func printDirFailures(stderr io.Writer, failures []app.DirFailure) {
+	if len(failures) > 0 {
+		printSummary(stderr, app.Summary{DirFailures: failures})
 	}
-	log.Warnf("%s", message)
 }
 
 // printExported lists the files a run wrote, even when it stopped early, so the user finds what it left.

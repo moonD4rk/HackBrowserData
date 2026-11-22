@@ -26,11 +26,14 @@ func newDumpKeysCommand() *cobra.Command {
 				return err
 			}
 			options.KeychainPassword = keychainPasswordFunc(keychainFlags, os.Stdin)
-			vaultCount, err := app.DumpKeys(command.Context(), options, command.OutOrStdout())
+			summary, err := app.DumpKeys(command.Context(), options, command.OutOrStdout())
 			if err != nil {
 				return err
 			}
-			log.Infof("Exported keys for %d vault(s)", vaultCount)
+			if summary.KeychainErr != nil {
+				log.Warnf("%v; keys only it holds are missing from the key file", summary.KeychainErr)
+			}
+			log.Infof("Exported keys for %d vault(s)", summary.Vaults)
 			return nil
 		},
 	}

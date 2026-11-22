@@ -1,10 +1,7 @@
 package app
 
 import (
-	"context"
-
 	"github.com/moond4rk/hackbrowserdata/internal/browser/safari"
-	"github.com/moond4rk/hackbrowserdata/internal/log"
 	"github.com/moond4rk/hackbrowserdata/internal/masterkey"
 )
 
@@ -15,12 +12,10 @@ type loginKeychain interface {
 	Err() error
 }
 
-// warnIfLocked speaks once the run is over, because every reader of a locked keychain quietly gets metadata only.
-func warnIfLocked(ctx context.Context, loginKeychain loginKeychain, consequence string) {
-	if loginKeychain == nil || ctx.Err() != nil {
-		return
+// keychainErr is read once the run is over, because every reader of a locked keychain quietly gets metadata only.
+func keychainErr(loginKeychain loginKeychain) error {
+	if loginKeychain == nil {
+		return nil
 	}
-	if err := loginKeychain.Err(); err != nil {
-		log.Warnf("%v; %s", err, consequence)
-	}
+	return loginKeychain.Err()
 }

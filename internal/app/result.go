@@ -61,5 +61,6 @@ type Summary struct {
 	Results     []Result
 	DirFailures []DirFailure
 	Exported    export.Listing // the files the run wrote; empty when nothing was exported
+	KeychainErr error          // why the macOS login keychain stayed locked; nil when it opened or was never read
 	Err         error          // why the run ended early: it was stopped, or its output could not be written
 }
