@@ -46,8 +46,8 @@ func printDirFailures(stderr io.Writer, failures []app.DirFailure) {
 	}
 }
 
-// printExported lists the files a run wrote, even when it stopped early, so the user finds what it left.
-func printExported(stderr io.Writer, exported export.Listing) {
+// printExportedFiles lists the files a run wrote, even when it stopped early, so the user finds what it left.
+func printExportedFiles(stderr io.Writer, exported export.Listing) {
 	if len(exported.Files) == 0 {
 		return
 	}

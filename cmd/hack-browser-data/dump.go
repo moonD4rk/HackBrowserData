@@ -64,7 +64,7 @@ func runDump(ctx context.Context, stderr io.Writer, flags app.DumpFlags, keychai
 	if summary.KeychainErr != nil && ctx.Err() == nil {
 		log.Warnf("%v; keychain-protected data was exported as metadata only", summary.KeychainErr)
 	}
-	printExported(stderr, summary.Exported)
+	printExportedFiles(stderr, summary.Exported)
 	if ctx.Err() == nil {
 		printSummary(stderr, summary)
 	}

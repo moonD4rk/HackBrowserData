@@ -53,7 +53,7 @@ func runRestore(ctx context.Context, stderr io.Writer, flags app.RestoreFlags) e
 		log.Warnf("no browsers to restore from the supplied keys and data")
 		return nil
 	}
-	printExported(stderr, summary.Exported)
+	printExportedFiles(stderr, summary.Exported)
 	if ctx.Err() == nil {
 		printSummary(stderr, summary)
 	}
