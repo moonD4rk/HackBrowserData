@@ -9,11 +9,11 @@
 
 ## Scopes
 
-Secrets live at different levels, so they are fetched at different levels: per data directory for Chromium's master keys, per profile for Firefox, whose key is derived from the profile's own files, and per run for the macOS login keychain.
+Secrets live at different levels, so they are fetched at different levels: per data directory for Chromium's master keys, per profile for Firefox, whose key is derived from the profile's own files, and per run for the macOS login keychain and the Firefox primary password the user supplies.
 
 ## Lazy retrieval
 
-A secret is fetched by the first record that needs it, once per scope, and then reused. A run that asks only for history or bookmarks never retrieves a key and never prompts. A retrieval failure is reported once for its scope; records that needed the secret are still written, with that field empty, and count as `partial`.
+A secret is fetched once per scope, only when the scope has an extraction that needs it, and is then passed on as a plain value: a directory's master keys right after its files are captured, the login keychain at its first query. A run that asks only for history or bookmarks never retrieves a key and never prompts. Deciding per extraction rather than per record is what keeps each secret a value with one owner; the cost is an occasional retrieval, and on macOS a prompt, for a store that turns out to hold no encrypted row. A retrieval failure is reported once for its scope; records that needed the secret are still written, with that field empty, and count as `partial`.
 
 ## Key versions
 
