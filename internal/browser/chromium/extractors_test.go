@@ -1,7 +1,6 @@
 package chromium
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,7 +26,7 @@ func TestExtractors_CoverEveryCategory(t *testing.T) {
 func TestExtractors_OverridesFollowTheBrowserNotTheDirectory(t *testing.T) {
 	yandex, ok := browser.Lookup("yandex")
 	require.True(t, ok)
-	sources := Sources(browser.UserDataDir{ID: "yandex-2", Browser: yandex}, browser.Profile{})
+	sources := Sources(browser.UserDataDir{ID: "yandex-2", Browser: yandex})
 	assert.Equal(t, "Ya Passman Data", sources[category.Password][0].RelativePath)
 	assert.Equal(t, "Ya Credit Cards", sources[category.CreditCard][0].RelativePath)
 }
@@ -36,7 +35,7 @@ func TestSources_ForksWithoutAnExtensionList(t *testing.T) {
 	for _, name := range []string{"qq", "sogou"} {
 		chromiumBrowser, ok := browser.Lookup(name)
 		require.True(t, ok, name)
-		assert.NotContains(t, Sources(browser.UserDataDir{Browser: chromiumBrowser}, browser.Profile{}), category.Extension, name)
+		assert.NotContains(t, Sources(browser.UserDataDir{Browser: chromiumBrowser}), category.Extension, name)
 	}
 }
 
@@ -50,7 +49,7 @@ func TestExtractors_EachProfileReadsItsOwnFiles(t *testing.T) {
 	want := map[string]string{"Default": "Home", "Profile 1": "Work"}
 	for _, profile := range []browser.Profile{{Name: "Default", RelativePath: "Default"}, {Name: "Profile 1", RelativePath: "Profile 1"}} {
 		var out testCollector
-		require.NoError(t, Extract(context.Background(), browser.NewProfileSnapshot(dir, profile, dirSnapshot), nil, category.History, &out))
+		require.NoError(t, Extract(browser.NewProfileSnapshot(dir, profile, dirSnapshot), nil, category.History, &out))
 		got := collected[record.History](t, &out)
 		require.Len(t, got, 1, profile.Name)
 		assert.Equal(t, want[profile.Name], got[0].Title, profile.Name)
@@ -76,7 +75,7 @@ func TestExtractors_ExtensionsFallBackToPreferences(t *testing.T) {
 			}))
 
 		var out testCollector
-		require.NoError(t, Extract(context.Background(), captured, nil, category.Extension, &out), testCase.browserName)
+		require.NoError(t, Extract(captured, nil, category.Extension, &out), testCase.browserName)
 		got := collected[record.Extension](t, &out)
 		require.Len(t, got, 1, testCase.browserName)
 		assert.Equal(t, "Ext", got[0].Name, testCase.browserName)

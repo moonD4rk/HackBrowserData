@@ -2,7 +2,6 @@
 package firefox
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -119,7 +118,7 @@ func hasDataFile(path string) bool {
 }
 
 // Sources lists the files of each category Firefox supports; every profile reads the same ones.
-func Sources(_ browser.UserDataDir, _ browser.Profile) map[category.Category][]browser.Source {
+func Sources() map[category.Category][]browser.Source {
 	sources := make(map[category.Category][]browser.Source, len(extractors))
 	for dataCategory, extractor := range extractors {
 		sources[dataCategory] = extractor.sources
@@ -128,9 +127,7 @@ func Sources(_ browser.UserDataDir, _ browser.Profile) map[category.Category][]b
 }
 
 // Extract opens a protected profile's key store with primaryPassword, "" when the user gave none.
-func Extract(
-	_ context.Context, captured browser.ProfileSnapshot, primaryPassword string, dataCategory category.Category, out browser.Collector,
-) error {
+func Extract(captured browser.ProfileSnapshot, primaryPassword string, dataCategory category.Category, out browser.Collector) error {
 	extractor, ok := extractors[dataCategory]
 	if !ok {
 		return fmt.Errorf("%s has no %s extractor", captured.UserDataDir.Browser.Name, dataCategory)

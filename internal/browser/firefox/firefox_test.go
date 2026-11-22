@@ -1,7 +1,6 @@
 package firefox
 
 import (
-	"context"
 	"fmt"
 	"io/fs"
 	"os"
@@ -163,7 +162,7 @@ func TestExtractors_EachProfileReadsItsOwnFiles(t *testing.T) {
 	want := map[string]string{"a.default": "Home", "b.work": "Work"}
 	for _, profile := range []browser.Profile{{Name: "a.default", RelativePath: "a.default"}, {Name: "b.work", RelativePath: "b.work"}} {
 		var out testCollector
-		require.NoError(t, Extract(context.Background(), browser.NewProfileSnapshot(dir, profile, dirSnapshot), "", category.History, &out))
+		require.NoError(t, Extract(browser.NewProfileSnapshot(dir, profile, dirSnapshot), "", category.History, &out))
 		got := collected[record.History](t, &out)
 		require.Len(t, got, 1, profile.Name)
 		assert.Equal(t, want[profile.Name], got[0].Title, profile.Name)

@@ -1,7 +1,6 @@
 package chromium
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -47,7 +46,7 @@ var defaultExtractors = map[category.Category]extractor{
 }
 
 // Sources lists the files of each category the dir's browser supports; every profile of a dir reads the same ones.
-func Sources(dir browser.UserDataDir, _ browser.Profile) map[category.Category][]browser.Source {
+func Sources(dir browser.UserDataDir) map[category.Category][]browser.Source {
 	extractors := dirExtractors(dir)
 	sources := make(map[category.Category][]browser.Source, len(extractors))
 	for dataCategory, extractor := range extractors {
@@ -57,9 +56,7 @@ func Sources(dir browser.UserDataDir, _ browser.Profile) map[category.Category][
 }
 
 // Extract decrypts with masterKeys, which lack each key version that could not be retrieved.
-func Extract(
-	_ context.Context, captured browser.ProfileSnapshot, masterKeys masterkey.Set, dataCategory category.Category, out browser.Collector,
-) error {
+func Extract(captured browser.ProfileSnapshot, masterKeys masterkey.Set, dataCategory category.Category, out browser.Collector) error {
 	extractor, ok := dirExtractors(captured.UserDataDir)[dataCategory]
 	if !ok {
 		return fmt.Errorf("%s has no %s extractor", captured.UserDataDir.Browser.Name, dataCategory)

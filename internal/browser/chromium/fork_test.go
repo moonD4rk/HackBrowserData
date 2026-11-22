@@ -1,7 +1,6 @@
 package chromium
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -66,7 +65,7 @@ func TestDiscoverProfiles_ReadsAnUnknownBrowserInItsVaultKind(t *testing.T) {
 	dir := browser.UserDataDir{ID: "nightly", Browser: nightly, Path: t.TempDir(), VaultKind: "chromium-yandex"}
 	_, err := DiscoverProfiles(dir)
 	require.NoError(t, err)
-	assert.Equal(t, "Ya Passman Data", Sources(dir, browser.Profile{})[category.Password][0].RelativePath)
+	assert.Equal(t, "Ya Passman Data", Sources(dir)[category.Password][0].RelativePath)
 
 	dir.VaultKind = "bogus"
 	_, err = DiscoverProfiles(dir)
@@ -95,7 +94,7 @@ func TestExtractors_OperaReadsOpsettings(t *testing.T) {
 		require.True(t, ok, name)
 		var out testCollector
 		captured := browser.NewProfileSnapshot(browser.UserDataDir{Browser: chromiumBrowser}, profile, dirSnapshot)
-		require.NoError(t, Extract(context.Background(), captured, nil, category.Extension, &out), name)
+		require.NoError(t, Extract(captured, nil, category.Extension, &out), name)
 		got := collected[record.Extension](t, &out)
 		require.Len(t, got, 1, name)
 		assert.Equal(t, "Opera Ext", got[0].Name, name)
@@ -103,6 +102,6 @@ func TestExtractors_OperaReadsOpsettings(t *testing.T) {
 
 	chrome, ok := browser.Lookup("chrome")
 	require.True(t, ok)
-	err := Extract(context.Background(), browser.NewProfileSnapshot(browser.UserDataDir{Browser: chrome}, profile, dirSnapshot), nil, category.Extension, &testCollector{})
+	err := Extract(browser.NewProfileSnapshot(browser.UserDataDir{Browser: chrome}, profile, dirSnapshot), nil, category.Extension, &testCollector{})
 	require.Error(t, err, "Chrome has no opsettings fallback")
 }

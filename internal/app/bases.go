@@ -29,9 +29,9 @@ func discoverBrowser(ctx context.Context, targetBrowser browser.Browser, options
 func profileSources(dir browser.UserDataDir, profile browser.Profile) map[category.Category][]browser.Source {
 	switch dir.Browser.Base {
 	case browser.Chromium:
-		return chromium.Sources(dir, profile)
+		return chromium.Sources(dir)
 	case browser.Firefox:
-		return firefox.Sources(dir, profile)
+		return firefox.Sources()
 	case browser.Safari:
 		return safari.Sources(dir, profile)
 	default:
@@ -59,9 +59,9 @@ func (r runner) extract(
 ) error {
 	switch captured.UserDataDir.Browser.Base {
 	case browser.Chromium:
-		return chromium.Extract(ctx, captured, masterKeys, dataCategory, out)
+		return chromium.Extract(captured, masterKeys, dataCategory, out)
 	case browser.Firefox:
-		return firefox.Extract(ctx, captured, r.firefoxPrimaryPassword, dataCategory, out)
+		return firefox.Extract(captured, r.firefoxPrimaryPassword, dataCategory, out)
 	case browser.Safari:
 		return safari.Extract(ctx, captured, r.loginKeychain, dataCategory, out)
 	default:
