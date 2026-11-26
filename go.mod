@@ -7,7 +7,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0
 	github.com/moond4rk/binarycookies/v2 v2.0.0
 	github.com/moond4rk/keychainbreaker v0.2.6
-	github.com/moond4rk/plist v1.2.2
+	github.com/moond4rk/plist v1.2.3
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
 	github.com/stretchr/testify v1.12.1
